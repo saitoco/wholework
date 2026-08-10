@@ -103,6 +103,10 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 
 `/auto` の event-based observation scan により再度 dispatch された。状況に変化がないため結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一 `/auto` セッション自身が Issue #1318 の verify フェーズで Phase Handoff の `### Notes for Next Phase` を読み `/merge 1330` の実行判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。
 
+### 追記 (2026-08-10, /auto #953 セッションからの再評価)
+
+`/auto` の event-based observation scan により再度 dispatch された。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一 `/auto` セッション自身 (Issue #953) が spec→code→review→merge の各フェーズで自身の Spec の Phase Handoff を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能 — ベースライン不在という構造的限界は解消されていない。#1118 の AC 再設計が着地するまで、本条件は observation scan の度に同一結論 (UNCERTAIN) を繰り返すことが見込まれる。
+
 ## Phase Handoff
 <!-- phase: code -->
 
