@@ -155,6 +155,14 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 ### Improvement Proposals
 - spec phase での Size 更新（S → M）が run-auto-sub.sh の route 判定に反映されない問題が観察された。`/auto` skill Step 3a「Post-Spec Size Refresh」は記載されているが、run-auto-sub.sh 経路ではこのリフレッシュが実行されていない可能性がある。次回 XL や M Issue の spec phase で route 不整合が発生したら起票候補
 
+### 2026-08-10 re-run (条件8 小規模傍証の追加確認)
+
+`/auto 1322` の end-of-run observation scan で `event=auto-run` が再発火し、post-merge observation 条件を再評価した。前回 (2026-08-06) 同様、条件が要求する「50+ sub-issue」規模の XL 実行はまだ発生しておらず SKIPPED を維持。
+
+#### verify (再々実行分)
+
+- 新たな傍証: session `94570-1786069858` (2026-08-07) で 4 並列 sub-issue が `auto-max-concurrent` 既定値5の範囲内で完走 (worktree/push/merge 競合ゼロ、`concurrent_commit_detected` 69件はすべて無害な検知イベント)。session `2319-1786222234` (2026-08-09) でも 3 並列が同様に完走
+- semaphore 機構自体は小規模 (3-4 並列) では実運用で正しく機能していることが確認できた。ただし本条件が求める 50+ 規模での OOM/rate limit kill 抑制効果はまだ未実測 — 引き続き Nuxt → Next 移行等の大規模 XL 実行を待つ
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/589#issuecomment-4700058969
