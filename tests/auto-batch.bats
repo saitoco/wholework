@@ -116,6 +116,19 @@ until_mode_section() {
     [ "$status" -eq 0 ]
 }
 
+@test "Until mode section: triage insertion between step 2 and step 3" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -n 'wholework:triage\|resolve-batch-query.sh --query'"
+    [ "$status" -eq 0 ]
+    triage_line=$(echo "$output" | grep 'wholework:triage' | head -1 | cut -d: -f1)
+    query_line=$(echo "$output" | grep 'resolve-batch-query.sh --query' | head -1 | cut -d: -f1)
+    [ "$triage_line" -lt "$query_line" ]
+}
+
+@test "Until mode section: triage insertion adopted-approach rationale present" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Adopted approach'"
+    [ "$status" -eq 0 ]
+}
+
 @test "Until mode section is inserted between List mode and Resume mode" {
     run bash -c "grep -n '^### List mode\|^### Until mode\|^### Resume mode' '$SKILL_FILE'"
     [ "$status" -eq 0 ]
