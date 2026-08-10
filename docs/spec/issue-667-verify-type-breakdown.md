@@ -183,6 +183,9 @@
 - (CONSIDER) `verify-type: observation event=auto-run,auto-run` のような重複 event 名のパース処理を別 Issue で追跡。本実装では deferred。merge phase handoff にも記載済み。
 - (HIGH) tests/audit-auto-session.bats のコンフリクト発生は #666 / #667 / #669 系列の並行 PR で頻発。session-report 拡張系 Issue は同時並行で進めると merge 順序で必ず衝突するため、batch 順序最適化（同領域 Issue を逐次配置 or 統合 spec）を検討すべき。
 
+### 追記 (2026-08-10, AC6 PASS 判定)
+
+2026-07-04/07-05 の観測で判明した構造的欠陥（`VERIFY_RESIDUALS` が `phase_start`/`phase_complete` イベント差分方式で計算されていたが、`/verify` はこれらのイベントを一度も emit しないため常に空集合になっていた）は、Issue #900 (`92091eb8`) で live `phase/verify` ラベル参照方式へ置き換えられ解消済みであることを確認した。`/auto 1213` セッション自身 (`13432-1786338309`) で `scripts/get-auto-session-report.sh` を実行し、`### Verify Phase Residuals` が期待どおり Issue 別 verify-type 内訳テーブルと集計行を出力することを直接確認し、AC6 を PASS 判定した。着地から約 2 ヶ月、実装以来一度も機能実証されていなかった AC が、別 Issue (#900) の修正を経て初めて実証された事例。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/667#issuecomment-4706634738
