@@ -314,6 +314,24 @@ If the issue title or body contains "rename", "renaming", or similar, run `grep 
 - Path link references (relative paths in docs)
 - Section number cross-references
 
+**Tag/enum semantic extension consumer sweep (regardless of SPEC_DEPTH; only when applicable):**
+
+When the Issue extends the accepted semantics or applicability scope of an existing tag/enum value (e.g., a `<!-- xxx-type: yyy -->` marker, a label value, a structured field constant) while the literal value string itself stays unchanged — for example, a tag previously valid only post-merge becoming also valid pre-merge — enumerate every consuming file and re-validate its assumptions:
+
+1. Identify the target tag/enum value string from the Issue body (e.g., `verify-type: manual`).
+2. Run `grep -rn '<value>' skills/ modules/ scripts/` from the repository root to enumerate every file that reads, branches on, or aggregates the value. Record the exact grep pattern and target directories used in the Spec's Changed Files or Notes section.
+3. For each hit, read the surrounding logic and judge whether its assumption about the value still holds under the extended semantics. Add files needing updates to the Changed Files list with the specific change required.
+4. If the resulting enumeration is presented as `(exhaustive)` in a Changed Files or Notes list, add a verify command that checks the enumeration matches the grep results, e.g.: `<!-- verify: rubric "modules/X.md の caller 一覧が、grep -rn 'PATTERN' skills/ modules/ scripts/ の結果と一致している" -->`.
+
+**Differs from adjacent checks:**
+- **Rename-type Issue grep check**: fires on literal string replacement — the string itself changes. This check fires when the string is unchanged but the conditions under which it is valid widen.
+- **Steering Docs sync candidate check**: targets `docs/` reference sync only. This check targets consuming *logic* in `skills/`/`modules/`/`scripts/` that branches on the value's meaning.
+- **Symbol impact discovery**: targets deletion/migration/rename, where the old symbol disappears. This check targets a symbol that remains present but whose consumers' assumptions must be re-validated.
+
+**Skip** if the Issue does not extend an existing tag/enum's semantics.
+
+*Example: Issue #1059 extended `<!-- verify-type: manual -->` from "post-merge only" to "pre-merge and post-merge", but the Spec's Changed Files were limited to `skills/issue`/`skills/review`/`skills/verify`; consumers in `skills/audit/SKILL.md` (Manual Waiting Count) and `skills/auto/SKILL.md` (Pending manual confirmation) surfaced only at `/review` time (#1090, #1092).*
+
 **`.claude/` files and `git add -f`:**
 
 Files under `.claude/` are in `.gitignore`, so `git add <file>` silently skips them. When grep finds hits in `.claude/` files, include them in the changed-files list and add a note to the Implementation Steps: "For `.claude/` files, use `git add -f` instead of `git add`."
