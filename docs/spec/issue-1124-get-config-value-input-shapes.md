@@ -88,16 +88,14 @@ Nothing to note — review-bug 相当の観点も含め MUST/SHOULD/CONSIDER い
 Nothing to note — Pre-merge AC 4件は rubric 2件・command 1件・github_check 1件のいずれも決定論的に検証でき、UNCERTAIN は発生しなかった。AC4 (`github_check "gh pr checks" "Run bats tests"`) は Step 9 の CI 全ジョブ SUCCESS 確認で解決し、Phase Handoff に記録された「/review/CI で解決される」という見立てどおりだった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issue が0件だったため Step 12 (Issue Resolution and Fixes) は実施なし。修正コミットは発生していない
-- Step 7 (External Review Integration) は `.wholework.yml` に copilot-review/claude-code-review/coderabbit-review いずれも未設定のため全面スキップ
-- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 該当なし。main 側との競合コンテキストなし
+- pre-merge AC gate は 4件全て `[x]` 済み、review-incomplete-fallback も非該当のため、追加確認なしで squash merge を実行した
+- `--non-interactive` フラグ付き実行だったが、ブロッキング条件が一つも発生しなかったため auto-resolve ロジックは未使用
 
 ### Deferred Items
-- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み (code phase から継続)
+- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み
 
 ### Notes for Next Phase
-- Pre-merge AC 1-4 すべて `[x]` チェック済み。`/merge 1341` は pre-merge AC gate をブロックなく通過できる見込み
-- Post-merge AC (opportunistic) は据え置きのまま。次に `get-config-value.sh` へ入力形状の拡張要求が来た際に単一箇所への追記とテスト追加だけで対応できるかを `/verify` で確認する
+- Post-merge AC (opportunistic) は据え置き。次に `get-config-value.sh` へ入力形状の拡張要求が来た際に単一箇所への追記とテスト追加だけで対応できるかを `/verify` で確認する
