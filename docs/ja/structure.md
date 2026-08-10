@@ -225,7 +225,7 @@ wholework/
 - `scripts/post-fallback-review-summary.sh` — `run-review.sh` が exit 0 + `matches_expected:false`（silent no-op）を検出した際に呼び出す。PR に "Acceptance Criteria Verification Results" を含む既存レビューが見つかり、かつ最新レビューの `state`（可能な場合は `gh api user` で取得した認証済みアクター自身のレビューのみから算出）が `CHANGES_REQUESTED` でない場合のみ、`<!-- review-summary -->` マーカー付きのフォールバック Review Response Summary を投稿する。この投稿にはマーカー直後に `<!-- wholework-event: type=review-incomplete -->` を併記し、下流 (`/merge` の pre-merge ゲート) がこの fallback 経由の完了を `/review` 自身による organic な完了と区別できるようにする。証跡が見つからない場合は exit 1、MUST 指摘が未解決 (最新レビューが `CHANGES_REQUESTED`) の場合は投稿せず exit 2 を返し `run-review.sh` がレビューセッションを1回だけ継続リトライする
 
 **Skill runners:**
-- `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーを含む
+- `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーに加え、バックグラウンドタスクの完了通知待ちを禁じる制約 (これらの実行サーフェスには再呼び出し保証がない) を含み、wrapper 経由の 5 phase (issue/spec/code/review/merge) すべてに届く。詳細は `modules/execution-context.md` の "Wrapper-Level Constraint Injection" 節を参照
 - `scripts/run-auto-sub.sh` — サブ issue 向け auto ワークフロー実行
 - `scripts/run-code.sh` — code スキル実行
 - `scripts/run-issue.sh` — issue スキル実行

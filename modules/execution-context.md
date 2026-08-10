@@ -94,6 +94,52 @@ report it as a failure rather than waiting on its completion notification.
 path), #1142 (a fork-executed `/review`), #1213/#1234 (the tool-ceiling corollary — an explicit
 `timeout` alone was insufficient because the command itself exceeded the ceiling).
 
+### Wrapper-Level Constraint Injection
+
+The MUST rule above only reaches a phase if that phase's SKILL.md carries an instruction that
+surfaces it — and a phase with no full-suite execution instruction of its own has nothing to
+carry it. Three generations of prose fixes (#994 for code, #1097 for review, #1213 iteration 0/1
+for both) moved or restated the constraint inside SKILL.md prose — #1175 separately added
+wrapper-side detection for the review phase without touching the prose — and each time, a phase
+without such an instruction reproduced the same silent no-op regardless — most recently `/spec`
+(#1130, 2026-08-10), whose SKILL.md has no full-suite execution instruction at all; the agent
+chose to run the suite on its own judgment and hit the same wait.
+
+Iteration 2 of #1213 moves the backstop out of SKILL.md prose entirely and injects it at the
+layer that starts every wrapper-launched phase process: `scripts/guard-prefix.sh`. All five
+wrapper scripts (`run-issue.sh`, `run-spec.sh`, `run-code.sh`, `run-review.sh`, `run-merge.sh`)
+source this file and prepend its `GUARD_PREFIX` string to the `PROMPT` passed to `claude -p`. A
+paragraph stating the MUST rule (no re-invocation guarantee, do not end a turn waiting on
+`run_in_background: true` / the Workflow tool / an Agent or Task dispatch that returns before the
+work finishes, run synchronously in the foreground and consume the result within the same turn,
+the Bash tool's 600000 ms timeout ceiling and the need to shorten commands that risk it, and
+reporting a command as failed immediately if it is backgrounded anyway) lives in that single
+string, so it reaches every phase these five wrappers launch **(exhaustive)**: issue, spec, code,
+review, merge — including spec, which has no full-suite execution instruction of its own for a
+body-level fix to attach to. Other `claude -p` launch paths outside these five wrappers
+(`scripts/spawn-recovery-subagent.sh`, the Tier 3 recovery sub-agent dispatched from
+`scripts/run-auto-sub.sh`) do not source `guard-prefix.sh` and are not covered by this injection
+point; whether they need the same constraint is undecided (#1213 iteration 2 deferred item).
+
+Skills with no wrapper (`verify`, `triage`, `audit`, `doc`, `auto`) are not reached by this
+injection point. They normally run in main context (an interactive session with a re-invocation
+guarantee — see the Per-Skill Context Table above), where the MUST rule does not apply. But if one
+of them is dispatched as a nested `Skill()` call from a fork-context phase (e.g. `/review`'s
+Opportunistic Verification dispatching `/verify`), the exhaustive surface list and "Default when
+undetermined" clause above still apply, and this injection point does not reach that nested
+invocation either.
+
+The SKILL.md-level guards added by earlier generations (`skills/code/SKILL.md` Step 9,
+`skills/review/SKILL.md` Step 12.3, `modules/test-runner.md`) remain in place; they were not
+removed by this change. They serve a different role: concrete, execution-point guidance for a
+phase that does have a full-suite instruction (e.g. how to parallelize a `bats` run into the
+timeout ceiling), while the wrapper-level paragraph is a phase-agnostic backstop that does not
+depend on any SKILL.md carrying it. This remains prompt-level guidance, not a mechanical
+enforcement: #1168 (recorded in `docs/spec/issue-1175-review-background-noop-fix.md`) showed the
+same rule present in the prompt yet violated 2/2. The wrapper position raises salience (prompt
+head, every phase) but does not remove the need for the detection/recovery side (#1323 detector
+signatures, `run-*.sh` auto-retry).
+
 ## How to Reference
 
 In a skill's SKILL.md, reference this module at the step where context affects behavior:
@@ -119,5 +165,8 @@ Skills/modules that explicitly read this module:
   bullet; Step 12.3 Lightweight Re-check local reminder), `skills/review/workflow-guidance.md`
   (Pre-flight section), `skills/code/SKILL.md` (Step 9 execution surface constraint, stated once
   before the Behavioral Change Detection subsection)
+- `scripts/guard-prefix.sh` — not a reader of this module; distributes this section's MUST rule
+  into the prompt for every phase, via the `GUARD_PREFIX` string the five `run-*.sh` wrappers
+  prepend to `PROMPT` (see "Wrapper-Level Constraint Injection" above)
 
 Update this list when a skill or module begins reading `modules/execution-context.md` explicitly.

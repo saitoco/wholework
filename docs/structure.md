@@ -233,7 +233,7 @@ Key modules:
 - `scripts/post-fallback-review-summary.sh` — called by `run-review.sh` on exit 0 + `matches_expected:false` (silent no-op); posts a `<!-- review-summary -->`-marked fallback Review Response Summary, immediately followed by a `<!-- wholework-event: type=review-incomplete -->` marker so downstream (`/merge`'s pre-merge gate) can distinguish this fallback-origin completion from `/review`'s own organic completion, only when a prior review containing "Acceptance Criteria Verification Results" is found for the PR and its latest `state` (computed from reviews by the authenticated actor only, via `gh api user`, when resolvable) is not `CHANGES_REQUESTED`, otherwise exits 1 (no evidence found) or exits 2 (MUST issues outstanding — `run-review.sh` retries the review session once instead of posting)
 
 **Skill runners:**
-- `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution
+- `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution, and a background-task completion-wait prohibition (no re-invocation guarantee on these execution surfaces) that reaches all 5 wrapper-launched phases (issue/spec/code/review/merge), see `modules/execution-context.md` § "Wrapper-Level Constraint Injection"
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
 - `scripts/run-code.sh` — run code skill
 - `scripts/run-issue.sh` — run issue skill
