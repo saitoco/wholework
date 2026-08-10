@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-10 03:34 UTC: manual-recovery-spec-rerun
+
+### Context
+- Issue #1130, phase: spec
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: background-notification-wait
+- /spec declared a wait for a background bats suite completion notification; claude -p has no subsequent turn, so the process exited 0 without writing the Spec and run-spec.sh converted it to exit 1. Recovered by re-running run-auto-sub.sh from phase/spec.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-08 22:08 UTC: wrapper-retry-on-kill
 
 ### Context
