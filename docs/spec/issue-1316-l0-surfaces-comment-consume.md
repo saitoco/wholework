@@ -16,7 +16,6 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (トリアージ結果・曖昧性自動解決ログ・スコープ評価、sub-issue 分割は non-interactive のため未実施と明記) / https://github.com/saitoco/wholework/issues/1316#issuecomment-5235007944
-- No new comments since last phase.
 
 ## Changed Files
 
@@ -82,6 +81,7 @@
 
 ### Bash Command Patterns
 - `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` — `skills/review/SKILL.md` と `skills/merge/SKILL.md` に新規call site追加 (`/spec`/`/code`/`/verify` の `allowed-tools` には既存)
+- `gh api:*` — `skills/issue/SKILL.md`・`skills/review/SKILL.md`・`skills/merge/SKILL.md` の 3 スキルに追加。Comment Consumption Procedure (`modules/l0-surfaces.md`) の Step 1 が `gh api "repos/{owner}/{repo}/issues/$N/timeline"` を実行するために必要 (`/spec`/`/code`/`/verify` には既存の前例あり)。`scripts/check-allowed-tools.sh skills/` で 3 スキルとも一致を確認済み。
 
 ### Built-in Tools
 none (追加なし)
@@ -108,7 +108,7 @@ none
 
 ### Out of Scope
 
-- **`/review`/`/merge` の `comments_consumed` イベント発火**: `scripts/emit-event.sh` の `_emit_comments_consumed()` は現状 `run-code.sh` と `run-auto-sub.sh` の spec/code パスにのみ組み込まれている (`/verify` も `run-verify.sh` が存在しないため対象外)。`run-review.sh`/`run-merge.sh` へ組み込むには `run-auto-sub.sh` → `run-review.sh`/`run-merge.sh` の呼び出し連鎖における `EMIT_ISSUE_NUMBER` 変数のスコープを精査する必要があり、本 Issue の Acceptance Criteria はこれを要求していない。`/audit stats` のメトリクス完全性が明示的な目標になった際の follow-up として残す。
+- **`/issue`/`/review`/`/merge` の `comments_consumed` イベント発火**: `scripts/emit-event.sh` の `_emit_comments_consumed()` は現状 `run-code.sh` と `run-auto-sub.sh` の spec/code パスにのみ組み込まれている (`/verify` も `run-verify.sh` が存在しないため対象外)。本 Issue で新たに consume フェーズとなった `/issue` (`run-issue.sh`) にも同様に組み込まれていない。`run-issue.sh`/`run-review.sh`/`run-merge.sh` へ組み込むには `run-auto-sub.sh` からの呼び出し連鎖における `EMIT_ISSUE_NUMBER` 変数のスコープを精査する必要があり、本 Issue の Acceptance Criteria はこれを要求していない。`/audit stats` のメトリクス完全性が明示的な目標になった際に、`/issue`・`/review`・`/merge` の 3 フェーズをまとめて扱う follow-up として残す。
 - **`docs/workflow.md` の Label Transition Map における `phase/merge` 行**: `skills/merge/SKILL.md` の現在の実装は `phase/merge` ラベルをどこにも付与しておらず、ドキュメントとの乖離が既に存在する (本 Issue と無関係な pre-existing drift)。本 Issue のカットオフ順序に関する分析 (`/merge` の Comment Consumption 呼び出し時点での最新 `phase/*` は `phase/review` である) を確認する過程で気づいたため記録するが、修正は本 Issue のスコープ外とする。
 
 ### #811 の教訓の適用
@@ -169,7 +169,8 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 
 ### Deviations from Design
 
-- None. Implementation followed the Spec's Implementation Steps as written, including the two decisions already reasoned through in the spec retrospective (`/merge`'s post-squash call placement; `/review`'s bash fallback omitting `--no-push`).
+- Implementation followed the Spec's Implementation Steps as written, including the two decisions already reasoned through in the spec retrospective (`/merge`'s post-squash call placement; `/review`'s bash fallback omitting `--no-push`).
+- One undocumented-but-necessary addition: `gh api:*` was added to `skills/issue/SKILL.md` / `skills/review/SKILL.md` / `skills/merge/SKILL.md`'s `allowed-tools`, not called out in the Spec's original Implementation Steps. The Comment Consumption Procedure's Step 1 (`modules/l0-surfaces.md`) executes `gh api "repos/{owner}/{repo}/issues/$N/timeline"`, which requires this grant — `/spec`/`/code`/`/verify` already carry it for the same reason. Recorded post-hoc in `## Tool Dependencies` above during review.
 
 ### Design Gaps/Ambiguities
 
