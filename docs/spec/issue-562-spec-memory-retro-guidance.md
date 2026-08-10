@@ -99,6 +99,10 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 
 「減っている」という比較節は測定可能なベースラインを伴わないため、PASS にも FAIL にも倒せず observation AC として恒久的に UNCERTAIN に留まる構造になっている。「後続フェーズが Spec retrospective を参照した形跡が Spec 内に残っている」のような**単一実行で判定可能な条件**への再型付けが妥当。observation AC の判別可能性という論点は #1118 が扱っており、単発観測のため新規起票はしない。
 
+### 追記 (2026-08-10, /auto #1318 セッションからの再評価)
+
+`/auto` の event-based observation scan により再度 dispatch された。状況に変化がないため結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一 `/auto` セッション自身が Issue #1318 の verify フェーズで Phase Handoff の `### Notes for Next Phase` を読み `/merge 1330` の実行判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。
+
 ## Phase Handoff
 <!-- phase: code -->
 
