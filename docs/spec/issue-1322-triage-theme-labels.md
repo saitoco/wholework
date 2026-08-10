@@ -114,17 +114,15 @@
 - 特筆事項なし — Pre-merge AC 7件すべてが verify command (`file_contains`/`rubric`/`section_contains`/`command`) により UNCERTAIN なくクリーンに PASS した。verify command の記述精度が高く、/code フェーズでの事前検証と一致していた
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 (safe mode) で Pre-merge AC 7件すべてを再検証し、`/code` フェーズの結果と一致する全件 PASS を確認
-- `REVIEW_DEPTH=light` (`--light` 指定、Size=M とも一致) のため review-light エージェント1体で4観点統合レビューを実施
-- SHOULD 1件 (label-conventions.md 同期漏れ) と CONSIDER 1件 (placeholder 不整合) を修正、CONSIDER 1件 (失敗時フォールバック未記載) はスコープ外としてスキップ
+- PR #1331 は mergeable=true (CI success, review approved) だったため Step 2/3 (Worktree Entry / Resolve Conflicts) をスキップし、Step 4 (Squash Merge) を直接実行
+- Pre-merge AC gate: 7/7 checked、review-incomplete-fallback も検出なし。マージ前ゲートは無条件通過
 
 ### Deferred Items
-- Post-merge AC (`/triage` が次回実行された Issue に `theme/*` label が付与されることの確認) は引き続き `session=next` の observation として未実施 (`/code` フェーズから継続)
-- CONSIDER: Step 6a の `gh label list` 失敗時フォールバック未記載は対応見送り。将来 `/triage` 実行時に実際の失敗が観測されれば別途 Issue 化を検討
+- Post-merge AC (`/triage` が次回実行された Issue に `theme/*` label が付与されることの確認) は引き続き `session=next` の observation として未実施
 
 ### Notes for Next Phase
-- `/merge 1331` 実行可能 (MUST issue なし、CI 全件 SUCCESS、Pre-merge AC 全件 PASS)
-- `tests/post_merge_check.bats` の並列実行時フレーク (Code Retrospective に記録済み) は本 PR の変更と無関係、`/merge`/`/verify` で再発時は既知フレークとして扱う
+- `/verify 1322` で post-merge AC (observation, session=next) を確認すること
+- `tests/post_merge_check.bats` の並列実行時フレークは本 PR の変更と無関係の既知フレーク
