@@ -1206,7 +1206,7 @@ Condition-driven loop: resolve the query → process the results as List mode �
 
 **Safety valve**: `--max-rounds` defaults to `3` and cannot be disabled (opt-out is not supported) — Until mode always terminates after at most `MAX_ROUNDS` rounds even if the query keeps matching new Issues every round.
 
-1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`.
+1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`. Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section; retain `AUTO_STOP_AT` for step 5's delegation to List mode step 7's verify orchestration gate below — List mode's own "Load stop-at setting (List mode only)" block sits outside its numbered steps 1–7, so step 5's "steps 1–7 unchanged" reuse does not cover it on its own.
 2. Increment `ROUND` by 1. If `ROUND > MAX_ROUNDS`: output "Until mode: max-rounds ($MAX_ROUNDS) reached; stopping." and go to step 7.
 3. Run:
    ```
@@ -1219,8 +1219,12 @@ Condition-driven loop: resolve the query → process the results as List mode �
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "$ROUND_LIST" "$COMPLETED" "$FAILED"
    ```
-   (this call also serves as List mode's own checkpoint initialization — do not call `write_batch` a second time). Add `ROUND_LIST` to `ALL_TARGETS`, then process each Issue in `ROUND_LIST` by applying `### List mode (--batch N1 N2 ...)` steps 1–7 unchanged. Whenever `update_batch ... complete` or `... fail` is called for an Issue number, add that number to `COMPLETED`/`FAILED` and to `PROCESSED`. An Issue skipped by the blocked-by gate (step 4 of List mode) is **not** added to `PROCESSED` — its blocker may clear within this same session, so it should be re-evaluated on the next round.
-6. If `CHECKIN_PER_ROUND` is `true` AND ARGUMENTS does **not** contain `--non-interactive`: use AskUserQuestion to confirm proceeding to the next round; any answer other than "continue" goes to step 7. If ARGUMENTS contains `--non-interactive`, output "Warning: --checkin-per-round ignored in non-interactive mode." and proceed without asking. In both cases (confirmed continue, or non-interactive skip), go back to step 2.
+   (this call also serves as List mode's own checkpoint initialization — do not call `write_batch` a second time). Add each number in `ROUND_LIST` to `ALL_TARGETS` if not already present (set union — an Issue skipped by the blocked-by gate can legitimately reappear in a later round's `ROUND_LIST`; see below), then process each Issue in `ROUND_LIST` by applying `### List mode (--batch N1 N2 ...)` steps 1–7 unchanged (using the `AUTO_STOP_AT` retained in step 1 above). Whenever `update_batch ... complete` or `... fail` is called for an Issue number, add that number to `COMPLETED`/`FAILED` and to `PROCESSED`. An Issue skipped by the blocked-by gate (step 4 of List mode) is **not** added to `PROCESSED` — its blocker may clear within this same session, so it should be re-evaluated on the next round.
+6. If `CHECKIN_PER_ROUND` is `true`:
+   - If ARGUMENTS does **not** contain `--non-interactive`: use AskUserQuestion to confirm proceeding to the next round; any answer other than "continue" goes to step 7.
+   - Else (ARGUMENTS contains `--non-interactive`): output "Warning: --checkin-per-round ignored in non-interactive mode." and proceed without asking.
+
+   In every case that did not go to step 7 above (including the default `CHECKIN_PER_ROUND=false` case, which asks nothing and always proceeds), go back to step 2.
 7. Run:
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch "$BATCH_ID"
