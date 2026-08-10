@@ -25,11 +25,11 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (44 files)
+├── modules/             # Shared modules referenced by skills (45 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (83 files)
+├── scripts/             # Utility scripts used by skills and agents (84 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (118 files)
+├── tests/               # Bats test files for scripts (120 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -151,6 +151,7 @@ Key modules:
 - `modules/skill-dev-doc-impact.md` — skill-development project Change Types for `/spec` and `/code` (via `doc-checker.md`)
 - `modules/autonomy-tier.md` — autonomy tier (L2→L1 path permission) SSoT: tier × path matrix, Tier × L0 write matrix, skill frontmatter declaration rules
 - `modules/event-emission.md` — event emission contract SSoT (phase event schema, _EMIT_PHASE_OWNED pattern, wrapper coverage table for run-*.sh)
+- `modules/round-ordering.md` — `/auto --batch --until` Round `ROUND_LIST` reordering (ROI + title prefix clustering + semantic relationship judgment, cluster-first combination)
 
 ### Agents
 
@@ -195,6 +196,7 @@ Key modules:
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label
 - `scripts/get-issue-priority.sh` — get issue priority field
+- `scripts/compute-round-order.sh` — fetch title/Size/Value for each issue in a `ROUND_LIST` (single `gh-graphql.sh` round-trip per issue, `size/*`/`value/*` label fallback) and compute ROI (Value/Size); consumed by `modules/round-ordering.md`
 - `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
 - `scripts/get-sub-issue-progress.sh` — fetch all sub-issues (OPEN + CLOSED) under an XL parent issue with state, labels, timestamps, and blockedBy for `/audit progress`
 - `scripts/get-auto-session-report.sh` — emit the `## Metrics` markdown section (`--metrics-only`) of a /auto session retrospective from `.tmp/auto-events.jsonl` (filtered by session_id), for embedding into `session.md` and for `/audit auto-session`
