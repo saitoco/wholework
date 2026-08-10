@@ -215,23 +215,21 @@ themes:
 なし。テスト・手動スモークテスト (themes あり2件・themes なし・実データ5テーマ) がいずれも初回実装で成功した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST issue は0件。SHOULD 5件・CONSIDER 2件は全て `/review` Step 12 内でその場で直接修正した (doc追記・bugfix・テスト追加のみで、いずれも低リスク)。
-- review-bug×2 が独立に検出した `scripts/setup-labels.sh:186` (theme ループが `set -euo pipefail` 下で Fallback-group より前に位置し、失敗時に abort する懸念) は Opus adversarial verification で false positive と判定し却下した — 本 PR 以前から `ALWAYS_LABELS` 内の `theme/*` エントリが全く同じ位置にあり、既存の挙動でありこの PR による新規リグレッションではないため。
+- mergeable=true (CI success / review approved) だったため、conflict 解決ステップはスキップし直接 squash merge を実行した。
+- pre-merge AC ゲートは 7/7 チェック済み・review-incomplete-fallback もなしで、override marker なしにそのまま通過した。
 
 ### Deferred Items
 
-- `get-config-value.sh` のフラットキー検索 (`^[[:space:]]*${KEY}[[:space:]]*:`) が `themes:` の子キー名と衝突しうる問題は、コード修正ではなく `docs/guide/customization.md` への制約明記のみで対応した。根本修正 (`get-config-value.sh` 側のアンカーを非インデント限定に厳格化) は `themes:` 以外の既存ブロックにも影響する広いスコープの変更のため、別 Issue 化が妥当と判断し見送った。
-- `themes:` の子キーにネストした sub-mapping (例: `checkout:\n  description: "..."`) を書くと誤った複数ラベルが作成される問題は、CONSIDER 級のエッジケースとして「サポート外の形状」をドキュメント化するに留め、パーサ側のガードは追加していない。
+- None (review phase からの Deferred Items — `get-config-value.sh` のフラットキー衝突と `themes:` sub-mapping 未対応 — はいずれも merge phase の対象外で、そのまま `docs/guide/customization.md` の制約明記に留めた状態を引き継ぐ)
 
 ### Notes for Next Phase
 
-- Pre-merge AC 7件はいずれも `/review` の再検証で PASS を再確認済み。Step 12 の修正内容 (ドキュメント追記・bash パーサのバグ修正・bats テスト追加) はいずれも AC の意味論を変更しないため、Step 13 Policy Change Detection で方針変更なしと判定し Issue 本文・verify command の更新は行っていない。
-- `/review` 投稿時点で CI 11/11 ジョブ SUCCESS を確認済み。Step 12 で追加した4コミットの push により CI が再トリガーされるため、`/merge` 前に再度グリーンを確認すること。
-- `bats tests/setup-labels.bats` は25/25 pass (`/code` 時点の22件 + `/review` で追加した新規3件: 空 `themes:` ブロック、`--no-fallback` + `themes:` 併用、column-0 コメントのリグレッションテスト)。
+- `/verify` は post-merge AC なし (`## Verification` の Post-merge セクションは「なし」) — Issue #1342 は自動クローズされる想定。
+- squash commit: `8c6cd7d9` (main)。
 
 ## review retrospective
 
