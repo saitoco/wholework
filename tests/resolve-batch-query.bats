@@ -162,3 +162,10 @@ three_issues_json() {
     [ "$status" -eq 0 ]
     [ "$output" = "10" ]
 }
+
+@test "status value containing whitespace: unsupported, exit 1 as documented" {
+    run --separate-stderr bash "$SCRIPT" --query "label:retro/* status:In progress"
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"resolve-batch-query:"* ]]
+    [[ "$stderr" == *"unknown key"* ]]
+}
