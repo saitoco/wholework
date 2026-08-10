@@ -70,7 +70,7 @@ Wholework が機能するための必須依存は以下のみです:
 - **ワークフロー最適化（3軸）**: Model 選択、Adaptive Thinking（`--effort`）、Advisor 戦略の 3 軸を調整し、品質・速度・コストのバランスを取る。フェーズ別マトリクス（`docs/tech.md` Architecture Decisions, `ssot_for: model-effort-matrix`）は新しいモデルや利用データが得られるたびに再調整する
 - **コンテキスト分離を一級制約として扱う**: 実行フェーズのスキルは fork コンテキストに保ち、Spec をフェーズ横断のメモリとして維持することで、新しいスキルが過去フェーズのコンテキスト腐敗を引き継がずに合成できる状態を守る
 - **対象プロジェクト種別の拡大**: アプリケーション/Web 開発を越えて、「Issue → spec → 成果物 → レビュー」のフローが当てはまるあらゆる GitHub プロジェクト（ドキュメント/コンテンツ、データ/リサーチ、インフラ/IaC、OSS 運用、ビジネス/企画など）へ一般化する
-- **テーマ駆動での Backlog 消化**: Issue に `theme/*` label (`/triage` が付与) を持たせることで、Value/Priority 順だけに頼らず、関連する backlog Issue をまとめて選定・消化できるようにする。未分類の Issue には無理に label を付与しない (全件網羅は要求しない)。テーマの実体は GitHub の label 側を SSoT とし、本ドキュメントには記述しない (GitHub state とドキュメントの二重管理を避けるため)。
+- **テーマ駆動での Backlog 消化**: Issue に `theme/*` label (`/triage` が付与) を持たせることで、Value/Priority 順だけに頼らず、関連する backlog Issue をまとめて選定・消化できるようにする。未分類の Issue には無理に label を付与しない (全件網羅は要求しない)。テーマカタログは二層構造になっている: プロジェクトは `.wholework.yml` の `themes:` キーで seed カタログを宣言し (`scripts/setup-labels.sh` がこれを読んで `theme/*` label を作成する。`docs/guide/customization.md` 参照)、`/triage` の実行時分類は生成された GitHub label を直接 (`gh label list`) 読む — 本ドキュメントや `.wholework.yml` を読むのではなく、GitHub state とドキュメントの二重管理を避けるため。
 
 <!-- ## Success Metrics (Optional)
 

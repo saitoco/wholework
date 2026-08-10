@@ -128,13 +128,14 @@ SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を
 
 ## Wholework ラベル管理
 
-`scripts/setup-labels.sh` は Wholework が管理するすべてのラベルの**唯一の真実（SSoT）**です。すべてのラベル名・色・説明はここで定義します。
+`scripts/setup-labels.sh` は Wholework が管理するすべてのラベルの**唯一の真実（SSoT）**です。すべてのラベル名・色・説明はここで定義します — ただし1つ例外があり、`theme/*` ラベルはプロジェクト依存で、各プロジェクト自身の `.wholework.yml` の `themes:` キー配下で定義します (`docs/guide/customization.md` 参照)。`setup-labels.sh` にハードコードはせず、固定色 (`006B75`) とパース/作成ロジックのみを提供します。
 
 ### ラベルグループ
 
 | グループ | 数 | ラベル | 作成条件 |
 |----------|-----|--------|----------|
-| 常時 | 22 | `phase/*`（9）、`triaged`、`retro/verify`、`retro/code`、`retro/recoveries`、`audit/drift`、`audit/fragility`、`audit/auto`、`stale-verify`、`theme/*`（5） | 常に作成 |
+| 常時 | 17 | `phase/*`（9）、`triaged`、`retro/verify`、`retro/code`、`retro/recoveries`、`audit/drift`、`audit/fragility`、`audit/auto`、`stale-verify` | 常に作成 |
+| テーマ | プロジェクト依存 | `theme/*` | `.wholework.yml` の `themes:` block mapping (`docs/guide/customization.md`) から作成。未設定なら一切作成されない — 既定/フォールバックのカタログは存在しない |
 | フォールバック | 17 | `type/*`（3）、`priority/*`（4）、`size/*`（5）、`value/*`（5） | 対応する GitHub 機能が未構成の場合に作成（以下参照） |
 
 ### 自動ブートストラップ
@@ -163,6 +164,8 @@ Wholework 内でラベルを追加・変更・削除する場合（skills、scri
 - **ラベル参照の削除**: `setup-labels.sh` からエントリを削除する
 
 このルールによりコード上のラベル参照と SSoT 定義のドリフトを防ぎます。将来の `/audit drift` 検出では、コードベース内のラベル参照集合と `setup-labels.sh` で定義された集合の一致チェックを行う予定です。
+
+**例外**: `theme/*` ラベルはこのルールの対象外です。プロジェクト依存であり、`setup-labels.sh` へのハードコードではなく各プロジェクトの `.wholework.yml` の `themes:` キー配下で宣言します (`docs/guide/customization.md` 参照)。`theme/*` ラベルの追加・改名・削除は、該当プロジェクトの `.wholework.yml` を編集するだけで完結します。
 
 ## テスト戦略
 
