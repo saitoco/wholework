@@ -101,15 +101,17 @@ CANDIDATE_PRS=$(gh pr list --search "closes #$ISSUE_NUMBER" --state merged --jso
 ```bash
 PR_NUMBER=""
 BASE_BRANCH=""
-for candidate in $CANDIDATE_PRS; do
-  EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$candidate")
-  CANDIDATE_ISSUE=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))")
-  if [ "$CANDIDATE_ISSUE" = "$ISSUE_NUMBER" ]; then
-    PR_NUMBER="$candidate"
-    BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
-    break
-  fi
-done
+if [ -n "$CANDIDATE_PRS" ]; then
+  while IFS= read -r candidate; do
+    EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$candidate")
+    CANDIDATE_ISSUE=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))")
+    if [ "$CANDIDATE_ISSUE" = "$ISSUE_NUMBER" ]; then
+      PR_NUMBER="$candidate"
+      BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
+      break
+    fi
+  done <<< "$CANDIDATE_PRS"
+fi
 ```
 
 If no candidate's `issue_number` matches `$ISSUE_NUMBER` (including when there are zero candidates), `PR_NUMBER` stays empty — the Issue is treated as patch route, same as if no PR were found at all. Default to `BASE_BRANCH=main` if no PR is found or base branch cannot be fetched.

@@ -748,3 +748,75 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"0 error"* ]]
 }
+
+# --- Unquoted word-split for-loop tests (#1318) ---
+
+@test "error: unquoted scalar for-loop is rejected" {
+    mkdir -p "$PROJECT_ROOT/skills/myskill"
+    cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
+---
+name: myskill
+description: A test skill
+---
+
+# Test Skill
+
+```bash
+CANDIDATE_PRS=$(gh pr list --search "closes #1" --state merged --json number --jq '.[].number' | head -10)
+```
+
+```bash
+for candidate in $CANDIDATE_PRS; do
+  echo "$candidate"
+done
+```
+EOF
+
+    run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"unquoted_word_split"* ]]
+}
+
+@test "success: while-read-loop form passes validation" {
+    mkdir -p "$PROJECT_ROOT/skills/myskill"
+    cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
+---
+name: myskill
+description: A test skill
+---
+
+# Test Skill
+
+```bash
+CANDIDATE_PRS=$(gh pr list --search "closes #1" --state merged --json number --jq '.[].number' | head -10)
+```
+
+```bash
+if [ -n "$CANDIDATE_PRS" ]; then
+  while IFS= read -r candidate; do
+    echo "$candidate"
+  done <<< "$CANDIDATE_PRS"
+fi
+```
+EOF
+
+    run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"0 error"* ]]
+}
+
+@test "error: unquoted scalar for-loop in modules/*.md is rejected" {
+    create_valid_skill
+    create_include "example-module.md" '# example-module
+
+```bash
+for candidate in $CANDIDATE_PRS; do
+  echo "$candidate"
+done
+```
+'
+
+    run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"unquoted_word_split"* ]]
+}
