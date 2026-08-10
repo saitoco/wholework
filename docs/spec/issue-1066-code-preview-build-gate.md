@@ -248,6 +248,7 @@ Issue 本文が「実装時に実機で確認すること」と留保してい�
 
 cutoff: `2026-07-29T05:20:59Z` (直近の `phase/*` ラベル付与時刻)。上記 1 件のみが cutoff 以降のコメント。`wholework-event: type=verify-fail` / `type=preview-ac-unverified` マーカーを持つコメントは存在しない。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1066#issuecomment-5114416916
 ## issue retrospective
 
 `/issue 1066 --non-interactive` で既存 Issue Refinement を実行した。
