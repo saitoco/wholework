@@ -94,3 +94,6 @@
   - AC3: audit 提案の `command "bats --filter 'Until mode section: triage insertion' tests/auto-batch.bats"` を実機 (Bats 1.13.0) で空撃ちしたところ、該当テスト 0 件でも `1..0` を出力して exit 0 (成功) を返すことを確認した。これは AC3 が本来検出しようとしていた「新規テストを追加しなくても常時 PASS する」問題を形を変えて再導入するため不採用とし、`grep "{新規テスト名}" tests/auto-batch.bats` (新規テスト文字列の存在確認。実装前は不一致) と `command "bats tests/auto-batch.bats"` (全テスト — 新規 2 件を含む計 22 件 — が pass することの確認) の 2 段構えに変更した。
 - **Issue #953 との関係**: 本 Issue は #953 (`--until` モード本体) の post-merge 実運用検証から派生した追加改善。`scripts/resolve-batch-query.sh` 自体への変更はなく (純粋な label glob match のままでよい)、`skills/auto/SKILL.md` の Until mode セクションと関連ドキュメントのみが変更対象。
 - **Option B (scoped `/triage $N`) を採用しない理由の補足**: Issue 本文の Proposal は Option B の課題を「`Skill(wholework:verify)` 呼び出し結果から起票 issue 番号を回収する経路の新設が必要」とのみ記述しているが、`/spec` の調査で追加の構造的制約を発見した — Option B は「セッション自身が起票した issue」のみを対象にするため、原理的に「ループ開始前から存在する未 triage issue」を Round 1 からカバーするという Issue の明示的要件を満たせない。この制約が Option A 採用の決定打であり、実装コストの多寡は副次的な理由にとどまる。
+
+## Consumed Comments
+No new comments since last phase.
