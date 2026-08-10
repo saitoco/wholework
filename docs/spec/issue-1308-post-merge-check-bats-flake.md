@@ -97,3 +97,28 @@ macOS (BSD) の `mktemp(1)` は man page に明記されている通り、**末�
 ### Notes for Next Phase
 - `/verify` は Post-merge AC を CI 実行時の `$GITHUB_STEP_SUMMARY` 観測で判定する (`docs/tech.md` § CI bats Parallel/Serial Split の Serial re-run セクションが出現しないことを確認)。
 - Pre-merge AC 2件は本フェーズで `[x]` 済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- triage が Pre-merge AC を単発実行から「5 回連続 PASS」のループ実行へ強化した判断は妥当だった。本 Issue のバグは非決定的レース (`--jobs` 実行時のみ、FAIL 件数が実行毎に変動) であり、単発 PASS では解消の根拠にならない。
+
+#### spec
+- Issue Notes が優先調査対象として挙げていた `WHOLEWORK_SCRIPT_DIR` / `PATH` 経由のモック解決経路は、切り分け実験 (`$BATS_TEST_TMPDIR` の 4 並列出力比較) により真因ではないと否定され、別方向 (macOS BSD `mktemp(1)` の trailing-X 制約) で真因に到達した。Notes の仮説に引きずられず実測で切り分けた点が有効に働いた。
+- Changed Files が 1 ファイルのみと判明したため Size を M → XS へ再評価し、route を patch に確定した。事前見積り (M) と実態の乖離を spec フェーズで補正できている。
+
+#### code
+- Spec の Implementation Steps をそのままの順序で実装し、design deviation なし。
+- Code Retrospective に記録された Design Gap (Step 8 の先行コミットにより Step 11 の規定フォーマット到達時に未コミット差分が残らず `git commit --amend` で訂正) は、既存 Issue #1134 (`code: Step 8 の粒度別コミットと Step 11 の closes-commit 要件の衝突を明文化`) がカバーする範囲であり、新規起票は不要。
+
+#### review / merge
+- patch route のため該当なし。
+
+#### verify
+- FAIL / UNCERTAIN は 0 件。Pre-merge 2 件は code フェーズで verify command 実行済みのため already-checked skip rule で SKIPPED。
+- **横展開の確認**: 本 Issue が修正した非移植的テンプレート形式 (`mktemp <path>-XXXXXX.<ext>`) が他に残っていないことを `scripts/*.sh` 全体で確認した。現存する `mktemp` 呼び出しは 7 箇所 (`apply-run-fact-match.sh:158` / `claude-watchdog.sh:47` / `gh-issue-edit.sh:118` / `post_merge_check.sh:35` / `gh-pr-review.sh:84` / `pre-merge-check.sh:52` / `wait-ci-checks.sh:30`) で、いずれも引数なしの `mktemp` または `mktemp -d` であり、同種のバグは残存しない。横展開 Issue の起票は不要。
+
+### Improvement Proposals
+- N/A (code フェーズの Design Gap は既存 #1134 でカバー済み、横展開余地は上記の通り無し)
