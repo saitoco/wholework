@@ -164,6 +164,10 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 - 新たな傍証: session `94570-1786069858` (2026-08-07) で 4 並列 sub-issue が `auto-max-concurrent` 既定値5の範囲内で完走 (worktree/push/merge 競合ゼロ、`concurrent_commit_detected` 69件はすべて無害な検知イベント)。session `2319-1786222234` (2026-08-09) でも 3 並列が同様に完走
 - semaphore 機構自体は小規模 (3-4 並列) では実運用で正しく機能していることが確認できた。ただし本条件が求める 50+ 規模での OOM/rate limit kill 抑制効果はまだ未実測 — 引き続き Nuxt → Next 移行等の大規模 XL 実行を待つ
 
+### 2026-08-10 再々確認 (/auto #953 セッションから)
+
+`/auto #953` (pr route、単発実行) の event-based observation scan で再度 dispatch された。XL sub-issue 並列実行は今回も発生しておらず、結論は変わらず SKIPPED を維持。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/589#issuecomment-4700058969
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 589` to verify the condition / https://github.com/saitoco/wholework/issues/589#issuecomment-4756911035
