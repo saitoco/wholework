@@ -77,3 +77,36 @@ Issue 本文が示す優先案 (ストリッパーを二重バッククォート
 - **既知の限定事項 (スコープ内で許容)**: 後方参照パターンは「開始と同じ長さのバッククォート列を最初に見つけた時点で閉じる」ため、閉じデリミタの直前・直後にさらにバッククォートが連続する極端なケース (短いフェンスが長いフェンスの一部に前置されるようなネスト) では、完全な CommonMark 仕様と異なる挙動になりうる。本 Issue が対象とする「二重バッククォートで単一バッククォートをエスケープする」通常の用法 (Issue 本文の実例と一致) では正しく動作することを確認済み。SKILL.md 本文でこのような極端なネストが使われている実例は現時点で確認されていないため、スコープ外として許容する。
 - **横展開候補 (本 Issue のスコープ外)**: `scripts/check-language-convention.py` の `INLINE_CODE_PATTERN` (line 41) にも同種の単一バッククォート限定の弱点がある。ただしこちらは diff の 1 行単位でストリップを適用するため、`validate-skill-syntax.py` のように複数パラグラフにまたがる広範囲の巻き込みは起こりにくい。Issue #1130 の Purpose は `validate-skill-syntax.py` に明示的にスコープされているため (Issue 本文 Background/Purpose 参照)、本 Spec の変更対象には含めない。将来 CJK 誤検出・見逃しの実例が観測された場合は別途検討する。
 - **CommonMark 仕様の直接引用は不可**: `spec.commonmark.org` および `commonmark-spec` リポジトリの Code spans セクションを WebFetch で参照しようとしたが、文書が長大で該当セクションを取得できなかった。既知のバッククォート文字列マッチングルール (開始・終了デリミタの長さが一致するまでを 1 つのコードスパンとする規則) に基づいて修正パターンを設計し、実際の入出力を Python で直接検証することで正当性を確認した。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の Implementation Steps 通りに実装した (`INLINE_CODE_PATTERN` を後方参照パターン `(`+)(?:(?!\1).)+?\1` + `re.DOTALL` に置き換え、`tests/validate-skill-syntax.bats` に新規 `@test` を追加)
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Notes セクションが実装前に既知の限定事項・横展開候補・優先案採用理由をすべて記録済みだったため、実装中に新たな設計判断は発生しなかった
+
+### Rework
+
+- N/A
+
+### Full bats suite (AC4) — parallel-only flaky failure observed, unrelated to this change
+
+`bats --jobs 18 tests/*.bats` (1658 tests) で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が 1 件のみ FAIL した。`docs/tech.md` § CI bats Parallel/Serial Split に記載済みの既知パターン (#1221/#1224/#1227/#1260、主に `tests/post_merge_check.bats` で発生) と一致するため、`bats tests/post_merge_check.bats` で serial 再実行し 10/10 PASS を確認した。本 Issue の変更 (`scripts/validate-skill-syntax.py` の正規表現のみ) とは無関係と判断し、AC4 は PASS 扱いとした。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の優先案 (バッククォート連続長の後方参照パターン `(`+)(?:(?!\1).)+?\1` + `re.DOTALL`) をそのまま採用し、代替案 (検出+エラーメッセージ方式) は不採用。理由は Spec Notes に記録済み
+- Pre-merge AC 4 件すべてを rubric 判定 (AC1/AC2) と command 実行 (AC3/AC4) で確認し、Issue のチェックボックスを更新済み
+
+### Deferred Items
+- Post-merge 手動 AC (`二重バッククォートのインラインコードを含む SKILL.md を編集し、validator が誤検出せずに通ることを確認する`) は `verify-type: manual` のため未実施。`/verify` フェーズでの実施を想定
+- 横展開候補 (`scripts/check-language-convention.py` の同種の弱点) は本 Issue のスコープ外として Spec Notes に記録済み。対応する場合は別 Issue
+
+### Notes for Next Phase
+- `bats tests/*.bats` フルスイート実行時、`tests/post_merge_check.bats` の 1 件が並列実行時のみ FAIL する既知の flaky パターンを踏んだ (docs/tech.md 記載の #1221/#1224/#1227/#1260 系統と同一)。serial 再実行で PASS を確認済みなので `/verify` で再度このテストが flaky に出ても本 Issue の実装起因ではない
+- 実装は `scripts/validate-skill-syntax.py` の正規表現 1 箇所のみの変更。既存 6 箇所の呼び出し元 (`validate_shell_sensitive_chars` 等) はすべて同じ `INLINE_CODE_PATTERN` を参照しているため、修正は自動的に全箇所に反映される
