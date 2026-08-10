@@ -55,3 +55,33 @@
 - **0 件判定規約の格納先**: Issue 本文は `modules/verify-classifier.md` を例示先として挙げているが、同ファイルの Purpose は「post-merge 条件の verify-type 分類基準」に限定されており、この規約が実際に問題化した #1275 の実例は Pre-merge の rubric AC だった。`modules/verify-patterns.md` は `/issue` `/spec` 双方が参照する pre/post-merge 共通の AC 記述ガイドライン集であり、既存 §26 (Absence-Verifying Acceptance Conditions) と主題的に連続するため、そちらへ §28 として追加する。Pre-merge AC の rubric 文言は「(または採用案に応じた規約ファイル)」を許容しており、この選択と矛盾しない。
 - **#1251 / #1294 からの繰越の解消**: 「件数 0 の AC の判定ルール」は元々 #1251 への追記として提案されたが、コメント投稿タイミングが #1251 の L0 消費カットオフ (`phase/issue` 付与時刻: 2026-08-08T23:29:13Z) より前だったため未反映のまま #1251 が `phase/done` でクローズされた (2026-08-09T00:17:09Z)。本 Issue が案 3 を採用したことで、この繰越スコープは本 Issue 内で解消され、新たな follow-up Issue の起票は不要である。
 - Issue #1304 の AC5 (`command "bats tests/"`) 自体の書き換えは本 Issue のスコープ外 (Issue 本文 Notes に明記されている)。`/verify 1304` 実行時に同じ UNCERTAIN 判定を受ける見込みだが、これは Issue #1304 側の解決事項として残す。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-3 をそのまま実装。追加のガイダンス — 60 秒タイムアウト超過の注記、patch/pr route の使い分け — は Implementation Steps が指示する内容の具体化であり、設計からの逸脱ではない)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- Step 9 の Behavioral Change Detection で `bats --jobs 18 tests/` を実行した際、`tests/post_merge_check.bats` の `multiple issues: processed sequentially` が 1 件 FAIL したが、`bats tests/post_merge_check.bats` (serial) では PASS した。これは並列実行限定のフレークであり、既存 Issue #1308 (`tests/post_merge_check.bats: bats --jobs 並列実行時に 2 件 FAIL するフレークを解消`) が同一ファイルの同種フレークを既に追跡済みのため、follow-up Issue は起票しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- §24 の「Recommended scope by test framework」表は narrow/full の 2 列構成にし、bats は本リポジトリの `.github/workflows/test.yml` の `Run bats tests` job を job-level sub-form の具体例として明記した。pytest/pnpm/npm は本リポジトリに該当ワークフローが存在しないため、workflow-level 形のプレースホルダ (`--workflow=<file>.yml`) とした。
+- `modules/verify-executor.md` への注記は Timeout Coverage Audit 表の直後・Out of scope 段落の直前に配置し、`modules/verify-patterns.md` §24 と「github_check: Job-Level Conclusion Sub-Form」への相互参照を含めた (Implementation Step 2 の指示通り)。
+- §28 (件数 0 判定既定ルール) は §26 の直後ではなく §27 の直後・`## Output` の直前に追加した (Implementation Step 3 の指示通り)。
+
+### Deferred Items
+- Post-merge AC (`verify-type: manual`、「上記いずれかの対応方針が設計され...検証可能になっている」) の判定は `/verify` フェーズに委ねる — 本 Issue の Changed Files (§24 修正・§28 新設・Timeout Coverage Audit 注記) がこの判定の根拠になる。
+- Issue #1304 の AC5 (`command "bats tests/"`) 自体の書き換えは本 Issue のスコープ外のまま (Issue Notes に明記済み)。
+
+### Notes for Next Phase
+- Pre-merge rubric AC 1/2 は `/code` Step 10 で PASS 判定済み (根拠: §28 追加)。Issue チェックボックスは `[x]` に更新済み。
+- `tests/post_merge_check.bats` の並列限定フレーク (`multiple issues: processed sequentially`) は本 Issue の変更と無関係。Issue #1308 が既存追跡中のため、`/review`/`/verify` で再発を見ても本 Issue の regression と誤認しないこと。
