@@ -118,3 +118,6 @@ Issue で確定した設計方針:
 ### Improvement Proposals
 
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results (/verify #124) / https://github.com/saitoco/wholework/issues/124#issuecomment-4231359722
