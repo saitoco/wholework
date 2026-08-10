@@ -252,23 +252,23 @@ N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
 N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜6 を逐語適用した。`GUARD_PREFIX` への追記文言はバッククォート・`$`・二重引用符 (先頭/末尾以外) ・バックスラッシュを含まない素のテキストで作成し、検出キーワードには `no re-invocation guarantee` を採用 (`GUARD_PREFIX` にのみ現れることを実装前後で `grep` により確認)。
-- `modules/execution-context.md` の `### Wrapper-Level Constraint Injection` サブ節には、注入箇所・仕組み・適用範囲 (exhaustive マーカー付き) ・wrapper なし skill への非適用理由・4 世代の経緯を Spec Implementation Step 2 の指示通りに記載した。
-- Issue Pre-merge AC の iteration 2 分 5 件 (rubric 3 件・section_contains 1 件・command 1 件) はすべて手動検証で PASS したためチェック済みに更新した。rubric/section_contains は fork context でも safe mode の対象外 (read-only 系) のため通常評価されるが、command 型 (AC14) は safe mode で skip されるため、`/code` セッション自身が `bats` を直接実行し 192 件 PASS を確認したうえで手動でチェックした。
+- Pre-merge AC 14 件を verify-executor (safe mode) で独立検証し、rubric 3 件を含め全件 PASS を確認した (checkbox は `/code` セッションが既にチェック済みだったため更新なし)。
+- review-spec + review-bug×2 を並列実行し、review-bug の指摘 3 件 (相対パス参照懸念 / 明示 timeout 欠落 / skill 除外文言の緊張) を adversarial verification (opus, 1 件ずつ) にかけた。2 件 PASS、1 件 (相対パス参照) は「本リポジトリに裸の相対パス参照が既に 177 件存在する」という一次証跡で REJECT。
+- SHOULD 3 件・CONSIDER 3 件 (MUST は 0 件) をすべて修正した。特に `scripts/guard-prefix.sh` の新規段落が明示 `timeout` 指定を欠いており、本 Issue が最初に対象とした失敗モードを部分的に再導入しかけていたため、この修正は優先度が高いと判断した。
 
 ### Deferred Items
-- `run-spec.sh` の `auto-retry-on-fail` 欠如 → #1329 (spec phase から引き継ぎ、本 Issue のスコープ外)。
-- Tier 2 detector の signature 追加 → #1323 (spec phase から引き継ぎ)。
-- wrapper 以外の `claude -p` 起動経路 (`scripts/spawn-recovery-subagent.sh`、`scripts/run-auto-sub.sh:782` の Tier 3 recovery sub-agent) への同種制約の要否は未判断のまま。
-- Post-merge observation AC 3 件 (code / review / spec) は `session=next` により次回以降の `/auto` 実行時に評価される。
+- `run-spec.sh` の `auto-retry-on-fail` 欠如 → #1329 (review phase から引き継ぎ、本 Issue のスコープ外)。
+- Tier 2 detector の signature 追加 → #1323 (review phase から引き継ぎ)。
+- wrapper 以外の `claude -p` 起動経路 (`scripts/spawn-recovery-subagent.sh`、`scripts/run-auto-sub.sh:782` の Tier 3 recovery sub-agent) への同種制約の要否は未判断のまま (`modules/execution-context.md` に既知のギャップとして明記済み)。
+- Post-merge observation AC 3 件 (code / review / spec) は `session=next` により次回以降の `/auto` 実行時に評価される。review phase 分 (AC16) は未チェックのまま。
 
 ### Notes for Next Phase
-- `/review` は Pre-merge AC 5 件 (iteration 2 分) が全てチェック済みであることを CI 経由で再確認できる。rubric 3 件は静的な文書レビューでも再確認可能。
-- 本セッション自体、並行する他セッションの CPU 競合により `bats` フルスイート実行が Bash tool の 600000ms timeout ceiling を複数回超過してバックグラウンド移行した (Code Retrospective 参照)。`/review` が同様のフルスイート実行を行う場合、同じ競合が再現しうることを踏まえておくとよい。
-- `docs/structure.md` / `docs/ja/structure.md` は日英同期済み。追加の翻訳同期作業は不要。
+- `/merge` は Pre-merge AC 14 件が全てチェック済みであることを確認できる。CI も全 11 ジョブ SUCCESS。MUST 指摘は 0 件のため通常の merge フローで進行可能。
+- review フィックス (2 commit 目、`5bedd861`) は `modules/execution-context.md` と `scripts/guard-prefix.sh` のみを対象とし、`bats --jobs 8` で 192 件全 PASS を再確認済み。`skills/` は変更していないため `validate-skill-syntax.py` は形式的な再確認のみ。
+- 本 review セッション自身も、同一 bats コマンドを誤って連続実行した際に 300s タイムアウトでバックグラウンド移行を経験した (Retrospective 参照)。単一呼び出しでの再実行により回避したが、`/merge` 側でも同種のコマンド重複実行には注意すること。
 
 ## Verify Retrospective
 
@@ -435,3 +435,18 @@ N/A — Implementation Steps 1〜6 を Spec の記述通りに実施した。
 ### Rework
 
 N/A — 実装は Spec の Implementation Steps をそのまま適用し、手戻りは発生しなかった。
+
+## review retrospective (iteration 2)
+
+### Spec vs. implementation divergence patterns
+
+- `modules/execution-context.md` の新設 `### Wrapper-Level Constraint Injection` 節は本 Issue の AC10-13 (rubric) が判定対象とする実装成果物そのものだが、review で 2 件の事実誤り (#1175 の帰属誤り、"every fork-context process" というカバレッジの過大表現) が見つかった。いずれも `/code` セッション自身が「文章として整合していそうか」を確認した範囲では検出されず、git log の実測 (`git show 6f388c14 --stat`) や隣接スクリプトの grep (`spawn-recovery-subagent.sh` が `guard-prefix.sh` を source しないこと) といった一次証跡への裏取りで初めて判明した。rubric AC が「実装成果物側の記述で判定する」設計になっている以上、その記述自体の事実精度を独立した review が担保する価値は高い。
+
+### Recurring issues
+
+- review-bug×2 (diff scan / security scan) が独立に同じ 2 件 (相対パス参照懸念、skill 除外の文言的緊張) を検出した。観点を分けた 2 エージェントが同一の指摘に収束したことは、その指摘の顕著性の高さを示す一方、adversarial verification の結果は割れた (相対パス懸念は REJECT、skill 除外の緊張は PASS) — 表層的な "2 エージェントが同意した" だけでは real/false の判別に使えないことの実例になった。
+- より重要な再発パターン: 本 PR 自身が追加した `scripts/guard-prefix.sh` の新規段落が、Issue #1213 が最初に対象とした失敗モード (明示 `timeout` なしでの完了通知待ち) を再導入しかけていた。過去 2 世代の guard (`skills/review/SKILL.md:39`, `skills/code/SKILL.md:322`) はいずれも「foreground + 明示 timeout」をセットで記述していたが、今回の wrapper 層への移設で明示 timeout の要素だけが脱落した。**guidance をある層から別の層へ移設する際は、移設元が持っていた要素を 1 対 1 でチェックリスト化して移設先と突き合わせる**ことが、今回のような部分的劣化を防ぐ具体策になる。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 14 件はすべて機械的な verify command (rubric 3 件含む) で判定でき、UNCERTAIN や verify command 自体の不備は 0 件だった。rubric AC (10-12) は "実装または文書から確認できる" という抽象的な文言だが、`modules/execution-context.md` に判定対象を明示的に限定していたため、grader (今回は `/review` 自身による直接検証) が一次証跡 (grep, git log, git show) に容易にアクセスでき、判定コストは低かった。Triage AC audit のフィードバックで rubric の判定対象を明示化する運用が、この iteration でも効果を発揮した形。
