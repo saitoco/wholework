@@ -137,3 +137,6 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 - **Steering Docs sync candidate check 実施済み・変更不要**: `grep -rn "get-auto-session-report.sh\|load_watchdog_timeout\|SILENT_THRESHOLD\|SILENT_MARGIN\|within 600s of watchdog limit" docs/ tests/ scripts/` で横断検索した。`docs/structure.md`・`docs/tech.md` にヒットはあるが、いずれも `--metrics-only` の出力先や `WHOLEWORK_ISSUE_BODY_DIR` など本修正が変更しない一般的な説明であり、`SILENT_THRESHOLD_*` の解決経路には触れていない。`docs/spec/issue-666-*.md`・`issue-939-*.md`・`issue-1300-*.md` は過去の disposable Spec (docs/tech.md の "Spec-first (disposable)" 方針により編集対象外)。`docs/sessions/**` は過去セッションの記録でありビルド対象外。以上より追加のドキュメント変更は不要と判断した。
 - **`SILENT_MARGIN=600` の妥当性は本 Issue のスコープ外**: Issue 本文 Notes の判断を踏襲し、固定マージンの是非は変更しない。
 - Issue 本文には元々 CI 検証 AC (`github_check`) を含めていない (route 依存の形式選択は Size 確定後にしか決まらないため) — Size が M/L (pr route) と確定した場合、`/code` フェーズで `github_check` AC の追加要否を再検討する。
+
+## Consumed Comments
+No new comments since last phase.
