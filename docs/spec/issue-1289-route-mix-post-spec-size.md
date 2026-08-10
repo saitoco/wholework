@@ -70,6 +70,11 @@ Acceptance criteria 3 (`operate` route・`xl`・フェーズ未達 Issue の 3 �
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — non-interactive 自動解決ログ (Auto-Resolve Log) の記録。内容は既に Issue 本文の「対応方針 (案)」「Auto-Resolved Ambiguity Points」に反映済みのため、本 Spec への追加指示なし / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228135341
 - 本 `/code` 実行時点で新規コメントなし (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-08T21:33:24Z)。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228467427
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228485978
+- saito / MEMBER / first-class / 本 Issue の Background (#1279 の verify retrospective 由来、実測 1 例) に対し、**追加の実測 2 例**が / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228991771
+- saito / MEMBER / first-class / ## 訂正: 前コメントの実測 2 例は「修正が機能していること」の裏付けでした / https://github.com/saitoco/wholework/issues/1289#issuecomment-5229446676
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1289#issuecomment-5235408915
 ## Code Retrospective
 
 ### Deviations from Design
