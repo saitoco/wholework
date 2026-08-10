@@ -99,3 +99,42 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Issue Retrospective (`/issue` Existing Issue Refinement, 2026-08-10T13:48:28Z): AC を Pre-merge 3 件 (rubric + 機械的補助チェック) に再構成したこと、および Proposal の A/B 実装方式選択は `/issue` (What) と `/spec` (How) の責務境界に照らして `/spec` の判断事項として Issue 側で確定させなかったことを記録。本 Spec の Option A (bulk `/triage`) 採用判断はこの委譲を受けたもの。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241168319
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Triage AC audit (2026-08-10T13:54:23Z): Issue 本文の Pre-merge AC 3 件すべてに verify command の不具合を検出 (AC1: `section_contains` heading 引数の `###` 残存、AC2: `grep "bulk|scoped"` の無関係な既存一致、AC3: 既存テスト全 PASS 済みによる保証不足) し、次フェーズでの反映を依頼。本 Spec 作成時に Issue 本文を更新して反映した (詳細な空撃ち検証record は Notes 参照)。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241233384
+
+### code phase (cutoff: phase/ready 付与時刻 2026-08-10T14:19:09Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1〜3 に記載された全文置き換え・テスト追加・ドキュメント追記をそのまま実装した。ステップの並び替えや省略・統合は発生していない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes に verify command の空撃ち検証記録が既に詳細に残されており、実装フェーズで新たに発見した設計上の曖昧さはなかった。
+
+### Rework
+- N/A — 実装は 1 パスで完了し、テスト失敗による手戻りは発生しなかった (`bats --jobs 18 tests/` 全 1690 件 PASS)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 乖離なし。review-light エージェントが Spec の Implementation Steps 1〜3 と PR diff (Until mode Step 3 の全文追加・`tests/auto-batch.bats` の新規テスト2件・`docs/workflow.md`/`docs/ja/workflow.md` の追記) を突き合わせ、いずれも Spec 記載どおりであることを確認した。再番号付けされたステップ間の内部参照 (新 step 6/8 など) にも古い番号への取り残しはなかった。
+
+### Recurring issues
+- 唯一の指摘 (SHOULD: `Skill(skill="wholework:triage")` 呼び出しの失敗処理未定義) は本 PR 単発の指摘であり、他 PR との明確な反復パターンはこの時点では確認していない。ただし新しい Skill/script 呼び出しを SKILL.md の自然言語手順に組み込む際、周辺ステップ (List mode step 2/3/5/7 等) と同型の失敗処理節を書き忘れやすい点は一般的な注意点として次回以降のレビューでも意識する価値がある。
+
+### Acceptance criteria verification difficulty
+- 困難なし。Pre-merge AC 3 件はいずれも `section_contains`/`grep`/`command` の機械的チェックで PASS 判定でき、UNCERTAIN はゼロだった。Issue 起票直後の Triage AC audit が事前に verify command の不具合 3 件を検出・修正していたため、review フェーズでの空撃ち確認は不要だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `REVIEW_DEPTH=light` (`--light` 明示指定、Size M とも整合) のため review-light エージェント1体による4観点統合レビューを採用し、review-spec/review-bug の2エージェント fan-out は行わなかった
+- SHOULD 指摘 (`wholework:triage` dispatch の失敗処理欠如、`skills/auto/SKILL.md:1211`) は周辺ステップとの一貫性を重視しその場で修正した。CONSIDER 指摘 (`docs/workflow.md`/`docs/ja/workflow.md` の base branch との `git merge-tree` コンフリクト検出) はコード修正を要さない情報提供のためスキップした
+
+### Deferred Items
+- N/A — MUST issue なし。Pre-merge AC 3 件はすべて review フェーズでも PASS 再確認済み
+
+### Notes for Next Phase
+- `/merge` 時に `docs/workflow.md` / `docs/ja/workflow.md` で base branch (PR #1336 / Issue #1049) との `git merge-tree` コンフリクトが発生する見込み。本 PR の diff は隣接する別段落 (`--batch --until <query>`) のみを変更しており、いずれの側の内容も diff 内では失われていないことを review フェーズで確認済みなので、両側の追記を保持する形でリベース/コンフリクト解消すればよい

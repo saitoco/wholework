@@ -1206,26 +1206,29 @@ Condition-driven loop: resolve the query → process the results as List mode �
 
 **Safety valve**: `--max-rounds` defaults to `3` and cannot be disabled (opt-out is not supported) — Until mode always terminates after at most `MAX_ROUNDS` rounds even if the query keeps matching new Issues every round.
 
-1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`. Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section; retain `AUTO_STOP_AT` for step 5's delegation to List mode step 7's verify orchestration gate below — List mode's own "Load stop-at setting (List mode only)" block sits outside its numbered steps 1–7, so step 5's "steps 1–7 unchanged" reuse does not cover it on its own.
-2. Increment `ROUND` by 1. If `ROUND > MAX_ROUNDS`: output "Until mode: max-rounds ($MAX_ROUNDS) reached; stopping." and go to step 7.
-3. Run:
+1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`. Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section; retain `AUTO_STOP_AT` for step 6's delegation to List mode step 7's verify orchestration gate below — List mode's own "Load stop-at setting (List mode only)" block sits outside its numbered steps 1–7, so step 6's "steps 1–7 unchanged" reuse does not cover it on its own.
+2. Increment `ROUND` by 1. If `ROUND > MAX_ROUNDS`: output "Until mode: max-rounds ($MAX_ROUNDS) reached; stopping." and go to step 8.
+3. Run `Skill(skill="wholework:triage")` (bulk `/triage`, no Issue number) to triage any Issues in the project that are still missing metadata (Type/Size/Priority/theme). Run this unconditionally every round, including round 1 — this is what lets the loop pick up Issues that were already untriaged before it started, not only ones created mid-session. Bulk `/triage`'s own Bulk Execution flow assigns `theme/*` labels as part of its normal metadata pass (same judgment as single-Issue Step 6a), so any Issue newly labeled here becomes visible to step 4's query resolution on this same round. On failure (e.g. a `gh` API/auth error inside bulk `/triage`'s own backlog scan): output a warning and proceed to step 4 anyway — fail-open, since a triage failure should not block query resolution or processing of Issues that are already correctly labeled.
+
+   **Adopted approach**: bulk `/triage` (Proposal option A) is adopted over scoped `/triage $N` (option B). Option B would only reach Issues created by this session's own `retro-proposals` step — it has no visibility into Issues that were already untriaged before the loop started, which this step must also cover from round 1 onward. Reaching those pre-existing Issues under option B would require re-deriving the same project-wide untriaged scan bulk `/triage` already performs, without the plumbing cost option B was chosen to avoid (surfacing created-Issue numbers out of List mode's `wholework:verify` retro-proposals dispatch, a step reused verbatim by Count/List/Resume modes). Option A's acknowledged trade-off — it also triages backlog Issues unrelated to this `--until` session — is accepted: the 2026-08-10 measurement that motivated this Issue found the call near-zero-cost whenever there is nothing left to triage, the common case once a project's backlog is caught up.
+4. Run:
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh --query "$UNTIL_QUERY" --exclude "$PROCESSED"
    ```
-   - Exit 1 (parse error — the query itself is malformed): abort Until mode entirely (no `delete_batch` call needed if `write_batch` was never reached — see step 5).
-   - Exit 2 (`gh` failure): if `ROUND == 1`, abort Until mode; if `ROUND >= 2`, output a warning and treat as converged (go to step 7).
-4. If the output is empty: output "Until mode: query returned 0 issues at round $ROUND; converged." and go to step 7.
-5. Record the output as `ROUND_LIST`. Run:
+   - Exit 1 (parse error — the query itself is malformed): abort Until mode entirely (no `delete_batch` call needed if `write_batch` was never reached — see step 6).
+   - Exit 2 (`gh` failure): if `ROUND == 1`, abort Until mode; if `ROUND >= 2`, output a warning and treat as converged (go to step 8).
+5. If the output is empty: output "Until mode: query returned 0 issues at round $ROUND; converged." and go to step 8.
+6. Record the output as `ROUND_LIST`. Run:
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "$ROUND_LIST" "$COMPLETED" "$FAILED"
    ```
    (this call also serves as List mode's own checkpoint initialization — do not call `write_batch` a second time). Add each number in `ROUND_LIST` to `ALL_TARGETS` if not already present (set union — an Issue skipped by the blocked-by gate can legitimately reappear in a later round's `ROUND_LIST`; see below), then process each Issue in `ROUND_LIST` by applying `### List mode (--batch N1 N2 ...)` steps 1–7 unchanged (using the `AUTO_STOP_AT` retained in step 1 above). Whenever `update_batch ... complete` or `... fail` is called for an Issue number, add that number to `COMPLETED`/`FAILED` and to `PROCESSED`. An Issue skipped by the blocked-by gate (step 4 of List mode) is **not** added to `PROCESSED` — its blocker may clear within this same session, so it should be re-evaluated on the next round.
-6. If `CHECKIN_PER_ROUND` is `true`:
-   - If ARGUMENTS does **not** contain `--non-interactive`: use AskUserQuestion to confirm proceeding to the next round; any answer other than "continue" goes to step 7.
+7. If `CHECKIN_PER_ROUND` is `true`:
+   - If ARGUMENTS does **not** contain `--non-interactive`: use AskUserQuestion to confirm proceeding to the next round; any answer other than "continue" goes to step 8.
    - Else (ARGUMENTS contains `--non-interactive`): output "Warning: --checkin-per-round ignored in non-interactive mode." and proceed without asking.
 
-   In every case that did not go to step 7 above (including the default `CHECKIN_PER_ROUND=false` case, which asks nothing and always proceeds), go back to step 2.
-7. Run:
+   In every case that did not go to step 8 above (including the default `CHECKIN_PER_ROUND=false` case, which asks nothing and always proceeds), go back to step 2.
+8. Run:
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch "$BATCH_ID"
    ```
