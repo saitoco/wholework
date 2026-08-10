@@ -169,6 +169,7 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1312#issuecomment-5235409687
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
