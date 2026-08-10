@@ -73,16 +73,31 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light エージェントによる Spec 乖離観点の確認で、Implementation Steps 1-4 が上から順に実装されており逸脱なし。ヘッダー表の8行は実際のパースロジック (`DOT_COUNT` 単一ドット fallback ゲート、`SECTION_INDENT` による grandchild-indent ガード、セクションヘッダーのインラインコメント正規表現) と完全一致していることを確認した。
+
+### Recurring issues
+
+Nothing to note — review-bug 相当の観点も含め MUST/SHOULD/CONSIDER いずれも検出なし。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 4件は rubric 2件・command 1件・github_check 1件のいずれも決定論的に検証でき、UNCERTAIN は発生しなかった。AC4 (`github_check "gh pr checks" "Run bats tests"`) は Step 9 の CI 全ジョブ SUCCESS 確認で解決し、Phase Handoff に記録された「/review/CI で解決される」という見立てどおりだった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の設計判断 (対応方針案 A 採用、パーサ書き換え・fail-closed 化は不採用) をそのまま実装。ヘッダーコメント表を単一 SSoT とし、`--help` と `modules/detect-config-markers.md` の両方をそこへの pointer に簡略化する構成で実装した
-- 新規 negative case テスト 2 件は Spec Step 4 の指定どおり、実際に nested path が存在するにもかかわらず default が返ることを確認する形にした (2 階層ドットキー・inline hash format)
+- MUST issue が0件だったため Step 12 (Issue Resolution and Fixes) は実施なし。修正コミットは発生していない
+- Step 7 (External Review Integration) は `.wholework.yml` に copilot-review/claude-code-review/coderabbit-review いずれも未設定のため全面スキップ
+- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 該当なし。main 側との競合コンテキストなし
 
 ### Deferred Items
-- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み
+- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み (code phase から継続)
 
 ### Notes for Next Phase
-- `modules/verify-classifier.md` (L65-66) と `modules/observation-trigger.md` (L263) の Steering Docs sync candidate は、既に「`get-config-value.sh` own constraint に一致」という pointer 形式のため、新表との内容不整合なしと確認済み (変更不要)
-- Pre-merge AC 1-3 (rubric×2 + bats command) はこの phase 内で PASS 済みとしてチェック済み。AC4 (`github_check "gh pr checks"`) は PR 作成前に評価したため UNCERTAIN のまま未チェック — `/review`/`/merge`/CI で解決される
+- Pre-merge AC 1-4 すべて `[x]` チェック済み。`/merge 1341` は pre-merge AC gate をブロックなく通過できる見込み
+- Post-merge AC (opportunistic) は据え置きのまま。次に `get-config-value.sh` へ入力形状の拡張要求が来た際に単一箇所への追記とテスト追加だけで対応できるかを `/verify` で確認する
