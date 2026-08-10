@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -256,6 +256,14 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    git fetch origin
    git merge origin/main --ff-only
    ```
+
+   **Comment consumption:** If `ISSUE_NUMBER` could not be extracted (see item 1's Early Issue number extraction), skip this call — output `[consumed-comments] No related Issue resolved — skipping.` and proceed to substep 2. Otherwise, read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$ISSUE_NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=merge`. Then run the deterministic fallback:
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh "$ISSUE_NUMBER" merge --no-push
+   ```
+   `--no-push` is correct here — substep 4 below pushes to `main`, and this Consumed Comments commit rides along with it in the same push. This depends on substep 4 pushing even when the Phase Handoff write itself has nothing new to commit (see substep 4's guard, updated to check for unpushed commits rather than only staged changes).
+
+   **Why this call sits here, post-squash, rather than at the start of the skill (Step 1-2) like the other phases:** `gh pr merge --squash --delete-branch` above already ran at the top of this Step, deleting the PR branch — any commit made before that point on the now-deleted branch would be lost. Pushing early (before the squash merge) is also unsafe: it would re-trigger CI and could invalidate the mergeability state Step 1 already confirmed. Running post-squash, direct to `main`, avoids both risks while still landing before Step 5's `phase/verify` transition — the same "before this phase's own label transition" ordering the other phases follow. At the point this call runs, the most recent `phase/*` label on the Issue is still `phase/review` (`/merge`'s own `phase/verify` transition happens in Step 5, not yet reached).
 2. Glob `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` to locate the Spec (now on main):
    - The target Spec file is the worktree-local copy under `.claude/worktrees/merge+pr-$NUMBER/` (the CWD established by EnterWorktree in Step 2). All Edit and commit operations target this worktree path — not the main repo working directory.
    - If not found: output `[phase-handoff] No Spec found — skipping handoff write.` and continue
@@ -265,12 +273,11 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    ```bash
    git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
    ```
-   Check whether there are staged changes (same-content scenario guard — skips commit/push when Phase Handoff was already committed to main in a prior run or retry):
+   Check whether there are staged changes (same-content scenario guard — skips the *commit* when Phase Handoff was already committed to main in a prior run or retry):
    ```bash
    git diff --cached --quiet
    ```
-   - If exit code 0 (no staged changes): output `[phase-handoff] No changes to commit — Phase Handoff already on main. Skipping commit/push.` and proceed to Step 5
-   - If exit code non-zero (changes present): proceed with commit and push:
+   - If exit code non-zero (changes present): commit, then push (both branches below converge on the same push):
    ```bash
    git commit -s -m "Add merge phase handoff for issue #$ISSUE_NUMBER
 
@@ -279,6 +286,12 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
+   - If exit code 0 (no staged changes): output `[phase-handoff] No changes to commit — Phase Handoff already on main. Skipping commit.` — do **not** skip the push yet: substep 1's `append-consumed-comments-section.sh ... --no-push` call may have created a commit that is still unpushed at this point (e.g. when this substep's own commit is a same-content no-op on a retry but substep 1's Consumed Comments commit is new). Check for unpushed commits before deciding whether to push:
+   ```bash
+   git rev-list --count origin/main..HEAD
+   ```
+   - If both branches above find nothing to push (no staged Phase Handoff changes AND `git rev-list --count origin/main..HEAD` is `0`): skip the push and proceed to Step 5.
+   - Otherwise (either branch produced a commit, or unpushed commits already existed from substep 1): push:
    ```bash
    git push origin HEAD:main
    ```

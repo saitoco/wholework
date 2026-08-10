@@ -1,5 +1,12 @@
 # Issue #1316: l0-surfaces: 各フェーズ冒頭でのコメント consume を必須化しパイプライン前後の欠落窓を解消
 
+## Autonomous Auto-Resolve Log
+
+### Code Phase
+
+- **Step 3 `phase/ready` ラベルチェック: ラベル不在 (`phase/code` に遷移済み) だが Spec 存在のため続行** — reason: `gh issue view 1316 --json labels` で確認すると `phase/ready` は既に `phase/code` へ遷移済みで、`reconcile-phase-state.sh code-pr 1316 --check-precondition` も `matches_expected: false` (診断: `phase/ready` ラベル不在) を返した。ただし Spec (`docs/spec/issue-1316-l0-surfaces-comment-consume.md`) は既に完全な形で存在し、Implementation Steps・Verification まで記載済みであるため、Spec 不在を前提とした「Issue 本文から要件を読み取る」フォールバックは不要と判断し、既存 Spec に基づいて実装を続行した。
+  - Other candidates: 中断して `/spec 1316` の再実行を促す — 却下。Spec は既に spec phase の内容を満たしており、再実行は不要な手戻りになる。
+
 ## Overview
 
 `modules/l0-surfaces.md` の Comment Consumption Procedure は `/spec`・`/code`・`/verify` の 3 フェーズでしか呼ばれておらず、`/issue`・`/review`・`/merge` は Issue コメントを構造的に consume しない。結果として (1) Issue がパイプラインに入る前に投稿されたコメント (欠落窓 1 — #1251 で実測: 3 件の提案が `phase/done` まで一度も読まれなかった) と、(2) review/merge 期間中に投稿された通常コメント (欠落窓 2) が失われる。
@@ -74,6 +81,7 @@
 
 ### Bash Command Patterns
 - `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` — `skills/review/SKILL.md` と `skills/merge/SKILL.md` に新規call site追加 (`/spec`/`/code`/`/verify` の `allowed-tools` には既存)
+- `gh api:*` — `skills/issue/SKILL.md`・`skills/review/SKILL.md`・`skills/merge/SKILL.md` の 3 スキルに追加。Comment Consumption Procedure (`modules/l0-surfaces.md`) の Step 1 が `gh api "repos/{owner}/{repo}/issues/$N/timeline"` を実行するために必要 (`/spec`/`/code`/`/verify` には既存の前例あり)。`scripts/check-allowed-tools.sh skills/` で 3 スキルとも一致を確認済み。
 
 ### Built-in Tools
 none (追加なし)
@@ -100,7 +108,7 @@ none
 
 ### Out of Scope
 
-- **`/review`/`/merge` の `comments_consumed` イベント発火**: `scripts/emit-event.sh` の `_emit_comments_consumed()` は現状 `run-code.sh` と `run-auto-sub.sh` の spec/code パスにのみ組み込まれている (`/verify` も `run-verify.sh` が存在しないため対象外)。`run-review.sh`/`run-merge.sh` へ組み込むには `run-auto-sub.sh` → `run-review.sh`/`run-merge.sh` の呼び出し連鎖における `EMIT_ISSUE_NUMBER` 変数のスコープを精査する必要があり、本 Issue の Acceptance Criteria はこれを要求していない。`/audit stats` のメトリクス完全性が明示的な目標になった際の follow-up として残す。
+- **`/issue`/`/review`/`/merge` の `comments_consumed` イベント発火**: `scripts/emit-event.sh` の `_emit_comments_consumed()` は現状 `run-code.sh` と `run-auto-sub.sh` の spec/code パスにのみ組み込まれている (`/verify` も `run-verify.sh` が存在しないため対象外)。本 Issue で新たに consume フェーズとなった `/issue` (`run-issue.sh`) にも同様に組み込まれていない。`run-issue.sh`/`run-review.sh`/`run-merge.sh` へ組み込むには `run-auto-sub.sh` からの呼び出し連鎖における `EMIT_ISSUE_NUMBER` 変数のスコープを精査する必要があり、本 Issue の Acceptance Criteria はこれを要求していない。`/audit stats` のメトリクス完全性が明示的な目標になった際に、`/issue`・`/review`・`/merge` の 3 フェーズをまとめて扱う follow-up として残す。
 - **`docs/workflow.md` の Label Transition Map における `phase/merge` 行**: `skills/merge/SKILL.md` の現在の実装は `phase/merge` ラベルをどこにも付与しておらず、ドキュメントとの乖離が既に存在する (本 Issue と無関係な pre-existing drift)。本 Issue のカットオフ順序に関する分析 (`/merge` の Comment Consumption 呼び出し時点での最新 `phase/*` は `phase/review` である) を確認する過程で気づいたため記録するが、修正は本 Issue のスコープ外とする。
 
 ### #811 の教訓の適用
@@ -157,21 +165,55 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 - Step 13 の skip condition に「Consumed Comments が 0 件でないこと」を追加したことで、他に特筆すべき内容が皆無でも retrospective コメントが投稿されるケースが生じる。これがノイズになるか有用なシグナルになるかは、本 Issue の Post-merge observation AC が最初の実例を提供する。追加の検証手段は設けず、実運用の観察に委ねた (Spec 本体の Uncertainty セクション参照)。
 - `_emit_comments_consumed()` を `/review`/`/merge` にも配線すべきか検討したが、`run-auto-sub.sh` → `run-review.sh`/`run-merge.sh` の呼び出し連鎖における `EMIT_ISSUE_NUMBER` の実際のスコープを確認しきれず (どの呼び出し経路で変数が継承されるか、追加調査が必要)、本 Issue の AC が要求しない拡張のためにスコープを広げるのは非効率と判断し、Out of Scope とした。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation followed the Spec's Implementation Steps as written, including the two decisions already reasoned through in the spec retrospective (`/merge`'s post-squash call placement; `/review`'s bash fallback omitting `--no-push`).
+- One undocumented-but-necessary addition: `gh api:*` was added to `skills/issue/SKILL.md` / `skills/review/SKILL.md` / `skills/merge/SKILL.md`'s `allowed-tools`, not called out in the Spec's original Implementation Steps. The Comment Consumption Procedure's Step 1 (`modules/l0-surfaces.md`) executes `gh api "repos/{owner}/{repo}/issues/$N/timeline"`, which requires this grant — `/spec`/`/code`/`/verify` already carry it for the same reason. Recorded post-hoc in `## Tool Dependencies` above during review.
+
+### Design Gaps/Ambiguities
+
+- The Spec's Implementation Step 1 description of the Bash wrapper fallback extension ("`/review`(Step 2 末尾、`--no-push` なし)・`/merge`(Step 4 の既存 Phase Handoff write サブセクション内、`--no-push` あり) を追加する") did not specify the exact wording for *why* `/merge`'s fallback call runs against `main` rather than the PR branch. My first draft of `modules/l0-surfaces.md` claimed both `/review` and `/merge` call `append-consumed-comments-section.sh` "against the PR branch their Spec already lives on" — this is wrong for `/merge`: by the time its call runs (after `gh pr merge --squash --delete-branch` and the subsequent `git merge origin/main --ff-only`), the worktree's content is `main`, not the (now-deleted) PR branch. Caught and fixed during the SSoT Module Cross-Check (`skills/code/SKILL.md` Step 8) by re-reading `skills/merge/SKILL.md` Step 4's actual sequencing before finalizing the module prose.
+- Similarly, the Secondary (bash wrapper post-processor) bullet initially stated `/review`/`/merge` are "excluded... for the same reason as `/code` pr route", implying an explicit gating condition analogous to `run-code.sh`'s `ROUTE_FLAG != "--pr"` check. Verified via `grep` that `run-review.sh`/`run-merge.sh` contain no reference to `append-consumed-comments-section.sh` at all — there is no Secondary layer to gate off in the first place, not merely a gated-off one. Revised the wording to state this directly rather than imply a parallel mechanism that does not exist.
+
+### Rework
+
+- `modules/l0-surfaces.md`'s Bash wrapper fallback description (Primary and Secondary bullets) was rewritten during the SSoT Module Cross-Check, after `skills/review/SKILL.md` and `skills/merge/SKILL.md` were implemented, to replace the design-time phrasing with wording verified against the actual call-site mechanics (see Design Gaps/Ambiguities above).
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 案 A (全 6 フェーズで Comment Consumption Procedure 呼び出しを必須化) を採用し、案 B (read watermark)・案 C (marker 例外拡大) は不採用とした — 理由は Spec 本体の Alternatives Considered を参照
-- `/merge` の呼び出しは Step 4 (post-squash) に配置 — Step 1-2 相当の早期配置では squash-merge によるブランチ削除でコミットが消失する、または early push が Step 1 の mergeability 判定を無効化するリスクがあった
-- `/review` の bash fallback (`append-consumed-comments-section.sh`) は `--no-push` を付けない — `/spec`/`/code`/`/verify` の慣例と異なるが、Step 3 の XS/S early exit 分岐が後続の無条件 push に到達しない可能性への対策
-- `/issue` の Consumed Comments 記録先は Step 13 の Issue Retrospective コメント内 `### Consumed Comments` サブセクション — この時点で Spec が存在しないため
+- Fixed 1 MUST bug (Fallback A in the cutoff ladder resolving to a self-referential `phase_start` timestamp under `/auto` dispatch, defeating pre-pipeline comment coverage) and 6 SHOULD / 4 CONSIDER findings surfaced by the review-spec + review-bug×2 fan-out; 1 low-confidence CONSIDER (checkout-failure edge case in `skills/review/SKILL.md`) was left unfixed.
+- All fixes were scoped to correcting the existing implementation and documentation against the Issue's already-stated acceptance criteria — no acceptance condition text or verify command changed, so Step 13's Policy Change Detection found nothing to propagate to the Issue body.
+- Grouped the fixes into 4 commits by topic (MUST cutoff-ladder fix; `/merge` guard fixes; SSoT doc updates; Spec self-corrections) rather than one commit per finding, since several findings shared the same file/section.
 
 ### Deferred Items
-- 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留
-- `/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り
-- `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ
+- 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留 (spec phase から継続)
+- `/issue`/`/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec phase から継続、review で `/issue` も対象に追加)
+- `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ (spec phase から継続)
+- Post-merge observation AC (`event=auto-run session=next`) は次に `/auto` に入る Issue でのみ検証可能。今回のセッションでは未検証。
+- `skills/review/SKILL.md`'s Step 2 comment consumption push has no guard for `git checkout "$headRefName"` failure (CONSIDER, low confidence) — deferred rather than expanding this PR's scope; same class of gap already tracked for `/verify` in `worktree-lifecycle.md` Known gaps.
 
 ### Notes for Next Phase
-- 3 つの SKILL.md (issue/review/merge) の挿入位置はそれぞれ理由が異なる (issue: ラベル遷移より前 / review: Worktree Entry 直後・無条件 / merge: post-squash) ため、Implementation Steps 2-4 の配置指示を「他フェーズと同様に早い段階に置けばよい」と単純化せず、記載された位置と根拠に忠実に実装すること
-- `tests/append-consumed-comments-section.bats` への追加テスト (AC7, AC8) はスクリプト自体の機能変更を伴わない回帰確認テストであり、スクリプト本体 (`append-consumed-comments-section.sh`) への機能変更は不要
-- `skills/review/SKILL.md` と `skills/merge/SKILL.md` の `allowed-tools` frontmatter に `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` の追加が必須 (現状どちらにも存在しないことを確認済み)
+- `tests/post_merge_check.bats` の 2 件は本変更と無関係な既知の並列実行時 flake (`docs/tech.md` § CI bats Parallel/Serial Split、#1221/#1224/#1227/#1260)。単体実行で PASS を確認済み。CI で再現しても本 PR の regression として扱わないこと。
+- Issue #1316 は着手時点で `phase/ready` ラベルが既に `phase/code` に遷移済みだった (経緯不明、Spec は完全な形で存在) — `/verify` 実行時にラベル遷移履歴の異常として気づく可能性があるが、Spec に基づいた正規の実装であることを Autonomous Auto-Resolve Log (Code Phase) に記録済み。
+- `/merge` 実行時は本 review で修正した substep 4 のガード変更 (staged diff だけでなく `origin/main..HEAD` の未 push コミットも確認) が実際に機能することを、squash-merge 後のログで確認するとよい。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Step 1 は「`/issue` 実行時点ではまだ `phase/*` ラベルが一切付与されていないため、Step 1 の cutoff 解決は Fallback B に自然に到達する」という高レベルの意図までは正しく記述していたが、`modules/l0-surfaces.md` の cutoff ラダーに Fallback A (`.tmp/auto-events.jsonl` の `phase_start` 参照) が Primary と Fallback B の間に既に存在することへの言及がなかった。code フェーズの SSoT Module Cross-Check (Spec の Design Gaps/Ambiguities に記録済み) は 2 件の記述誤り (`/merge` の対象ブランチ、Secondary layer の有無) を捕捉したが、この Fallback A の抜けは捕捉されなかった。`/auto` → `run-issue.sh` が `claude` サブプロセス起動前に自身の `phase_start` を emit するという、呼び出し元スクリプト側の実装詳細まで遡らないと気づけない類の齟齬であり、Spec レベルの記述レビューだけでは検出困難だった。
+- 教訓: 複数のフォールバック段を持つロジックを新しい呼び出しパターン (今回は「これまで到達しなかった cutoff 未確定状態」) に晒す変更では、Spec 記述時点で全フォールバック段を明示的に列挙し、各段が新しい呼び出しパターン下でどう解決されるかを個別にトレースする方が良い。「最終的に到達するはずの段」だけを結論として書くと、中間段の副作用を見落とす。
+
+### Recurring issues
+
+- 「Bash wrapper fallback スクリプトの呼び出し元列挙」が `modules/l0-surfaces.md` 自身・`docs/structure.md`・`modules/worktree-lifecycle.md` の 3 箇所に独立して存在し、本 PR は 1 箇所目 (呼び出し元である `modules/l0-surfaces.md`) のみを更新して残り 2 箇所を更新し忘れた。同種の欠落が Review で 3 件独立に検出された。SSoT が 1 箇所に定まっておらず、実質的な重複記述が複数箇所に散在している構造そのものが再発の温床になっている。
+  - 教訓: 呼び出し元一覧のような「新しい呼び出し追加のたびに更新が要る列挙」は、可能であれば単一の SSoT (例えば `modules/l0-surfaces.md` の Bash wrapper fallback セクション) に一本化し、`docs/structure.md`・`worktree-lifecycle.md` 側は具体的な列挙を持たずそこへのリンクのみにする設計変更を検討する価値がある。今回は個々の記述を更新するに留めた。
+
+### Acceptance criteria verification difficulty
+
+- Step 8 の Pre-merge AC (2 grep + 6 rubric) は全件 PASS だったが、いずれも「手順書に説明が書かれているか」を問う AC であり、「その手順が `/auto` 実際の呼び出し連鎖の下で意図通りに動作するか」を問う AC は存在しなかった。本 PR の MUST バグ (Fallback A が pre-pipeline coverage を潰す) は rubric ベースの AC では原理的に検出できない種類の欠陥であり、Step 10 のコードレベル bug review (特に review-bug の 2 エージェント中 1 エージェントのみが検出、もう 1 エージェントは同じ箇所を low confidence の CONSIDER と評価) で初めて捕捉された。
+  - 教訓: 「ドキュメント/手順が存在するか」を検証する rubric AC と、「実際の実行パスで意図通りに動くか」を検証する AC (可能であれば `command` 型で `.tmp/auto-events.jsonl` を使ったシミュレーションを組む、または最低限「主要な呼び出し経路を明示的にトレースしたことを rubric text に含める」) を分けて設計する余地がある。本 Issue のような L0 配線変更では、後者が特に価値が高い。
