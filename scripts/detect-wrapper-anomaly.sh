@@ -117,9 +117,10 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" 
 elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"review"' "$LOG_FILE" && ! grep -q '"matches_expected":true' "$LOG_FILE"; then
   # reconcile-first authority: a later matches_expected:true in the same log (post-fallback-review-summary.sh recovery) suppresses this anomaly
   _review_pr_json=$(gh pr view "$ISSUE_NUMBER" --json comments,reviews 2>/dev/null)
+  _review_gh_status=$?
   _review_comment_count=""
   _review_review_count=""
-  if [[ $? -eq 0 && -n "$_review_pr_json" ]]; then
+  if [[ $_review_gh_status -eq 0 && -n "$_review_pr_json" ]]; then
     _review_comment_count=$(echo "$_review_pr_json" | jq -r '.comments | length' 2>/dev/null)
     _review_review_count=$(echo "$_review_pr_json" | jq -r '.reviews | length' 2>/dev/null)
   fi

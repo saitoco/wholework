@@ -545,6 +545,21 @@ MOCK
     [[ "$output" != *"review-silent-no-op"* ]]
 }
 
+@test "review-silent-no-op: falls back to review-completion-false-negative when gh pr view exits non-zero with non-empty stdout (exit-code guard)" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo '{"comments":[],"reviews":[]}'
+exit 1
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"review-completion-false-negative"* ]]
+    [[ "$output" != *"review-silent-no-op"* ]]
+}
+
 @test "review-completion-false-negative: reconciler-header-mismatch takes priority when Review Summary present" {
     printf '"matches_expected":false\n"phase":"review"\nreconcile-phase-state result: Review Summary found\n' > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
