@@ -96,4 +96,6 @@
 - **Option B (scoped `/triage $N`) を採用しない理由の補足**: Issue 本文の Proposal は Option B の課題を「`Skill(wholework:verify)` 呼び出し結果から起票 issue 番号を回収する経路の新設が必要」とのみ記述しているが、`/spec` の調査で追加の構造的制約を発見した — Option B は「セッション自身が起票した issue」のみを対象にするため、原理的に「ループ開始前から存在する未 triage issue」を Round 1 からカバーするという Issue の明示的要件を満たせない。この制約が Option A 採用の決定打であり、実装コストの多寡は副次的な理由にとどまる。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class — Issue Retrospective (`/issue` Existing Issue Refinement, 2026-08-10T13:48:28Z): AC を Pre-merge 3 件 (rubric + 機械的補助チェック) に再構成したこと、および Proposal の A/B 実装方式選択は `/issue` (What) と `/spec` (How) の責務境界に照らして `/spec` の判断事項として Issue 側で確定させなかったことを記録。本 Spec の Option A (bulk `/triage`) 採用判断はこの委譲を受けたもの。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241168319
+- login: saito / authorAssociation: MEMBER / trust tier: first-class — Triage AC audit (2026-08-10T13:54:23Z): Issue 本文の Pre-merge AC 3 件すべてに verify command の不具合を検出 (AC1: `section_contains` heading 引数の `###` 残存、AC2: `grep "bulk|scoped"` の無関係な既存一致、AC3: 既存テスト全 PASS 済みによる保証不足) し、次フェーズでの反映を依頼。本 Spec 作成時に Issue 本文を更新して反映した (詳細な空撃ち検証record は Notes 参照)。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241233384
