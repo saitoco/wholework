@@ -166,3 +166,6 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 ### Notes for Next Phase
 - `bats --jobs 18 tests/` のフルスイートで `tests/post_merge_check.bats` の 2 件が flake する (本変更と無関係、pre-existing、`--jobs 18` 高並列時のみ再現)。CI や `/review` でこの 2 件が failed した場合、まずこの flake の可能性を疑い、単独実行で再現するか確認すること。
 - 本 Issue の着地により #1301 の post-merge observation AC が初めて判定可能になる。#1301 は `phase/verify` で該当 AC が未チェックのまま残っている。
+
+## Consumed Comments
+No new comments since last phase.
