@@ -50,9 +50,9 @@ watchdog-timeout-seconds: 3600
 # Per-phase overrides (optional; take precedence over watchdog-timeout-seconds)
 # watchdog-timeout-spec-seconds: 1800
 # watchdog-timeout-code-seconds: 4680
-# watchdog-timeout-review-seconds: 2600
+# watchdog-timeout-review-seconds: 5400
 # watchdog-timeout-merge-seconds: 600
-# watchdog-timeout-issue-seconds: 600
+# watchdog-timeout-issue-seconds: 1200
 
 # Patch lock timeout for main-branch push (default: 300 seconds; lock is held only during git merge + push)
 patch-lock-timeout: 300
@@ -134,9 +134,9 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
 | `watchdog-timeout-spec-seconds` | integer | `""` (falls back to `1800`) | Per-phase watchdog timeout override for `/spec`. Priority: this key > `watchdog-timeout-seconds` > `1800`. |
 | `watchdog-timeout-code-seconds` | integer | `""` (falls back to `4680`) | Per-phase watchdog timeout override for `/code`. Priority: this key > `watchdog-timeout-seconds` > `4680`. |
-| `watchdog-timeout-review-seconds` | integer | `""` (falls back to `2600`) | Per-phase watchdog timeout override for `/review`. Priority: this key > `watchdog-timeout-seconds` > `2600`. |
+| `watchdog-timeout-review-seconds` | integer | `""` (falls back to `5400`) | Per-phase watchdog timeout override for `/review`. Priority: this key > `watchdog-timeout-seconds` > `5400`. |
 | `watchdog-timeout-merge-seconds` | integer | `""` (falls back to `600`) | Per-phase watchdog timeout override for `/merge`. Priority: this key > `watchdog-timeout-seconds` > `600`. |
-| `watchdog-timeout-issue-seconds` | integer | `""` (falls back to `600`) | Per-phase watchdog timeout override for `/issue`. Priority: this key > `watchdog-timeout-seconds` > `600`. |
+| `watchdog-timeout-issue-seconds` | integer | `""` (falls back to `1200`) | Per-phase watchdog timeout override for `/issue`. Priority: this key > `watchdog-timeout-seconds` > `1200`. |
 | `patch-lock-timeout` | integer | `300` | Lock acquisition timeout in seconds for `git merge --ff-only` + `git push origin main` (the only protected critical section). The default is generous since the lock is held only for seconds. Increase only if push consistently fails to acquire. Values ≤0 or non-numeric fall back to `300`. To override per-run without editing `.wholework.yml` (emergency use), set the `WHOLEWORK_PATCH_LOCK_TIMEOUT` env var; priority: env var > this key > `300`. |
 | `permission-mode` | string | `"auto"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions` (legacy / opt-out). |
 | `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |
