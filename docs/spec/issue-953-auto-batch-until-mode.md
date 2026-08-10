@@ -289,3 +289,37 @@ Pre-merge / Post-merge の内容自体は変更していない (rubric ベース
 
 - Post-merge AC (opportunistic) は次回 `--batch --until` 実運用時に `/verify` が観察する。それまで `- [ ]` のまま
 - Issue #953 の状態遷移 (CLOSED + `phase/verify` label) を Step 6 のフォールバックで確認すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+- Pre-merge AC 6件は `/spec`〜`/review` の各フェーズで前倒し確認され、`/verify` 実行時点で全て `[x]` 済みだった。rubric 系 AC の記述品質が高く、`/verify` 側での再判定に UNCERTAIN が一切発生しなかった
+
+#### design
+
+- 収束保証 (処理済み Issue のラウンド跨ぎ除外) は Issue 本文に明記されていなかった暗黙の前提を `/spec` が明示化した判断が妥当だった。「0件になるまで繰り返す」という中心的な受入条件は、除外ロジックなしには構造的に成立しないため
+
+#### code
+
+- Implementation Steps は Spec 記載順のまま逸脱なく実装され、Rework は bats の `run` が stdout/stderr を合流させる仕様の見落とし1件のみ (`run --separate-stderr` で解消、既存パターンの再利用)
+
+#### review
+
+- review-spec エージェントが Spec 本文の明示的マンデート (空白を含む status 値のテストケース) と実装の乖離を検出した一方、Code Retrospective の自己申告 (「追加確認を要さなかった」) では拾えていなかった。第三者視点によるレビューが自己申告のギャップを補完した好例
+- 新規スクリプト `resolve-batch-query.sh` で「サイレント失敗が成功と区別できない」パターンが1ファイル内に複数箇所検出された。fail-closed を謳うスクリプトほど個々の失敗パスの exit status 伝播を丁寧に扱う必要がある
+
+#### merge
+
+- Pre-merge AC ゲート・CI・review 承認状態がすべて clean で、コンフリクト解決なしに直接 squash merge が完了した。特筆すべき問題は発生していない
+
+#### verify
+
+- Pre-merge 6件は SKIPPED (already checked)、FAIL/UNCERTAIN は0件。Post-merge の opportunistic 条件1件は本実行のスコープ外 (実運用待ち) のため `phase/verify` を維持し Issue はクローズ済みのまま据え置いた
+
+### Improvement Proposals
+
+- **AC の `command` 検証が「Spec が明示要求する特定テストケースの存在」まで保証しない** — `command "bats tests/resolve-batch-query.bats"` のような書き方は「既存テストが全て PASS する」ことしか検証せず、Spec の `## Uncertainty` セクションが個別テストケースを明示要求していても、そのケースが実際に実装されているかは AC 側で機械的に検出できない。今回は review エージェントの目視確認で捕捉できたが、目視に依存する設計は再発しうる。Spec の Uncertainty が特定テストケース名を明示する場合、AC 側にも `grep`/`file_contains` でそのテストケース名の存在を確認する verify command を追加する運用ガイドを検討する余地がある (対象: `docs/workflow.md` または AC 作成時のガイダンス)
+- **新規スクリプト作成時の「サイレント失敗チェックリスト」が存在しない** — fail-closed 設計を謳う新規スクリプトで、stderr への JSON 混入・リダイレクト内コマンド置換の exit status 無視・`shift` の値なし失敗、といった複数のサイレント失敗パターンが1ファイル内に同時発生した。新規スクリプト作成時にこれらのパターンを機械的にチェックするガイド/チェックリストがあれば review フェーズでの検出漏れリスクを下げられる可能性がある
