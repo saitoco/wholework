@@ -271,23 +271,21 @@ Pre-merge / Post-merge の内容自体は変更していない (rubric ベース
 - `command "bats tests/resolve-batch-query.bats"` という AC の書き方は「既存テストが全て PASS する」ことしか検証せず、「Spec が要求する特定のテストケースが実際に存在する」ことまでは保証しない。今回のような Spec-mandated だが未実装のテストケースを AC 側で機械的に検出する手段がなく、review エージェントの目視確認に依存した。次回以降、Spec の Uncertainty セクションが特定のテストケースを明示的に要求する場合は、AC 側にも `grep`/`file_contains` などでそのテストケース名の存在を確認する verify command を追加検討する余地がある
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 10 は `capabilities.workflow: true` が有効だったが、本セッションに再呼び出し保証がなかったため `skills/review/workflow-guidance.md` の指示通り Workflow パスをスキップし、静的 Task fan-out (review-spec + review-bug×2、Agent ツール `run_in_background: false`) を採用した
-- Base Branch Conflict Pre-check で `git merge-tree` (deprecated 3-arg form) が `docs/structure.md` / `docs/ja/structure.md` を「changed in both」と検出したが、`git merge-tree --write-tree` による実マージ検証で偽陽性と確認し、review エージェントには informational context として渡した (MUST 化しなかった)
-- Step 10.3 の 2 段階検証で review-bug 系 9 件中 2 件 (head -1 の SIGPIPE リスク、checkin-per-round の順序) を false positive として除外し、7 件を確定指摘として採用した
-- MUST 1 件・SHOULD 4 件を修正し、CONSIDER 3 件 (shift 2 のサイレント失敗、docs/product.md の status: 未文書化、ROUND_LIST 区切り文字の prose 不整合) は優先度低のため見送った
+- Pre-merge AC ゲート (6 件) は全て `[x]` 済み、review_incomplete_fallback も検出されず (Review Response Summary を organic に検出)。追加のオーバーライド確認なしでマージ可能と判定した
+- `gh-pr-merge-status.sh` が `mergeable=true reason=clean ci_status=success review_status=approved` を返したため、conflict 解決 (Step 3) はスキップし直接 squash merge を実行した
+- `gh pr merge 1333 --squash --delete-branch` を実行し正常完了。base branch は main のため `closes #953` により Issue は自動クローズされる想定
 
 ### Deferred Items
 
-- CONSIDER 級の 3 件 (上記) は未対応のまま。将来 Follow-up Issue 化するかは運用実績次第
-- Spec の Deferred Items (wall-clock 上限、`--batch --resume` の until ループ非再開、空白を含む status 値非対応) は Code フェーズから継承されたまま本フェーズでも変更なし
+- CONSIDER 級の 3 件 (shift 2 のサイレント失敗、docs/product.md の status: 未文書化、ROUND_LIST 区切り文字の prose 不整合) は review フェーズから未対応のまま持ち越し。将来 Follow-up Issue 化するかは運用実績次第
+- Spec の Deferred Items (wall-clock 上限、`--batch --resume` の until ループ非再開、空白を含む status 値非対応) は変更なし
 - `tests/post_merge_check.bats` の並列実行フレークは既存 Issue #1308 に委ねたまま (無関係、対応不要)
 
 ### Notes for Next Phase
 
 - Post-merge AC (opportunistic) は次回 `--batch --until` 実運用時に `/verify` が観察する。それまで `- [ ]` のまま
-- PR #1333 の pre-merge AC は 6 件すべて `[x]` 済み。`/merge` は追加の pre-merge AC gate 対応不要
-- MUST 指摘 1 件・SHOULD 指摘 4 件を修正済み (commit 8f37c633, f88fca29, 2cc67e6f)。CI 再実行が必要 (`/merge` 前に green を確認すること)
+- Issue #953 の状態遷移 (CLOSED + `phase/verify` label) を Step 6 のフォールバックで確認すること
