@@ -120,3 +120,12 @@ Fix: ポインタファイル名に PGID を含めることで、同一 Claude C
 1. **Tier 3 recovery 後の Auto Retrospective 自動追記**: 現状、run-auto-sub.sh の Tier 2 (`apply-fallback.sh` 成功時) は `_write_tier2_recovery_to_spec()` で sub-issue Spec に Auto Retrospective を自動追記するが、**Tier 3 (recovery sub-agent) 成功時は同等の Spec write が走らない**。`spawn-recovery-subagent.sh` が orchestration-recoveries.md にのみ write、Spec 側は更新せず。`/verify` Step 12 の "Tier 2/3 automatic recovery handling" が Spec の Auto Retrospective を SSoT とする想定だが、Tier 3 は SSoT への流入経路がない。Tier 3 でも sub-issue Spec の Auto Retrospective に追記する仕組みの実装が candidate。
 2. **Changed Files リスト網羅性問題の再発 (#771 と同根)**: `skills/audit/SKILL.md` の参照が "Changed Files" から漏れた点は #771 の test 同期漏れと同種パターン。"参照元 (実装ロジック) を変更したら参照先 (SKILL.md / 関連 docs / test) も同期する" を機械的にチェックする仕組み — 例えば file_not_contains AC を symbolic naming (variable name / file path) で自動拡散する Spec template ガイダンス — の検討候補。本 batch session で #778 (verify command 対称性) として既起票の論点を更に拡張する位置づけ。
 3. **JSON モード watchdog timeout の検出強化**: #770 code-pr は 1800s silent run の間 Claude Code が実作業中だったが watchdog が kill。同様パターンが今後も発生する可能性。JSON mode silent run の watchdog 延長 (e.g., 1800s → 3600s) や進捗 heartbeat (1 commit / N min 等) の検出による reset 機構が candidate。本 batch session で複数 Tier 3 recovery が観察される場合 `/audit recoveries` の自動 fire (`recoveries-auto-fire`) が trigger される想定だが、watchdog kill 特化の予防策として別軸で考慮。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/770#issuecomment-4818972877
+- saito / MEMBER / first-class / ## Re-verify (2026-06-28) / https://github.com/saitoco/wholework/issues/770#issuecomment-4826264958
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/770#issuecomment-5200984188
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/770#issuecomment-5212262362
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/770#issuecomment-5225315248
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/770#issuecomment-5229258817
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/770#issuecomment-5235401641
