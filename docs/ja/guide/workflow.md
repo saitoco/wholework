@@ -126,6 +126,7 @@ issue のサイズに基づいて全フェーズを連鎖させます。最も�
 /auto 42               # フルワークフローを実行
 /auto 42 --patch       # patch 経路を強制（PR をスキップ）
 /auto --batch 5        # XS/S のバックログ issue を 5 件順次処理
+/auto --batch --until "label:retro/*"  # 特定テーマのバックログを 0 件になるまで処理（--max-rounds が上限）
 ```
 
 `phase/*` ラベルが設定されていない場合、`/auto` は issue triage から開始します。spec が無い場合は先に `/spec` を実行します。
@@ -181,6 +182,7 @@ Steering Documents（`docs/product.md`、`tech.md`、`structure.md`）と `docs/
 | あいまいな issue を先にリファインしたい | `/issue N`、次に `/auto N` |
 | 他人が作成した PR をレビュー | `/review PR_NUMBER` |
 | 小さなバックログ issue を一括処理 | `/auto --batch 10` |
+| あるテーマのバックログを尽きるまで処理 | `/auto --batch --until "label:theme/*"` |
 
 ## Verify 失敗後の修正
 

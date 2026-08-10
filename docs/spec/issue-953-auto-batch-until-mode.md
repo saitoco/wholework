@@ -235,27 +235,59 @@ Pre-merge / Post-merge の内容自体は変更していない (rubric ベース
 - 空白を含む Status option (`In progress` 等) は初期実装で非対応 (パースエラー) と決め、検証方法込みで Uncertainty セクションに残した。実装フェーズで仕様追加を迫られうる箇所を先に可視化している
 - `.claude/settings.json.template` への新規スクリプト登録要否は、同格の 4 スクリプト (`auto-checkpoint.sh` / `scan-pending-ac.sh` / `observation-trigger.sh` / `collect-run-facts.sh`) が全て未登録であることを grep で確認して「不要」と確定した。未確認のまま「変更不要」と書かない規則 (#749) に従った
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜9 を Spec 記載順のまま実装した。ステップの入れ替え・省略・統合は発生していない
+
+### Design Gaps/Ambiguities
+
+- なし。Uncertainty セクションで既に洗い出されていた 2 点 (Status 値の空白非対応、`--batch --resume` の再開範囲) は実装時に追加確認を要さなかった
+
+### Rework
+
+- `tests/resolve-batch-query.bats` の `status resolution failure` / `query with whitespace` の 2 テストで、bats の `run` がデフォルトで stdout+stderr を `$output` に合流させることを見落とし、fail-closed 警告 (stderr) を含む出力を等価比較して初回 FAIL した。`run --separate-stderr` (既存 `tests/check-allowed-tools.bats` と同じパターン) に切り替えて解消した — 新規スクリプトが stderr に warning を出す設計そのものは変更していない
+
+### Judgment rationale (実装フェーズでの追加判断)
+
+- **Steering Docs sync candidate は不採用** — `docs/product.md` § Terms の `/auto` 行は List mode (`--batch N1 N2 ...`) 導入時も追記されなかった前例があり (grep で確認: 同行は `--batch N` の説明のみ)、この Terms エントリは `--batch` の全バリアントを網羅する設計になっていない。同じ理由で `--until` も追記しないと判断し、`docs/product.md` / `docs/ja/product.md` は変更しなかった。`docs/guide/autonomy.md` の L2 節も「手動トリガーの例示」のみで flag 網羅の趣旨ではないため同様に不採用とした
+- **`tests/post_merge_check.bats` の並列実行フレークは対応しない** — Behavioral Change Detection により `bats --jobs 18 tests/` を実行したところ `not ok 877 fail: gh issue reopen called when FAIL input given` が再現 (2 回とも同一テスト)。単体実行 (`bats tests/post_merge_check.bats`) では PASS するため `--jobs` 並列実行時のみのテスト分離不足と判断。`git diff origin/main -- tests/post_merge_check.bats scripts/post_merge_check.sh` で本ブランチが同ファイルを一切変更していないことを確認し、既存 Issue #1308 (`tests/post_merge_check.bats: bats --jobs 並列実行時に 2 件 FAIL するフレークを解消`) と重複するため新規 Follow-up Issue の起票をスキップした (Duplicate check 手順に従い #1308 を参照)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の `## Uncertainty` セクションが明示的に要求していた bats テストケース (「空白を含む status 値でパースエラー」) が実装フェーズで欠落していた。Code Retrospective は「Uncertainty セクションで既に洗い出されていた 2 点は実装時に追加確認を要さなかった」と記載していたが、実際には該当テストケースが存在せず、Spec の明示的なマンデートと実装結果に乖離があった。動作自体は正しかった (`*)` アームへの偶発的フォールスルーで exit 1 になる) が、regression-unprotected な状態だった。review-spec エージェントが Spec 本文を直接参照して検出した — Code フェーズの自己申告 (Retrospective の「なし」記載) だけでは拾えない典型例
+
+### Recurring issues
+
+- 新規スクリプト `resolve-batch-query.sh` で「サイレント失敗が成功/収束と区別できない」パターンが 1 ファイル内に複数箇所 (stderr の JSON への混入、リダイレクト内コマンド置換の exit status 無視、`shift 2` の値なし失敗) 出現した。fail-closed 設計を明示的に header で謳うスクリプトほど、個々の失敗パスの exit status 伝播を丁寧に扱う必要がある — 新規スクリプト作成時のチェックリスト項目として持つ価値がある
+- `### Until mode` が List mode を「steps 1-7 unchanged」と限定的に参照したことで、List mode の numbered steps の外側にある前提ブロック (stop-at 設定ロード) が漏れた。対照的に `### Resume mode` は List mode セクション全体を無限定で参照しており、この漏れを踏んでいない。既存モードの一部だけを prose で再利用する設計をとる際は、対象範囲外に prerequisite block がないか確認する一手間が要る
+
+### Acceptance criteria verification difficulty
+
+- rubric 系 AC 4 件はいずれも UNCERTAIN なく明確に PASS 判定でき、verify command の記述品質は良好だった
+- `command "bats tests/resolve-batch-query.bats"` という AC の書き方は「既存テストが全て PASS する」ことしか検証せず、「Spec が要求する特定のテストケースが実際に存在する」ことまでは保証しない。今回のような Spec-mandated だが未実装のテストケースを AC 側で機械的に検出する手段がなく、review エージェントの目視確認に依存した。次回以降、Spec の Uncertainty セクションが特定のテストケースを明示的に要求する場合は、AC 側にも `grep`/`file_contains` などでそのテストケース名の存在を確認する verify command を追加検討する余地がある
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- クエリ解決を新規スクリプト `scripts/resolve-batch-query.sh` に分離した — Issue 本文の「機械的に評価できる形にする」要求の実装形であり、prose 実装は不採用
-- ラウンド跨ぎ状態は既存 `auto-checkpoint.sh write_batch` の `COMPLETED` / `FAILED` 引数で保持し、セッション全体で単一 `BATCH_ID` を使う。新規 subcommand も seed file (#1214 で撤去済み) も作らない
-- 安全弁は `--max-rounds` (既定 3、opt-out 不可) のみ。wall-clock 上限は見送り
-- 受入条件の検証対象を `modules/skill-help.md` → `docs/workflow.md` に付け替え、`file_contains "skills/auto/SKILL.md" "--max-rounds"` と `command "bats tests/resolve-batch-query.bats"` を追加した (Issue 本文も更新済み、Pre-merge は 6 件)
+- Step 10 は `capabilities.workflow: true` が有効だったが、本セッションに再呼び出し保証がなかったため `skills/review/workflow-guidance.md` の指示通り Workflow パスをスキップし、静的 Task fan-out (review-spec + review-bug×2、Agent ツール `run_in_background: false`) を採用した
+- Base Branch Conflict Pre-check で `git merge-tree` (deprecated 3-arg form) が `docs/structure.md` / `docs/ja/structure.md` を「changed in both」と検出したが、`git merge-tree --write-tree` による実マージ検証で偽陽性と確認し、review エージェントには informational context として渡した (MUST 化しなかった)
+- Step 10.3 の 2 段階検証で review-bug 系 9 件中 2 件 (head -1 の SIGPIPE リスク、checkin-per-round の順序) を false positive として除外し、7 件を確定指摘として採用した
+- MUST 1 件・SHOULD 4 件を修正し、CONSIDER 3 件 (shift 2 のサイレント失敗、docs/product.md の status: 未文書化、ROUND_LIST 区切り文字の prose 不整合) は優先度低のため見送った
 
 ### Deferred Items
 
-- wall-clock 上限の安全弁は実装しない (運用実績を見てから別 Issue で検討)
-- `--batch --resume` は until ループを再開しない — 中断ラウンドの `remaining` を List mode として処理して終了する。仕様として `docs/workflow.md` に明記するのみで実装上の特別扱いはしない
-- 空白を含む `status:` 値 (`In progress` 等) は非対応 (exit 1 のパースエラー)
-- `docs/product.md` / `docs/ja/product.md` / `docs/guide/autonomy.md` は Steering Docs sync candidate 止まり — `/code` が個別に読んで採否を判断する
+- CONSIDER 級の 3 件 (上記) は未対応のまま。将来 Follow-up Issue 化するかは運用実績次第
+- Spec の Deferred Items (wall-clock 上限、`--batch --resume` の until ループ非再開、空白を含む status 値非対応) は Code フェーズから継承されたまま本フェーズでも変更なし
+- `tests/post_merge_check.bats` の並列実行フレークは既存 Issue #1308 に委ねたまま (無関係、対応不要)
 
 ### Notes for Next Phase
 
-- `--until` 分岐は Step 1 の numeric token 収集分岐より**前**に置くこと。後ろに置くと `--batch` 直後に数値が無いため Count / List どちらにも該当しない未定義状態に落ちる
-- `resolve-batch-query.sh` は bash 3.2 互換必須 (macOS system bash)。`mapfile` / 連想配列 / `${var,,}` を使わず、label の glob 一致は `case "$name" in $LABEL_PATTERN)` で行う
-- `--until` の値は空白を含むため記述例・実装ともに常にダブルクォートで扱う (#1318 と同種の単語分割事故を避ける)
-- `docs/structure.md` / `docs/ja/structure.md` のファイル数は scripts 82 → 83、tests 117 → 118 (いずれも本 Spec 作成時に実測)
-- `tests/auto-batch.bats` の awk 抽出は `/^### / && !/<name>/` で次セクションを打ち切るため、`### Until mode` を List mode と Resume mode の間に挿入しても既存 12 テストは壊れない
+- Post-merge AC (opportunistic) は次回 `--batch --until` 実運用時に `/verify` が観察する。それまで `- [ ]` のまま
+- PR #1333 の pre-merge AC は 6 件すべて `[x]` 済み。`/merge` は追加の pre-merge AC gate 対応不要
+- MUST 指摘 1 件・SHOULD 指摘 4 件を修正済み (commit 8f37c633, f88fca29, 2cc67e6f)。CI 再実行が必要 (`/merge` 前に green を確認すること)
