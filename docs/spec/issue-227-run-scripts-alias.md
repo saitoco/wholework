@@ -134,3 +134,7 @@ Issue body の `github_check "gh pr checks" "Run bats tests"` は PR ルート�
 ### 受け入れ基準の検証難易度
 
 記録なし（UNCERTAIN ゼロ、verify コマンドはすべて正確）。ただし過去 Issue（#195）の Spec で verify 条件のターゲット文字列が安定しない値（`claude-sonnet-4-6`）に依存していたため、エイリアス移行後に条件が無効化されていた。今後 verify 条件記述時は、参照先文字列が将来変更される可能性があるか（定数か変数か）を意識する。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/227#issuecomment-4267711049
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/227#issuecomment-4267790472
