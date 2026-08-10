@@ -244,3 +244,30 @@ Spec の `## Changed Files` は実装対象8ファイルを正確に列挙して
 ### Acceptance criteria verification difficulty
 
 Pre-merge AC 7件はすべて `/code` フェーズの機械チェックで PASS 判定済みで、`/review` の再検証でも全件 PASS が再確認できた。UNCERTAIN・verify command の不備は0件で、AC の検証容易性に問題はなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- YAML 形状 (block mapping)・色固定・設定ファイル解決方式の3点を Issue 本文からの委譲を受けて `/spec` が確定し、プロトタイプ実装で bash 3.2 互換性・特殊文字・境界条件を事前検証した (issue retrospective / spec retrospective 参照)。委譲された設計判断を先送りせずプロトタイプで前倒し解消した進め方は有効だった。
+
+#### design
+- `docs/product.md` の「theme カタログの実体は GitHub label 側が SSoT」という設計判断が、Issue 本文からも `setup-labels.sh` からも参照されておらず、全文 grep で初めて発見された (spec retrospective 参照)。SSoT の所在宣言はそれを変える Issue から機械的にはたどれないという構造的な発見漏れリスクが残る。
+
+#### code
+- 設計からの逸脱・手戻りともになし。実装は Spec の指示どおりの順序・配置で完了した。
+
+#### review
+- review-spec / review-bug×2 の3エージェントが揃って `modules/detect-config-markers.md` の Changed Files 漏れを指摘した。同種のパターン (`See also` ポインタ先ファイルの Changed Files 漏れ) が `docs/spec/issue-1322-triage-theme-labels.md` の retrospective でも記録されており、**2回目の再発** となる。
+- review-bug×2 が独立に `scripts/setup-labels.sh:116` (column-0 コメントによるパース中断) という genuine な logic error を発見し、Opus 検証で再現・修正した。Spec の Uncertainty/Notes には記載のない未知の bash パーサ挙動だった。
+
+#### merge
+- pre-merge AC ゲート・review-incomplete-fallback とも問題なく、mergeable=true を確認したうえでそのまま squash merge した。
+
+#### verify
+- Pre-merge AC 7件は全て merge 前に確認済みで既に `[x]` 済みだったため、already-checked AC skip rule により SKIPPED として記録 (FAIL/UNCERTAIN はゼロ)。Post-merge AC がないため追加確認は発生しなかった。
+
+### Improvement Proposals
+- `/spec` の Changed Files 洗い出し手順に、「変更対象ファイルが `See also` / `for the full reference` 等の外部ポインタを含む場合、ポインタ先ファイルも Changed Files 候補に加える」というチェック項目を追加する。`docs/spec/issue-1322-triage-theme-labels.md` (`modules/label-conventions.md` 欠落) と本 Issue (`modules/detect-config-markers.md` 欠落) で同一パターンが2回発生しており、review フェーズでの後追い指摘という同じコストを繰り返している。
+- 新規 bash パーサを書く Issue の Spec Implementation Steps に、パーサへの fuzz 的な境界値テストケース (コメント行・空行・不正文字・column-0 コメント等) を明示的に含める運用を検討する。本 Issue では review-bug×2 が独立に column-0 コメントでのパース中断という genuine なバグを発見しており、Spec 段階のプロトタイプ検証がカバーしていなかった境界条件だった。
