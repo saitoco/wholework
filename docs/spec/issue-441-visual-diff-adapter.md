@@ -209,3 +209,7 @@ UI 再現案件における「検証範囲の選択バイアス」を体系的�
 
 ### Improvement Proposals
 - **V4 verify command の改善**: `section_contains "modules/detect-config-markers.md" "Marker Definition Table" "capabilities.visual-diff"` は bold text 見出しのため UNCERTAIN になる。今後 `detect-config-markers.md` のような構造を持つファイルの verify command は `file_contains` を使用すること。または `detect-config-markers.md` の Marker Definition Table を `### Marker Definition Table` 形式の markdown heading に変更して `section_contains` と整合させることを検討する（Issue として記録推奨）。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/441#issuecomment-4416973256
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/441#issuecomment-5182937727
