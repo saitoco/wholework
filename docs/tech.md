@@ -142,7 +142,7 @@ SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this t
 
 | Group | Count | Labels | Creation condition |
 |-------|-------|--------|-------------------|
-| Always | 21 | `phase/*` (9), `triaged`, `retro/verify`, `retro/code`, `retro/recoveries`, `audit/drift`, `audit/fragility`, `audit/auto`, `stale-verify`, `theme/*` (4) | Always created |
+| Always | 22 | `phase/*` (9), `triaged`, `retro/verify`, `retro/code`, `retro/recoveries`, `audit/drift`, `audit/fragility`, `audit/auto`, `stale-verify`, `theme/*` (5) | Always created |
 | Fallback | 17 | `type/*` (3), `priority/*` (4), `size/*` (5), `value/*` (5) | Created when corresponding GitHub feature is unavailable (see below) |
 
 ### Auto-bootstrap
