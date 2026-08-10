@@ -68,3 +68,55 @@ No new comments since last phase.
 ### Notes for Next Phase
 - 本 Issue は patch route (Size S) のため `/review`/`/merge` を経由せず、`/verify` が直接次のフェーズとなる。
 - Pre-merge AC 4 件は本フェーズで `[x]` 済み。Post-merge AC 1 件 (observation) は `/verify` 実行時点でイベント未発火なら SKIPPED 判定になる見込み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- AC 4 件がいずれも rubric で自動検証可能な形に書かれており、triage の AC 監査も指摘 0 件だった。`/issue` は「本文は既に What レベルで十分 specified」として本文変更なしと判断しており、過剰介入がない。
+- Post-merge AC を observation 型 1 件に絞った設計も適切。「次に複数量を要求する AC を処理した際に充足可能性が確認される」は、実装の効果が現れるのが将来の別 Issue 処理時であるという性質を正しく反映している。
+
+#### spec
+
+- Implementation Steps が「既存 `rubric` 型サブパターンの直後、`### Pattern 3` の直前への単一挿入」まで具体化されており、実装時の判断余地がほぼゼロだった。結果として逸脱・rework ともに 0。
+
+#### code
+
+- Spec との完全一致。逸脱なし、rework なし。
+- `bats --jobs 18 tests/` で `tests/post_merge_check.bats` の 2 件が並列限定 FAIL したが、直列再実行で 10/10 PASS を確認し無関係と切り分けている。判断は妥当。
+
+#### review
+
+- patch route (Size S) のため `/review` は実行されていない。
+
+#### merge
+
+- patch route のため PR なし。main への直コミット。
+
+#### verify
+
+- Pre-merge 4 件は already-checked skip rule により SKIPPED、Post-merge 1 件は `auto-run` 未発火のため SKIPPED。FAIL / UNCERTAIN ゼロ。
+- 実装内容を Spec の AC 要件と照合し、Fix options が要求の 2 つを上回る 3 つ提示されていること、うち 1 つが #1270 の実採用手段であることを確認した。
+
+### Improvement Proposals
+
+- N/A — 新規の構造的改善提案は生じなかった。観測した事象はいずれも既存 Issue が扱っている。
+
+### 特記 1: Pattern 2 の被覆が揃った
+
+本 Issue の着地により、`skills/triage/skill-dev-verify-audit.md` Pattern 2 が扱う「実装の如何にかかわらず結果が変わらない AC」の被覆が一通り揃った。
+
+| サブパターン | 着地先 |
+|---|---|
+| 常時 PASS (文字列が既存) | 既存 |
+| 常時 PASS (既存グリーンテスト) | #1294 |
+| **充足不能 (定義矛盾)** | **本 Issue** |
+| 常時 UNCERTAIN (executor タイムアウト超過) | #1310 (`verify-executor.md` 側の警告として) |
+
+#1251 (AC 記述規約) がクローズ時に取りこぼした 2 件 — 充足不能の検出と件数 0 の判定ルール — は、本 Issue と #1310 でそれぞれ行き先を得た。取りこぼしの構造的原因 (L0 コメント消費カットオフの欠落窓) は **#1316** が扱う。
+
+### 特記 2: `tests/post_merge_check.bats` の並列フレークが本セッション内で 4 回目の観測
+
+本セッション (`40422-1786325686` および直前の関連実行) を通じて、同フレークは #1278 / #1304 / #1310 / #1315 の code フェーズで計 4 回観測された。FAIL 件数は 1 件のときと 2 件のときがあり、非決定的なレースであることが繰り返し確認されている。追跡は **#1308** が担当しており、本 Issue から追加起票はしない。ただし観測回数は #1308 の優先度判断の材料になる。
