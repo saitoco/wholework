@@ -93,6 +93,11 @@ $ gh run list --workflow=test.yml --limit=8 --json conclusion,headBranch,event
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: Triage AC audit — Issue 本文の AC4 verify command が pr route (Size M) にもかかわらず `gh run list --branch=main` 形式を使っており、本 Issue が是正対象とする欠陥 A をそのまま体現していると指摘。`gh pr checks "Run bats tests"` への修正を提案 / URL: https://github.com/saitoco/wholework/issues/1212#issuecomment-5205304798
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: 欠陥 B の 3 例目実測 (#1210) の記録、および `skills/code/SKILL.md` Step 10 が実装コミット作成前に同じ commit-scoped AC を評価してしまう未文書化の問題を指摘。対応方針確定時にこの評価タイミングの扱いも SSoT に含めるかの判断を要請 / URL: https://github.com/saitoco/wholework/issues/1212#issuecomment-5206424811
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1212#issuecomment-5211186531
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1212#issuecomment-5212270584
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1212#issuecomment-5225319219
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1212#issuecomment-5229261689
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1212#issuecomment-5235406400
 ## Code Retrospective
 
 ### Deviations from Design
