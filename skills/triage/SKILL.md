@@ -155,8 +155,10 @@ Compare each label's `description` against the Issue title/body using AI judgmen
 For each determined theme, apply the label:
 
 ```bash
-gh issue edit $NUMBER --add-label "theme/<name>"
+gh issue edit $NUMBER --add-label "$THEME"
 ```
+
+(`$THEME` is one element of `DETERMINED_THEMES`, already prefixed with `theme/`)
 
 ### Step 7: AC Verify Command Integrity Audit
 
