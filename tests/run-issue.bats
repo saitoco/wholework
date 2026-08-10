@@ -53,6 +53,9 @@ for arg in "$@"; do
         if echo "$arg" | grep -q 'IMPORTANT - HEADLESS SKILL EXECUTION'; then
             echo "PROMPT_HAS_GUARD=1" >> "$CLAUDE_CALL_LOG"
         fi
+        if echo "$arg" | grep -q 'no re-invocation guarantee'; then
+            echo "PROMPT_HAS_BG_GUARD=1" >> "$CLAUDE_CALL_LOG"
+        fi
         break
     fi
     [[ "$arg" == "-p" ]] && FOUND_P=1
@@ -246,6 +249,12 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "PROMPT_HAS_GUARD=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "guard: prompt contains background-wait no re-invocation guarantee text" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "PROMPT_HAS_BG_GUARD=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "reconcile: exit 0 + matches_expected:false results in exit 1" {
