@@ -86,3 +86,47 @@
 | login | authorAssociation | trust tier | 意図要約 | URL |
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。session 97764 (`manual_intervention` 0件) と session 1497 (同 2件) の対照実験結果を踏まえ、Purpose/AC を「呼び出し側コンプライアンス確保 (主)」「emission path 再検証 (従)」の二段構成へ改訂した経緯の記録。本 Spec 作成前に Issue 本文へ統合済みのため、本文を一次資料として直接使用した | https://github.com/saitoco/wholework/issues/1049#issuecomment-5240768609 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 を Spec の記述どおりに実装した
+
+### Design Gaps/Ambiguities
+- Notes の Steering Docs sync candidate (`docs/tech.md`/`docs/workflow.md` の Parent-session manual respawn / External kill respawn 段落) は「`/code` が判断」とされていたため、両段落に `/verify` Step 12 からの backfill 呼び出しが第二の呼び出し元であることを 1 文追記する判断を下した。`docs/ja/tech.md`/`docs/ja/workflow.md` も `docs/translation-workflow.md` の同期手順に従い同内容を追記し、code fence 数の一致を確認した
+
+### Rework
+- N/A
+
+### Smoke Test
+- Spec に `## Smoke Test` セクションが存在しないためスキップ (no-op)
+
+### Test Suite Note
+- Behavioral Change Detection の結果、`modules/orchestration-fallbacks.md` と `skills/verify/SKILL.md` を追加参照するテストファイルが直接対応ファイル以外に存在したため `bats --jobs 18 tests/` でフルスイートを実行した。`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が並列実行時のみ FAIL したが、変更前のコード (`git stash` で本 Issue の diff を除去した状態) でも同じ 2 件が `bats --jobs 18 tests/post_merge_check.bats` で同様に FAIL し、単体実行では両状態とも PASS することを確認した — 本 Issue の変更とは無関係な既存の並列実行時 flaky test であり、既に Issue #1308 (open) がこの解消を追跡している。本 PR に関連するテスト (`tests/run-auto-sub.bats`, `tests/orchestration-fallbacks.bats`) は単体実行・フルスイート実行のいずれでも PASS した
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 独立した 2 回の review-light 実行 (foreground) がいずれも `skills/verify/SKILL.md:866` の同一 bullet に指摘を出したため、両方を 1 コミットに統合して修正した (`_validate_recovery_args` の入力形式制約の明記 + standalone `/verify` での `emit_event` no-op caveat)
+- MUST issue はゼロ (AC 4件全 PASS、CI 全 SUCCESS) だったため `event=REQUEST_CHANGES` にはならず `COMMENT` として投稿
+- Base Branch Conflict Pre-check で `docs/tech.md`/`docs/ja/tech.md` [SSoT] が `changed in both` と報告されたが、実際は非重複行範囲 (無関係な in-flight PR のラベル数変更) で conflict marker ゼロ件だったため、追加対応は不要と判断した
+
+### Deferred Items
+- Post-merge observation AC (次に手動復旧が発生した session での event 数一致確認) は `/verify` 実行時まで未検証のまま (変更なし、`/code` からの引き継ぎを維持)
+- `tests/post_merge_check.bats` の並列実行 flaky test 解消は Issue #1308 に委譲 (本 Issue のスコープ外、変更なし)
+
+### Notes for Next Phase
+- `/merge` は本 PR に MUST issue が残っていないこと、CI 全 SUCCESS であることを確認済みなのでそのまま進行してよい
+- Post-merge の observation AC は `/verify` 実行まで未検証のため、`/verify` 側で改めて確認すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 乖離なし。review-light エージェントが Spec の Implementation Steps 1〜3 / Changed Files と diff を突き合わせ、全項目が一致することを確認した。
+
+### Recurring issues
+- `skills/verify/SKILL.md:866` の新 bullet に対し、独立した 2 回のレビュー観点 (`_validate_recovery_args` の入力形式制約、`emit_event` の session pointer 依存による no-op) がいずれも「新規追加した指示文が、呼び出し先スクリプトの前提条件・失敗モードを書ききれていない」という同型のギャップを指摘した。新しい bash script 呼び出しを SKILL.md の自然言語手順に組み込む際は、呼び出し先の引数バリデーション規則 (`_validate_recovery_args` の正規表現等) と、呼び出し先が持つ暗黙の前提条件 (session pointer の解決可否等) の両方を、追加する bullet 自体に明記するかどうかを都度確認する価値がある。単発の Issue で汎用ルール化するには時期尚早だが、今後同種の指摘が別 PR でも出た場合は review checklist 化を検討する。
+
+### Acceptance criteria verification difficulty
+- 困難なし。4件の Pre-merge AC (rubric) はいずれも Spec の `## Root Cause` セクションと直接対応しており、機械的に PASS 判定できた。bats テスト AC も `bats --filter` で一意に実行・確認可能だった。

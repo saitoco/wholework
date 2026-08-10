@@ -2030,6 +2030,48 @@ MOCK
     grep -q "recovery_target=code" "$EMIT_LOG"
 }
 
+@test "run-auto-sub: manual recovery: 4 consecutive --write-manual-recovery calls emit 4 manual_intervention events" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "$@" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    for _ in 1 2 3 4; do
+        run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+        [ "$status" -eq 0 ]
+    done
+
+    [ "$(grep -c manual_intervention "$EMIT_LOG")" -eq 4 ]
+}
+
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash
