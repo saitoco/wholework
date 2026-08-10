@@ -205,7 +205,7 @@ After Issue generation, assign the following label:
 
 - `audit/drift`: tracking label indicating the drift was detected by the audit skill
 
-Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset. See [docs/guide/customization.md](../../docs/guide/customization.md) for the distributable version of this convention, for custom Issue-creation skills.
 
 **Type/Size assignment:**
 
@@ -782,7 +782,7 @@ After Issue generation, assign the following label:
 
 - `audit/fragility`: tracking label indicating the fragility was detected by the audit skill
 
-Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset. See [docs/guide/customization.md](../../docs/guide/customization.md) for the distributable version of this convention, for custom Issue-creation skills.
 
 **Type/Size assignment:**
 
@@ -1069,7 +1069,7 @@ After Issue generation, assign the following label:
 
 - `audit/drift`: tracking label indicating the drift was detected by the audit skill
 
-Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset. See [docs/guide/customization.md](../../docs/guide/customization.md) for the distributable version of this convention, for custom Issue-creation skills.
 
 **Type/Size assignment:**
 
@@ -1108,7 +1108,7 @@ After Issue generation, assign the following label:
 
 - `audit/fragility`: tracking label indicating the fragility was detected by the audit skill
 
-Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset. See [docs/guide/customization.md](../../docs/guide/customization.md) for the distributable version of this convention, for custom Issue-creation skills.
 
 **Type/Size assignment:**
 

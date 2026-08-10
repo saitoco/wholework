@@ -988,7 +988,7 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
         - [ ] Root cause(s) identified per cause group above <!-- verify: rubric "each cause group listed in this Issue has an identified root cause or documented mitigation plan" -->
         - [ ] Fix or mitigation implemented and verified; no new `{group-key}` entries in `docs/reports/orchestration-recoveries.md` after the fix <!-- verify: rubric "orchestration-recoveries.md contains no '未起票' Improvement Candidate entries for {group-key} newer than this Issue's creation date" -->
         ```
-     e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" --body "{body}"` and capture the new issue number from the output URL.
+     e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" --body "{body}"` and capture the new issue number from the output URL. Do not assign the `triaged` label to this Issue — see [docs/guide/customization.md](../../docs/guide/customization.md) for this Issue-creation convention.
      f. Emit the event:
         ```bash
         source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"

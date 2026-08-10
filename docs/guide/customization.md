@@ -240,6 +240,14 @@ This means you can override any built-in adapter for your project without forkin
 
 For details on writing custom adapters and verify command handlers, see [docs/guide/adapter-guide.md](adapter-guide.md).
 
+## Skill Authoring Conventions
+
+If you add a custom skill that creates Issues — or fork Wholework to add one — follow the same convention Wholework's own Issue-creation skills use:
+
+- **Do not assign the `triaged` label** when creating Issues (`gh issue create --label` or `gh issue edit --add-label`). The `triaged` label marks that the `/triage` skill has actually run against an Issue; pre-assigning it causes `triage-backlog-filter.sh` to skip the Issue during bulk triage, leaving Type/Size/Priority/Value unset. Let `/triage` assign the label after triage actually runs against the Issue.
+
+See `skills/audit/SKILL.md` and `skills/verify/SKILL.md` for this convention applied at Wholework's own Issue-creation call sites.
+
 ## Steering Documents
 
 Steering Documents (`docs/product.md`, `docs/tech.md`, `docs/structure.md`) are the primary way to give Wholework deep project context. Skills read them automatically when present.

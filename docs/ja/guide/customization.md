@@ -227,6 +227,14 @@ Wholework はツールアクセス（ブラウザ自動化、CI チェック、�
 
 カスタム adapter や verify command ハンドラの書き方詳細は [docs/ja/guide/adapter-guide.md](adapter-guide.md) を参照してください。
 
+## Skill Authoring Conventions
+
+Issue を作成するカスタム skill を追加する場合 (または Wholework を fork して追加する場合)、Wholework 自身の Issue 作成 skill が従っている次の規約に従ってください。
+
+- **Issue 作成時に `triaged` ラベルを付与しない** (`gh issue create --label` または `gh issue edit --add-label`)。`triaged` ラベルは `/triage` skill が実際にその Issue に対して実行済みであることを示すマークです。事前に付与すると `triage-backlog-filter.sh` がその Issue をバルクトリアージ対象から除外し、Type/Size/Priority/Value が未設定のまま残ります。`/triage` が実際にその Issue に対して実行された後にラベルを付与させてください。
+
+Wholework 自身の Issue 作成箇所でこの規約が適用されている例は `skills/audit/SKILL.md` と `skills/verify/SKILL.md` を参照してください。
+
 ## Steering Documents
 
 Steering Documents（`docs/product.md`、`docs/tech.md`、`docs/structure.md`）は Wholework に深いプロジェクトコンテキストを与える主要手段です。スキルは存在すれば自動的に読み込みます。
