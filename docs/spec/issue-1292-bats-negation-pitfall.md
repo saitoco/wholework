@@ -87,6 +87,9 @@ tests/audit-auto-session.bats:46,103 / tests/get-auto-session-report.bats:71,199
 |---|---|---|---|---|
 | saito | MEMBER | first-class | Issue Retrospective (triage auto-chain): Type=Task, Size=S に確定。AC3 の記録先を「Spec/Issue コメント」→ `docs/reports/bats-negation-assertion-audit.md` に変更した理由 (rubric grader は Spec ファイルと Issue コメントのどちらも読めないため) を記録。Issue 本文にも同内容が反映済み | https://github.com/saitoco/wholework/issues/1292#issuecomment-5228437961 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1292#issuecomment-5228692710
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1292#issuecomment-5229262817
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1292#issuecomment-5235409059
 ## Code Retrospective
 
 ### Deviations from Design
