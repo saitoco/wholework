@@ -119,3 +119,6 @@ SHOULD issue が 1 件: `collect-recovery-candidates.sh` の Python `-c` 文字�
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/318#issuecomment-4290798821
