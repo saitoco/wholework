@@ -110,3 +110,57 @@ Issue 本文が示す優先案 (ストリッパーを二重バッククォート
 ### Notes for Next Phase
 - `bats tests/*.bats` フルスイート実行時、`tests/post_merge_check.bats` の 1 件が並列実行時のみ FAIL する既知の flaky パターンを踏んだ (docs/tech.md 記載の #1221/#1224/#1227/#1260 系統と同一)。serial 再実行で PASS を確認済みなので `/verify` で再度このテストが flaky に出ても本 Issue の実装起因ではない
 - 実装は `scripts/validate-skill-syntax.py` の正規表現 1 箇所のみの変更。既存 6 箇所の呼び出し元 (`validate_shell_sensitive_chars` 等) はすべて同じ `INLINE_CODE_PATTERN` を参照しているため、修正は自動的に全箇所に反映される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Pre-merge AC2 の rubric は「二重バッククォートを含む入力に対する挙動を検証する**新規テストケースが追加されている**」と、テストの**存在**のみを問う文言だった。追加されたテストに**検出力があるか**は問うていない。結果として検出力ゼロのテストが AC2 を正当に PASS して merge を通過した (下記 verify 節)。AC2 自体は文言どおり正しく判定されており、欠陥は文言の設計側にある
+
+#### spec
+
+- Root Cause を実スクリプト実行で再現・特定しており、設計判断の根拠が実測に基づいていた
+- `## Changed Files` の実測に基づき Size を M → S へ降格 (post-spec route demotion が正しく発火し patch route へ再計画された)
+- 横展開候補 (`scripts/check-language-convention.py` の同種の弱点) をスコープ外として Notes に明記した判断は妥当。ただし本 run で**当該欠陥が未修正のまま残存していることを実測確認**した (下記 Improvement Proposals)
+
+#### code
+
+- 修正そのものは実効性がある。ストリップ層の直接比較で修正前後の差を実証した:
+
+  ```
+  === identical? === False
+  --- verify comment survives? ---   OLD: False / NEW: True
+  ```
+
+  修正前は stray backtick が文中から `<!-- verify: ... -->` ごと後方まで飲み込み、verify command が検査対象から消えていた
+- **Issue の Background が記述した実害より重い症状が実在した**。Background は「無関係な箇所を誤検出させる」偽陽性を問題として挙げていたが、実測では**偽陰性 (verify command のサイレント見逃し)** も発生していた。今回の fixture では未知コマンド `totally_unknown_command` が修正前は 0 error で素通りし、修正後に初めて検出される
+- 実装は Spec 通りで rework ゼロ
+
+#### review
+
+- patch route (Size S) のため `/review` は実行されていない
+
+#### merge
+
+- patch route。main 直コミット (`10dc158d`)、コンフリクト・CI 失敗なし
+
+#### verify
+
+- **追加された回帰テストの検出力がゼロであることを実測で確定した**。`tests/validate-skill-syntax.bats` の新規 `@test "success: double-backtick inline code with nested single backtick does not swallow surrounding content"` と同一内容の fixture に対し、修正前パターン (`` `[^`]+` ``, L67) が working tree に入っていることを `grep` で確認した状態で実行し、**0 error / exit 0** を得た。修正後と同一の結果であり、回帰を検出できない
+
+  | fixture の verify command | PRE-FIX | POST-FIX |
+  |---|---|---|
+  | `file_exists "path/to/file"` (= 追加テストと同一) | 0 error / exit 0 | 0 error / exit 0 |
+  | `totally_unknown_command "path/to/file"` | **0 error / exit 0** | **1 error / exit 1** |
+
+  原因は「飲み込まれた verify コメントは消えるだけでエラーにならない」性質。fixture のコマンドを未知のものに変えるだけで検出力が生まれる (上表 2 行目で実証済み)
+- Post-merge manual AC は batch 自律度方針に従い確認なしで Claude 実行した。判定は PASS
+- spec phase の silent no-op (`background-notification-wait`) は `docs/reports/orchestration-recoveries.md` に manual recovery として記録済みのため、本節では重複記録しない。Tier 2 detector が 5 回連続で無反応だった件は #1323 で起票済み
+
+### Improvement Proposals
+
+- **`tests/validate-skill-syntax.bats` の二重バッククォート回帰テストが検出力ゼロ** — 修正前コードでも PASS することを実測確認済み (`modules/verify-patterns.md` §9 の常時 PASS 欠陥に該当)。fixture の verify command を未知のものへ変更すれば解消する (修正前 0 error / 修正後 1 error を実証済み)。あわせて `modules/verify-patterns.md` §9 に「テストの**存在**を問う AC ではなく**検出力**を問う AC を書く」規約を追加し、同型の再発を防ぐ。`docs/spec/` 配下で「常時 PASS」「trivial pass」に言及する Spec は 62 件あり、クラスとしての再発性は確立している
+
+- **`scripts/check-language-convention.py:41` に同一欠陥が未修正で残存** — `INLINE_CODE_PATTERN = re.compile(r"\`[^\`]*\`")` は本 Issue が修正した `validate-skill-syntax.py` の旧パターンと同型で、二重バッククォート span を正しく扱えない。L83 で `stripped = INLINE_CODE_PATTERN.sub("", content)` として本文ストリップに使われているため、同じサイレント飲み込みが起きる。本 Issue の Spec が「対応する場合は別 Issue」として明示的に繰り延べた項目であり、本 run で残存を実測確認した
