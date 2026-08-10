@@ -217,3 +217,29 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 
 - Step 8 の Pre-merge AC (2 grep + 6 rubric) は全件 PASS だったが、いずれも「手順書に説明が書かれているか」を問う AC であり、「その手順が `/auto` 実際の呼び出し連鎖の下で意図通りに動作するか」を問う AC は存在しなかった。本 PR の MUST バグ (Fallback A が pre-pipeline coverage を潰す) は rubric ベースの AC では原理的に検出できない種類の欠陥であり、Step 10 のコードレベル bug review (特に review-bug の 2 エージェント中 1 エージェントのみが検出、もう 1 エージェントは同じ箇所を low confidence の CONSIDER と評価) で初めて捕捉された。
   - 教訓: 「ドキュメント/手順が存在するか」を検証する rubric AC と、「実際の実行パスで意図通りに動くか」を検証する AC (可能であれば `command` 型で `.tmp/auto-events.jsonl` を使ったシミュレーションを組む、または最低限「主要な呼び出し経路を明示的にトレースしたことを rubric text に含める」) を分けて設計する余地がある。本 Issue のような L0 配線変更では、後者が特に価値が高い。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 8 件はすべて「手順書に記述があるか」を問う grep/rubric で、実装前 XL → 実装後 L への Size 再判定も含め設計判断は妥当だった。案 A/B/C の並記と不採用理由の記録は verify 時点でも一貫して参照可能だった。
+
+#### design
+- `/merge` の呼び出し位置 (post-squash) は Spec 記述時点で `skills/merge/SKILL.md` の実装を確認した上での意図的判断であり、実装との乖離はなかった。一方 Spec の Implementation Step 1 記述は cutoff ラダーの Fallback A (`.tmp/auto-events.jsonl` 参照) の存在に触れておらず、review フェーズでこの記述漏れがコードレベルの MUST バグ発見につながった (review retrospective 参照)。
+
+#### code
+- 実装は Spec の Implementation Steps に忠実。SSoT Module Cross-Check で 2 件の記述誤り (`/merge` の対象ブランチ、Secondary layer の有無) を自己修正済み。
+
+#### review
+- review retrospective に記録された「Bash wrapper fallback 呼び出し元列挙」が `modules/l0-surfaces.md`・`docs/structure.md`・`modules/worktree-lifecycle.md` の 3 箇所に独立して存在する構造的重複は、本 Issue のスコープでは個々の記述更新に留められ、SSoT 一本化という設計変更自体は見送られた (Recurring issues 参照)。rubric ベース AC では検出できない「実際の呼び出し連鎖下での動作」を検証する MUST バグが 1 件、コードレベル bug review で捕捉された。
+
+#### merge
+- Squash merge はクリーンに完了 (`mergeable=true`, CI success, review approved)。conflict・追加対応は発生しなかった。
+
+#### verify
+- Pre-merge AC 7 件はすべて `/review` 時点で既にチェック済みのため再検証をスキップ (already-checked skip rule)。Post-merge の observation AC (`event=auto-run session=next`) は未発火のため SKIPPED — 次に `/auto` へ入る Issue で確認される。
+- code フェーズの 1 回目の実行が external kill (プロセスグループの外部強制終了) で中断され、`run-code.sh 1316 --pr` の再実行で復旧した。`docs/reports/orchestration-recoveries.md` に `manual-recovery-respawn` として記録済み (cause: `external-kill`)。
+
+### Improvement Proposals
+- review retrospective の Recurring issues が指摘する「Bash wrapper fallback スクリプトの呼び出し元列挙」が `modules/l0-surfaces.md`・`docs/structure.md`・`modules/worktree-lifecycle.md` の 3 箇所に独立して存在する重複構造。単一の SSoT (`modules/l0-surfaces.md` 自身) に一本化し、他 2 箇所はリンクのみにする設計変更を検討する価値がある。本 Issue では個々の記述更新に留めた。
