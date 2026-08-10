@@ -183,3 +183,21 @@
 - (CONSIDER) `verify-type: observation event=auto-run,auto-run` のような重複 event 名のパース処理を別 Issue で追跡。本実装では deferred。merge phase handoff にも記載済み。
 - (HIGH) tests/audit-auto-session.bats のコンフリクト発生は #666 / #667 / #669 系列の並行 PR で頻発。session-report 拡張系 Issue は同時並行で進めると merge 順序で必ず衝突するため、batch 順序最適化（同領域 Issue を逐次配置 or 統合 spec）を検討すべき。
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/667#issuecomment-4706634738
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4756910802
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4768308133
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4806654909
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4814731220
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4816318572
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4817060328
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 667` to verify the condition / https://github.com/saitoco/wholework/issues/667#issuecomment-4818974846
+- saito / MEMBER / first-class / ## Observation: 未確認 — 実データで矛盾を発見 (2026-07-04) / https://github.com/saitoco/wholework/issues/667#issuecomment-4882307757
+- saito / MEMBER / first-class / ## 根本原因を特定 (2026-07-05) / https://github.com/saitoco/wholework/issues/667#issuecomment-4882689624
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5195218787
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5202636857
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5212259771
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5225313941
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5229257805
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/667#issuecomment-5235400096
