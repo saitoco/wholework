@@ -61,5 +61,17 @@
 - 2 回目の lock timeout はそのまま failure set へ追加（retry ループ禁止）
 - Non-interactive モードのため自動解決: 実装箇所は SKILL.md（LLM 実行）とし、`run-auto-sub.sh` 側の変更は行わない（シェルスクリプト側は lock 保持者を知る手段がないため）
 
-## Consumed Comments
-No new comments since last phase.
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Design was completed (this Spec) but implementation was never started — a superseding decision closed the Issue before `/code` ran.
+
+#### verify
+- All AC are unimplemented by deliberate choice, not oversight: #302's investigation concluded that patch-lock scope minimization (方針 D, implemented in #303) shrinks lock hold time from ~30 minutes to a few seconds, eliminating the lock-timeout collisions this Issue's auto-retry was meant to paper over. The Issue's own 2026-04-21 closing comment records this explicitly. Verified #303 is CLOSED and its short-lived lock is live in `scripts/worktree-merge-push.sh` today.
+- Judged all AC as SKIPPED (superseded) rather than FAIL, and transitioned directly to `phase/done` rather than looping in `phase/verify` — the Issue's real goal (resolve lock-timeout failures) was achieved via an alternative already shipped, so re-checking for the originally-planned implementation would misrepresent the Issue's true state.
+
+### Improvement Proposals
+- N/A
+
