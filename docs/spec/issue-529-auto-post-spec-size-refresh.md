@@ -109,3 +109,11 @@
 
 ### Improvement Proposals
 - （低優先）Step 4 の review 深度選択（line 220）が Step 3a で再判定した値ではなく Size から再導出している。Step 3a の refresh 済み値を明示参照する形にすると、将来 Step 2 の stale Size に起因する回帰を構造的に防げる。LLM ナラティブ上は Step 3a が Step 4 直前で Size を更新するため現状でも正しく流れるため、優先度は低い。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/529#issuecomment-4628091724
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/529#issuecomment-5182941369
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/529#issuecomment-5212258783
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/529#issuecomment-5225313420
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/529#issuecomment-5229257260
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/529#issuecomment-5235399205
