@@ -102,3 +102,7 @@ Domain 外プロジェクト (`HAS_VISUAL_DIFF_CAPABILITY=false`) では `domain
 - 旧案撤回 (Issue body の「設計再考の経緯」セクションで明記): `/spec --visual` flag (Core 改修)、`topic/visual-reproduction` label 新規定義、`.wholework.yml` `visual_states` config key は全て撤回し、capability gate + Domain file + project-local override の組み合わせで代替
 - AC 数値の整合: 本 Spec の Verification > Pre-merge は 5 items (Issue body も 5 items に同期更新; 元の Issue body は 10 items だったが light template Simplicity Rule に従い consolidate)
 - 同様の Domain file pattern を持つ参考実装: `skills/spec/visual-diff-guidance.md` (#441 で確立)、`skills/verify/browser-verify-phase.md` (browser capability)、`skills/issue/mcp-call-guidelines.md` (mcp capability)
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/438#issuecomment-4417861622
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/438#issuecomment-5182938348
