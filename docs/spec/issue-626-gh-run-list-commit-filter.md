@@ -101,3 +101,19 @@ patch route（Size XS/S）で使う `github_check "gh run list ..."` verify comm
 ### Improvement Proposals
 - N/A
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/626#issuecomment-4701067197
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4756910869
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4768308439
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4806655082
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4814731308
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4816318654
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4817060477
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 626` to verify the condition / https://github.com/saitoco/wholework/issues/626#issuecomment-4818974938
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5195218457
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5202636497
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5212259567
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5225313845
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5229257705
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5235399952
