@@ -397,6 +397,30 @@ EOF
     [[ "$output" == *"0 error"* ]]
 }
 
+# --- inline code (double backtick) validation ---
+
+@test "success: double-backtick inline code with nested single backtick does not swallow surrounding content" {
+    mkdir -p "$PROJECT_ROOT/skills/myskill"
+    cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
+---
+name: myskill
+description: A test skill
+---
+
+# Test Skill
+
+Use double backticks when the code itself contains a backtick, e.g. ``the `foo` value``.
+
+- [ ] <!-- verify: file_exists "path/to/file" --> some acceptance condition
+
+Later, reference the raw `backtick` character again for emphasis.
+EOF
+
+    run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"0 error"* ]]
+}
+
 # --- decimal step validation ---
 
 @test "error: decimal step in body is rejected" {

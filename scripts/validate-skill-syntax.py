@@ -63,8 +63,12 @@ ALL_CODEBLOCK_PATTERN = re.compile(r'```[^\n]*\n.*?```', re.DOTALL)
 # Pattern to extract HTML comments (<!-- verify: ... --> etc.)
 HTML_COMMENT_PATTERN = re.compile(r'<!--.*?-->', re.DOTALL)
 
-# Pattern to extract inline code (`...`)
-INLINE_CODE_PATTERN = re.compile(r'`[^`]+`')
+# Pattern to extract inline code (`...`, ``...``, etc.)
+# Captures the opening backtick run and requires a closing run of the same length
+# (Markdown code span rule), so a double-backtick span containing a nested single
+# backtick (e.g. ``the `foo` value``) is recognized as one span instead of the
+# unmatched first backtick greedily consuming the rest of the document.
+INLINE_CODE_PATTERN = re.compile(r'(`+)(?:(?!\1).)+?\1', re.DOTALL)
 
 # Pattern for shell-sensitive characters forbidden outside code fences
 # `!` is detected as a shell operator by the Claude Code Bash permission checker
