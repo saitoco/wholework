@@ -248,20 +248,27 @@ N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
 N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: spec -->
 
 ### Key Decisions
-- Pre-merge AC gate (`check-pre-merge-ac.sh`) は unchecked_count=0 で全 9 件 (iteration 0 の 5 件 + iteration 1 の 4 件) チェック済みだったため、override マーカーなしで通常フローのまま squash merge を実行した。
-- `review_incomplete_fallback` チェックは `reconcile-phase-state.sh` の diagnosis が "Review Response Summary found" (organic completion) を示しており、fallback 起因ではないと判定した。
-- `mergeable=UNKNOWN` が 2 回連続したが `gh-pr-merge-status.sh` の内蔵リトライで `mergeable=true, reason=clean` に解決したため、追加対応は不要だった。
+- 注入層を `scripts/guard-prefix.sh` の `GUARD_PREFIX` に決めた。5 本の wrapper が既に source し `PROMPT` 先頭へ前置する集約点が実在するため、1 ファイルの変更で issue / spec / code / review / merge の 5 phase に届く。`--append-system-prompt` (注入点が 5 箇所に分散) と新規 module + 全 SKILL.md からの Read (本 Issue が直そうとしている失敗そのもの) は不採用。
+- iteration 0/1 が SKILL.md 側に置いたガード (code Step 9 / review Step 12.3 / `modules/test-runner.md`) は削除せず維持する。既存 Pre-merge AC 4 件が当該記述の存在を検証しており、削除は回帰になる。役割分担も異なる (wrapper = phase 横断の backstop、SKILL.md = 実行判断地点直近の具体手順)。
+- Triage AC audit コメントの指摘 (iteration 2 の 3 件目 rubric が常時 PASS しうる) を反映し、Issue 本文の当該 AC を「判定対象を `modules/execution-context.md` に限定する」形へ書き換え、機械的裏取りの `section_contains` AC を 1 件追加した。Pre-merge AC は 13 → 14 件。
+- AC14 (`command "bats ..."`) の対象を 3 本から 5 本へ広げた。本 iteration は `tests/run-code.bats` / `tests/run-review.bats` も変更するため、元の 3 本では変更したテストが AC で回らない。
+- Spec 冒頭の `## Verification` を全 iteration 統合の現行リスト (Pre-merge 14 / Post-merge 3、Issue 本文と 1:1) に更新した。iteration 1 の review retrospective が指摘した「fix cycle で Spec の AC が旧 iteration のまま据え置かれる」構造的ギャップの再発を避けるため。
 
 ### Deferred Items
-- Post-merge observation AC (code phase / review phase の 2 件) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される — `/verify` に引き継ぐ。
-- `cause=background-notification-wait` の閾値到達監視 (現在 2/3) — 本 Issue の修正が有効なら 3 件目は発生しないはずで、この閾値到達の有無自体が実効性の指標になる。`/verify` で観測を継続すること。
+- `run-spec.sh` の `auto-retry-on-fail` 欠如 → #1329 (復旧機構であり予防ではないため本 Issue の除外規定に該当)。
+- Tier 2 detector の signature 追加 → #1323 (検出側)。
+- wrapper 以外の `claude -p` 起動経路 (`scripts/spawn-recovery-subagent.sh`、`scripts/run-auto-sub.sh:782` の Tier 3 recovery sub-agent) への同種制約の要否は未判断。phase 実行ではないため本 Issue の AC が列挙する 5 phase には含まれない。
+- Post-merge observation AC 3 件 (code / review / spec) は `session=next` により次回以降の `/auto` 実行時に評価される。
 
 ### Notes for Next Phase
-- `/verify` は Post-merge observation AC 2 件 (並列形・バックグラウンド移行なしでの完了) を次回 `/auto` 実行ログから評価すること。
-- squash merge・remote branch 削除は正常完了 (`gh pr merge --squash --delete-branch` エラーなし)。
+- **最重要**: `GUARD_PREFIX` は二重引用符で囲まれた bash 文字列。追記テキストにバッククォート・`$`・二重引用符・バックスラッシュを含めるとコマンド置換または文字列の早期終端が起きる。素のテキストで書き、実装後に `bash -n scripts/guard-prefix.sh` で構文チェックすること。
+- AC13 の `section_contains` は Implementation Step 2 が新設する `### Wrapper-Level Constraint Injection` 見出しに依存する。見出し文字列を変更する場合は Issue 本文の AC13 も同時に更新すること。
+- bats 5 本の mock に追加する検出キーワードは `GUARD_PREFIX` にしか現れない語句を選ぶこと。既存の `PROMPT_HAS_GUARD` と同じブロック内に並べる。5 本とも `setup()` で実体 `scripts/guard-prefix.sh` を `$MOCK_DIR` へ `cp` しているため、テストは出荷される文字列そのものを検証する。
+- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md` の Sync Procedure)。
+- `scripts/check-forbidden-expressions.sh` の `SCAN_DIRS` は `scripts/` を含まないが、`modules/execution-context.md` と `docs/structure.md` は対象。
 
 ## Verify Retrospective
 
@@ -356,3 +363,60 @@ iteration 0 は「前景実行 + 明示 `timeout`」を要求したが、**`time
 
 - **fix cycle で Issue body の AC が iteration 0 のまま据え置かれる構造的ギャップ** — `/verify` FAIL → reopen → `/code` の経路で、新しい実装を検証する Pre-merge AC が自動では追加されない。今回は `/review` が MUST として指摘して 4 件追加したが、機構としては保証がない。`/code` の fix-cycle 経路 (`skills/auto/SKILL.md` Step 2a で検出される状態) に「iteration N の実装を検証する AC を Issue body へ追加する」ステップを設ける余地がある。ただし既存 Issue (#1096「新規追加する検証系テストの assert が実装前に FAIL することを確認させる」、#1125「パーサ系変更への negative/edge case 実測ステップの定型化」) と検証設計という点で隣接するため、独立起票せず本節に記録するに留める (Tier 2)
 - **制約値を指示に書く際、その値が上限か否かを確認する** — iteration 0 が `timeout: 600000` を「実測 ~407s をカバーする値」として書いたが、実際は tool の上限値であり超過時の挙動 (自動バックグラウンド移行) が指示の前提を壊していた。同種のパターン (tool/API の上限値をそのまま指示に埋め込む) は他にもありうるが、現時点で具体的な再発候補が特定できていないため、横断棚卸しは次に類似事例が出た時点で判断する (Tier 3)
+
+## issue retrospective (iteration 2)
+
+`/issue` フェーズが Issue コメントとして残した retrospective の転記 (出典: https://github.com/saitoco/wholework/issues/1213#issuecomment-5235850418)。
+
+### スコープ転換の判断根拠
+
+reopen コメントの項目 2 (phase 横断での取りこぼし防止) を、調査によって方式レベルまで確定させた。決め手は次の 3 事実である。
+
+| 事実 | 確認コマンド |
+|---|---|
+| `modules/test-runner.md` を読む skill は code / review / verify のみ | `grep -ln "modules/test-runner.md" skills/*/SKILL.md` |
+| `modules/execution-context.md` を参照する skill は code / review のみ | `grep -ln "execution-context.md" skills/*/SKILL.md` |
+| `skills/spec/SKILL.md` にフルスイート実行の指示は存在しない | 同ファイルの `bats` 言及はすべて「Spec に何を書くか」の規約 |
+
+当初は `modules/test-runner.md` への集約を有力案と考えていたが、`/spec` は test-runner.md を読まないため届かないことが判明した。さらに `/spec` はフルスイート実行を指示されてすらおらず、エージェントの自発的判断で実行していた。これにより「制約文をどこに配置するか」という iteration 0/1 のアプローチは、指示を持たない phase には原理的に届かないことが確定した。残る `issue` / `merge` / `doc` / `triage` / `audit` も同じ穴を持つ。
+
+結論として、`claude -p` を起動する唯一の層である `scripts/run-*.sh` 側での一括注入へ方針転換した。wrapper は `--non-interactive` を渡す当事者であり、再呼び出し保証がないことを起動時点で知っている。
+
+### ユーザー確認で決定した 2 点
+
+| 論点 | 決定 | 却下した選択肢 |
+|---|---|---|
+| スコープに含める phase | 全 phase を wrapper 側で一括担保 | spec のみ追加 (4 世代目の繰り返しになる) / 検出側 #1323 を優先 (予防を諦める) |
+| `run-spec.sh` の auto-retry 欠如 | 別 Issue に切り出す → #1329 | 今回のスコープに含める / 揃えない理由を明記するだけ |
+
+### AC の設計方針: 手段を固定しない
+
+新規 AC はいずれも結果 (どの phase に制約が届くか) で記述し、実現方式を固定していない。これは #1293 の先例に倣ったもので、同 Issue ではタイトルが特定方式を示唆していたが AC が outcome-based だったため、`/issue` の実測による反証を受けて `/spec` が別方式へ切り替えられた。本 Issue も 4 世代目にして初めて方式を変えるため、AC が手段を縛らないことの価値が高い。
+
+### 既存 AC の扱い
+
+iteration 0/1 の Pre-merge AC 9 件はすべてチェック済みだが削除せず維持した。fix cycle の検証履歴であり、`(iteration 1)` / `(iteration 2)` のプレフィックスで世代を区別する既存の方式を踏襲している。Post-merge の未達 AC 1 件 (review phase の observation) もそのまま残した。
+
+### タイトル更新と系譜
+
+タイトルの `code/review:` プレフィックスがスコープと不整合になったため `auto:` へ変更した。component は wrapper 群 (`scripts/run-*.sh`) の管轄である `auto` とし、系譜が 4 世代に伸びたため `(#994 の再発)` は本文の系譜表に委ねて外した。reopen コメントが記載していた系譜に #1175 が含まれており、当初の把握 (3 世代) より 1 世代長かった。
+
+## spec retrospective (iteration 2)
+
+### Minor observations
+
+- Issue 本文の事実主張 3 件 (`test-runner.md` の読み手、`execution-context.md` の読み手、`skills/spec/SKILL.md` にフルスイート実行指示がないこと) を Step 6 の conflict detection で全件再検証したが、いずれも実装と一致していた。`/issue` フェーズが調査コマンドを本文に明記していたため検証コストがほぼゼロで済んだ。事実主張に確認コマンドを併記する書き方は再現性が高い。
+- 注入点として `scripts/guard-prefix.sh` が既に存在していたことが、この iteration の設計を大きく単純化した。#557 が「5 wrapper に散在していた GUARD_PREFIX を 1 ファイルへ抽出」した結果が、3 世代あとの本 Issue で phase 横断制約の集約点として機能している。抽出のリファクタリングが後から別目的で効いた例。
+- `modules/execution-context.md` の Callers リストは「どの skill がこの module を読むか」を追跡する目的で維持されているが、今回追加する `scripts/guard-prefix.sh` は module を読む側ではなく「module が定義した規則を配る側」である。同じリストに載せると意味が二重になるため、行の書き方で役割の違いを明示する必要がある (Implementation Step 3 に反映済み)。
+
+### Judgment rationale
+
+- **Spec 冒頭の `## Verification` を全 iteration 統合リストへ更新した判断**: iteration 1 の review retrospective が「fix cycle で Spec の Implementation Steps / AC が旧 iteration のまま残り、新実装を検証する AC が 1 件も存在しない状態で PR が作られた」と記録していた。同じ構造が iteration 2 でも成立しうるため、Spec 側の Verification を Issue 本文と 1:1 に揃えることで予防した。一方 `## Changed Files` / `## Implementation Steps` は iteration ごとの節に分ける既存方式を維持し、冒頭に「現在の作業対象は iteration 2」というポインタを置く形で折衷した。両方を統合リスト化しなかったのは、履歴としての iteration 0/1 の実装記録を失いたくないため。
+- **Triage AC audit の 2 案から「記録先を実装成果物側に限定する」を選んだ理由**: もう一方の案 (実装箇所の特定を問う形) は、実装の実体は git diff から grader が読めるものの「方式を選んだ理由」という記録要件が落ちる。本 Issue は 4 世代目にして初めて方式を変えるケースであり、なぜ変えたかの記録は将来の 5 世代目を防ぐ資産になる。判定対象を `modules/execution-context.md` に限定すれば、要件を落とさずに常時 PASS リスクだけを外せる。
+- **AC の追加を 1 件に留めた理由**: 監査コメントは `section_contains` の併記を推奨していたが、AC を増やすほど `/merge` の pre-merge AC gate で未チェック項目が残るリスクが上がる (iteration 1 で実際に 4 件未チェックによる merge ブロックが起きている)。rubric の裏取りとして最小限の 1 件だけを追加した。
+
+### Uncertainty resolution
+
+- **`section_contains` の見出しレベル依存**: 新設する `### Wrapper-Level Constraint Injection` が `##` ではなく `###` であることが判定に影響するかを `modules/verify-executor.md` で確認した。heading 引数は先頭の `#` を除去した上での部分一致であり、レベルは判定に影響しない。ただし節の範囲は「同レベル以上の次の見出しまで」なので、`###` 節の直後に別の `###` が来る配置なら意図した範囲になる — Implementation Step 2 の配置で成立する。
+- **`GUARD_PREFIX` への追記が bash 文字列として安全か**: 既存の `GUARD_PREFIX` は二重引用符文字列で、現状バッククォートも `$` も含んでいない。追記テキストにコード片をバッククォートで囲む書き方をすると即座にコマンド置換になるため、素のテキスト表記に統一する方針を Implementation Step 1 と Changed Files の双方に明記した。実装時の検証手順 (`bash -n` + `source` して `grep`) も Uncertainty 節に残した。
+- **wrapper を持たない skill をどう扱うか**: `/verify` / `/triage` / `/audit` / `/doc` / `/auto` は `run-*.sh` を持たず常に main context で走る。main context には再呼び出し保証があるため MUST rule の適用対象外であり、wrapper 層の注入で「全 phase をカバーする」という AC の主張と矛盾しないことを `modules/execution-context.md` の Per-Skill Context Table で確認した。この整理を実装成果物にも書き残す (Implementation Step 2)。
