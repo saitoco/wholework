@@ -60,6 +60,10 @@
 ## Consumed Comments
 - saito / MEMBER / first-class / Issue Retrospective — AC2 の verify command を awk ベースの frontmatter 判定に修正済み (environment-adaptation.md 内の fenced code block 由来の誤検出を回避)。Post-merge observation AC に `session=next` 追加済み。追加で解決すべき曖昧性なし / https://github.com/saitoco/wholework/issues/1283#issuecomment-5226925420
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1283#issuecomment-5227147234
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1283#issuecomment-5227646774
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1283#issuecomment-5230976727
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1283#issuecomment-5235408622
 ## Code Retrospective
 
 ### Deviations from Design
