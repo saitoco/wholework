@@ -32,6 +32,9 @@ for ARG in "$@"; do
     esac
 done
 
+RUN_TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$RUN_TMP_DIR"' EXIT
+
 # extract_manual_acs <file>
 # Print lines from <file> that contain verify-type: manual, stripped of checkbox and HTML comment markup.
 extract_manual_acs() {
@@ -60,7 +63,7 @@ for NUMBER in "$@"; do
         TMP_SRC="$SPEC_FILE"
     else
         echo "Source: Issue body (no Spec found)"
-        TMP_SRC=$(mktemp /tmp/post-merge-issue-body-XXXXXX.md)
+        TMP_SRC="$RUN_TMP_DIR/issue-body-${NUMBER}.md"
         TMP_SRC_CREATED=true
         gh issue view "$NUMBER" --json body -q .body > "$TMP_SRC" 2>/dev/null || true
     fi
@@ -77,8 +80,7 @@ for NUMBER in "$@"; do
     fi
 
     # Write ACs to temp file and iterate via fd 3 to keep stdin free for user input
-    TMP_ACS=$(mktemp /tmp/post-merge-acs-XXXXXX.txt)
-    trap 'rm -f "$TMP_ACS"' EXIT
+    TMP_ACS="$RUN_TMP_DIR/acs-${NUMBER}.txt"
     echo "$MANUAL_ACS" > "$TMP_ACS"
 
     PASS_COUNT=0
@@ -133,7 +135,7 @@ ${ac_line}"
         echo "FAIL detected — reopening Issue #${NUMBER}..."
         gh issue reopen "$NUMBER"
 
-        TMP_COMMENT=$(mktemp /tmp/post-merge-comment-XXXXXX.md)
+        TMP_COMMENT="$RUN_TMP_DIR/comment-${NUMBER}.md"
         cat > "$TMP_COMMENT" <<COMMENT
 ## Post-Merge Manual Verification: FAIL
 
@@ -151,7 +153,7 @@ COMMENT
         echo "Transitioning Issue #${NUMBER} to phase/done..."
         "$SCRIPT_DIR/gh-label-transition.sh" "$NUMBER" done
 
-        TMP_COMMENT=$(mktemp /tmp/post-merge-comment-XXXXXX.md)
+        TMP_COMMENT="$RUN_TMP_DIR/comment-${NUMBER}.md"
         cat > "$TMP_COMMENT" <<COMMENT
 ## Post-Merge Manual Verification: Complete
 
