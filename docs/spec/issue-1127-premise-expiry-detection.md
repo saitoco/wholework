@@ -283,27 +283,24 @@ Background に記載の対応方針 A (`/audit` への観点追加) / B (機械�
 - N/A — 上記のガイダンス文言修正以外に手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Non-interactive fork context 判定 (execution-context.md) により Workflow path はスキップし、静的 Task fan-out (review-spec + review-bug×2) を Agent ツール (`run_in_background: false`) で実行した。
-- review-bug 由来 10 件の finding を2段階検証にかけ、2件のみ生存 (`scripts/check-premise-expiry.sh:105` 空 paths、`:117` マーカー抽出近似マッチ消失)。残り8件は「呼び出し元がパスを自身で生成するため到達不能」「手前のガードが同じ fail-open 結果に先に到達」「既存の `--limit 100` 慣行と同型」「ja ミラー全体で全角括弧が支配的な既存慣行」等の理由で false positive として棄却した。
-- review-spec が検出した `skills/audit/SKILL.md:842` (Step 2 の exit 0 処理が Step 3 の `HOLDS`/`UNEVALUABLE` を生成できない) は review-bug の diff-scan エージェントも独立に同一箇所を検出しており、2 観点のクロスバリデーションにより MUST として採用した。
-- MUST 1件・SHOULD 3件・CONSIDER 3件、計7件すべてを修正した。CONSIDER も含め全件修正した理由: いずれも修正コストが低く (数行の diff)、放置すると `/audit premise` の fail-open 契約が部分的に空文化する (MUST/一部SHOULD) か、ガイダンス例が初回実行で必ず EXPIRED を出す (CONSIDER 1件) など、実利用時に混乱を招く実質的なギャップだったため。
+- pre-merge AC ゲート (4件全 PASS) と review-incomplete-fallback チェック (fallback なし、通常の Review Response Summary 経路) を確認したうえで、conflicts なしの clean マージとして squash merge を実行した。
+- BASE_BRANCH は `main` のため、`closes #1127` による Issue 自動クローズが有効。ラベル遷移・Issue クローズ確認のフォールバック手順が Step 6 として組み込まれている。
 
 ### Deferred Items
 
-- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない (spec retrospective から継続)。
-- `docs/translation-workflow.md` の同期対象範囲の記述の是正は本 Issue のスコープ外 (spec retrospective から継続)。
-- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (spec retrospective から継続)。
-- 棄却した8件のうち `scripts/check-premise-expiry.sh:161` (git grep exit status 未検査、out-of-repo path で fatal collapse) は「ドキュメント外の使用法でのみ到達」と判定して見送ったが、`git grep` の終了コードを一切検査しない設計自体は将来別の呼び出しパターンで顕在化しうる。再発した場合は個別 Issue で再検討する。
+- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない (spec/review retrospective から継続)。
+- `docs/translation-workflow.md` の同期対象範囲の記述の是正は本 Issue のスコープ外 (spec/review retrospective から継続)。
+- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (spec/review retrospective から継続)。
+- 棄却した review finding のうち `scripts/check-premise-expiry.sh:161` (git grep exit status 未検査、out-of-repo path で fatal collapse) は将来別の呼び出しパターンで顕在化しうる。再発した場合は個別 Issue で再検討する (review retrospective から継続)。
 
 ### Notes for Next Phase
 
-- `/merge` 前提: 全11 CI ジョブ SUCCESS (修正後の再プッシュ分含む)、pre-merge AC 4件すべて PASS でチェック済み。
-- Full bats suite (`bats --jobs 18 tests/`) は review フェーズの修正後に 1728/1728 で全 pass (1725 既存 + review で追加した回帰テスト3件)。
-- `docs/tech.md` の model-effort-matrix (SSoT) に `premise` サブコマンドを追加した — 同種の列挙を追加する際は `docs/product.md`/`docs/workflow.md`/`docs/guide/workflow.md` だけでなく `docs/tech.md` も確認対象に含めること (今回は review フェーズで検出・修正)。
+- `/verify` 前提: post-merge AC は「CI (`Run bats tests`) が merge commit で pass すること」および「`/audit premise` を既存 open Issue に対して実行し、他に #1055 のような失効前提が存在しないかを investigation-only で確認すること」の2点。
+- Full bats suite は review フェーズ完了時点で 1728/1728 全 pass。マージ commit 上での再実行結果が post-merge AC の1つ目。
 
 ## review retrospective
 
