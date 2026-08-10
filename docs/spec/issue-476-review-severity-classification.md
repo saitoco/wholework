@@ -269,3 +269,14 @@
 ### Improvement Proposals
 - 16 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。re-run #15 が指摘した「observation ベースの AC 設計が長期間 PASS/FAIL に到達しにくい構造的問題」は本 re-run でさらに裏付けられた — 皮肉にも、この誤発火の直接的な原因系統 (`keyword=` ゲートの部分一致誤検知) を修正する PR #1293/#1314 自身が発火元となったことで、「誤発火の原因を直そうとする作業自体が誤発火の材料になる」という構造的な自己参照ループが可視化された。Step 16 (retro-proposals) の freshness check に判断を委ねるが、16 回という回数は re-run #15 時点よりさらに一段深刻であり、observation AC 自体の設計見直し (一定回数 UNCERTAIN が続いた場合の人手確認フォールバック等) の優先度が上がったと判断する
 
+## Verify Retrospective (2026-08-10 re-run #17)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1341、Issue #1124) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1341 の diff (`scripts/get-config-value.sh`, `modules/detect-config-markers.md`, `tests/get-config-value.bats`, `docs/spec/issue-1124-*.md` — get-config-value.sh の対応/非対応入力形状のドキュメント統合) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートは `scripts/get-config-value.sh` ヘッダー表・Spec 本文中の `capabilities.workflow` キー言及への部分一致で発火しており、re-run #1〜#16 と同型 (発火元 PR が Issue #476 の対象シナリオを含まない) の誤発火/無関係発火パターンが 17 件目として再現した。基準の存在 (Pre-merge 2 件 PASS 済み) は再確認できたが、17回連続で UNCERTAIN 判定を維持する
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14/#15/#16 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- 17 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。Issue #1220 (`observation-trigger: keyword= フィルタの部分一致誤検知を解消`) が根本原因を追跡済みのため、本 re-run でも重複起票は行わない。件数の増加自体は re-run #16 までの傾向の継続であり、新たな示唆はない
+
