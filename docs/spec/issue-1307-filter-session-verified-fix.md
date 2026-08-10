@@ -62,6 +62,10 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1307 --non-interactive` (Existing Issue Refinement) の Issue Retrospective。AC1 の verify command を `grep "session" ...` (常時 PASS 欠陥) から `grep -- "--session" ...` (実装後にのみ HIT) へ修正した経緯、Post-merge AC に `session=next` を追加した経緯 (skills/auto/SKILL.md 変更を含むため) を記録。Background の技術的主張は確認済みで修正不要、との申し送りも含む。/ URL: https://github.com/saitoco/wholework/issues/1307#issuecomment-5230556404
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1307#issuecomment-5230791564
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1307#issuecomment-5230977431
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1307#issuecomment-5235409556
+- saito / MEMBER / first-class / ## 本 Issue の failure mode を再現しました (session `40422-1786325686`, 2026-08-10) / https://github.com/saitoco/wholework/issues/1307#issuecomment-5235709807
 ## Code Retrospective
 
 ### Deviations from Design
