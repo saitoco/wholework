@@ -153,19 +153,18 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 - Behavioral Change Detection (Step 9) により `bats --jobs 18 tests/` のフルスイート実行を行ったところ、`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が failed した。本変更を `git stash` で除いた状態でも同じ 2 件が同じ `--jobs 18` 条件下で再現し、単独実行 (`bats tests/post_merge_check.bats`) では 10/10 PASS したため、本変更とは無関係な高並列実行時のプリイグジスティング flake と判断した。`test-failure-classify.sh` の分類は `infra`。pr route のため CI 側の検出に委ねる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `/review --light` (REVIEW_DEPTH=light、Issue #1312 の Size に基づく明示指定) で review-light エージェント (Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性の4観点統合) を1エージェントで実行し、問題は検出されなかった。
-- Pre-merge AC 5件 (rubric×2, grep×2, command×1) をすべて safe mode で検証し、全件 PASS を確認した。command 条件は CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) 経由で PASS 判定した。
-- Base Branch Conflict Pre-check (`git merge-tree` 3引数形式) で `changed in both` 0件を確認し、main との競合なしと判定した。
+- pre-merge AC ゲートは `check-pre-merge-ac.sh` により 5件全チェック済みと確認し、追加確認なしでマージへ進んだ。
+- `gh-pr-merge-status.sh` で mergeable=true (reason=clean, CI success, review approved) を確認し、コンフリクト解消ステップはスキップした。
+- `gh pr merge --squash --delete-branch` により squash merge を実行した。
 
 ### Deferred Items
-- Post-merge observation AC (`次回 /auto --batch の完走後、spec silent window が at-risk 警告を出さないことを観察する`) は `/verify` フェーズで判定する (code フェーズの Phase Handoff から引き続き繰越)。
+- Post-merge observation AC (`次回 /auto --batch の完走後、spec silent window が at-risk 警告を出さないことを観察する`) は `/verify` フェーズで判定する (review フェーズの Phase Handoff から引き続き繰越)。
 
 ### Notes for Next Phase
-- MUST issue はなく、Claude Review Response は "Resolved" 対応なし。`/merge 1319` へ直接進んで問題ない。
-- `bats --jobs 18 tests/` のフルスイートで `tests/post_merge_check.bats` の 2 件が flake する既知事象 (code フェーズの Phase Handoff 記載、本 PR と無関係) は今回の CI 実行では再現しなかった (全ジョブ SUCCESS)。
+- `closes #1312` により Issue は自動クローズされる見込み。`/verify 1312` で post-merge observation AC を確認すること。
 
 ## Consumed Comments
 No new comments since last phase.
