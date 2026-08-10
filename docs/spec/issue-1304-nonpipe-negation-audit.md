@@ -8,6 +8,9 @@
 
 本 Spec は当該コメントを消費し、AC1 を `section_not_contains` 形式へ差し替えた (Notes § Auto-Resolve Log 参照)。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1304#issuecomment-5230332699
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1304#issuecomment-5230977328
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1304#issuecomment-5235409421
 ## Overview
 
 `tests/*.bats` に残る **pipe を伴わない否定アサーション**を #1292 と同じ判定基準 (非最終文なら defective、真の最終文なら safe) で棚卸しし、検出力ゼロのアサーションを `if cmd; then false; fi` 形式へ書き換える。
