@@ -278,29 +278,31 @@ If SPEC_DEPTH=full, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
 
-**Steering Docs sync candidate check (when Changed Files includes SKILL.md or scripts/):**
+**Steering Docs sync candidate check (when Changed Files includes SKILL.md, `modules/`, or `scripts/`):**
 
-When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`) or files under `scripts/`, run a recursive `grep -rn` cross-search across `docs/`, `tests/`, and `scripts/` to find files that reference the changed skill/script name, or any config key / marker name / function name this Issue introduces or changes. List found files as sync candidates in the Changed Files section.
+When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`), files under `modules/` (e.g., `modules/verify-executor.md`), or files under `scripts/`, run a recursive `grep -rn` cross-search across `docs/`, `tests/`, `scripts/`, and `modules/` to find files that reference the changed skill/module/script name, or any config key / marker name / function name this Issue introduces or changes. List found files as sync candidates in the Changed Files section.
 
 Steps:
 1. Extract target keywords from each changed file:
    - `skills/{name}/SKILL.md` → keyword: `{name}` (e.g., `auto`, `spec`)
+   - `modules/{name}.md` → keyword: `{name}.md` (e.g., `verify-executor.md`)
    - `scripts/{script-name}.sh` → keyword: `{script-name}.sh` (e.g., `run-code.sh`)
    - Also extract any config key, marker name (`type=...`), or function name this Issue introduces or changes (e.g., `capabilities.pr-preview`, `type=preview-ac-unverified`) — these are often more specific sync-relevant terms than the skill/script name alone
 2. For each keyword, run:
    ```bash
-   grep -rn "<keyword>" docs/ tests/ scripts/ 2>/dev/null
+   grep -rn "<keyword>" docs/ tests/ scripts/ modules/ 2>/dev/null
    ```
-   Unlike a `docs/*.md`-style non-recursive glob (which misses second-level files such as `docs/guide/customization.md`), this reaches every file under the three directories. The `-n` output shows each matching line's content, not just the filename, so a prose bullet and a table cell are both visible in one pass.
+   Unlike a `docs/*.md`-style non-recursive glob (which misses second-level files such as `docs/guide/customization.md`), this reaches every file under the four directories. The `-n` output shows each matching line's content, not just the filename, so a prose bullet and a table cell are both visible in one pass.
 3. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section, checking category-specific patterns:
    - **docs/**: check ALL occurrence formats (prose bullets, config-reference tables, variable tables, code blocks) — a table cell can go stale independently of a prose paragraph describing the same key elsewhere in the same file
    - **tests/**: check whether another `.bats` file targets the same script/behavior (e.g., both `tests/run-verify.bats` and `tests/verify.bats` may need the same update)
    - **scripts/**: check whether a helper script called by the changed script also references the keyword
+   - **modules/**: check whether another module file describes the same spec/behavior under a different filename (e.g., both `modules/verify-executor.md` and `modules/observation-trigger.md` may describe the same verify-type semantics)
 
    e.g., `docs/guide/customization.md`: [Steering Docs sync candidate] verify `<keyword>` description is current across prose and config-reference table occurrences; update if needed
 4. The `/code` phase makes the final include/exclude decision by reading each candidate; listing them here prevents silent omission at implementation time
 
-**Skip** if Changed Files does not include SKILL.md files or files under `scripts/`.
+**Skip** if Changed Files does not include SKILL.md files, files under `modules/`, or files under `scripts/`.
 
 **`docs/ja/` translation sync check:**
 
@@ -325,7 +327,7 @@ When the Issue extends the accepted semantics or applicability scope of an exist
 
 **Differs from adjacent checks:**
 - **Rename-type Issue grep check**: fires on literal string replacement — the string itself changes. This check fires when the string is unchanged but the conditions under which it is valid widen.
-- **Steering Docs sync candidate check**: targets `docs/` reference sync only. This check targets consuming *logic* in `skills/`/`modules/`/`scripts/` that branches on the value's meaning.
+- **Steering Docs sync candidate check**: targets reference sync across `docs/`, `tests/`, `scripts/`, and `modules/` — cross-file description consistency, not decision logic. This check targets consuming *logic* in `skills/`/`modules/`/`scripts/` that branches on the value's meaning.
 - **Symbol impact discovery**: targets deletion/migration/rename, where the old symbol disappears. This check targets a symbol that remains present but whose consumers' assumptions must be re-validated.
 
 **Skip** if the Issue does not extend an existing tag/enum's semantics.
