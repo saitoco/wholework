@@ -60,3 +60,6 @@
 - retry は逐次実行（並列不要）。他の sub-issue は既に完走済みのため lock 競合は発生しない
 - 2 回目の lock timeout はそのまま failure set へ追加（retry ループ禁止）
 - Non-interactive モードのため自動解決: 実装箇所は SKILL.md（LLM 実行）とし、`run-auto-sub.sh` 側の変更は行わない（シェルスクリプト側は lock 保持者を知る手段がないため）
+
+## Consumed Comments
+No new comments since last phase.
