@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (84 files)
+├── scripts/             # Utility scripts used by skills and agents (85 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (120 files)
+├── tests/               # Bats test files for scripts (121 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -254,6 +254,7 @@ Key modules:
 - `scripts/check-session-findings-disposition.sh` — detects `## Findings` bullets in an L3 `session.md` missing a canonical disposition tag; called warn-only from `skills/auto/SKILL.md` Step 5 right before the commit
 - `scripts/check-skill-change-observation-ac.sh` — detects post-merge `verify-type: observation` ACs missing `session=next` when the Issue body references `skills/*/SKILL.md`; called warn-only from `skills/issue/SKILL.md` Step 4
 - `scripts/check-ac-checkbox-format.sh` — detects non-checkbox condition lines under `### Pre-merge` / `### Post-merge` sections of an Issue body; called warn-only from `skills/issue/SKILL.md` Step 4
+- `scripts/check-premise-expiry.sh` — re-evaluates `<!-- premise: ... -->` markers (`grep_count`/`file_exists`/`file_not_exists`) from an Issue body against the current work tree; exit 2 + `EXPIRED:` stdout lines on expiry, exit 0 otherwise (fail-open `UNEVALUABLE:` lines to stderr do not affect the exit code); called from `/audit premise` Step 2 Layer 1
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/check-known-events-firing.sh` — verify every `KNOWN_EVENTS` entry in `scripts/opportunistic-search.sh` has a real `--event <name>` invocation site (excluding comment lines and echo/printf usage strings)
