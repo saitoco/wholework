@@ -86,3 +86,36 @@
 | login | authorAssociation | trust tier | 意図要約 | URL |
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。session 97764 (`manual_intervention` 0件) と session 1497 (同 2件) の対照実験結果を踏まえ、Purpose/AC を「呼び出し側コンプライアンス確保 (主)」「emission path 再検証 (従)」の二段構成へ改訂した経緯の記録。本 Spec 作成前に Issue 本文へ統合済みのため、本文を一次資料として直接使用した | https://github.com/saitoco/wholework/issues/1049#issuecomment-5240768609 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 を Spec の記述どおりに実装した
+
+### Design Gaps/Ambiguities
+- Notes の Steering Docs sync candidate (`docs/tech.md`/`docs/workflow.md` の Parent-session manual respawn / External kill respawn 段落) は「`/code` が判断」とされていたため、両段落に `/verify` Step 12 からの backfill 呼び出しが第二の呼び出し元であることを 1 文追記する判断を下した。`docs/ja/tech.md`/`docs/ja/workflow.md` も `docs/translation-workflow.md` の同期手順に従い同内容を追記し、code fence 数の一致を確認した
+
+### Rework
+- N/A
+
+### Smoke Test
+- Spec に `## Smoke Test` セクションが存在しないためスキップ (no-op)
+
+### Test Suite Note
+- Behavioral Change Detection の結果、`modules/orchestration-fallbacks.md` と `skills/verify/SKILL.md` を追加参照するテストファイルが直接対応ファイル以外に存在したため `bats --jobs 18 tests/` でフルスイートを実行した。`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が並列実行時のみ FAIL したが、変更前のコード (`git stash` で本 Issue の diff を除去した状態) でも同じ 2 件が `bats --jobs 18 tests/post_merge_check.bats` で同様に FAIL し、単体実行では両状態とも PASS することを確認した — 本 Issue の変更とは無関係な既存の並列実行時 flaky test であり、既に Issue #1308 (open) がこの解消を追跡している。本 PR に関連するテスト (`tests/run-auto-sub.bats`, `tests/orchestration-fallbacks.bats`) は単体実行・フルスイート実行のいずれでも PASS した
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/verify/SKILL.md` Step 12 の Tier 2/3 と Manual recovery の bullet を分離し、Manual recovery のみに `--write-manual-recovery` backfill 呼び出しを追加した (Tier 2/3 は自動復旧経路のため今回のスコープ外)
+- Steering Docs sync candidate (`docs/tech.md`/`docs/workflow.md` および ja mirror) は「追記する」を選択し、既存段落へ 1 文追記する形で反映した (新規段落の追加ではなく既存記述の拡張)
+- `skills/auto/SKILL.md` の real-time hand-off 文言自体は変更しない Spec Notes の判断を踏襲した — 変更対象は `/verify` Step 12 のみ
+
+### Deferred Items
+- Post-merge observation AC (次に手動復旧が発生した session での event 数一致確認) は `/verify` 実行時まで未検証のまま
+- `tests/post_merge_check.bats` の並列実行 flaky test 解消は Issue #1308 に委譲 (本 Issue のスコープ外)
+
+### Notes for Next Phase
+- `/review` は `skills/verify/SKILL.md` の allowed-tools 追加 (`run-auto-sub.sh`) が意図通りか、Step 12 の新 bullet の文言が Tier 2/3 の既存規定と矛盾しないかを確認すること
+- `docs/tech.md`/`docs/workflow.md` と ja mirror の追記文が英日で対応していることは code fence 数一致で simple check 済みだが、内容面の翻訳精度は未レビュー
