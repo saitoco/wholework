@@ -42,3 +42,7 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/539#issuecomment-4628883477
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/539#issuecomment-5182940914
