@@ -15,16 +15,21 @@
 #   Exits with code 0 on success (including when returning default value)
 #   Exits with code 1 on usage error
 #
-# Notes:
-#   - Supports flat kebab-case keys and single-level nested keys in block format
-#     (e.g., capabilities.workflow). Keys with two or more dots, or inline hash
-#     format (capabilities: { workflow: true }), are not supported.
-#   - A nested key matches only a direct child of the section: a deeper-indented
-#     key (capabilities.mcp.workflow) does not answer capabilities.workflow
-#   - Keys may contain only [A-Za-z0-9._-]; any other key returns the default
-#     (keys can originate from free text, so they are never treated as regex)
-#   - Strips surrounding quotes from values
-#   - Ignores comment lines (starting with #)
+# Supported/Unsupported Input Shapes (SSoT — modules/detect-config-markers.md
+# points here rather than re-listing these; keep changes to this table alone,
+# in the same commit as any corresponding tests/get-config-value.bats change):
+#
+#   | # | Input shape                                         | Supported | Behavior |
+#   |---|------------------------------------------------------|-----------|----------|
+#   | 1 | Flat key (`key: value`)                               | Yes | value returned, quotes/comment stripped |
+#   | 2 | Single-level nested key, block format (`section.key`, matched against `section:\n  key: value`) | Yes | value returned from the section's direct child |
+#   | 3 | Nested key, 2+ dots (`a.b.c`)                          | No  | default returned (fallback only fires for exactly 1 dot) |
+#   | 4 | Inline hash format (`section: { key: value }`)         | No  | default returned (not recognized as a section header) |
+#   | 5 | Section direct child vs. deeper indent (grandchild)    | Direct child: Yes / Grandchild: No | grandchild returns default |
+#   | 6 | Inline comment, value line (`key: value  # comment`)   | Yes | comment stripped from the returned value |
+#   | 7 | Inline comment, section header (`section:  # comment`) | Yes | section recognition unaffected (no value on this line) |
+#   | 8 | Key character set (`[A-Za-z0-9._-]`)                   | Out-of-range: No | default returned (fail-closed; keys can originate from free text and must never be treated as regex) |
+#
 #   - Returns default value if key is absent or .wholework.yml does not exist
 
 set -euo pipefail
@@ -51,12 +56,9 @@ Examples:
   get-config-value.sh production-url ""
 
 Notes:
-  - Flat kebab-case keys and single-level nested keys in block format are
-    supported (e.g., capabilities.workflow). Keys with two or more dots, or
-    inline hash format (capabilities: { workflow: true }), are not supported.
-  - A nested key matches only a direct child of the section; a deeper-indented
-    key (capabilities.mcp.workflow) does not answer capabilities.workflow
-  - Keys may contain only [A-Za-z0-9._-]; any other key returns the default
+  - See the "Supported/Unsupported Input Shapes" table in this script's own
+    header comment (top of the file) for the exhaustive list of supported and
+    unsupported key/value shapes.
   - Values are returned with surrounding quotes stripped
   - Comment lines (starting with #) are ignored
 EOF

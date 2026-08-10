@@ -272,3 +272,23 @@ EOF
     [ "$output" = "default" ]
     [[ "$output" != *"grep"* ]]
 }
+
+@test "unsupported shape: 2+ dot key returns default even though the nested path exists" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  mcp:
+    workflow: true
+EOF
+    run bash "$SCRIPT" capabilities.mcp.workflow default
+    [ "$status" -eq 0 ]
+    [ "$output" = "default" ]
+}
+
+@test "unsupported shape: inline hash format returns default" {
+    cat > .wholework.yml << 'EOF'
+capabilities: { workflow: true }
+EOF
+    run bash "$SCRIPT" capabilities.workflow default
+    [ "$status" -eq 0 ]
+    [ "$output" = "default" ]
+}

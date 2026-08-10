@@ -61,3 +61,43 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — 2026-08-10T18:29:03Z — `/issue` フェーズの Issue Retrospective コメント。Background の事実記述 (行指向パース実装、キー文字種制限) をコードベースと照合し一致を確認 (警告なし)。Post-merge AC の文言を Option A 前提から approach-agnostic な表現へ自動解決した経緯を記録。Pre-merge AC / verify command は Size M (PR route) の規約に適合しており変更不要と判断、との記載。本 Spec の設計判断に対する新たな指示は含まれない。 https://github.com/saitoco/wholework/issues/1124#issuecomment-5244328957
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps を上から順に実施し、逸脱なし
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light エージェントによる Spec 乖離観点の確認で、Implementation Steps 1-4 が上から順に実装されており逸脱なし。ヘッダー表の8行は実際のパースロジック (`DOT_COUNT` 単一ドット fallback ゲート、`SECTION_INDENT` による grandchild-indent ガード、セクションヘッダーのインラインコメント正規表現) と完全一致していることを確認した。
+
+### Recurring issues
+
+Nothing to note — review-bug 相当の観点も含め MUST/SHOULD/CONSIDER いずれも検出なし。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 4件は rubric 2件・command 1件・github_check 1件のいずれも決定論的に検証でき、UNCERTAIN は発生しなかった。AC4 (`github_check "gh pr checks" "Run bats tests"`) は Step 9 の CI 全ジョブ SUCCESS 確認で解決し、Phase Handoff に記録された「/review/CI で解決される」という見立てどおりだった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issue が0件だったため Step 12 (Issue Resolution and Fixes) は実施なし。修正コミットは発生していない
+- Step 7 (External Review Integration) は `.wholework.yml` に copilot-review/claude-code-review/coderabbit-review いずれも未設定のため全面スキップ
+- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 該当なし。main 側との競合コンテキストなし
+
+### Deferred Items
+- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み (code phase から継続)
+
+### Notes for Next Phase
+- Pre-merge AC 1-4 すべて `[x]` チェック済み。`/merge 1341` は pre-merge AC gate をブロックなく通過できる見込み
+- Post-merge AC (opportunistic) は据え置きのまま。次に `get-config-value.sh` へ入力形状の拡張要求が来た際に単一箇所への追記とテスト追加だけで対応できるかを `/verify` で確認する
