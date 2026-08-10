@@ -127,3 +127,19 @@
 
 - **`github_check "gh run list ..."` テンプレートの commit 絞り込み**: `--commit=$(git rev-parse HEAD)` を組み込んだ form を `modules/verify-classifier.md` および `skills/issue/spec-test-guidelines.md` の AC writing guide に標準として追加すべき。並行 /auto セッション環境で `--limit=1` 単独は安定しない。本セッションだけで複数回観測されたパターン。
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/624#issuecomment-4700387631
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4756910903
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4768308595
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4806655168
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4814731347
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4816318701
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4817060543
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 624` to verify the condition / https://github.com/saitoco/wholework/issues/624#issuecomment-4818975007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5195218110
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5202636163
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5212259406
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5225313770
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5229257623
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/624#issuecomment-5235399806
