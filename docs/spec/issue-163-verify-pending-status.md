@@ -55,5 +55,24 @@
 - **AC5 のリテラル「CI 完了後」**: 日本語リテラル。英語版 SKILL.md 本文に日本語混入は許容される（既存 `verify/SKILL.md` には日本語完了メッセージが多数存在。line 493 の「Issue #$NUMBER has been reopened」などと整合性を保つ）
 - **Simplicity rule**: light 上限 5 ステップ / 5 pre-merge に対し、ステップ 3 件は OK。pre-merge は 6 件で 1 件超過だが Issue body の AC と 1:1 対応を優先して全量コピー
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Note 54 (this Spec) already anticipated the AC4 risk at design time: "`skills/verify/SKILL.md` に「Issue Reopen Judgment」セクション見出しが存在することを確認... 見出しの追加が必要" — the anticipated heading was never added by implementation, confirming this was a known, documented risk rather than an oversight.
+
+#### code
+- No implementation commit or merged PR closes #163 directly. The PENDING/UNCERTAIN classification feature described in this Issue's AC was implemented via commit `7f9ebd68 feat: add PENDING status for CI in_progress in verify (closes #190)`, under a different Issue number. Content-wise the AC is satisfied, but Issue-to-commit attribution is broken — #163 never went through its own `/code` phase.
+
+#### verify
+- AC4 (`section_contains ... "Issue Reopen Judgment" ...`) is UNCERTAIN: no heading with that exact/partial text exists in `skills/verify/SKILL.md`; the equivalent logic lives under `### Step 11: Apply Verification Results` § "(c) PENDING only". This matches the risk documented in Note 54 — the dedicated heading was never added.
+- AC6 (`github_check "gh run list --workflow=test.yml --limit=1 ..." "success"`) is racy: the hint omits `--branch=main`, so under concurrent `/verify` activity in this repository it can pick up an unrelated branch's in-progress run and return an empty `conclusion`, which does not literal-match `"success"` and is not recognized as `in_progress` either (the hint only inspects `.conclusion`, which GitHub leaves null until a run completes — it never observes `.status`). A `--branch=main`-scoped re-run confirmed the actual main-branch CI is green. Recorded as UNCERTAIN rather than FAIL to avoid a spurious reopen of the very Issue that exists to prevent spurious reopens from inconclusive CI reads.
+
+### Improvement Proposals
+- Add `### Issue Reopen Judgment` as an explicit heading (or alias) in `skills/verify/SKILL.md` around Step 11, or update AC4-style hints project-wide to reference the actual `Step 11: Apply Verification Results` heading — closes the gap Note 54 flagged at design time.
+- `github_check` hints referencing `gh run list --workflow=...` for patch-route CI checks should include `--branch=main` by default (per `modules/verify-classifier.md` § "Patch Route CI Verification Note") to avoid picking up concurrent unrelated-branch runs; #163's own AC6 hint is a live example of the omission causing a racy read.
+- Issue #163 and #190 both target the same PENDING/CI-in_progress classification feature; #190 shipped it and closed, while #163 was independently spec'd and never coded. Consider flagging duplicate-scope Issues earlier (at spec/triage time) to avoid two Issues tracking the same implementation.
+
 ## Consumed Comments
 No new comments since last phase.
