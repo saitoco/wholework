@@ -87,6 +87,8 @@ Issue 本文自身の調査用 grep (`grep -rnE 'for [a-zA-Z_]+ in [$]' skills/ 
 
 - saito / MEMBER / first-class / Issue Retrospective: 追加確認不要と判断 (検査範囲は Issue 本文 Notes で既に /spec へ委譲済み)、Type=Bug/Size=M/Value=3 設定、post-merge AC に session=next 追加 / https://github.com/saitoco/wholework/issues/1318#issuecomment-5235678768
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1318#issuecomment-5236585913
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1318#issuecomment-5236769556
 ## Code Retrospective
 
 ### Deviations from Design
