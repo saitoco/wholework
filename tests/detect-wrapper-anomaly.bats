@@ -225,6 +225,52 @@ MOCK
     [[ "$output" == *"### Orchestration Anomalies"* ]]
 }
 
+@test "silent no-op: review phase IMPROVEMENT_HINT names run-review.sh and PR number, not run-code.sh/code phase" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 1269 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"run-review.sh 1269"* ]]
+    [[ "$output" != *"run-code.sh"* ]]
+    [[ "$output" != *"code phase"* ]]
+}
+
+@test "silent no-op: merge phase IMPROVEMENT_HINT names run-merge.sh and PR number, not run-code.sh/code phase" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo "OPEN"
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 1269 --phase merge
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"run-merge.sh 1269"* ]]
+    [[ "$output" != *"run-code.sh"* ]]
+    [[ "$output" != *"code phase"* ]]
+}
+
 @test "reconciler header mismatch: detects matches_expected false with Review Summary" {
     printf '"matches_expected":false\nreview: Review Summary not found in PR comment\n' > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 386 --phase review
@@ -451,12 +497,52 @@ MOCK
     [[ "$output" != *"ci-wait-silence-timeout"* ]]
 }
 
-@test "review-completion-false-negative: detects matches_expected false with phase review" {
+@test "review-completion-false-negative: detects matches_expected false with phase review (comments/reviews present)" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo '{"comments":[{"body":"some comment"}],"reviews":[]}'
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
     printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
-    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
     [ "$status" -eq 0 ]
     [[ "$output" == *"review-completion-false-negative"* ]]
+    [[ "$output" != *"review-silent-no-op"* ]]
     [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
+
+@test "review-silent-no-op: detects matches_expected false with phase review and zero comments/reviews" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo '{"comments":[],"reviews":[]}'
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 1069 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"review-silent-no-op"* ]]
+    [[ "$output" != *"review-completion-false-negative"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+    [[ "$output" == *"orchestration-fallbacks.md#review-silent-no-op"* ]]
+}
+
+@test "review-silent-no-op: falls back to review-completion-false-negative when gh pr view fails (fail-safe)" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"review-completion-false-negative"* ]]
+    [[ "$output" != *"review-silent-no-op"* ]]
 }
 
 @test "review-completion-false-negative: reconciler-header-mismatch takes priority when Review Summary present" {
