@@ -138,5 +138,31 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 - **`SILENT_MARGIN=600` の妥当性は本 Issue のスコープ外**: Issue 本文 Notes の判断を踏襲し、固定マージンの是非は変更しない。
 - Issue 本文には元々 CI 検証 AC (`github_check`) を含めていない (route 依存の形式選択は Size 確定後にしか決まらないため) — Size が M/L (pr route) と確定した場合、`/code` フェーズで `github_check` AC の追加要否を再検討する。
 
-## Consumed Comments
-No new comments since last phase.
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Spec の Implementation Steps 通りに進んだ (`SILENT_THRESHOLD_*` の `load_watchdog_timeout()` 経由化、`tests/audit-auto-session.bats` の hermetic 化、`tests/get-auto-session-report.bats` への 2 テスト追加)。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- Behavioral Change Detection (Step 9) により `bats --jobs 18 tests/` のフルスイート実行を行ったところ、`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が failed した。本変更を `git stash` で除いた状態でも同じ 2 件が同じ `--jobs 18` 条件下で再現し、単独実行 (`bats tests/post_merge_check.bats`) では 10/10 PASS したため、本変更とは無関係な高並列実行時のプリイグジスティング flake と判断した。`test-failure-classify.sh` の分類は `infra`。pr route のため CI 側の検出に委ねる。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps をそのまま踏襲し、`SILENT_THRESHOLD_*` 4 変数の算出を `load_watchdog_timeout()` の 4 回呼び出しに置き換えた (`command -v` ガード + `-1` センチネルフォールバックを含む)。
+- `tests/audit-auto-session.bats` の既存 silent-window テストへ `WHOLEWORK_CONFIG_PATH=/dev/null` を追加し、この repo 自身の override に依存しない hermetic 実行にした。
+- `tests/get-auto-session-report.bats` の末尾に override 反映 / フォールバックの 2 テストを Spec 記載通り追加した。
+
+### Deferred Items
+- Post-merge observation AC (`次回 /auto --batch の完走後、spec silent window が at-risk 警告を出さないことを観察する`) は `/verify` フェーズで判定する。
+
+### Notes for Next Phase
+- `bats --jobs 18 tests/` のフルスイートで `tests/post_merge_check.bats` の 2 件が flake する (本変更と無関係、pre-existing、`--jobs 18` 高並列時のみ再現)。CI や `/review` でこの 2 件が failed した場合、まずこの flake の可能性を疑い、単独実行で再現するか確認すること。
+- 本 Issue の着地により #1301 の post-merge observation AC が初めて判定可能になる。#1301 は `phase/verify` で該当 AC が未チェックのまま残っている。
