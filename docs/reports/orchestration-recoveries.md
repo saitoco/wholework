@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-10 03:51 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1316, phase: code-pr
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: external-kill
+- code phase wrapper process group was SIGKILLed externally at ~5min elapsed, before its own EXIT trap could print a completion marker; respawned run-code.sh 1316 --pr resumed cleanly
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-10 03:34 UTC: manual-recovery-spec-rerun
 
 ### Context
