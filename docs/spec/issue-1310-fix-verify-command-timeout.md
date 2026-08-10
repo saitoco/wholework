@@ -103,3 +103,46 @@ Purpose セクションの「以下のいずれか (または組み合わせ) �
 ### 機械チェック結果
 
 `check-ac-checkbox-format.sh` / `check-skill-change-observation-ac.sh` はいずれも exit 0 (問題なし)。BRE メタ文字を含む `grep` verify command は本 Issue に存在しない。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **triage が AC の配置ミスを是正した**。Pre-merge (auto-verified) にあった `verify-type: manual` の AC (verify command なし) を Post-merge へ移動している。`modules/verify-classifier.md` の Purpose が「post-merge セクションの各条件に対する分類基準」である以上、`verify-type` タグを持つ manual AC は Post-merge に属する。この移動により、起票時に `/triage` が指摘していた「Pre-merge に自動検証可能な AC が 1 件もない」という構造的欠陥が解消された (Pre-merge 2 件はいずれも rubric で自動検証可能、Post-merge 1 件が manual)。
+- 対応方針の選定を `/spec` に委ねる判断を維持したのは適切。`docs/product.md` の `/issue` (What) vs `/spec` (How) 境界に沿っている。
+
+#### spec
+
+- **3 案の不採用理由まで記録した点が良い**。案 1 は既存 `github_check` の重複実装、案 2 は `command` が呼び出し元 Bash tool 内で走る制約が変わらないため 600 秒上限問題を解消しない — いずれも「なぜ採らなかったか」が後から検証できる形で残っている。
+- Size を M → XS へ再評価し patch route へ降格させた判断も妥当。実際の変更は 2 ファイル計 39 行で、pr route の重さに見合わない。
+- `docs/environment-adaptation.md` の Eager-load 制約 (新規 capability の usage guidance は Domain file 化する) との整合を明示的に確認している。§24 修正・§28 新設はいずれも capability 非依存の汎用ガイドラインであり対象外、という判断が記録されている。
+
+#### code
+
+- Spec 逸脱なし、rework なし。Implementation Steps 1-3 をそのまま実装。
+- `bats --jobs 18 tests/` で `tests/post_merge_check.bats` のフレークを再度観測したが、既存 #1308 が追跡済みのため follow-up 起票を見送っている。判断は妥当 (本セッションでも同フレークを独立に観測しており、非決定的なレースであることを #1308 へコメント済み)。
+
+#### review
+
+- patch route のため `/review` フェーズは実行されていない。
+
+#### merge
+
+- patch route のため PR なし。main への直コミット (`ddeacffc`)。
+
+#### verify
+
+- Pre-merge 2 件は already-checked skip rule により SKIPPED。Post-merge 1 件 (manual) を Claude 実行で PASS 判定した。判定根拠は 3 点 (Spec の採用案記録 / `verify-executor.md` の明示的禁止と代替提示 / `verify-patterns.md` §24 のフレームワーク別推奨形)。
+- 判定過程で **verify 実行者側の検索ミスが 1 件**あった。§28 の存在確認に日本語 (`0 件`) で `grep` したため空振りし、一時的に「Pre-merge AC が誤 PASS の可能性」と判断した。実際には §28 は英語 (`Count-Dependent Conditional Acceptance Criteria`) で正しく追加されていた。ドキュメントが英語規約である以上、日本語での存在確認は原理的に空振りする。
+
+### Improvement Proposals
+
+- N/A — 本 Issue の実行から新規の構造的改善提案は生じなかった。付随して観測した事象はいずれも既存 Issue が扱っている: `tests/post_merge_check.bats` の並列フレークは **#1308**、本 Issue のスコープが #1251 / #1294 から繰り越された経緯 (コメント消費カットオフの欠落窓) は **#1316**。
+
+### 特記: 繰越スコープの回収が機能した
+
+本 Issue は「件数依存 AC の 0 件時判定規約」を #1251 / #1294 からの繰越分として取り込み、`modules/verify-patterns.md` §28 として着地させた。この規約は当初 #1251 へコメントで提案されたが、#1251 のパイプライン開始前に投稿されたため L0 の消費カットオフの外に落ち、#1251 は規約を含まずにクローズされている。次の受け皿候補だった #1294 も統合を試みた時点で `phase/done` に到達済みだった。
+
+**3 度目の受け皿で初めて着地した**ことになる。欠落窓そのものは #1316 が扱うが、繰越スコープを Issue 本文へ明示的に書き込む (コメントではなく) という運用がこの回収を成立させた点は記録に値する。
