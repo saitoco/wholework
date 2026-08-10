@@ -115,16 +115,26 @@ No new comments since last phase.
 ### Rework
 - N/A — 実装は 1 パスで完了し、テスト失敗による手戻りは発生しなかった (`bats --jobs 18 tests/` 全 1690 件 PASS)。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 乖離なし。review-light エージェントが Spec の Implementation Steps 1〜3 と PR diff (Until mode Step 3 の全文追加・`tests/auto-batch.bats` の新規テスト2件・`docs/workflow.md`/`docs/ja/workflow.md` の追記) を突き合わせ、いずれも Spec 記載どおりであることを確認した。再番号付けされたステップ間の内部参照 (新 step 6/8 など) にも古い番号への取り残しはなかった。
+
+### Recurring issues
+- 唯一の指摘 (SHOULD: `Skill(skill="wholework:triage")` 呼び出しの失敗処理未定義) は本 PR 単発の指摘であり、他 PR との明確な反復パターンはこの時点では確認していない。ただし新しい Skill/script 呼び出しを SKILL.md の自然言語手順に組み込む際、周辺ステップ (List mode step 2/3/5/7 等) と同型の失敗処理節を書き忘れやすい点は一般的な注意点として次回以降のレビューでも意識する価値がある。
+
+### Acceptance criteria verification difficulty
+- 困難なし。Pre-merge AC 3 件はいずれも `section_contains`/`grep`/`command` の機械的チェックで PASS 判定でき、UNCERTAIN はゼロだった。Issue 起票直後の Triage AC audit が事前に verify command の不具合 3 件を検出・修正していたため、review フェーズでの空撃ち確認は不要だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Step 1 の置き換え全文をそのまま採用し、ステップ番号参照 ("step 5's delegation" → "step 6's delegation" 等) も Spec 記載どおりに更新した。地の文中の "List mode step 7" と新 step 6 内の "steps 1–7 unchanged" は List mode 自身の内部ステップ番号参照であり Until mode 側の番号ではないため変更していない (Spec の指示どおり)
-- `skills/auto/SKILL.md` が複数のテストファイル (auto-xl-concurrency.bats, auto.bats, check-file-overlap.bats, run-auto-sub.bats, auto-completion-report.bats, operate-route.bats, check-skill-change-observation-ac.bats 等) から参照されている behavioral change と判定し、`bats --jobs 18 tests/` で全 1690 テストを実行した (直接対応する auto-batch.bats のみへのスコープ限定は不採用)
+- `REVIEW_DEPTH=light` (`--light` 明示指定、Size M とも整合) のため review-light エージェント1体による4観点統合レビューを採用し、review-spec/review-bug の2エージェント fan-out は行わなかった
+- SHOULD 指摘 (`wholework:triage` dispatch の失敗処理欠如、`skills/auto/SKILL.md:1211`) は周辺ステップとの一貫性を重視しその場で修正した。CONSIDER 指摘 (`docs/workflow.md`/`docs/ja/workflow.md` の base branch との `git merge-tree` コンフリクト検出) はコード修正を要さない情報提供のためスキップした
 
 ### Deferred Items
-- N/A — Issue #1334 の Pre-merge AC 3 件はすべて実装・検証済みでチェック済み。Post-merge AC はなし
+- N/A — MUST issue なし。Pre-merge AC 3 件はすべて review フェーズでも PASS 再確認済み
 
 ### Notes for Next Phase
-- PR #1337 は 3 件の Pre-merge AC すべてが自動検証済み (mechanical チェックはすべて PASS、rubric は目視確認済み)。`/review` では rubric 判定の再確認と Spec 本文の妥当性確認を中心に見てもらうと良い
-- Until mode セクションの新ステップ番号 (1〜8) は Spec 本文にも転記済みで齟齬はない
+- `/merge` 時に `docs/workflow.md` / `docs/ja/workflow.md` で base branch (PR #1336 / Issue #1049) との `git merge-tree` コンフリクトが発生する見込み。本 PR の diff は隣接する別段落 (`--batch --until <query>`) のみを変更しており、いずれの側の内容も diff 内では失われていないことを review フェーズで確認済みなので、両側の追記を保持する形でリベース/コンフリクト解消すればよい
