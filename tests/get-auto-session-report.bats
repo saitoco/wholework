@@ -357,3 +357,40 @@ FIXTURE_EOF
     echo "$output" | grep -q "| #1251 | M/patch |"
     echo "$output" | grep -q "| #1292 | S/pr |"
 }
+
+@test "at-risk threshold honors .wholework.yml phase override: no false positive within headroom" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-09T10:00:00Z","issue":1301,"event":"sub_start","session_id":"session-1312-override","size":"S"}
+{"ts":"2026-08-09T10:01:00Z","issue":1301,"event":"phase_start","session_id":"session-1312-override","phase":"spec"}
+{"ts":"2026-08-09T10:22:50Z","issue":1301,"event":"max_silent_window","session_id":"session-1312-override","phase":"spec","max_sec":"1310"}
+{"ts":"2026-08-09T10:22:51Z","issue":1301,"event":"phase_complete","session_id":"session-1312-override","phase":"spec"}
+{"ts":"2026-08-09T10:22:52Z","issue":1301,"event":"sub_complete","session_id":"session-1312-override","exit_code":"0"}
+FIXTURE_EOF
+    CONFIG_FIXTURE="$BATS_TEST_TMPDIR/wholework-override.yml"
+    cat > "$CONFIG_FIXTURE" << 'YAML_EOF'
+watchdog-timeout-spec-seconds: 2340
+YAML_EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FIXTURE"
+
+    run bash "$SCRIPT" "session-1312-override" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    # override threshold = 2340 - 600 = 1740s; observed 1310s stays under it
+    if echo "$output" | grep -q "within 600s of watchdog limit"; then false; fi
+    echo "$output" | grep -q "Phase silent windows > threshold | 0"
+}
+
+@test "at-risk threshold falls back to phase default when no override is configured" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-09T10:00:00Z","issue":1301,"event":"sub_start","session_id":"session-1312-default","size":"S"}
+{"ts":"2026-08-09T10:01:00Z","issue":1301,"event":"phase_start","session_id":"session-1312-default","phase":"spec"}
+{"ts":"2026-08-09T10:22:50Z","issue":1301,"event":"max_silent_window","session_id":"session-1312-default","phase":"spec","max_sec":"1310"}
+{"ts":"2026-08-09T10:22:51Z","issue":1301,"event":"phase_complete","session_id":"session-1312-default","phase":"spec"}
+{"ts":"2026-08-09T10:22:52Z","issue":1301,"event":"sub_complete","session_id":"session-1312-default","exit_code":"0"}
+FIXTURE_EOF
+    export WHOLEWORK_CONFIG_PATH=/dev/null
+    run bash "$SCRIPT" "session-1312-default" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    # default threshold = 1800 - 600 = 1200s; observed 1310s exceeds it
+    echo "$output" | grep -q "within 600s of watchdog limit"
+    echo "$output" | grep -q "Phase silent windows > threshold | 1 (spec:1)"
+}

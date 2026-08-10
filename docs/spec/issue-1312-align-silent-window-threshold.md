@@ -138,5 +138,45 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 - **`SILENT_MARGIN=600` の妥当性は本 Issue のスコープ外**: Issue 本文 Notes の判断を踏襲し、固定マージンの是非は変更しない。
 - Issue 本文には元々 CI 検証 AC (`github_check`) を含めていない (route 依存の形式選択は Size 確定後にしか決まらないため) — Size が M/L (pr route) と確定した場合、`/code` フェーズで `github_check` AC の追加要否を再検討する。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Spec の Implementation Steps 通りに進んだ (`SILENT_THRESHOLD_*` の `load_watchdog_timeout()` 経由化、`tests/audit-auto-session.bats` の hermetic 化、`tests/get-auto-session-report.bats` への 2 テスト追加)。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- Behavioral Change Detection (Step 9) により `bats --jobs 18 tests/` のフルスイート実行を行ったところ、`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が failed した。本変更を `git stash` で除いた状態でも同じ 2 件が同じ `--jobs 18` 条件下で再現し、単独実行 (`bats tests/post_merge_check.bats`) では 10/10 PASS したため、本変更とは無関係な高並列実行時のプリイグジスティング flake と判断した。`test-failure-classify.sh` の分類は `infra`。pr route のため CI 側の検出に委ねる。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `/review --light` (REVIEW_DEPTH=light、Issue #1312 の Size に基づく明示指定) で review-light エージェント (Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性の4観点統合) を1エージェントで実行し、問題は検出されなかった。
+- Pre-merge AC 5件 (rubric×2, grep×2, command×1) をすべて safe mode で検証し、全件 PASS を確認した。command 条件は CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) 経由で PASS 判定した。
+- Base Branch Conflict Pre-check (`git merge-tree` 3引数形式) で `changed in both` 0件を確認し、main との競合なしと判定した。
+
+### Deferred Items
+- Post-merge observation AC (`次回 /auto --batch の完走後、spec silent window が at-risk 警告を出さないことを観察する`) は `/verify` フェーズで判定する (code フェーズの Phase Handoff から引き続き繰越)。
+
+### Notes for Next Phase
+- MUST issue はなく、Claude Review Response は "Resolved" 対応なし。`/merge 1319` へ直接進んで問題ない。
+- `bats --jobs 18 tests/` のフルスイートで `tests/post_merge_check.bats` の 2 件が flake する既知事象 (code フェーズの Phase Handoff 記載、本 PR と無関係) は今回の CI 実行では再現しなかった (全ジョブ SUCCESS)。
+
 ## Consumed Comments
 No new comments since last phase.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. 実装は Spec の Implementation Steps と完全に一致しており、Code Retrospective の "Deviations from Design: N/A" 記載を review 側でも確認した。
+
+### Recurring issues
+- Nothing to note. review-light の4観点いずれにも指摘事項なし。
+
+### Acceptance criteria verification difficulty
+- Nothing to note. Pre-merge AC 5件 (rubric×2, grep×2, command×1) すべてが UNCERTAIN なく PASS に解決した。rubric 条件は Spec の Notes セクションに理由が明記されていたため grader 判定が容易だった。command 条件は CI 参照フォールバックで PASS 判定でき、verify command 自体の不備は見られなかった。

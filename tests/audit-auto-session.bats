@@ -126,6 +126,7 @@ FIXTURE_EOF
 {"ts":"2026-06-15T10:25:02Z","issue":500,"event":"sub_complete","session_id":"abc-666","exit_code":"0"}
 FIXTURE_EOF
 
+    export WHOLEWORK_CONFIG_PATH=/dev/null
     run bash "$SCRIPT" "abc-666" --metrics-only --no-github
     [ "$status" -eq 0 ]
 
