@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (82 files)
+├── scripts/             # Utility scripts used by skills and agents (83 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (117 files)
+├── tests/               # Bats test files for scripts (118 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -215,6 +215,7 @@ Key modules:
 
 **Process management:**
 - `scripts/auto-checkpoint.sh` — checkpoint helper for `/auto --resume`: atomic read/write/delete of single-Issue verify counter and batch remaining list; BATCH_ID-namespaced per-session state files prevent parallel `--batch` collisions (subcommands: `read_single`, `write_single`, `delete_single`, `read_batch`, `write_batch`, `update_batch`, `delete_batch`, `list_active_batches`)
+- `scripts/resolve-batch-query.sh` — resolves a `/auto --batch --until <query>` `label:`/`status:` query into a sorted, exclusion-aware list of matching open Issue numbers (deterministic, bash 3.2 compatible; a per-Issue Status GraphQL failure is excluded fail-closed rather than treated as a hard error)
 - `scripts/watchdog-defaults.sh` — sourceable helper providing `WATCHDOG_TIMEOUT_DEFAULT` constant and `load_watchdog_timeout` function for run-*.sh scripts
 - `scripts/retry-on-kill.sh` — sourceable helper providing `run_with_retry_on_kill()`: detects SIGTERM/SIGKILL (exit 137/143) in the early-kill window (<300s) and auto-retries once; used by run-issue.sh, run-spec.sh, run-code.sh, run-auto-sub.sh
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
