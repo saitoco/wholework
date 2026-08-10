@@ -115,3 +115,6 @@ bats テストでその動作を検証する。
 
 ### Improvement Proposals
 - `/spec` スキルの実装ステップテンプレートに「英語ドキュメントを更新した場合は `docs/ja/` の対応ファイルも更新リストに含める」チェック項目を追加することで、翻訳同期漏れを Spec 段階で防止できる
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/276#issuecomment-4276258022
