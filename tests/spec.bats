@@ -22,3 +22,16 @@ setup() {
 @test "spec skill differentiates the sweep from Rename-type and Steering Docs sync checks" {
     grep -q 'the string is unchanged but the conditions under which it is valid widen' "$SKILL_FILE"
 }
+
+# Content-assertion tests for the Steering Docs sync candidate check gate/cross-search
+# extension to modules/ (added for #1089). Guards against the gate silently reverting to
+# excluding modules/*.md-only changes, and against the cross-search target directory list
+# dropping modules/ again.
+
+@test "spec skill Steering Docs sync candidate check gate covers modules/ changes" {
+    grep -q 'SKILL.md, `modules/`, or `scripts/`' "$SKILL_FILE"
+}
+
+@test "spec skill Steering Docs sync candidate check searches modules/ in cross-search" {
+    grep -q 'grep -rn "<keyword>" docs/ tests/ scripts/ modules/' "$SKILL_FILE"
+}
