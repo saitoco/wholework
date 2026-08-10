@@ -482,3 +482,7 @@ N/A — 実装は Spec の Implementation Steps をそのまま適用し、手�
 ### Improvement Proposals
 - **observation AC の文言設計: 「バックグラウンド移行なしに完了」ではなく「silent no-op に陥らないこと」を直接問う形にすべきではないか** — AC16 の判定で発生した曖昧さ (transient かつ recover された背景移行を PASS とみなせるか) は、AC が「手段 (背景移行の有無)」を問う形になっていることに起因する。本 Issue の Purpose は「silent no-op を構造的に防止する」ことであり、AC もこの結果 (turn が完了通知待ちで終わらないこと) を直接問う文言に書き換えれば、recover 済みの transient occurrence を素直に PASS 判定できる。次に同種の post-merge observation AC を書く際の教訓として記録する (Tier 3 相当 — 本 Issue 自身の残 AC (16, 17) の再評価には影響しない設計論点のため独立起票はせず、次に類似 AC を設計する際の参考として本節に残す)。
 - `cause=background-notification-wait` の閾値到達監視 — iteration 2 の実行 (spec/code/review/merge 全フェーズ) を通じて新規の `background-notification-wait` recovery は発生しなかった (review phase の 300s incident は同一ターン内で自己回復しており `docs/reports/orchestration-recoveries.md` への記録対象ではない)。カウンタは 2/3 のまま据え置き。本 Issue の修正 (wrapper 層一括注入) が有効であることを示唆する追加の間接証拠だが、`recoveries-auto-fire` の起票基準には未到達。
+
+### 追記 (2026-08-10, AC16 手動再確認)
+
+UNCERTAIN のまま留めていた AC16 を、ユーザー指示によりPR #1332 のコミット履歴・Review Response Summary・Spec Phase Handoff を突き合わせて手動で再確認した。300s incident は review セッション内部での「同一 bats コマンドの誤連続実行」に起因し、Review Response Summary 自体 (最終成果物) には影響していないこと、および incident 自体が同一ターン内の単一呼び出し再実行で自己回復し silent no-op には至らなかったことを確認した。AC 文言 (「バックグラウンド移行なしに完了」) と Issue の Purpose (「silent no-op を構造的に防止する」) が乖離する場面では、後者を優先して PASS と判定した。Issue コメントに判定根拠を記録し checkbox を更新、`/verify` を再実行して収束させた。AC17 (spec phase 観察) は premise 未成立のため SKIPPED のまま `phase/verify` に残留する。
