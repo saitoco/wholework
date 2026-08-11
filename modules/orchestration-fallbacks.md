@@ -530,6 +530,33 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## auto-retry-on-fail (code_retry_fire)
+
+### Symptom
+- `run-code.sh` detects a silent no-op (`reconcile-phase-state.sh` `--check-completion` returns `matches_expected:false`) after a `claude` invocation exits 0 or 143
+- With `AUTONOMY_TIER` at `L2`/`L3` and `auto-retry-on-fail.enabled: true`, `run-code.sh` emits `code_retry_fire` and then self-restarts via `exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` (`scripts/run-code.sh:308` emit / `:320` exec)
+
+### Applicable Phases
+- code phase only (patch and pr routes alike)
+- Applies regardless of the calling path — `/auto` single-Issue direct dispatch, `run-auto-sub.sh`-mediated XL sub-issue / Batch Mode execution, or a standalone `run-code.sh` invocation — since `run-code.sh` itself is the recording subject in all of them
+
+### Fallback Steps
+1. Immediately before the `exec` self-restart, `run-code.sh` itself calls `_write_code_retry_recovery(issue, iteration)`, which appends a `code-retry-fire` entry to `docs/reports/orchestration-recoveries.md`, commits it (`git commit -s`), and pushes with fetch+rebase retry (same pattern as `_push_with_retry()` below)
+2. Recording happens before `exec`, not after: `exec` replaces the running process with a fresh one that has no memory of the first attempt's failure, so any recording logic placed after `exec` (or in the retried process) could never observe the silent no-op that triggered the retry
+3. If any of the record/commit/push steps fail, `run-code.sh` logs a warning to stderr and proceeds to `exec` regardless — this is a best-effort log, not a gate on the retry
+
+### Escalation
+- None. Once `auto-retry-on-fail` iterations are exhausted, the existing `code-patch-silent-no-op` pattern (Tier 2/3, above) already checks whether `auto-retry-on-fail` has been exhausted and takes over from there
+
+### Rationale
+- Resolves an asymmetry with `wrapper-retry-on-kill` (above): that pattern's `wrapper-retry-on-kill` recovery is already recorded to `docs/reports/orchestration-recoveries.md` by `run-auto-sub.sh`, but `code_retry_fire` previously only reached `.tmp/auto-events.jsonl` (gitignored, ephemeral) — invisible to `/audit recoveries` frequency detection and to any Spec that might reference it
+- Recording must happen before `exec`, not in `run_phase_with_recovery()` (`run-auto-sub.sh`'s wrapper-retry-on-kill recording layer), because that layer is only reached via XL sub-issue / Batch Mode dispatch — `/auto`'s single-Issue direct dispatch calls `run-code.sh` directly and never passes through `run-auto-sub.sh` (see Issue #1320 Spec Notes for the full investigation)
+- Placing the recording inside `run-code.sh` itself, immediately before `exec`, uniformly covers every calling shape (single-Issue direct dispatch, XL sub-issue, Batch Mode, standalone invocation) with one implementation
+- `run-code.sh`'s top-level bash code runs in `MAIN_REPO_ROOT` (the main repository, not the `/code` `claude -p` child's own worktree), so `modules/worktree-lifecycle.md`'s worktree write-path constraints do not apply here — the same execution context `_write_wrapper_retry_recovery()` already relies on
+- Pointer comment `# See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` is placed immediately above the `_write_code_retry_recovery` call in `scripts/run-code.sh`
+
+---
+
 ## external-kill-parent-respawn
 
 ### Symptom

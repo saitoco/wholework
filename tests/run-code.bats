@@ -952,6 +952,193 @@ MOCK
     [ ! -f "$STRAY_FILE" ]
 }
 
+@test "auto-retry: code_retry_fire records recovery entry before exec re-invocation (Issue #1320)" {
+    # Simulates Issue #1320: when auto-retry-on-fail fires, run-code.sh must record a
+    # code-retry-fire entry to orchestration-recoveries.md and commit/push it BEFORE the
+    # `exec` self-restart -- exec replaces the process, so the retried invocation has no
+    # memory of the failure that triggered it. Verifies (a) the entry is appended to the
+    # mocked orchestration-recoveries.md, and (b) git add/commit/push are logged before the
+    # second `claude` invocation (i.e. before the exec re-invocation runs).
+    RECOVERIES_FILE="$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    mkdir -p "$(dirname "$RECOVERIES_FILE")"
+    cat > "$RECOVERIES_FILE" <<'EOF'
+---
+type: report
+description: Cross-Issue orchestration recovery log. Append-only. Newest entries first.
+---
+
+# Orchestration Recovery Log
+
+<!-- Log entries appear below, newest first. -->
+EOF
+    export RECOVERIES_FILE
+
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    COMBINED_LOG="$BATS_TEST_TMPDIR/combined_calls.log"
+    : > "$COMBINED_LOG"
+    export COMBINED_LOG
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+echo "CLAUDE_INVOKE" >> "$COMBINED_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"code-pr"}'
+else
+  echo '{"matches_expected":true,"phase":"code-pr"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "$BATS_TEST_TMPDIR"
+  exit 0
+fi
+ARGS=("\$@")
+if [[ "\${ARGS[0]}" == "-C" ]]; then
+  ARGS=("\${ARGS[@]:2}")
+fi
+case "\${ARGS[0]}" in
+  diff)
+    echo "GIT diff" >> "$COMBINED_LOG"
+    exit 1
+    ;;
+  add)
+    echo "GIT add \${ARGS[*]}" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  commit)
+    echo "GIT commit" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  push)
+    echo "GIT push" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  ls-files)
+    exit 0
+    ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+
+    # (a) code-retry-fire entry appended with expected fields
+    grep -q ": code-retry-fire$" "$RECOVERIES_FILE"
+    grep -q "Issue #123, phase: code-pr" "$RECOVERIES_FILE"
+    grep -q "modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire" "$RECOVERIES_FILE"
+
+    # (b) git add/commit/push happened before the second claude invocation (exec re-invocation)
+    SECOND_CLAUDE_LINE=$(grep -n "CLAUDE_INVOKE" "$COMBINED_LOG" | sed -n '2p' | cut -d: -f1)
+    COMMIT_LINE=$(grep -n "GIT commit" "$COMBINED_LOG" | head -1 | cut -d: -f1)
+    PUSH_LINE=$(grep -n "GIT push" "$COMBINED_LOG" | head -1 | cut -d: -f1)
+    [ -n "$SECOND_CLAUDE_LINE" ]
+    [ -n "$COMMIT_LINE" ]
+    [ -n "$PUSH_LINE" ]
+    [ "$COMMIT_LINE" -lt "$SECOND_CLAUDE_LINE" ]
+    [ "$PUSH_LINE" -lt "$SECOND_CLAUDE_LINE" ]
+}
+
+@test "auto-retry: code_retry_fire skips recording when orchestration-recoveries.md does not exist" {
+    # Regression guard for existing tests that never create orchestration-recoveries.md:
+    # _write_code_retry_recovery must return 0 immediately (no git calls) when the file
+    # is absent, matching the skip-if-absent convention of apply-fallback.sh /
+    # spawn-recovery-subagent.sh / run-auto-sub.sh's own recovery writers.
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    GIT_CALL_LOG="$BATS_TEST_TMPDIR/git_calls.log"
+    : > "$GIT_CALL_LOG"
+    export GIT_CALL_LOG
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"code-pr"}'
+else
+  echo '{"matches_expected":true,"phase":"code-pr"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$*" >> "$GIT_CALL_LOG"
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "$BATS_TEST_TMPDIR"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [ ! -f "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" ]
+    ! grep -q "^commit " "$GIT_CALL_LOG"
+    ! grep -q "^push " "$GIT_CALL_LOG"
+}
+
 @test "retry-on-kill: retry-success - killed once then succeeds, wrapper exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"

@@ -143,6 +143,91 @@ fi
 CODE_RETRY_COUNT=${CODE_RETRY_COUNT:-0}
 export CODE_RETRY_COUNT
 
+# Pushes HEAD to origin, retrying with fetch+rebase on non-fast-forward rejection.
+# Same pattern as scripts/run-auto-sub.sh's _push_with_retry().
+# Usage: _push_with_retry REPO_ROOT
+# Returns 0 on success, 1 if all retries are exhausted or a step fails.
+_push_with_retry() {
+  local repo_root="$1"
+  local attempt=0
+  local branch
+
+  while true; do
+    if git -C "$repo_root" push origin HEAD; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    if [[ $attempt -ge 3 ]]; then
+      return 1
+    fi
+    branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD) || return 1
+    git -C "$repo_root" fetch origin "$branch" || return 1
+    if ! git -C "$repo_root" rebase "origin/${branch}"; then
+      git -C "$repo_root" rebase --abort 2>/dev/null || true
+      return 1
+    fi
+  done
+}
+
+# _write_code_retry_recovery ISSUE ITERATION
+# Records a code_retry_fire recovery event to orchestration-recoveries.md immediately
+# before the exec self-restart -- exec replaces the running process, so recording
+# after exec (or in the retried process) can never observe the failure that triggered
+# it; recording must happen here, before exec.
+# Skips silently if the file does not exist (file not in repo -> return 0).
+# See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
+_write_code_retry_recovery() {
+  local issue="$1"
+  local iteration="$2"
+  local repo_root="${MAIN_REPO_ROOT:-.}"
+  local recoveries_file="${repo_root}/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$recoveries_file" ]]; then
+    return 0
+  fi
+  local _date
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  python3 << PYEOF 2>/dev/null || true
+fpath = "${recoveries_file}"
+marker = "<!-- Log entries appear below, newest first. -->"
+entry = (
+    "\n## ${_date}: code-retry-fire\n"
+    "\n### Context\n"
+    "- Issue #${issue}, phase: ${_RECONCILE_PHASE}\n"
+    "- Source: run-code.sh auto-retry-on-fail\n"
+    "- Wrapper: run-code.sh, iteration: ${iteration}/${AUTO_RETRY_MAX_ITERATIONS}\n"
+    "\n### Diagnosis\n"
+    "- cause: silent-no-op\n"
+    "- reconcile-phase-state.sh --check-completion reported matches_expected:false (silent no-op) prior to this retry\n"
+    "\n### Recovery Applied\n"
+    "- modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire\n"
+    "\n### Outcome\n"
+    "- retry fired (iteration ${iteration}/${AUTO_RETRY_MAX_ITERATIONS})\n"
+    "\n### Improvement Candidate\n"
+    "- 未起票\n"
+)
+try:
+    content = open(fpath).read()
+    idx = content.find(marker)
+    if idx != -1:
+        pos = idx + len(marker)
+        content = content[:pos] + entry + content[pos:]
+        open(fpath, "w").write(content)
+except Exception:
+    pass
+PYEOF
+  if ! git -C "$repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+    if git -C "$repo_root" add "docs/reports/orchestration-recoveries.md" \
+       && git -C "$repo_root" commit -s -m "Record code_retry_fire recovery for issue #${issue}
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+       && _push_with_retry "$repo_root"; then
+      echo "[recovery] code-retry-fire recovery log committed and pushed" >&2
+    else
+      echo "WARNING: could not commit/push code-retry-fire recovery log" >&2
+    fi
+  fi
+}
+
 echo "=== run-code.sh: Starting /code for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
 source "$SCRIPT_DIR/watchdog-defaults.sh"
@@ -317,6 +402,8 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
         echo "auto-retry preflight: stashing parent-main untracked files: $_STRAY_UNTRACKED" >&2
         git stash push --include-untracked -m "auto-retry preflight for #$ISSUE_NUMBER" -- ':!docs/sessions/**' 2>/dev/null || true
       fi
+      # See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
+      _write_code_retry_recovery "$ISSUE_NUMBER" "$CODE_RETRY_COUNT"
       exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"
     else
       if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \

@@ -27,7 +27,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ### Context
 - Issue #N, phase: <code-pr|code-patch|review|merge|verify>
 - Source: <fallback-catalog|recovery-sub-agent|wrapper-anomaly-detector>
-- Wrapper: <run-*.sh name>, exit code: <N>
+- Wrapper: <run-*.sh name>, exit code: <N> (or `iteration: <N>/<M>` — see `Outcome` below)
 - Log tail: "<last relevant log line>"
 
 ### Diagnosis
@@ -46,7 +46,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - <catalog anchor (e.g., orchestration-fallbacks.md#anchor) or sub-agent plan excerpt or manual steps>
 
 ### Outcome
-- <success|partial|failed>
+- <success|partial|failed|retry fired (iteration <N>/<M>)>
 
 ### Improvement Candidate
 - <未起票|起票済み #NNN|N/A (resolved by known catalog)>
@@ -60,7 +60,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 | `cause` | Kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Optional at read time — pre-#1281 entries lack it. Separates occurrences of the same symptom by known root cause during frequency grouping. Always written by Tier 2 (`apply-fallback.sh`, value is the matched symptom anchor) and Tier 3 (`spawn-recovery-subagent.sh`, value is the recovery plan's `cause` field, `unclassified` when missing/invalid); optional for manual recovery (`run-auto-sub.sh --write-manual-recovery --cause`) |
 | `notification` | Classification of the observed task notification wording in `### Diagnosis` (Issue #1153): `harness-stop`/`external-signal`/`indeterminate`/`unobserved`. Written only by the manual recovery path (`run-auto-sub.sh --write-manual-recovery --notification`), never by Tier 2/3. Line is absent when the flag was not passed (see `notification_class=unspecified` on the corresponding `manual_intervention` event). Does not participate in `/audit recoveries` frequency grouping — `cause` is the only grouping key |
 | `Source` | Which mechanism detected and handled this recovery event |
-| `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped |
+| `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped; `retry fired (iteration <N>/<M>)` = the retry was fired but its result is not yet known at write time (Issue #1320: `code-retry-fire` entries are written immediately before an `exec`-based self-restart, which replaces the process before the retry's own outcome can be observed — see `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire`) |
 | `Improvement Candidate` | `未起票` = not yet filed; `起票済み #NNN` = filed as Issue #NNN; `N/A` = no action needed |
 
 ## Sources
