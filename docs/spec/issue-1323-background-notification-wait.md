@@ -53,3 +53,32 @@
 ## Consumed Comments
 
 No new comments since last phase. (直近の `phase/spec` ラベル付与後に投稿された Issue コメント 2 件は `/issue` フェーズ自身が Step 13 で残した Issue Retrospective であり、上記「行番号ドリフト」の指摘はその内容を踏まえて本 Spec の Notes に反映済み。)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (Implementation Steps 1-3 をそのまま実施。挿入位置・条件式・パターン名は Spec 記載どおり)
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- Implementation Step ごとに個別コミットしていたが (3 コミット)、いずれのコミット subject にも `#1323` が含まれておらず、`skills/code/SKILL.md` Step 11 が要求する「BASE_BRANCH が main の場合、実装コミット自体に `closes #N` を含める (Issue #996 の `concurrent_commit_detected` false-positive 再発防止)」を満たしていなかった。3 コミットは未 push のローカル worktree ブランチ上のみに存在したため、`git reset --soft` で 1 コミットにまとめ直し、`(closes #1323)` を含む commit subject で再コミットした。今後 patch route で複数ステップに分けてコミットする場合、少なくとも最終コミット (または全コミットのいずれか) の subject に `#N` を含めることを意識する。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 新 `elif` 分岐は `review-completion-false-negative` ブロックの `fi` 直後・`mid-run-api-error` の直前に配置し、Spec 指定どおり `EXIT_CODE == "0"` ガードの外に置いた (AC4 rubric の要求を満たす)
+- 条件式は `matches_expected:false` と待機宣言フレーズ (`完了通知|を待ちます|待っています|waiting for .*(notification|completion)`) の AND とし、phase 非依存にした
+- IMPROVEMENT_HINT は既存の `_phase_retry_hint()` ヘルパーを再利用しつつ、`run-auto-sub.sh --write-manual-recovery ... --cause background-notification-wait` の記録手順を明記した
+
+### Deferred Items
+- Post-merge AC (次に background task 完了通知待ちが発生した `/auto` 実行での実地確認、`verify-type: observation event=auto-run session=next`) は `/verify` フェーズで評価される
+
+### Notes for Next Phase
+- Behavioral Change Detection により `modules/orchestration-fallbacks.md` が `tests/run-code.bats` / `tests/run-auto-sub.bats` / `tests/orchestration-fallbacks.bats` から参照されているため、フルスイートを `bats --jobs 18 tests/` で実行済み (1748 件 全 PASS)
+- 4 件の Pre-merge AC は grep 3 件 + rubric 1 件で全て PASS 済み。Issue 側チェックボックスも `[x]` 済み
