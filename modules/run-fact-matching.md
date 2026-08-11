@@ -110,6 +110,89 @@ condition matchable — a bare phase name is no longer part of the vocabulary an
 the pre-filter. Referencing the phase's wrapper script name (e.g. "`run-code.sh` 実行後") also
 works but is a less natural way to write AC prose than referencing the phase's concrete outcome.
 
+## Ambiguous Breakdown Measurement (Issue #1321)
+
+5 consecutive sessions (2026-08-06–2026-08-10, 147 candidates total) recorded zero
+`auto-check` — every candidate resolved `ambiguous`. Only one session
+(`83307-1786372673`, 2026-08-10, `/auto --batch 1308 1265`, N=27) recorded a
+per-fail-safe-condition breakdown at the time this was investigated:
+
+| Fail-safe condition (Processing Steps Step 3) | Count | Share |
+|---|---|---|
+| Condition's premise event did not occur in this run | **15** | **56%** |
+| Condition text has no representation in the facts JSON | 8 | 30% |
+| Conjunction — only some sub-conditions backed by facts | 4 | 15% |
+
+Sampling 3 of the 15 dominant-category candidates against their source Issues (#1200
+ac7, #807 ac7, #783 ac11) found a common structural pattern: all three targeted Issues
+that this session's run never touched (#1265/#1308), were tagged `verify-type:
+observation`/`opportunistic`, and used a generic event name (`event=auto-run` /
+`event=code-run`) meaning "some future `/auto` run" rather than a specific anomaly.
+Because `collect-run-facts.sh`'s facts JSON is entirely per-issue-keyed
+(`route`/`phases`/`anomalies`/`recovery_tiers`/...), **an Issue absent from
+`facts.issues[]` has zero representable facts** — the rubric in Step 3 can only ever
+return `ambiguous` for it, never `satisfied`. The pre-#1321 `scan-pending-ac.sh --facts`
+pre-filter only checked whether *some* Issue's `fact_tokens` substring-matched the
+condition text; it never checked whether the *candidate's own* Issue was one this run
+actually processed.
+
+**Regression-risk evaluation**: across the 5 measured sessions (147 candidates, 0
+`auto-check`), no case exists where excluding this class of candidate would have
+prevented a `satisfied` verdict that was actually reached — there is no successful case
+to break.
+
+### Candidate Pre-filter Exclusion Rules (`scan-pending-ac.sh --facts`)
+
+Two exclusion rules run inside `scripts/scan-pending-ac.sh`'s candidate loop, active
+only when `--facts` is given (they filter out candidates that Step 3's rubric could
+only ever mark `ambiguous`, before the rubric judgment step runs):
+
+- **Rule 1 (dominant-factor fix)**: a candidate whose `verify_type` is `observation` or
+  `opportunistic`, and whose Issue number is absent from the facts file's
+  `issues[].number` array, is excluded. Scope is deliberately limited to these two
+  verify-types: `manual`/`auto` AC sometimes assert a general, Issue-independent claim
+  about Wholework's own behavior (e.g. `#1212 ac5` — "`/verify`'s CI check matches
+  `headSha` before judging", true regardless of which Issue's run is observed), where
+  mechanical exclusion by Issue-absence would risk losing a rare but real judgment
+  opportunity. `observation`/`opportunistic` AC are inherently "wait for a future event"
+  prose, and the sampling above confirmed no facts-JSON-representable signal exists for
+  them when the target Issue wasn't processed this run.
+- **Rule 2 (ordering-problem fix, see below)**: a candidate whose condition text
+  contains an L3/session-retrospective reference keyword (case-insensitive:
+  `L3 retrospective`, `L3 レトロスペクティブ`, `L3 セッションレトロスペクティブ`,
+  `session.md`, `セッションレトロスペクティブ`, `session retrospective`) is
+  excluded. Bare `L3` was rejected as a token — it false-positives on unrelated
+  prose like `autonomy: L3`.
+
+### Ordering Problem: L3 Retrospective-Referencing AC
+
+`skills/auto/SKILL.md` runs run-fact AC reconciliation (single-issue and batch routes
+alike) **before** L3 auto-retrospective generation. A candidate AC whose own condition
+text observes the L3 retrospective (e.g. "does the L3 retrospective record X") is
+therefore judged before the artifact it references exists — session `97764-1786198856`
+recorded 3 such candidates (#1307, #1300, #1289), all structurally undecidable at
+judgment time.
+
+Three options were considered for this ordering problem; **exclusion (Rule 2 above)**
+was adopted:
+
+- **Re-run reconciliation after L3 generation** — rejected: `collect-run-facts.sh`'s
+  facts JSON schema (`session_id`/`mode`/`number`/`size`/`route`/`pr`/`pr_state`/
+  `phases`/`anomalies`/`recovery_tiers`/`fact_tokens`) has no field representing L3
+  retrospective content or its notable-judgment result. Re-running the same judgment
+  step against the same schema would not change the outcome — the schema, not the
+  ordering, is the actual constraint. Adding such a field is schema-extension work
+  outside this fix's scope (measurement + dominant-factor fix + ordering-problem
+  disposition).
+- **Carry the candidate forward to the next run** — rejected: this is what the
+  pre-#1321 design already does by construction (`scan-pending-ac.sh` recomputes
+  candidates fresh every run), and the Background's carryover growth (11→37 candidates
+  across the 5 measured sessions) shows this "carry forward" behavior does not resolve
+  the underlying undecidability — it only accumulates.
+- **Exclude from the candidate set** — adopted: stops the same undecidable candidate
+  from re-entering rubric judgment (and re-generating `advisory` noise) on every run,
+  at minimal cost, without requiring a facts-schema change.
+
 ## Processing Steps
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh` (with `--session

@@ -18,6 +18,21 @@
 # --max-candidates <N>: truncate the candidate list to this size (default 30).
 #   Truncation is never silent: a stderr Note reports how many were dropped.
 #
+# --facts exclusion rules (only active when --facts is given; see
+# modules/run-fact-matching.md "Candidate Pre-filter Exclusion Rules" for the
+# rationale and regression-risk evaluation):
+#   Rule 1: a candidate whose verify_type is "observation" or "opportunistic"
+#     is excluded when its Issue number is not present in the facts file's
+#     `issues[].number` array — per-issue facts (route/phases/anomalies/...)
+#     cannot exist for an Issue the current run never touched, so such a
+#     candidate is structurally undecidable (always "ambiguous").
+#   Rule 2: a candidate whose condition text contains an L3/session
+#     retrospective reference keyword (case-insensitive; see
+#     L3_KEYWORDS_LOWER below) is excluded — the facts JSON has no field
+#     representing L3 retrospective content, and reconciliation runs before
+#     L3 retrospective generation in skills/auto/SKILL.md, so this class of
+#     candidate is also structurally undecidable.
+#
 # Global 1-based checkbox index: counted over every `^- \[[ xX]\]` line in the
 # full Issue body (same convention as scripts/gh-issue-edit.sh --checkbox and
 # scripts/check-pre-merge-ac.sh), so returned ac_index values are directly
@@ -92,6 +107,7 @@ if ! echo "$MAX_CANDIDATES" | grep -qE '^[0-9]+$'; then
 fi
 
 FACT_TOKENS_LOWER=""
+FACTS_ISSUE_NUMBERS=""
 if [ -n "$FACTS_PATH" ]; then
   if [ ! -f "$FACTS_PATH" ]; then
     echo "Error: --facts file not found: $FACTS_PATH" >&2
@@ -101,7 +117,21 @@ if [ -n "$FACTS_PATH" ]; then
     echo "Error: failed to parse --facts file: $FACTS_PATH" >&2
     exit 1
   }
+  FACTS_ISSUE_NUMBERS=$(jq -r '[.issues[].number] | unique | .[]' "$FACTS_PATH" 2>/dev/null) || {
+    echo "Error: failed to parse --facts file: $FACTS_PATH" >&2
+    exit 1
+  }
 fi
+
+# Rule 2 keyword list (case-insensitive substring match against condition text).
+L3_KEYWORDS_LOWER=$(printf '%s\n' \
+  "l3 retrospective" \
+  "l3 レトロスペクティブ" \
+  "l3 セッションレトロスペクティブ" \
+  "session.md" \
+  "セッションレトロスペクティブ" \
+  "session retrospective" \
+  | tr '[:upper:]' '[:lower:]')
 
 ISSUES_JSON=$(gh issue list --label "phase/verify" --state all --json number,body --limit "$LIMIT" 2>/dev/null) || {
   echo "[]"
@@ -167,8 +197,9 @@ while IFS= read -r issue_obj; do
   while IFS=$'\t' read -r ac_idx vtype cond_text; do
     [ -z "$ac_idx" ] && continue
 
+    TEXT_LOWER=$(printf '%s' "$cond_text" | tr '[:upper:]' '[:lower:]')
+
     if [ -n "$FACT_TOKENS_LOWER" ]; then
-      TEXT_LOWER=$(printf '%s' "$cond_text" | tr '[:upper:]' '[:lower:]')
       MATCHED=false
       while IFS= read -r tok; do
         [ -z "$tok" ] && continue
@@ -180,6 +211,41 @@ while IFS= read -r issue_obj; do
         esac
       done <<< "$FACT_TOKENS_LOWER"
       if [ "$MATCHED" = false ]; then
+        continue
+      fi
+    fi
+
+    if [ -n "$FACTS_PATH" ]; then
+      # Rule 1: observation/opportunistic candidates whose Issue is absent
+      # from this run's facts.issues[].number are structurally undecidable.
+      if [ "$vtype" = "observation" ] || [ "$vtype" = "opportunistic" ]; then
+        ISSUE_IN_FACTS=false
+        while IFS= read -r facts_n; do
+          [ -z "$facts_n" ] && continue
+          if [ "$facts_n" = "$N" ]; then
+            ISSUE_IN_FACTS=true
+            break
+          fi
+        done <<< "$FACTS_ISSUE_NUMBERS"
+        if [ "$ISSUE_IN_FACTS" = false ]; then
+          continue
+        fi
+      fi
+
+      # Rule 2: candidates referencing L3/session retrospective content are
+      # structurally undecidable (no facts JSON field represents them, and
+      # reconciliation runs before L3 retrospective generation).
+      L3_MATCHED=false
+      while IFS= read -r kw; do
+        [ -z "$kw" ] && continue
+        case "$TEXT_LOWER" in
+          *"$kw"*)
+            L3_MATCHED=true
+            break
+            ;;
+        esac
+      done <<< "$L3_KEYWORDS_LOWER"
+      if [ "$L3_MATCHED" = true ]; then
         continue
       fi
     fi

@@ -97,3 +97,52 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective コメント。session `83307-1786372673` の追加実測 (27 件全件 ambiguous の内訳分類と pre-filter 改善の示唆) を Background・対応方針へ統合済みであることの記録。本 `/spec` フェーズでの追加アクションは不要 (Issue 本文に統合済みの内容を Root Cause セクションでそのまま活用した) / https://github.com/saitoco/wholework/issues/1321#issuecomment-5248548214
+- `/code` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:35:39Z`) 以降の新規コメントなし。
+- `/review` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:41:58Z`) 以降の新規コメントなし (Issue/PR とも)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の Implementation Steps 1〜4 をそのままの順序・対象ファイルで実装した。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Root Cause / 対処方針 (Rule 1 スコープ限定の理由、Rule 2 キーワード選定の理由、順序問題 3 選択肢の比較) が実装判断に必要な情報を過不足なく提供していた。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+### Test Execution Note
+
+- `scripts/scan-pending-ac.sh` は `tests/scan-pending-ac.bats` からも参照されているため (Spec の Changed Files に記載のない参照)、Step 9 の Behavioral Change Detection により `bats --jobs <N> tests/` のフルスイート実行が確定した。フルスイート 1745 件全 PASS を確認済み (`tests/run-fact-matching.bats` 単体の 35 件 PASS を含む)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — review-light の Perspective 1 (Spec 逸脱) で Spec の Implementation Steps 1〜4 と実装の一致を確認済み。構造的な乖離は検出されなかった。
+
+### Recurring issues
+
+- CI `Language Convention check` が FAILURE (MUST) となり `/review` の Step 12 で修正した。根本原因は `scripts/check-language-convention.py` の除外ロジック (フェンス/インラインコード/二重引用符の3種) が (1) 複数行にまたがるインラインコードスパンの行単位バックティック対応判定のずれ、(2) heredoc 内の機能的な日本語キーワードリテラル (二重引用符でもフェンスでもない生テキスト) のいずれにも対応していないこと。今回は `printf '%s\n' "..."` 形式への書き換えと行折り返し位置の調整で回避したが、`scripts/scan-pending-ac.sh`/`modules/run-fact-matching.md` に限らず「AC 条件文が日本語である (`CLAUDE.md` の Issue body 言語規約) ため、マッチング用キーワードデータも日本語で持たざるを得ない」パターンは他の pre-filter 実装でも今後発生しうる。`check-language-convention.py` 自体に (a) 複数行インラインコードスパンの状態追跡、(b) heredoc/配列リテラル形式の機能的データを対象外とする除外ルールを追加する改善の余地がある — 次回同様の FAILURE が発生した場合は `check-language-convention.py` 自体の改善を検討する Issue 起票を優先する。
+
+### Acceptance criteria verification difficulty
+
+- N/A — rubric 3 件・command 1 件とも PR diff / CI 参照から明確に判定でき、UNCERTAIN は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 9 の CI Blocking by default ルールに従い、`Language Convention check` FAILURE を MUST として扱い REQUEST_CHANGES 相当でブロック、Step 12 で修正した (self-review のため実際の投稿イベントは COMMENT フォールバック)。
+- 修正はチェッカーの誤検知を回避する目的の純粋なフォーマット変更 (heredoc → `printf` + 二重引用符、インラインコードスパンの改行位置調整) に限定し、Rule 1/Rule 2 の判定ロジック・キーワード内容には手を入れていない。修正後に `L3_KEYWORDS_LOWER` の出力がバイト同一であることを確認済み。
+
+### Deferred Items
+- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、次回の `/auto` 実行後の観察に委ねる (`/code` フェーズから継続、未解消)。
+- `check-language-convention.py` 自体の除外ロジック改善 (複数行インラインコードスパン追跡、heredoc データリテラルの除外) は本 PR のスコープ外 — 再発時に別 Issue での対応を検討 (review retrospective参照)。
+
+### Notes for Next Phase
+- `/merge` 実行前に CI は全 11 件 SUCCESS (コミット `22b00a7a`) を確認済み。
+- Pre-merge AC は 4/4 PASS、Issue チェックボックスは既にすべて `[x]` (変更不要)。
