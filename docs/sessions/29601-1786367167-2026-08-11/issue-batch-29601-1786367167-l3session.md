@@ -1,0 +1,5 @@
+## Auto Retrospective
+### Improvement Proposals
+- `opportunistic-search.sh --facts` silently disables its 30-item truncation cap when the facts JSON is missing expected top-level keys (`phases`/`anomalies`/`recovery_tiers`), instead of truncating correctly or erroring — a caller passing a shape-mismatched facts file gets unbounded output with no warning.
+- The `--commit=$(git rev-parse HEAD)` CI verify-command template recommended by Issue #626 is unusable when executed literally inside a `/verify` worktree (resolves to the worktree's own unpushed local commit, or to a pushed-but-run-less intermediate commit under squash/ff-only pushes); the fix requires resolving to the actual `origin/<base>` HEAD SHA before use, which is undocumented in `modules/verify-classifier.md`.
+- Issue #562's post-merge observation AC has been re-dispatched and re-judged UNCERTAIN identically 5 times across 5 sessions because its "duplication/contradiction reduced" clause has no recorded baseline and is structurally undecidable as worded; it needs re-typing to a single-run-decidable condition.
