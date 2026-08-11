@@ -210,25 +210,48 @@ cutoff: 2026-08-11T00:13:10Z (直近の `phase/*` ラベル付与時刻)。cutof
 - 「`- notification:` 行が `collect-recovery-candidates.sh` の集計を壊さないか」は、パースループ (L195-221) が `^- cause: ` / `^- 起票済み #` / `^- N/A` の 3 パターンのみに一致する行単位処理であることを読解して設計時に解決した。fixture ベースの追加テストは不要と判断
 - 「上流 harness の notification 文言がバージョン更新で変化しうる」は解決していないが、文言パーサをスクリプトに持たせない設計 (分類判断は親セッションの LLM、スクリプトは 4 語彙の検証のみ) により影響範囲を `skills/auto/SKILL.md` の例示 1 箇所に封じ込めた
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — implemented Steps 1-10 as designed, no reordering or omission
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+### Steering Docs sync candidate resolution (Changed Files末尾の3件)
+
+- `docs/structure.md` L190 (`collect-recovery-candidates.sh` の group-key 説明) と L240 (`run-auto-sub.sh` の 1 行説明): どちらも現状の記述のまま正確であることを確認し、変更しなかった。L190 は `- cause:` 行のみを group-key の入力として説明しており、他の Diagnosis 行の存在有無を主張していないため `- notification:` 行の追加と矛盾しない。L240 はフラグ粒度の記述を持たないため陳腐化しない
+- `scripts/collect-recovery-candidates.sh` 冒頭コメント (L5-14): `- notification:` 行がパースループに対して inert であることを明記する 1 段落を追加した (採用) — 将来この行を読む開発者が group-key への影響を推測で判断せずに済むようにするため
+
+### AC 判定メモ
+
+- 5 件の Pre-merge AC はすべて非対話モードで LLM 判断により rubric を評価し PASS 判定した (rubric 3 件、command 1 件は `bats tests/run-auto-sub.bats` 90/90 PASS で実測、rubric 1 件は `scripts/check-translation-sync.sh` の IN_SYNC 実測を根拠とした)
+- Behavioral Change Detection (Step 9) により `scripts/run-auto-sub.sh` / `scripts/emit-event.sh` / `scripts/collect-recovery-candidates.sh` / `docs/reports/orchestration-recoveries.md` / `skills/auto/SKILL.md` / `modules/orchestration-fallbacks.md` がいずれも direct-associated test 以外からも参照されていることを確認し、フルスイート `bats --jobs 18 tests/` (1738 件) を実行して回帰なしを確認した
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 新フラグは `--notification CLASS` の 1 本のみ。生の通知文言は既存の `--diagnosis TEXT` に載せる (専用の text フラグは追加しない)
-- 分類を `--cause` の slug で代用しない — `--cause` は `_find_known_recoveries_issue` の group key (`<symptom-short>/<cause-slug>`) に入るため、通知分類を混ぜると同一 root cause の occurrence が 4 グループに分裂する
-- `scripts/detect-external-kill.sh` には接続しない。判定閾値を動かさないという Issue 方針に従い、判定に影響しない入力はデッドサーフェスになるため
-- フラグ省略時のイベント値は `unspecified` とし、語彙値 `unobserved` (文言を確認できなかった) と区別する
+- `--notification CLASS` の 1 本のみを追加し、生の通知文言は既存の `--diagnosis TEXT` に載せる設計を Spec 通り実装した
+- `skills/auto/SKILL.md` の捕捉手順は `harness-stop` への分岐を設けず、`external-signal` (数値 exit code あり) / `indeterminate` (`killed`・"was stopped" のみ) / `unobserved` の 3 値のみを判定させる設計にした — 2026-08-07 実例が示すとおり、通知文言単体では `harness-stop` を確定できないため。`harness-stop` は語彙としては残し、他の観測チャネルが今後判別材料を提供する余地を残した
+- `_diagnosis_body` を「cause / notification / 末尾テキスト」の順序付き行リストに書き換え、既存 3 ケース (両フラグなし / `--cause` のみ / `--cause`+`--diagnosis`) の出力バイト等価性を保ったまま、`--diagnosis` 単独指定時に本文が黙って捨てられていた既存バグも解消した
+- `docs/structure.md` 側の Steering Docs sync candidate 2 件は記述変更せず (既存記述のままで正確と判断)、`scripts/collect-recovery-candidates.sh` 冒頭コメントのみ 1 段落追加した
 
 ### Deferred Items
 
-- 追加の判別軸 3 種 (数値 exit code の有無 / 停止までの経過時間 vs watchdog 閾値 / `run_in_background` 起動か) は本 Issue のスコープ外。組み込む場合は別 Issue を起票する
-- `scripts/get-auto-session-report.sh` への notification 分類の内訳 Metrics 行は、データが数件貯まってから別途判断する
-- post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため、merge 直後には解決しない (2026-08-03 以降 kill は未再現)
+- 追加の判別軸 3 種 (数値 exit code の有無 / 停止までの経過時間 vs watchdog 閾値 / `run_in_background` 起動か) は本 Issue のスコープ外 (Spec の Deferred Items を継承)
+- `scripts/get-auto-session-report.sh` への notification 分類の内訳 Metrics 行は、データが数件貯まってから別途判断する (Spec 継承)
+- post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため、merge 直後には解決しない (2026-08-03 以降 kill は未再現、Spec 継承)
 
 ### Notes for Next Phase
 
-- `_diagnosis_body` の行リスト化では、既存 3 ケース (両フラグなし / `--cause` のみ / `--cause`+`--diagnosis`) の出力がバイト等価であることを必ず保つ。既存 bats テストがこの出力に依存している
-- Python heredoc へは環境変数 `WW_NOTIFICATION` で渡すこと。heredoc ソースへの文字列補間は #1123 で発生した SyntaxError silent-skip (書き込みが落ちるのに exit 0) を再発させる
-- `skills/auto/SKILL.md` 本文に半角感嘆符とトリプルバッククォートを入れない (`scripts/validate-skill-syntax.py` の制約)。追加する語彙リストには **(exhaustive)** マーカーを付ける
-- Changed Files 末尾の Steering Docs sync candidate 3 件 (`docs/structure.md` L190/L240、`docs/ja/structure.md` の対応行、`scripts/collect-recovery-candidates.sh` 冒頭コメント) は、各ファイルを読んで採否を最終判断すること
+- `skills/auto/SKILL.md` Step 6 の捕捉手順に `harness-stop` 分岐が存在しないのは意図的な設計判断であり、実装漏れではない — `/review` で欠落として指摘された場合はこの Phase Handoff と Code Retrospective を参照すること
+- `tests/run-auto-sub.bats` 90/90 PASS、フルスイート `bats --jobs 18 tests/` 1738/1738 PASS を確認済み。behavioral change (複数ファイルが direct-associated test 以外からも参照) を検出したため、フルスイート実行はこの Code フェーズの必須ステップとして実施済み
+- Post-merge AC は external kill 再発生に依存する `verify-type: manual` のため、`/verify` では未チェックのままでよい
