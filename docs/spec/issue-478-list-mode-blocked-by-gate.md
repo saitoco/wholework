@@ -148,6 +148,19 @@
 - **[Tier 2 / Spec 記録のみ] `github_check` で `--commit=$(git rev-parse HEAD)` を使うと patch route で常時 FAIL になる** — 理由は上記 2 点。`modules/verify-patterns.md` §9 の具体例、または `modules/verify-classifier.md` の patch route ガイダンスに「`--commit=` ではなく `--branch=<base>` を使う。patch route の実装コミットは multi-commit push の中間コミットになるため run を持たない」を追記する余地がある。ただし (1) 実測できた事例は本 Issue の 1 件のみで open Issue に同型パターンは 0 件、(2) `verify-patterns:` 系の未着手 open Issue が既に 4 件 (#1132 #1087 #1084 #490) 積み上がっている、の 2 点から起票せずここに記録する。同型が 2 例目として観測された時点で起票を再検討する
 - **前回 verify の PENDING 誤判定** — 「値が空 → CI 実行中 → PENDING」という判定は、`gh run list` が空を返す原因を区別していなかった。空の理由は (a) run が実行中で `conclusion` が null、(b) 指定 SHA に run が存在しない、の 2 通りあり、(b) は待っても解決しない。上記の記載追加を行う際は、この区別も併せて記述すると診断精度が上がる
 
+### 2026-08-11 re-run (AC5 解消 + 条件 6/7 の 2 セッション目観測)
+
+`/auto --batch --until "label:theme/observability"` (session `29601-1786367167`) の Batch Completion Report observation scan で `event=auto-run` が再発火。
+
+#### verify (再実行分)
+
+- **AC5 が今回は PASS した**。`--commit=$(git rev-parse HEAD)` をそのまま使わず、main の実際に push 済みの HEAD (`git log <worktree-commit>^` で解決) の完全 SHA (`6b5c3f10...`) を手動で特定して `gh run list --commit=` に渡したところ `success` を得た。推奨修正 (`--branch=main` への置き換え) 自体はまだ未適用だが、原因 2 点 (worktree ローカルコミット参照 / 中間コミットに run が無い) のいずれも「main の実際の push 済み HEAD を参照する」ことで回避可能であることが実地で確認できた
+- **条件 6/7 は今回も SKIPPED**。本 run は Round 1 で 10 Issue を処理したが、blocked-by ゲートで実際にブロッカーが検出された件は 0 件 (全件 exit 0)。これで観測 2 セッション連続 (`97764-1786198856` → `29601-1786367167`) でシナリオ自体が未発生
+
+#### Improvement Proposals (再実行分)
+
+- N/A — `--commit=` バグの起票再検討トリガー (「同型が 2 例目として観測」) は他 Issue での同パターン再現を指すものであり、本 Issue 自身の再評価では発火しない。条件 6/7 の非発生も、現状は「機能が正しく動作しているが誘発条件がまだ発生していない」health signal であり、改善提案には至らない
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/478#issuecomment-4703000955
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/478#issuecomment-5212257510
