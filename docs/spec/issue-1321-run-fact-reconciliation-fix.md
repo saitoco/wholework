@@ -133,16 +133,15 @@
 - N/A — rubric 3 件・command 1 件とも PR diff / CI 参照から明確に判定でき、UNCERTAIN は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 9 の CI Blocking by default ルールに従い、`Language Convention check` FAILURE を MUST として扱い REQUEST_CHANGES 相当でブロック、Step 12 で修正した (self-review のため実際の投稿イベントは COMMENT フォールバック)。
-- 修正はチェッカーの誤検知を回避する目的の純粋なフォーマット変更 (heredoc → `printf` + 二重引用符、インラインコードスパンの改行位置調整) に限定し、Rule 1/Rule 2 の判定ロジック・キーワード内容には手を入れていない。修正後に `L3_KEYWORDS_LOWER` の出力がバイト同一であることを確認済み。
+- Pre-merge AC ゲートは 4/4 checked、review-incomplete-fallback も検出されなかったため、confirmation なしでスクワッシュマージを実行した。
+- `BASE_BRANCH=main` のため `closes #1321` により Issue は自動クローズされる想定 (フォールバック検証は Step 6 で実施)。
 
 ### Deferred Items
-- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、次回の `/auto` 実行後の観察に委ねる (`/code` フェーズから継続、未解消)。
-- `check-language-convention.py` 自体の除外ロジック改善 (複数行インラインコードスパン追跡、heredoc データリテラルの除外) は本 PR のスコープ外 — 再発時に別 Issue での対応を検討 (review retrospective参照)。
+- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、`/verify` フェーズでの観察に委ねる (未解消のまま継続)。
+- `check-language-convention.py` 自体の除外ロジック改善 (複数行インラインコードスパン追跡、heredoc データリテラルの除外) は本 PR のスコープ外 — 再発時に別 Issue での対応を検討。
 
 ### Notes for Next Phase
-- `/merge` 実行前に CI は全 11 件 SUCCESS (コミット `22b00a7a`) を確認済み。
-- Pre-merge AC は 4/4 PASS、Issue チェックボックスは既にすべて `[x]` (変更不要)。
+- スクワッシュマージ済みコミット (`c3fbbb2e`) が `main` に反映されている。`/verify` は post-merge AC (session=next observation) の確認を担当する。
