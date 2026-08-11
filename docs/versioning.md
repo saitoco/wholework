@@ -3,6 +3,7 @@ type: project
 ssot_for:
   - versioning-policy
   - release-bump-rules
+  - release-cut-criteria
   - pre-1.0-policy
 ---
 
@@ -107,6 +108,69 @@ Claude Code response flow:
 | 0.1.1 | 2026-04-16 | Additive (SECURITY.md, Issue templates, README sections) | 0.2.0 | Judgment error; documented here for audit trail |
 
 **Rule when correction needed**: skip the would-be next number rather than retag. Example: since 0.1.1 was really 0.2.0-equivalent, next release goes to **0.2.0** (not 0.1.2), leaving 0.1.2 as a skipped slot.
+
+## Release Cut Criteria
+
+This section is the SSoT for **when** to cut a release. The Bump Level Rules above decide *which number*; this section decides *whether it is time at all*.
+
+The rule this section exists to state plainly: **an empty backlog is not a release condition, and waiting for one means never releasing.** Wholework's own retrospective pipeline files improvement Issues on every `/auto` run, so the open backlog has no equilibrium at zero by construction.
+
+### Triggers (OR — any one makes a release a candidate)
+
+| # | Trigger | Rationale |
+|---|---------|-----------|
+| 1 | **100 closed Issues** since the previous tag (excluding `not planned` — see Exclusions above) | Primary trigger. Calibrated on v0.2.0 → v0.3.0 (108 Issues), the last release small enough to document issue-by-issue. |
+| 2 | **6 weeks (42 days)** since the previous tag | Safety net for periods when throughput drops and trigger 1 never fires. A small release is preferable to a stale one. |
+| 3 | A **breaking change** has landed on the base branch | Breaking changes should reach users close to when they land, not batched. v0.4.0 shipped 5 at once after 97 days — adopters had to absorb all five migrations in a single upgrade. |
+
+A trigger opens the question; it does not by itself authorize the tag. Run the gates below.
+
+### Gates (AND — all must hold before tagging)
+
+| # | Gate | How to check |
+|---|------|--------------|
+| 1 | Base branch CI is green | `gh run list --branch main --workflow Test --limit 10 --json conclusion` — no `failure` |
+| 2 | No open PR carrying unreleased work | `gh pr list --state open` — empty, or only PRs still in review/CI |
+| 3 | No known test failure or regression | Open Issues describing a reproducible failure in the shipped surface are resolved or explicitly deferred with a recorded reason |
+| 4 | Documentation drift check passes | See the four checks below |
+| 5 | No stale or untriaged Issues | `/audit stats` reports 0 stale (90d+) and 0 untriaged |
+
+**Gate 4 — documentation drift checks:**
+
+```sh
+# a. structure.md file counts match reality (EN and JA)
+ls scripts/ | wc -l ; ls tests/ | wc -l ; ls modules/*.md | wc -l
+grep -E '\([0-9]+ files\)' docs/structure.md
+
+# b. config keys agree between the user-facing reference and the implementation SSoT
+#    (docs/guide/customization.md § Available Keys vs modules/detect-config-markers.md)
+
+# c. every top-level docs/*.md has a docs/ja/ mirror
+ls docs/*.md | sed 's|docs/||' | sort > /tmp/en.txt
+ls docs/ja/*.md | sed 's|docs/ja/||' | sort > /tmp/ja.txt
+comm -23 /tmp/en.txt /tmp/ja.txt   # must be empty
+
+# d. plugin.json version matches the tag about to be created
+jq -r '.version' .claude-plugin/plugin.json
+```
+
+### Explicitly NOT blockers
+
+Do **not** delay a release for any of the following. Each is a standing background state, not a defect:
+
+- **Open Issue count / an empty backlog.** Majority-`retro/verify` backlogs grow as a function of throughput, not of quality.
+- **`phase/verify` dwell.** Issues awaiting `observation` / `opportunistic` / `manual` post-merge confirmation are merged and shipped; their AC checkboxes are a separate, slower loop. As of 2026-08, median dwell is 39 days with 126 Issues past 30 days — treating this as a release gate would block indefinitely.
+- **Icebox Issues.** Frozen by definition, with their own re-evaluation triggers.
+- **Unfiled retrospective Improvement Proposals.** They are recorded in Spec/session retrospectives and lose nothing by shipping first.
+
+### Historical calibration
+
+| Interval | Elapsed | Closed Issues (excl. `not planned`) | Assessment |
+|----------|---------|-------------------------------------|------------|
+| v0.2.0 → v0.3.0 | 16 days | 108 | Healthy — release notes documented each theme with per-issue detail |
+| v0.3.0 → v0.4.0 | 97 days | 557 | Too large — required theme aggregation instead of issue enumeration, and deferred 5 breaking changes into one upgrade |
+
+Measured throughput over the 90 days preceding v0.4.0 was ~44 closed Issues/week, so trigger 1 is expected to fire roughly every 2–3 weeks at that pace. Recalibrate the thresholds if sustained throughput changes by more than about 2×.
 
 ## Release Procedure
 
