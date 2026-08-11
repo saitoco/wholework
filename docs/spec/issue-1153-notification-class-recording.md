@@ -168,3 +168,67 @@
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。`indeterminate` 語彙追加の auto-resolve 判断、判定閾値を動かさない方針の維持、AC3 ルーブリックへの `indeterminate` 明記を記録 | https://github.com/saitoco/wholework/issues/1153#issuecomment-5247533556 |
 
 cutoff: 2026-08-11T00:13:10Z (直近の `phase/*` ラベル付与時刻)。cutoff 以前の 2026-08-07 コメント (issuecomment-5218189694) は Issue body の「2026-08-07 追記」として本文に反映済みのため、本 Spec でも前提として参照している。
+
+## issue retrospective
+
+### Autonomous Auto-Resolve Log
+
+- **通知文言だけでは harness-stop / external-signal を判別できない実例 (2026-08-07 コメント) への対応として、分類語彙に `indeterminate` (文言は確認できたが判別情報を含まない) を追加し、スコープは「記録経路の拡張」のまま維持** — reason: 判定閾値 (respawn するかどうかの判断ロジック) を動かさないという本 Issue の既存方針 (Notes) に最も整合し、記録経路の拡張という元の変更規模を保ったまま、コメントが示した実例 (判別不能ケースが実在すること) を正直に記録できる。least-risk かつ既存方針と一貫した選択肢を優先する auto-resolve ヒューリスティックに従った
+  - Other candidates: 数値 exit code の有無・停止までの経過時間 vs watchdog 閾値・起動方法 (`run_in_background`) の 3 軸を含む判別ロジックへスコープを広げる — 却下: 判定閾値を動かさない方針から逸脱し、変更規模が「記録経路の拡張」から「判別アルゴリズムの再設計」に広がる。新規 Issue 起票も見送り、3 軸は本 Issue の Notes に将来検討事項として記録するに留めた (直近の Issue 発散抑制方針に沿う判断)
+
+### Policy Decisions
+
+- コメントで指摘された「判別できない」実例は、本 Issue の設計前提 (通知文言の分類だけで harness-stop / external-signal を判別できる) を部分的に反証するものだったが、記録経路そのものは無効化されない (正常完了時の `completed`+exit code と `killed` 系の対比など、判別に資する場合もある) ため、Issue のクローズや大幅な作り直しではなく、分類語彙とドキュメントの補強で対応した
+- タイトルドリフトチェック: 本文更新後もスコープ (`auto: --write-manual-recovery` の記録拡張) は変わっていないため、タイトルは変更していない
+
+### Acceptance Criteria への変更理由
+
+- AC3 (`skills/auto/SKILL.md` Step 6 の捕捉手順) のルーブリック文言に、`indeterminate` (判別不能ケース) を明記する条件を追加した。既存の `unobserved` (文言確認不可) との区別を実装レベルで担保するため
+- 他の AC はテキスト変更なし (記録経路・記録先・ドキュメント同期という検証対象自体は変わらない)
+
+### Consumed Comments
+
+| login | authorAssociation | trust tier | intent summary | URL |
+|-------|-------------------|------------|-----------------|-----|
+| saito | MEMBER | first-class | 2026-08-07 実例: `#939` merge phase の harness-stop で通知文言が `killed`/"was stopped" のみとなり、既存の判定条件では harness-stop と external-signal を区別できないことを報告。分類語彙・スコープの見直しを提起 | https://github.com/saitoco/wholework/issues/1153#issuecomment-5218189694 |
+
+## spec retrospective
+
+### Minor observations
+
+- `_write_manual_recovery_to_recoveries_log()` の `_diagnosis_body` 構築には、`--diagnosis` を `--cause` なしで渡すとテキストが黙って捨てられる経路がある (`if _cause:` の else 分岐が `_diagnosis` を参照しない)。本 Issue の行リスト化で副次的に解消されるが、#1123 の実装・レビュー時点では検出されていなかった
+- `docs/reports/orchestration-recoveries.md` の `### Diagnosis` body は 3 つの writer (`run-auto-sub.sh` / `apply-fallback.sh` / `spawn-recovery-subagent.sh`) が独立にフォーマット文字列を組み立てており、行フォーマットの SSoT はドキュメント側の `## Entry Format` にしかない。新しい行種別を足すたびに 3 writer と 1 reader (`collect-recovery-candidates.sh`) を個別に確認する必要がある
+
+### Judgment rationale
+
+- Issue が Spec に委ねた「要判断」2 点 (生文言の保存方式 / `detect-external-kill.sh` への接続) は、いずれも Issue 自身の Notes に明文化された「判定閾値を動かさない」方針を判断基準として解決できた。方針が本文に書かれていたことで、非対話モードでも一貫した判断が可能だった — 逆に言えば、方針が Notes になければ両方とも判断保留になっていた
+- `unspecified` (フラグ省略) を語彙 4 値と別扱いにしたのは、イベント側フィールドを常時出力する既存慣行 (`wrapper_exit_code=${_mr_exit_code:-unknown}`) を崩さずに Issue の「省略と区別できるようにする」要求を満たすため。recoveries log 側は `- cause:` と同じく「未指定なら行を書かない」に揃え、2 記録先で意味は同じだが表現方法が異なる形にした
+- post-merge AC を `verify-type: manual` のまま維持したのは、`observation` へ変えると解決経路を持たない SKIPPED 通知が蓄積する既知の病理 (#1026、`modules/verify-classifier.md` が明示的に警告) に該当するため
+
+### Uncertainty resolution
+
+- 「`- notification:` 行が `collect-recovery-candidates.sh` の集計を壊さないか」は、パースループ (L195-221) が `^- cause: ` / `^- 起票済み #` / `^- N/A` の 3 パターンのみに一致する行単位処理であることを読解して設計時に解決した。fixture ベースの追加テストは不要と判断
+- 「上流 harness の notification 文言がバージョン更新で変化しうる」は解決していないが、文言パーサをスクリプトに持たせない設計 (分類判断は親セッションの LLM、スクリプトは 4 語彙の検証のみ) により影響範囲を `skills/auto/SKILL.md` の例示 1 箇所に封じ込めた
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 新フラグは `--notification CLASS` の 1 本のみ。生の通知文言は既存の `--diagnosis TEXT` に載せる (専用の text フラグは追加しない)
+- 分類を `--cause` の slug で代用しない — `--cause` は `_find_known_recoveries_issue` の group key (`<symptom-short>/<cause-slug>`) に入るため、通知分類を混ぜると同一 root cause の occurrence が 4 グループに分裂する
+- `scripts/detect-external-kill.sh` には接続しない。判定閾値を動かさないという Issue 方針に従い、判定に影響しない入力はデッドサーフェスになるため
+- フラグ省略時のイベント値は `unspecified` とし、語彙値 `unobserved` (文言を確認できなかった) と区別する
+
+### Deferred Items
+
+- 追加の判別軸 3 種 (数値 exit code の有無 / 停止までの経過時間 vs watchdog 閾値 / `run_in_background` 起動か) は本 Issue のスコープ外。組み込む場合は別 Issue を起票する
+- `scripts/get-auto-session-report.sh` への notification 分類の内訳 Metrics 行は、データが数件貯まってから別途判断する
+- post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため、merge 直後には解決しない (2026-08-03 以降 kill は未再現)
+
+### Notes for Next Phase
+
+- `_diagnosis_body` の行リスト化では、既存 3 ケース (両フラグなし / `--cause` のみ / `--cause`+`--diagnosis`) の出力がバイト等価であることを必ず保つ。既存 bats テストがこの出力に依存している
+- Python heredoc へは環境変数 `WW_NOTIFICATION` で渡すこと。heredoc ソースへの文字列補間は #1123 で発生した SyntaxError silent-skip (書き込みが落ちるのに exit 0) を再発させる
+- `skills/auto/SKILL.md` 本文に半角感嘆符とトリプルバッククォートを入れない (`scripts/validate-skill-syntax.py` の制約)。追加する語彙リストには **(exhaustive)** マーカーを付ける
+- Changed Files 末尾の Steering Docs sync candidate 3 件 (`docs/structure.md` L190/L240、`docs/ja/structure.md` の対応行、`scripts/collect-recovery-candidates.sh` 冒頭コメント) は、各ファイルを読んで採否を最終判断すること
