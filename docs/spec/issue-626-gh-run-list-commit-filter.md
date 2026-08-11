@@ -121,3 +121,4 @@ patch route（Size XS/S）で使う `github_check "gh run list ..."` verify comm
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/626#issuecomment-5237167559
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/626#issuecomment-5237791238
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=6 / https://github.com/saitoco/wholework/issues/626#issuecomment-5246553135
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/626#issuecomment-5247420806
