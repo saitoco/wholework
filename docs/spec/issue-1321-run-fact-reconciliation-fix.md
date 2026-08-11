@@ -97,3 +97,37 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective コメント。session `83307-1786372673` の追加実測 (27 件全件 ambiguous の内訳分類と pre-filter 改善の示唆) を Background・対応方針へ統合済みであることの記録。本 `/spec` フェーズでの追加アクションは不要 (Issue 本文に統合済みの内容を Root Cause セクションでそのまま活用した) / https://github.com/saitoco/wholework/issues/1321#issuecomment-5248548214
+- `/code` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:35:39Z`) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の Implementation Steps 1〜4 をそのままの順序・対象ファイルで実装した。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Root Cause / 対処方針 (Rule 1 スコープ限定の理由、Rule 2 キーワード選定の理由、順序問題 3 選択肢の比較) が実装判断に必要な情報を過不足なく提供していた。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+### Test Execution Note
+
+- `scripts/scan-pending-ac.sh` は `tests/scan-pending-ac.bats` からも参照されているため (Spec の Changed Files に記載のない参照)、Step 9 の Behavioral Change Detection により `bats --jobs <N> tests/` のフルスイート実行が確定した。フルスイート 1745 件全 PASS を確認済み (`tests/run-fact-matching.bats` 単体の 35 件 PASS を含む)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Rule 1 / Rule 2 の実装対象は Spec のとおり `scripts/scan-pending-ac.sh` のみとし、`modules/run-fact-matching.md` には根拠・リグレッションリスク評価・3 選択肢比較を明文化するに留めた (Step 3 の判定基準 `satisfied`/`not_satisfied`/`ambiguous` や Step 4 の tier gate ロジックには手を入れていない)。
+- Rule 1/Rule 2 とも `--facts` 未指定時は完全に無効化されるガードを維持し、後方互換 (デバッグ用の無フィルタ実行) を壊さないようにした。
+
+### Deferred Items
+- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、次回の `/auto` 実行後の観察に委ねる。
+- `modules/run-fact-matching.md` の Notes で言及されていた `collect-run-facts.sh`/`apply-run-fact-match.sh` へのスキーマ拡張 (L3 retrospective 関連フィールド追加) は、Spec の対処方針で明示的にスコープ外と判断されており、本実装でも着手していない。
+
+### Notes for Next Phase
+- `/review` は `tests/scan-pending-ac.bats` と `tests/run-fact-matching.bats` の両方が `scan-pending-ac.sh` の直接参照ファイルである点に注意 (前者は Spec の Changed Files に記載がなかった)。
+- Rule 1/Rule 2 のキーワード・スコープ判断根拠は `modules/run-fact-matching.md` の「Ambiguous Breakdown Measurement (Issue #1321)」セクションに集約されている。
