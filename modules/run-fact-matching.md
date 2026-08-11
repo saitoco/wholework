@@ -158,11 +158,11 @@ only ever mark `ambiguous`, before the rubric judgment step runs):
   prose, and the sampling above confirmed no facts-JSON-representable signal exists for
   them when the target Issue wasn't processed this run.
 - **Rule 2 (ordering-problem fix, see below)**: a candidate whose condition text
-  contains an L3/session-retrospective reference keyword (case-insensitive: `L3
-  retrospective`, `L3 レトロスペクティブ`, `L3 セッションレトロスペクティブ`,
-  `session.md`, `セッションレトロスペクティブ`, `session retrospective`) is excluded.
-  Bare `L3` was rejected as a token — it false-positives on unrelated prose like
-  `autonomy: L3`.
+  contains an L3/session-retrospective reference keyword (case-insensitive:
+  `L3 retrospective`, `L3 レトロスペクティブ`, `L3 セッションレトロスペクティブ`,
+  `session.md`, `セッションレトロスペクティブ`, `session retrospective`) is
+  excluded. Bare `L3` was rejected as a token — it false-positives on unrelated
+  prose like `autonomy: L3`.
 
 ### Ordering Problem: L3 Retrospective-Referencing AC
 

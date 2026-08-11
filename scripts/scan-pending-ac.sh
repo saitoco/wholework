@@ -124,15 +124,14 @@ if [ -n "$FACTS_PATH" ]; then
 fi
 
 # Rule 2 keyword list (case-insensitive substring match against condition text).
-L3_KEYWORDS_LOWER=$(cat <<'EOF' | tr '[:upper:]' '[:lower:]'
-l3 retrospective
-l3 レトロスペクティブ
-l3 セッションレトロスペクティブ
-session.md
-セッションレトロスペクティブ
-session retrospective
-EOF
-)
+L3_KEYWORDS_LOWER=$(printf '%s\n' \
+  "l3 retrospective" \
+  "l3 レトロスペクティブ" \
+  "l3 セッションレトロスペクティブ" \
+  "session.md" \
+  "セッションレトロスペクティブ" \
+  "session retrospective" \
+  | tr '[:upper:]' '[:lower:]')
 
 ISSUES_JSON=$(gh issue list --label "phase/verify" --state all --json number,body --limit "$LIMIT" 2>/dev/null) || {
   echo "[]"
