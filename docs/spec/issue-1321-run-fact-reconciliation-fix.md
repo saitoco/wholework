@@ -118,17 +118,31 @@
 
 - `scripts/scan-pending-ac.sh` は `tests/scan-pending-ac.bats` からも参照されているため (Spec の Changed Files に記載のない参照)、Step 9 の Behavioral Change Detection により `bats --jobs <N> tests/` のフルスイート実行が確定した。フルスイート 1745 件全 PASS を確認済み (`tests/run-fact-matching.bats` 単体の 35 件 PASS を含む)。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — review-light の Perspective 1 (Spec 逸脱) で Spec の Implementation Steps 1〜4 と実装の一致を確認済み。構造的な乖離は検出されなかった。
+
+### Recurring issues
+
+- CI `Language Convention check` が FAILURE (MUST) となり `/review` の Step 12 で修正した。根本原因は `scripts/check-language-convention.py` の除外ロジック (フェンス/インラインコード/二重引用符の3種) が (1) 複数行にまたがるインラインコードスパンの行単位バックティック対応判定のずれ、(2) heredoc 内の機能的な日本語キーワードリテラル (二重引用符でもフェンスでもない生テキスト) のいずれにも対応していないこと。今回は `printf '%s\n' "..."` 形式への書き換えと行折り返し位置の調整で回避したが、`scripts/scan-pending-ac.sh`/`modules/run-fact-matching.md` に限らず「AC 条件文が日本語である (`CLAUDE.md` の Issue body 言語規約) ため、マッチング用キーワードデータも日本語で持たざるを得ない」パターンは他の pre-filter 実装でも今後発生しうる。`check-language-convention.py` 自体に (a) 複数行インラインコードスパンの状態追跡、(b) heredoc/配列リテラル形式の機能的データを対象外とする除外ルールを追加する改善の余地がある — 次回同様の FAILURE が発生した場合は `check-language-convention.py` 自体の改善を検討する Issue 起票を優先する。
+
+### Acceptance criteria verification difficulty
+
+- N/A — rubric 3 件・command 1 件とも PR diff / CI 参照から明確に判定でき、UNCERTAIN は発生しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Rule 1 / Rule 2 の実装対象は Spec のとおり `scripts/scan-pending-ac.sh` のみとし、`modules/run-fact-matching.md` には根拠・リグレッションリスク評価・3 選択肢比較を明文化するに留めた (Step 3 の判定基準 `satisfied`/`not_satisfied`/`ambiguous` や Step 4 の tier gate ロジックには手を入れていない)。
-- Rule 1/Rule 2 とも `--facts` 未指定時は完全に無効化されるガードを維持し、後方互換 (デバッグ用の無フィルタ実行) を壊さないようにした。
+- Step 9 の CI Blocking by default ルールに従い、`Language Convention check` FAILURE を MUST として扱い REQUEST_CHANGES 相当でブロック、Step 12 で修正した (self-review のため実際の投稿イベントは COMMENT フォールバック)。
+- 修正はチェッカーの誤検知を回避する目的の純粋なフォーマット変更 (heredoc → `printf` + 二重引用符、インラインコードスパンの改行位置調整) に限定し、Rule 1/Rule 2 の判定ロジック・キーワード内容には手を入れていない。修正後に `L3_KEYWORDS_LOWER` の出力がバイト同一であることを確認済み。
 
 ### Deferred Items
-- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、次回の `/auto` 実行後の観察に委ねる。
-- `modules/run-fact-matching.md` の Notes で言及されていた `collect-run-facts.sh`/`apply-run-fact-match.sh` へのスキーマ拡張 (L3 retrospective 関連フィールド追加) は、Spec の対処方針で明示的にスコープ外と判断されており、本実装でも着手していない。
+- Post-merge AC (「次に run-fact reconciliation が走った session で auto-check が 1 件以上発生するか、または ambiguous 率が実測で低下していることを確認する」) は `session=next` の observation 型のため、次回の `/auto` 実行後の観察に委ねる (`/code` フェーズから継続、未解消)。
+- `check-language-convention.py` 自体の除外ロジック改善 (複数行インラインコードスパン追跡、heredoc データリテラルの除外) は本 PR のスコープ外 — 再発時に別 Issue での対応を検討 (review retrospective参照)。
 
 ### Notes for Next Phase
-- `/review` は `tests/scan-pending-ac.bats` と `tests/run-fact-matching.bats` の両方が `scan-pending-ac.sh` の直接参照ファイルである点に注意 (前者は Spec の Changed Files に記載がなかった)。
-- Rule 1/Rule 2 のキーワード・スコープ判断根拠は `modules/run-fact-matching.md` の「Ambiguous Breakdown Measurement (Issue #1321)」セクションに集約されている。
+- `/merge` 実行前に CI は全 11 件 SUCCESS (コミット `22b00a7a`) を確認済み。
+- Pre-merge AC は 4/4 PASS、Issue チェックボックスは既にすべて `[x]` (変更不要)。
