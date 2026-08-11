@@ -98,6 +98,7 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective コメント。session `83307-1786372673` の追加実測 (27 件全件 ambiguous の内訳分類と pre-filter 改善の示唆) を Background・対応方針へ統合済みであることの記録。本 `/spec` フェーズでの追加アクションは不要 (Issue 本文に統合済みの内容を Root Cause セクションでそのまま活用した) / https://github.com/saitoco/wholework/issues/1321#issuecomment-5248548214
 - `/code` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:35:39Z`) 以降の新規コメントなし。
+- `/review` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:41:58Z`) 以降の新規コメントなし (Issue/PR とも)。
 
 ## Code Retrospective
 
