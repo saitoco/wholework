@@ -234,24 +234,37 @@ cutoff: 2026-08-11T00:13:10Z (直近の `phase/*` ラベル付与時刻)。cutof
 - 5 件の Pre-merge AC はすべて非対話モードで LLM 判断により rubric を評価し PASS 判定した (rubric 3 件、command 1 件は `bats tests/run-auto-sub.bats` 90/90 PASS で実測、rubric 1 件は `scripts/check-translation-sync.sh` の IN_SYNC 実測を根拠とした)
 - Behavioral Change Detection (Step 9) により `scripts/run-auto-sub.sh` / `scripts/emit-event.sh` / `scripts/collect-recovery-candidates.sh` / `docs/reports/orchestration-recoveries.md` / `skills/auto/SKILL.md` / `modules/orchestration-fallbacks.md` がいずれも direct-associated test 以外からも参照されていることを確認し、フルスイート `bats --jobs 18 tests/` (1738 件) を実行して回帰なしを確認した
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- なし。Implementation Steps 1-10 は Spec 通りに実装されており、review-spec agent も "Verified as conforming" と報告した
+
+### Recurring issues (workflow improvement opportunity)
+
+- 同一 PR 内で追加された `skills/auto/SKILL.md` の複数箇所間 (Step 6 の capture 節と Recording 節、L945 と L955) で語彙・条件記述の不整合が計 3 件検出された (Instruction Conflict 1 件 SHOULD、Documentation Consistency 1 件 CONSIDER、Prose-Literal Inconsistency 1 件 CONSIDER)。1 つの Issue で SKILL.md の同一セクション内の複数箇所を編集する際、Code フェーズでの self-consistency チェック (新規追加した複数の段落間の相互参照が矛盾しないかの通読) が手薄になりやすい可能性がある。今回は `/review` の review-spec + review-bug 双方が独立に検出できたため実害はなかったが、再発する場合は Code フェーズの Spec Implementation Steps に「複数箇所を編集する Step では、追加後に対象範囲を通読して矛盾がないか確認する」旨のチェック項目を追加する余地がある (Improvement Proposal 候補として記録するに留め、Issue 化は `/verify` での集約に委ねる)
+
+### Acceptance criteria verification difficulty
+
+- なし。5 件の Pre-merge AC (rubric 4 件、command 1 件) はすべて非対話 safe mode で明確に PASS 判定できた。verify command の記述漏れ・不正確さも見られなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `--notification CLASS` の 1 本のみを追加し、生の通知文言は既存の `--diagnosis TEXT` に載せる設計を Spec 通り実装した
-- `skills/auto/SKILL.md` の捕捉手順は `harness-stop` への分岐を設けず、`external-signal` (数値 exit code あり) / `indeterminate` (`killed`・"was stopped" のみ) / `unobserved` の 3 値のみを判定させる設計にした — 2026-08-07 実例が示すとおり、通知文言単体では `harness-stop` を確定できないため。`harness-stop` は語彙としては残し、他の観測チャネルが今後判別材料を提供する余地を残した
-- `_diagnosis_body` を「cause / notification / 末尾テキスト」の順序付き行リストに書き換え、既存 3 ケース (両フラグなし / `--cause` のみ / `--cause`+`--diagnosis`) の出力バイト等価性を保ったまま、`--diagnosis` 単独指定時に本文が黙って捨てられていた既存バグも解消した
-- `docs/structure.md` 側の Steering Docs sync candidate 2 件は記述変更せず (既存記述のままで正確と判断)、`scripts/collect-recovery-candidates.sh` 冒頭コメントのみ 1 段落追加した
+- `--full --non-interactive` で review-spec 1 体 + review-bug 2 体 (diff/security) の finder fan-out と、bug 側 finding 3 件への 2 段階検証 (adversarial verify sub-agent) を実施した。Workflow ツールは re-invocation guarantee のない実行サーフェスのため使用せず、`workflow-guidance.md` の指示通り静的 Task fan-out (Agent tool, `run_in_background: false`) にフォールバックした
+- MUST issue はゼロ、CI 全 SUCCESS、Pre-merge AC 5 件すべて PASS 済みのため `event=COMMENT` で投稿した
+- SHOULD 2 件 (`skills/auto/SKILL.md:945` の instruction conflict、`modules/orchestration-fallbacks.md:613` の doc 不足) は修正コミット (90254b69) で解消。CONSIDER 5 件は non-blocking と判断しスキップ (詳細は Review Response Summary コメント参照)
+- Code フェーズの Phase Handoff が明記していた「`harness-stop` 分岐の意図的欠如」を review-spec/review-bug 双方の起動プロンプトに事前共有し、誤検出 (false positive) を未然に防いだ
 
 ### Deferred Items
 
-- 追加の判別軸 3 種 (数値 exit code の有無 / 停止までの経過時間 vs watchdog 閾値 / `run_in_background` 起動か) は本 Issue のスコープ外 (Spec の Deferred Items を継承)
-- `scripts/get-auto-session-report.sh` への notification 分類の内訳 Metrics 行は、データが数件貯まってから別途判断する (Spec 継承)
-- post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため、merge 直後には解決しない (2026-08-03 以降 kill は未再現、Spec 継承)
+- CONSIDER 5 件は PR コメントに記録済み。うち `scripts/run-auto-sub.sh:292` (diagnosis 複数行テキストが `collect-recovery-candidates.sh` のセンチネル行と衝突しうる懸念) は将来 follow-up の候補として残る
+- Post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため未解決のまま (Spec 継承)
 
 ### Notes for Next Phase
 
-- `skills/auto/SKILL.md` Step 6 の捕捉手順に `harness-stop` 分岐が存在しないのは意図的な設計判断であり、実装漏れではない — `/review` で欠落として指摘された場合はこの Phase Handoff と Code Retrospective を参照すること
-- `tests/run-auto-sub.bats` 90/90 PASS、フルスイート `bats --jobs 18 tests/` 1738/1738 PASS を確認済み。behavioral change (複数ファイルが direct-associated test 以外からも参照) を検出したため、フルスイート実行はこの Code フェーズの必須ステップとして実施済み
-- Post-merge AC は external kill 再発生に依存する `verify-type: manual` のため、`/verify` では未チェックのままでよい
+- `/merge 1346` 実行可能な状態: MUST issue ゼロ、CI 全 SUCCESS、Pre-merge AC 5 件すべて `[x]` 済み
+- 修正コミット (90254b69) は prose-only (SKILL.md / orchestration-fallbacks.md の文言修正のみ) のため、bats フルスイート再実行はスキップし `validate-skill-syntax.py` と `check-forbidden-expressions.sh` のみ実施した
+- Post-merge AC は external kill 再発生に依存する `verify-type: manual` のため、`/verify` では未チェックのままでよい (Code フェーズの Phase Handoff から継承)
