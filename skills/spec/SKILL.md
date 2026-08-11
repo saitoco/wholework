@@ -304,6 +304,19 @@ Steps:
 
 **Skip** if Changed Files does not include SKILL.md files, files under `modules/`, or files under `scripts/`.
 
+**Outbound pointer sync candidate check (when a Changed Files entry itself points elsewhere):**
+
+Complements the Steering Docs sync candidate check above, which works **inbound**: starting from a changed file's name/keyword, it searches *outward* for other files that reference it. This check works the opposite direction — **outbound**: starting from a changed file's own body, it follows the pointers *that file itself* names, to check whether the file each pointer targets also needs to be in Changed Files.
+
+Steps:
+1. For each file already in the Changed Files list, scan its content for outbound pointer phrases such as "See also", "for the full reference", "SSoT:", or a Markdown link pointing to another repository file.
+2. For each pointer target found, evaluate whether the Issue's change also affects that target file's content — a pointer alone does not make the target a Changed Files candidate; the target must itself need an update to stay consistent with the change.
+3. If it does, add the pointed-to file to the Changed Files list as an **Outbound pointer sync candidate** entry.
+
+**Skip** if no Changed Files entry contains an outbound pointer to another repository file.
+
+*Example: #1322 added a `theme/*` label namespace to `scripts/setup-labels.sh` (in Changed Files), but `modules/label-conventions.md` — which documents itself as the SSoT for label namespaces and instructs "update this file and setup-labels.sh together when adding a new namespace" — was not in Changed Files (caught in review). #1342 documented `.wholework.yml`'s `themes:` key in `docs/guide/customization.md` (in Changed Files), which points to `modules/detect-config-markers.md` as "the full reference", but the latter was not in Changed Files (caught by 3 review agents independently).*
+
 **`docs/ja/` translation sync check:**
 
 If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
