@@ -122,13 +122,14 @@ _pull_ff_only() {
 }
 
 # Validates recovery function arguments to prevent path traversal via glob patterns.
-# Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]
+# Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE] [NOTIFICATION]
 # Returns 1 and prints to stderr if any argument fails validation.
 _validate_recovery_args() {
   local _issue="${1:-}"
   local _phase="${2:-}"
   local _recovery_type="${3:-}"
   local _exit_code="${4:-}"
+  local _notification="${5:-}"
 
   if [[ -z "$_issue" ]] || ! [[ "$_issue" =~ ^[0-9]+$ ]]; then
     echo "_validate_recovery_args: invalid issue: '${_issue}'" >&2
@@ -147,6 +148,11 @@ _validate_recovery_args() {
 
   if [[ -n "$_exit_code" ]] && ! [[ "$_exit_code" =~ ^[0-9]+$ ]]; then
     echo "_validate_recovery_args: invalid exit_code: '${_exit_code}'" >&2
+    return 1
+  fi
+
+  if [[ -n "$_notification" ]] && [[ "$_notification" != "harness-stop" && "$_notification" != "external-signal" && "$_notification" != "indeterminate" && "$_notification" != "unobserved" ]]; then
+    echo "_validate_recovery_args: invalid notification: '${_notification}'" >&2
     return 1
   fi
 }
@@ -203,7 +209,7 @@ _find_known_recoveries_issue() {
   _search_recoveries_issue "$target" closed closedAt 1000
 }
 
-# _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE] [CAUSE] [DIAGNOSIS]
+# _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE] [CAUSE] [DIAGNOSIS] [NOTIFICATION]
 # Records a parent-session-driven manual recovery event to orchestration-recoveries.md,
 # in the canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it
 # up for frequency detection / recoveries-auto-fire (unlike the H3 wrapper-retry-on-kill
@@ -222,6 +228,10 @@ _find_known_recoveries_issue() {
 # _find_known_recoveries_issue becomes "<symptom-short>/<cause>" so scripts/collect-recovery-
 # candidates.sh's cause-aware grouping (reads the "- cause:" line back out) can separate
 # same-symptom-different-cause events instead of merging them.
+# NOTIFICATION (Issue #1153): when supplied, adds a machine-readable "- notification: <class>"
+# line to the ### Diagnosis body, placed after "- cause:" (if present) and before the trailing
+# free-text line. Does not participate in the group key -- only CAUSE does (see Alternatives
+# Considered in docs/spec/issue-1153-notification-class-recording.md for why).
 _write_manual_recovery_to_recoveries_log() {
   local issue="$1"
   local phase="${2:-unknown}"
@@ -229,6 +239,7 @@ _write_manual_recovery_to_recoveries_log() {
   local exit_code="${4:-unknown}"
   local cause="${5:-}"
   local diagnosis="${6:-}"
+  local notification="${7:-}"
   local _repo_root="$REPO_ROOT"
   local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
   _pull_ff_only "$_repo_root"
@@ -248,15 +259,15 @@ _write_manual_recovery_to_recoveries_log() {
   fi
   local _date
   _date=$(date -u '+%Y-%m-%d %H:%M UTC')
-  # cause/diagnosis are passed to Python via environment variables (WW_CAUSE/WW_DIAGNOSIS)
-  # rather than interpolated into the heredoc's Python source text. Interpolation requires
-  # escaping every character with meaning inside a Python string literal; the previous
-  # backslash/double-quote-only sed escaping did not cover newlines, so a --diagnosis value
-  # containing a newline broke the embedded string literal with a SyntaxError that the
-  # `2>/dev/null || true` below silently discarded -- a silent no-op (Issue #1123 review
-  # finding). Environment variables carry arbitrary text (including newlines) verbatim with
-  # no source-text escaping needed.
-  WW_CAUSE="$cause" WW_DIAGNOSIS="$diagnosis" python3 << PYEOF 2>/dev/null || true
+  # cause/diagnosis/notification are passed to Python via environment variables
+  # (WW_CAUSE/WW_DIAGNOSIS/WW_NOTIFICATION) rather than interpolated into the heredoc's Python
+  # source text. Interpolation requires escaping every character with meaning inside a Python
+  # string literal; the previous backslash/double-quote-only sed escaping did not cover
+  # newlines, so a --diagnosis value containing a newline broke the embedded string literal
+  # with a SyntaxError that the `2>/dev/null || true` below silently discarded -- a silent
+  # no-op (Issue #1123 review finding). Environment variables carry arbitrary text (including
+  # newlines) verbatim with no source-text escaping needed.
+  WW_CAUSE="$cause" WW_DIAGNOSIS="$diagnosis" WW_NOTIFICATION="$notification" python3 << PYEOF 2>/dev/null || true
 import os
 import re
 from datetime import datetime, timezone, timedelta
@@ -268,11 +279,20 @@ context_line = "- Issue #${issue}, phase: ${phase}"
 
 _cause = os.environ.get("WW_CAUSE", "")
 _diagnosis = os.environ.get("WW_DIAGNOSIS", "")
+_notification = os.environ.get("WW_NOTIFICATION", "")
+# Ordered line list (Issue #1153): (a) cause, (b) notification, (c) one trailing free-text
+# line (diagnosis if supplied, else the default boilerplate). Byte-equivalent with the prior
+# 3 cases (no flags / --cause only / --cause+--diagnosis) when notification is empty; also
+# fixes the pre-existing bug where --diagnosis without --cause was silently dropped (see
+# docs/spec/issue-1153-notification-class-recording.md Notes).
+_diagnosis_lines = []
 if _cause:
-    _diagnosis_text = _diagnosis or "Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})"
-    _diagnosis_body = "- cause: {}\n- {}\n".format(_cause, _diagnosis_text)
-else:
-    _diagnosis_body = "- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
+    _diagnosis_lines.append("- cause: {}".format(_cause))
+if _notification:
+    _diagnosis_lines.append("- notification: {}".format(_notification))
+_diagnosis_text = _diagnosis or "Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})"
+_diagnosis_lines.append("- {}".format(_diagnosis_text))
+_diagnosis_body = "\n".join(_diagnosis_lines) + "\n"
 
 entry = (
     "\n## ${_date}: manual-recovery-${recovery_type}\n"
@@ -337,13 +357,14 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
 if [[ "${1:-}" == "--write-manual-recovery" ]]; then
   shift
   if [[ -z "${1:-}" ]]; then
-    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE] [--cause SLUG] [--diagnosis TEXT]" >&2
+    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE] [--cause SLUG] [--diagnosis TEXT] [--notification CLASS]" >&2
     exit 1
   fi
   _mr_issue="$1"
   shift
   # Positional args (PHASE, RECOVERY_TYPE, EXIT_CODE) keep their original order/meaning
-  # regardless of where --cause/--diagnosis appear among the remaining arguments (Issue #1123).
+  # regardless of where --cause/--diagnosis/--notification appear among the remaining
+  # arguments (Issue #1123, extended in #1153).
   _mr_phase="unknown"
   _mr_recovery_type="unspecified"
   # EXIT_CODE left un-defaulted (unlike PHASE/RECOVERY_TYPE above): passed through as-is to
@@ -353,6 +374,7 @@ if [[ "${1:-}" == "--write-manual-recovery" ]]; then
   _mr_exit_code=""
   _mr_cause=""
   _mr_diagnosis=""
+  _mr_notification=""
   _mr_pos_idx=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -364,6 +386,11 @@ if [[ "${1:-}" == "--write-manual-recovery" ]]; then
       --diagnosis)
         [[ $# -ge 2 ]] || { echo "Error: --diagnosis requires a value" >&2; exit 1; }
         _mr_diagnosis="$2"
+        shift 2
+        ;;
+      --notification)
+        [[ $# -ge 2 ]] || { echo "Error: --notification requires a value" >&2; exit 1; }
+        _mr_notification="$2"
         shift 2
         ;;
       *)
@@ -378,14 +405,14 @@ if [[ "${1:-}" == "--write-manual-recovery" ]]; then
     esac
   done
 
-  _validate_recovery_args "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
+  _validate_recovery_args "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_notification"
 
   source "$SCRIPT_DIR/emit-event.sh"
   restore_auto_session_pointer
   export EMIT_ISSUE_NUMBER="$_mr_issue"
 
-  _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause" "$_mr_diagnosis"
-  emit_event "manual_intervention" "recovery_target=${_mr_phase}" "wrapper_exit_code=${_mr_exit_code:-unknown}" "intervention_type=${_mr_recovery_type}"
+  _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause" "$_mr_diagnosis" "$_mr_notification"
+  emit_event "manual_intervention" "recovery_target=${_mr_phase}" "wrapper_exit_code=${_mr_exit_code:-unknown}" "intervention_type=${_mr_recovery_type}" "notification_class=${_mr_notification:-unspecified}"
   exit 0
 fi
 

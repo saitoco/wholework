@@ -1807,6 +1807,139 @@ MOCK
     grep -q "^second line$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
+@test "run-auto-sub: manual recovery: --notification harness-stop is recorded in recoveries log and emitted as notification_class (Issue #1153)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "$@" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn 137 --notification harness-stop
+    [ "$status" -eq 0 ]
+    grep -q -- "- notification: harness-stop" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "notification_class=harness-stop" "$EMIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: --cause and --notification each produce their own recoveries log line (Issue #1153)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn 137 --cause dirty-guard --notification external-signal
+    [ "$status" -eq 0 ]
+    grep -q -- "- cause: dirty-guard" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q -- "- notification: external-signal" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
+@test "run-auto-sub: manual recovery: omitting --notification writes no notification line and emits notification_class=unspecified (Issue #1153)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "$@" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" != *"- notification:"* ]]
+    grep -q "notification_class=unspecified" "$EMIT_LOG"
+}
+
 @test "run-auto-sub: manual recovery: reissuing the same recovery within 24h does not duplicate the recoveries log entry" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
@@ -2171,6 +2304,18 @@ MOCK
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only --cause dirty-guard --diagnosis
     [ "$status" -ne 0 ]
     [[ "$output" == *"--diagnosis requires a value"* ]]
+}
+
+@test "validate: --write-manual-recovery rejects an out-of-vocabulary --notification value (Issue #1153)" {
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only --notification bogus
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"invalid notification"* ]]
+}
+
+@test "validate: --write-manual-recovery rejects --notification with no value (with diagnostic message, not a bare shift failure) (Issue #1153)" {
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only --notification
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"--notification requires a value"* ]]
 }
 
 @test "retry-on-kill: child runner killed once then succeeds, run-auto-sub exits 0" {
