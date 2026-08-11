@@ -168,6 +168,10 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 
 `/auto #953` (pr route、単発実行) の event-based observation scan で再度 dispatch された。XL sub-issue 並列実行は今回も発生しておらず、結論は変わらず SKIPPED を維持。
 
+### 2026-08-11 再確認 (/auto --batch --until 953 セッションから)
+
+`/auto --batch --until "label:theme/observability"` (session `29601-1786367167`) の Batch Completion Report observation scan で再度 dispatch された。本 run は List mode (spec→code→verify の順次単発実行) であり XL sub-issue 並列実行を伴わないため、傍証の追加もなし。結論は変わらず SKIPPED を維持 — 50+ 規模の実 XL 実行を引き続き待つ。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/589#issuecomment-4700058969
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 589` to verify the condition / https://github.com/saitoco/wholework/issues/589#issuecomment-4756911035
