@@ -275,3 +275,11 @@ Spec の Implementation Step 5 は `tests/pre-merge-check.bats` のシナリオ�
 **条件9 に前進あり**: `scripts/check-forbidden-expressions.sh` を実行し exit 0 (クリーン) を確認。Issue #710 の Forbidden Expressions pre-existing FAILURE は解消済みと判断できる (baseline が FAIL → PASS に移行)。ただし `pre-merge-check.sh` 自体の PR ベース baseline diff 動作確認には至っていない (OPEN PR が存在しないため) — UNCERTAIN のまま。次回いずれかの PR で `/merge` が実行された際に CLEAN 判定 (exit 0) が返ることの確認が残っている。
 
 条件8 (dogfood テスト) は引き続き別途 PR 作成が必要で変化なし。
+
+### 追記 (2026-08-10, /auto #1342 セッションからの再評価 — 条件9 PASS 確定)
+
+`/auto` の event-based observation scan により再度 dispatch された。今回 PR #1344 (Issue #1342) の実 `/merge` が本セッション内で実行され、条件9 が求める「PR ベースの baseline diff 動作確認」が実現した。
+
+`run-merge.sh:106` が `pre-merge-check.sh 1344` を呼び出し、出力は `CLEAN: forbidden-expressions check passes on both main and worktree-code+issue-1342` — `scripts/pre-merge-check.sh:94` の `baseline_status=0 (PASS) && current_status=0 (PASS)` 分岐 (CLEAN) と完全に一致する。issue-710 側の Forbidden Expressions 解消 (前回確認済み) と合わせ、baseline=PASS 状態での正常動作が実 PR で確証された。条件9 を **PASS** として checkbox を更新した。
+
+条件8 (dogfood テスト、意図的 Forbidden Expressions FAIL PR での新規 FAILURE abort 観察) は引き続き別途 PR 作成が必要で未確認のまま。
