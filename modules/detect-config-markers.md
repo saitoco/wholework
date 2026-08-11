@@ -46,7 +46,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `capabilities.workflow` | `HAS_WORKFLOW_CAPABILITY` | `true` | `false` |
 | `capabilities.pr-preview` | `HAS_PR_PREVIEW_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
-| `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) |
+| `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use the default if ≤0 or non-numeric) | see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT` |
 | `watchdog-timeout-spec-seconds` | `WATCHDOG_TIMEOUT_SPEC_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_SPEC_DEFAULT`) |
 | `watchdog-timeout-code-seconds` | `WATCHDOG_TIMEOUT_CODE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_CODE_DEFAULT`) |
 | `watchdog-timeout-review-seconds` | `WATCHDOG_TIMEOUT_REVIEW_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_REVIEW_DEFAULT`) |
@@ -87,7 +87,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
 - `production-url` is treated as URL string with quotes removed
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
-- `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
+- `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
 - `observation-dispatch-threshold` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `5`
 - `patch-lock-timeout` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `300` (used by `scripts/worktree-merge-push.sh`)
@@ -125,7 +125,7 @@ HAS_VISUAL_DIFF_CAPABILITY: true if capabilities.visual-diff: true is set (defau
 HAS_WORKFLOW_CAPABILITY: true if capabilities.workflow: true is set (default: false)
 HAS_PR_PREVIEW_CAPABILITY: true if capabilities.pr-preview: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
-WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800" (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`); falls back to "1800" if ≤0 or non-numeric)
+WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`; falls back to the same default if ≤0 or non-numeric)
 WATCHDOG_TIMEOUT_SPEC_SECONDS: integer from watchdog-timeout-spec-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
 WATCHDOG_TIMEOUT_CODE_SECONDS: integer from watchdog-timeout-code-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
 WATCHDOG_TIMEOUT_REVIEW_SECONDS: integer from watchdog-timeout-review-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
