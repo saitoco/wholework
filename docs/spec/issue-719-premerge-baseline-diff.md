@@ -22,6 +22,8 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/719#issuecomment-5225314121
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/719#issuecomment-5229257907
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/719#issuecomment-5235400248
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/719#issuecomment-5237823139
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/719#issuecomment-5246553414
 ## Changed Files
 
 - `scripts/pre-merge-check.sh`: 新規作成 — baseline diff 分類器。対象 check を base ブランチと PR head ブランチで実行し、結果を NEW_FAILURE / PRE_EXISTING / FIXED / CLEAN に分類。bash 3.2+ 互換 (mapfile / 連想配列を使わない)。
