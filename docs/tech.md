@@ -86,6 +86,8 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 
 **Default parent = Sonnet 5** (`claude-sonnet-5`, launched 2026-06-30): the bare `Sonnet` alias used throughout the table below (in `run-*.sh`, skill, and sub-agent frontmatter) now resolves to Sonnet 5, superseding the former default parent Sonnet 4.6. See the **Sonnet 5** note below the table for the swap rationale and the alias pin policy.
 
+**Scope of "Default parent" (read this before the table)**: this term governs only (1) the model that `run-*.sh`'s spawned `claude -p` phase processes run with (`--model sonnet` / `ANTHROPIC_MODEL=sonnet`), and (2) skills whose own frontmatter pins a `model:` value (e.g. `merge`, `triage`, `verify` — fixed regardless of who invokes them). It does **not** set the model of your own interactive Claude Code session — that stays yours to choose (Sonnet 5, Opus 5, or otherwise), independent of this table. Skills invoked inline with neither a `run-*.sh` wrapper nor a `model:` frontmatter value (e.g. `auto`, `audit`, `doc`) inherit whichever model the invoking session is already running — for `/auto`'s own top-level invocation, that is your interactive session's choice, not "Default parent"; only the phases `/auto` spawns via `run-*.sh` are pinned per (1) above.
+
 | Component | Phase | Model | Effort | Rationale |
 |-----------|-------|-------|--------|-----------|
 | run-issue.sh | issue | Sonnet | high | Existing Issue Refinement performs substantive judgment work (ambiguity resolution, AC/verify-command authoring) to produce the pipeline's most upstream artifact; errors propagate through every downstream phase — the longest blast radius in the C-series |

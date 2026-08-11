@@ -86,6 +86,8 @@
 
 **デフォルト親モデル = Sonnet 5**（`claude-sonnet-5`、2026-06-30 リリース）: 下記の表全体（`run-*.sh`、skill、サブエージェントの frontmatter）で使われている bare `Sonnet` エイリアスは、現在 Sonnet 5 に解決される。これにより旧デフォルトの Sonnet 4.6 は置き換えられた。切替の根拠と alias pin 方針については表の下の **Sonnet 5** の注記を参照。
 
+**「デフォルト親モデル」が指す範囲 (表を読む前に)**: この語が規定するのは (1) `run-*.sh` が spawn する `claude -p` フェーズ実行プロセスが使うモデル (`--model sonnet` / `ANTHROPIC_MODEL=sonnet`)、および (2) skill 自身の frontmatter に `model:` 値が固定されているもの (`merge`、`triage`、`verify` など — 誰が呼び出しても固定) の 2 者のみである。**ユーザー自身の対話的な Claude Code セッションのモデルを規定するものではない** — それは Sonnet 5 でも Opus 5 でも、本表とは独立にユーザーが自由に選べる。`run-*.sh` ラッパーも `model:` frontmatter も持たずインラインで呼び出される skill (`auto`、`audit`、`doc` など) は、呼び出し元セッションが現在動作しているモデルをそのまま継承する — `/auto` 自身のトップレベル呼び出しについて言えば、それは対話セッションでユーザーが選んだモデルであり、「デフォルト親モデル」ではない。「デフォルト親モデル」の対象となるのは `/auto` が `run-*.sh` 経由で spawn する各フェーズのみである (上記 (1))。
+
 | コンポーネント | フェーズ | モデル | Effort | 根拠 |
 |-----------|-------|-------|--------|-----------|
 | run-issue.sh | issue | Sonnet | high | Existing Issue Refinement は曖昧性解決・受入条件と verify command の作成などの実質的な判断作業を行い、パイプライン最上流の成果物を生成する。その誤りは下流の全フェーズに伝播し、C-series の中で最も波及範囲が広い |
