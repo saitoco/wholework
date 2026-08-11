@@ -101,6 +101,12 @@ patch route（Size XS/S）で使う `github_check "gh run list ..."` verify comm
 ### Improvement Proposals
 - N/A
 
+### 2026-08-11 再確認 (/auto --batch --until 953 セッションから) — 条件 PASS 確定
+
+`/auto --batch --until "label:theme/observability"` (session `29601-1786367167`) の Batch Completion Report observation scan で 14 回目の dispatch。今回、初めて実証条件が揃い PASS と判定した。
+
+同セッションの Issue #478 (patch route) の post-merge AC が `--commit=$(git rev-parse HEAD)` テンプレートそのものを使用しており、Round 1 で複数 `/auto` sub-run が連続 push していた (`concurrent_commit_detected` 最大 21 件) 状況下で `gh run list --commit=<main の実際の push 済み HEAD 完全 SHA>` を実行し、並行 push による "latest run" の揺れに影響されず指定コミット固有の `success` を正確に取得できた。#626 が意図した「並行 push 下でもコミット絞り込みで正確な CI 判定を得る」という目的が実測で確認できたため、post-merge AC を PASS としてチェックし `phase/done` へ遷移した。
+
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/626#issuecomment-4701067197
