@@ -249,22 +249,17 @@ cutoff: 2026-08-11T00:13:10Z (直近の `phase/*` ラベル付与時刻)。cutof
 - なし。5 件の Pre-merge AC (rubric 4 件、command 1 件) はすべて非対話 safe mode で明確に PASS 判定できた。verify command の記述漏れ・不正確さも見られなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `--full --non-interactive` で review-spec 1 体 + review-bug 2 体 (diff/security) の finder fan-out と、bug 側 finding 3 件への 2 段階検証 (adversarial verify sub-agent) を実施した。Workflow ツールは re-invocation guarantee のない実行サーフェスのため使用せず、`workflow-guidance.md` の指示通り静的 Task fan-out (Agent tool, `run_in_background: false`) にフォールバックした
-- MUST issue はゼロ、CI 全 SUCCESS、Pre-merge AC 5 件すべて PASS 済みのため `event=COMMENT` で投稿した
-- SHOULD 2 件 (`skills/auto/SKILL.md:945` の instruction conflict、`modules/orchestration-fallbacks.md:613` の doc 不足) は修正コミット (90254b69) で解消。CONSIDER 5 件は non-blocking と判断しスキップ (詳細は Review Response Summary コメント参照)
-- Code フェーズの Phase Handoff が明記していた「`harness-stop` 分岐の意図的欠如」を review-spec/review-bug 双方の起動プロンプトに事前共有し、誤検出 (false positive) を未然に防いだ
+- 非対話モードで pre-merge AC ゲートを確認し、5 件すべて `[x]` 済み・review-incomplete-fallback なしを確認した上で squash merge を実行した
+- worktree entry を経由し、squash merge 後に `origin/main` へ fast-forward、Consumed Comments フォールバックと Phase Handoff の rotation 書き込みをこの worktree 上のコミットとして main に直接反映する運用にした (worktree ブランチは squash merge で既に削除済みのため)
 
 ### Deferred Items
 
-- CONSIDER 5 件は PR コメントに記録済み。うち `scripts/run-auto-sub.sh:292` (diagnosis 複数行テキストが `collect-recovery-candidates.sh` のセンチネル行と衝突しうる懸念) は将来 follow-up の候補として残る
 - Post-merge AC (`docs/reports/external-kill-investigation.md` への Update 反映) は external kill の再発生に依存するため未解決のまま (Spec 継承)
 
 ### Notes for Next Phase
 
-- `/merge 1346` 実行可能な状態: MUST issue ゼロ、CI 全 SUCCESS、Pre-merge AC 5 件すべて `[x]` 済み
-- 修正コミット (90254b69) は prose-only (SKILL.md / orchestration-fallbacks.md の文言修正のみ) のため、bats フルスイート再実行はスキップし `validate-skill-syntax.py` と `check-forbidden-expressions.sh` のみ実施した
-- Post-merge AC は external kill 再発生に依存する `verify-type: manual` のため、`/verify` では未チェックのままでよい (Code フェーズの Phase Handoff から継承)
+- `/verify 1153` 実行可能な状態: Pre-merge AC 5 件はいずれもチェック済み。Post-merge AC は `verify-type: manual` のため external kill 再発生まで未チェックのままでよい
