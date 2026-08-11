@@ -68,3 +68,6 @@ Issue 本文の検討候補 (案 A: emit 直前に `run-code.sh` 自身が記録
 ### Symptom-short 命名
 
 新規エントリの H2 見出し (`symptom-short`) は `code-retry-fire` (kebab-case) とする。`wrapper-retry-on-kill`/`code-patch-silent-no-op` の命名規則に合わせた。`scripts/collect-recovery-candidates.sh` は見出しの `UTC: ` 以降を汎用的にパースする実装 (ハードコードされた既知シンボルのリストは持たない) であるため、本追加による同スクリプト側の変更は不要。
+
+## Consumed Comments
+No new comments since last phase.
