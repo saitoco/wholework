@@ -386,6 +386,113 @@ MOCK
     [[ "$condition" == *"pr route"* ]]
 }
 
+@test "scan-pending-ac: Rule 1 excludes observation candidate whose issue is absent from facts.issues" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 1200, "body": "### Post-merge\n\n- [ ] <!-- verify-type: observation event=auto-run --> observation condition mentioning pr route\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    FACTS_FILE="$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1265,"fact_tokens":["pr route"]}]}' > "$FACTS_FILE"
+
+    run bash "$SCAN_SCRIPT" --facts "$FACTS_FILE"
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "0" ]
+}
+
+@test "scan-pending-ac: Rule 1 keeps observation candidate whose issue is present in facts.issues" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 1265, "body": "### Post-merge\n\n- [ ] <!-- verify-type: observation event=auto-run --> observation condition mentioning pr route\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    FACTS_FILE="$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1265,"fact_tokens":["pr route"]}]}' > "$FACTS_FILE"
+
+    run bash "$SCAN_SCRIPT" --facts "$FACTS_FILE"
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "1" ]
+}
+
+@test "scan-pending-ac: Rule 1 does not exclude manual candidate whose issue is absent from facts.issues" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 1212, "body": "### Post-merge\n\n- [ ] manual condition mentioning pr route\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    FACTS_FILE="$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1265,"fact_tokens":["pr route"]}]}' > "$FACTS_FILE"
+
+    run bash "$SCAN_SCRIPT" --facts "$FACTS_FILE"
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "1" ]
+}
+
+@test "scan-pending-ac: Rule 2 excludes candidate referencing L3 retrospective" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 1307, "body": "### Post-merge\n\n- [ ] pr route: does the L3 retrospective record this outcome\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    FACTS_FILE="$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1307,"fact_tokens":["pr route"]}]}' > "$FACTS_FILE"
+
+    run bash "$SCAN_SCRIPT" --facts "$FACTS_FILE"
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "0" ]
+}
+
+@test "scan-pending-ac: Rule 1/Rule 2 are inactive without --facts" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 1307, "body": "### Post-merge\n\n- [ ] <!-- verify-type: observation event=auto-run --> does the L3 retrospective record this outcome\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCAN_SCRIPT"
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "1" ]
+}
+
 @test "scan-pending-ac: gh failure fails open with empty array" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
