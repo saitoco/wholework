@@ -561,4 +561,18 @@ The host has not been rebooted since 2026-08-10 04:49Z, so uptime is accumulatin
 - **Kill returns** → H-b' (uptime / PID reuse) is confirmed as a co-factor, and **periodic reboot is a validated workaround** with a measured interval to set it by
 - **Kill does not return** → H-b' weakens and the 2026-08-10 occurrence needs another explanation (an upstream change between then and now, or a variable not yet measured)
 
+**The no-reboot window is a deliberate operating commitment, not an accident of scheduling** (recorded 2026-08-11): the host will not be rebooted before 2026-08-16 barring a work-blocking need. This distinction matters because the 2026-08-04 reboot was unplanned maintenance and confounded Arm 4a by resetting uptime before a baseline existed. If a reboot does become necessary before 2026-08-16, record the uptime and cumulative dispatch count at that moment — a truncated window is still a valid partial result ("0 kills through Nh uptime across M dispatches"), whereas an unrecorded one repeats the 08-04 problem.
+
+**Uptime-banded dispatch counts are the useful intermediate record.** The kill threshold, if there is one, sits somewhere between 26h (this arm's ceiling, 132 dispatches, 0 kills) and 131.6h (the reproduction). Counting dispatches per uptime band as they accumulate narrows that interval whether or not the kill returns:
+
+```
+jq -r 'select(.ts >= "2026-08-10T04:49:03Z" and .event == "phase_start") | .ts' .tmp/auto-events.jsonl \
+  | python3 -c 'import sys,datetime as d; b=d.datetime(2026,8,10,4,49,3,tzinfo=d.timezone.utc); \
+    from collections import Counter; c=Counter(); \
+    [c.update([int((d.datetime.fromisoformat(l.strip().replace("Z","+00:00"))-b).total_seconds()//3600//24)]) for l in sys.stdin]; \
+    [print(f"day {k}: {v} dispatches") for k,v in sorted(c.items())]'
+```
+
+Run it at the 2026-08-16 observation and record the banding alongside the kill verdict.
+
 **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) stays on standby, and deliberately so.** Running it now would test detachment under conditions where nothing is being killed — the same design flaw that made Arm 1 unable to reproduce. It becomes informative only against a live reproduction, i.e. after uptime returns to the kill-producing range. If periodic reboot is adopted as the workaround before then, Arm 3 loses its test conditions permanently and should be recorded as "not tested — workaround adopted instead" rather than left open.
