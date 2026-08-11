@@ -13,6 +13,10 @@
 # rather than merged. Entries without a cause line (pre-#1281 entries) keep the plain
 # symptom-short key.
 #
+# Note (Issue #1153): a "- notification: <class>" line may also appear in "### Diagnosis"
+# (written by run-auto-sub.sh --write-manual-recovery --notification). It is not part of the
+# group-key and is inert to the parsing below -- only "- cause:" affects grouping.
+#
 # Exclusion (Issue #1152): judged per entry, not per group-key, so a resolved symptom
 # and a genuine post-fix recurrence of the same group-key can be told apart.
 #   1. Resolve the group-key's corresponding Issue:

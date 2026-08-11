@@ -24,6 +24,16 @@
 #   intervention_type=<type>      silent_no_op_manual_fix | tier3_abort_manual_fix | direct_commit |
 #                                  respawn | push-only | pr-create | review-rerun
 #                                  (the last four are --write-manual-recovery RECOVERY_TYPE values)
+#   notification_class=<class>    harness-stop | external-signal | indeterminate | unobserved | unspecified
+#                                  (Issue #1153) classification of the task notification the parent
+#                                  session observed for the killed background task, if any:
+#                                  harness-stop = wording indicated the harness's own task-kill path;
+#                                  external-signal = wording indicated a true external signal (e.g.
+#                                  "failed with exit code N"); indeterminate = wording was observed but
+#                                  did not distinguish between the two (e.g. "killed"/"was stopped" alone,
+#                                  no numeric exit code); unobserved = no notification wording could be
+#                                  observed at all; unspecified = --notification was not passed to
+#                                  --write-manual-recovery (distinct from unobserved)
 #
 # verify_reopen_cycle: /verify FAIL -> issue reopen fix cycle entered
 #   iteration=<n>                 verify iteration counter (from get-verify-iteration.sh)

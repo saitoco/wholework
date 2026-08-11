@@ -34,6 +34,12 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - cause: <slug> (optional; short kebab-case root-cause label, e.g. `dirty-guard`. When
   present, `/audit recoveries` groups this entry under `<symptom-short>/<cause-slug>`
   instead of the bare `<symptom-short>`, separating occurrences by known root cause)
+- notification: <class> (optional; one of `harness-stop`/`external-signal`/`indeterminate`/
+  `unobserved` — classification of the task notification the parent session observed for the
+  killed background task, written only by the manual recovery path
+  (`run-auto-sub.sh --write-manual-recovery --notification`). Absent means the flag was not
+  passed, distinct from `unobserved` which means the wording could not be confirmed. Does not
+  participate in frequency grouping)
 - <observed state inspection result and root cause hypothesis>
 
 ### Recovery Applied
@@ -52,6 +58,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 |-------|-------------|
 | `symptom-short` | Short identifier for the symptom pattern (kebab-case). Frequency grouping key is `symptom-short`, or `symptom-short/cause-slug` when a `cause` line is present in `### Diagnosis` |
 | `cause` | Kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Optional at read time — pre-#1281 entries lack it. Separates occurrences of the same symptom by known root cause during frequency grouping. Always written by Tier 2 (`apply-fallback.sh`, value is the matched symptom anchor) and Tier 3 (`spawn-recovery-subagent.sh`, value is the recovery plan's `cause` field, `unclassified` when missing/invalid); optional for manual recovery (`run-auto-sub.sh --write-manual-recovery --cause`) |
+| `notification` | Classification of the observed task notification wording in `### Diagnosis` (Issue #1153): `harness-stop`/`external-signal`/`indeterminate`/`unobserved`. Written only by the manual recovery path (`run-auto-sub.sh --write-manual-recovery --notification`), never by Tier 2/3. Line is absent when the flag was not passed (see `notification_class=unspecified` on the corresponding `manual_intervention` event). Does not participate in `/audit recoveries` frequency grouping — `cause` is the only grouping key |
 | `Source` | Which mechanism detected and handled this recovery event |
 | `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped |
 | `Improvement Candidate` | `未起票` = not yet filed; `起票済み #NNN` = filed as Issue #NNN; `N/A` = no action needed |
