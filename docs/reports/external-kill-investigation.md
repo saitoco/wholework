@@ -509,3 +509,56 @@ If a kill *does* recur post-reboot, H-b' is falsified in its uptime form and H-a
 #1146's Purpose item 3 — conclude "trigger removed by environment change" if no external kill is observed — **has lost its premise**, as has the 2026-09-07 backstop and the three-trigger revision built on top of it. A kill was observed under passive observation with a primary record. The investigation now proceeds on evidence rather than on an expiry clock, and the compensation-layer slimming decision (#1070/#1081/#1093/#1119) plus the #598 re-evaluation stay blocked on the Arm 2/3 outcome rather than being unblocked by expiry.
 
 The recovery itself worked: respawn succeeded on the first attempt and #1316 completed end-to-end. The compensation layer's "relaunch always works" property (~11/11 upstream, and every local occurrence to date) holds at 12/12.
+
+## 2026-08-11 Update (Arm 2 result — 0 external kills across 132 dispatches, past the significance threshold)
+
+The reboot arm cleared the dispatch count the 2026-08-10 Update set as its bar, and returned negative.
+
+| | Value |
+|---|---|
+| Window | 2026-08-10 05:03:47Z → 2026-08-11 06:58:01Z (25.9h of dispatching) |
+| Host uptime spanned | **0.25h → 26.15h** (no reboot since `kern.boottime` = 1786337343) |
+| Dispatches (`phase_start`) | **132** |
+| Sessions | 9 (6 `single`, 3 `batch`) |
+| Peak concurrent sessions | **5** (2026-08-10 07:00–08:00Z) |
+| `manual_intervention` events | **0** |
+| `manual-recovery-respawn` entries | **0** |
+| **External kills** | **0** |
+
+Per-session breakdown:
+
+| Session | mode | Dispatches | Window |
+|---|---|---|---|
+| `7106-1786338170` | single | 11 | 05:03:47Z–07:12:00Z |
+| `10253-1786338239` | single | 9 | 05:05:01Z–07:13:22Z |
+| `13432-1786338309` | single | 11 | 05:08:56Z–08:06:53Z |
+| `54184-1786342112` | single | 11 | 06:09:54Z–08:33:11Z |
+| `8869-1786346520` | single | 2 | 07:22:39Z–07:30:48Z |
+| `29601-1786367167` | batch | 59 | 08-10 13:07:39Z–08-11 06:58:01Z |
+| `57133-1786369329` | batch | 11 | 13:43:18Z–16:33:46Z |
+| `83307-1786372673` | batch | 8 | 14:38:31Z–16:24:42Z |
+| `67291-1786394010` | single | 10 | 08-10 20:34:07Z–08-11 00:01:09Z |
+
+### Significance
+
+Against the local baseline rate of 1/28 ≈ 3.6% per dispatch, the probability of observing 0 kills across 132 dispatches is `(1 − 0.036)^132` = **0.82%**. The 2026-08-10 Update required ~82 dispatches for a null result to reach the 5% level; at 132 the result clears it with room.
+
+Against upstream #76974's 1.45% per dispatch, the same calculation gives **14.5%** — not significant. **The honest statement is therefore rate-dependent**: the kill rate observed on this host on 2026-08-10 did not persist after the reboot, but the arm is not long enough to rule out a rate as low as upstream's.
+
+### What this does and does not establish
+
+**It does not distinguish "the reboot removed the trigger" from "uptime has not accumulated yet"** — under H-b' those are the same statement. The arm reached 26.15h of uptime; the baseline kill occurred at 131.6h. A negative result at one fifth of the baseline's uptime is exactly what H-b' predicts, so this is **corroboration of H-b', not a test that could have falsified it**. The test that can falsify it is the passive one now running: keep accumulating uptime and watch whether the kill returns.
+
+Two things do firm up:
+
+1. **The "freshly rebooted × concurrent" cell now has a denominator.** The 2026-08-05〜07 Arm 4a runs reported 0 kills at up to ~60h uptime and peak concurrency 8, but never counted dispatches. Adding 132 counted dispatches at up to 26h makes that cell's negative result quantitative for the first time.
+2. **Route independence is confirmed from the other direction.** Three of the nine sessions ran `--batch` (78 of the 132 dispatches) and none was killed. Combined with the baseline — four `single` sessions, one kill — the batch/single distinction predicts nothing in either direction. The July batch correlation was a proxy for spawn volume, and this report should stop treating it as a variable.
+
+### Next: the passive arm, and where Arm 3 sits
+
+The host has not been rebooted since 2026-08-10 04:49Z, so uptime is accumulating toward the baseline condition on its own. **131.6h — the uptime at which the kill reproduced — falls at 2026-08-16 01:25 JST.** Concurrent dispatching past that point is the decisive observation:
+
+- **Kill returns** → H-b' (uptime / PID reuse) is confirmed as a co-factor, and **periodic reboot is a validated workaround** with a measured interval to set it by
+- **Kill does not return** → H-b' weakens and the 2026-08-10 occurrence needs another explanation (an upstream change between then and now, or a variable not yet measured)
+
+**Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) stays on standby, and deliberately so.** Running it now would test detachment under conditions where nothing is being killed — the same design flaw that made Arm 1 unable to reproduce. It becomes informative only against a live reproduction, i.e. after uptime returns to the kill-producing range. If periodic reboot is adopted as the workaround before then, Arm 3 loses its test conditions permanently and should be recorded as "not tested — workaround adopted instead" rather than left open.
