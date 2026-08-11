@@ -133,6 +133,10 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"review"
     ANOMALY_DESC="Review phase completion false-negative in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`phase:review\` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the \`<!-- review-summary -->\` marker and using a non-standard heading. Reference: #547."
     IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#review-completion-false-negative\`: re-run reconcile, check PR comments for summary, add \`<!-- review-summary -->\` marker if present, or re-run /review if absent."
   fi
+elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -qiE "完了通知|を待ちます|待っています|waiting for .*(notification|completion)" "$LOG_FILE"; then
+  PATTERN_NAME="background-notification-wait"
+  ANOMALY_DESC="Background task completion notification wait in phase \`$PHASE\` (exit code $EXIT_CODE): a wait-declaration phrase (e.g. \`完了通知\`/\`を待ちます\`/\`待っています\`) and \`matches_expected:false\` were both detected in wrapper output. The forked session declared it was waiting for a background task's completion notification, but \`claude -p\` has no next turn — it exited at that point, and the wrapper converted the resulting silent no-op into a non-zero exit code. Reference: #1323."
+  IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#background-notification-wait\`: $(_phase_retry_hint "$PHASE" "$ISSUE_NUMBER") Then record the recovery with \`run-auto-sub.sh --write-manual-recovery $ISSUE_NUMBER $PHASE respawn $EXIT_CODE --cause background-notification-wait\`."
 elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]verload" "$LOG_FILE"; then
   PATTERN_NAME="mid-run-api-error"
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."

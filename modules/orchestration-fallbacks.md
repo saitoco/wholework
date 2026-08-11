@@ -615,6 +615,37 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## background-notification-wait
+
+### Symptom
+- Wrapper log contains a wait-declaration phrase (e.g. `完了通知`, `を待ちます`, `待っています`, `waiting for .*(notification|completion)`) — the forked session declared it would wait for a background task's completion notification
+- Wrapper log also contains `"matches_expected":false` — reconcile-phase-state.sh confirms the phase did not actually complete
+- `claude -p` has no next turn: once the session declares it is waiting, the process exits at that point, and the phase's `run-*.sh` wrapper converts the resulting silent no-op into a non-zero exit code (observed: exit 1) — so the anomaly always reaches `detect-wrapper-anomaly.sh` with a non-zero `$EXIT_CODE`, never `0`
+- Phase-independent: observed in spec, code, and review phases
+
+### Applicable Phases
+- Any phase running via `run-*.sh` (spec, code, review, merge, verify)
+
+### Fallback Steps
+1. Retry the failed phase once via the corresponding `run-*.sh <issue_number>` script (see `_phase_retry_hint()` in `scripts/detect-wrapper-anomaly.sh` for the phase-specific invocation)
+2. If the retry completes normally, continue the normal workflow
+3. Record the recovery per `#manual-recovery-spec-write` above:
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE respawn [EXIT_CODE] --cause background-notification-wait
+   ```
+
+### Escalation
+- If the retry also exits with `matches_expected:false` and a wait-declaration phrase, escalate to Tier 3 (recovery sub-agent)
+- Maximum 1 automatic retry attempt per occurrence; no further looping
+
+### Rationale
+- Introduced in Issue #1323: the pattern recurred 5 times (`docs/reports/orchestration-recoveries.md`, `cause: background-notification-wait`) before this signature existed, and Tier 2 never detected any of them — every occurrence fell through to Tier 3 diagnosis despite the root cause already being known
+- Two independent gaps caused the miss, both fixed by this entry's addition to `scripts/detect-wrapper-anomaly.sh`: (a) the existing success-claim phrase list (`完了しました|commit and push|...`) does not include wait-declaration phrases, so a wait declaration never matched the `silent-no-op` branch; (b) the `silent-no-op` branch is gated on `EXIT_CODE == "0"`, but `run-*.sh` wrappers convert a detected silent no-op to a non-zero exit before `/auto` Step 6 ever invokes the detector, so that gate was structurally unreachable for this pattern regardless of (a)
+- Placed after `review-completion-false-negative` (and the other `matches_expected:false`-gated review/code patterns) so those more specialized diagnoses are preferred when applicable; this pattern catches the phases they do not cover (e.g. spec) or cases whose more specific conditions do not match
+- Real case: session `16210-1786327272`, `/auto --batch 1130 1318`, `/spec 1130` (2026-08-10) — the session declared `バックグラウンドの bats スイート完了通知、またはフォールバックの wakeup (約20分後) を待ちます。` and exited; the wrapper converted this to exit 1, and `matches_expected:false` was present in the reconcile output, but the detector reported nothing until this entry was added
+
+---
+
 ## manual-recovery-spec-write
 
 ### Symptom

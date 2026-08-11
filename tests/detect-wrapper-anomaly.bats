@@ -582,3 +582,27 @@ MOCK
     [[ "$output" != *"review-completion-false-negative"* ]]
     [ -z "$output" ]
 }
+
+@test "background notification wait: detects wait-declaration phrase with matches_expected false (issue #1130 log shape)" {
+    printf 'バックグラウンドの bats スイート完了通知、またはフォールバックの wakeup (約20分後) を待ちます。\n"matches_expected":false\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 1130 --phase spec
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"background-notification-wait"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+    [[ "$output" == *"#1323"* ]]
+}
+
+@test "background notification wait: no detection when only matches_expected false present" {
+    printf '"matches_expected":false\nno relevant context here\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 1130 --phase spec
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "background notification wait: no detection when only wait-declaration phrase present" {
+    printf 'バックグラウンドの完了通知を待ちます。\nsome other content\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 1130 --phase spec
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
