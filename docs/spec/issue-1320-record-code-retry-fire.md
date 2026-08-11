@@ -11,7 +11,9 @@ Issue 本文の検討候補 (案 A: emit 直前に `run-code.sh` 自身が記録
 - `modules/orchestration-fallbacks.md`: `## wrapper-retry-on-kill` セクション (現在 500-531 行、閉じの `---` は 531 行目) の直後、`## external-kill-parent-respawn` (533 行目) の直前に、新規セクション `## auto-retry-on-fail (code_retry_fire)` を追加。bash 3.2+ 互換 (prose のみ、コード変更なし)
 - `scripts/run-code.sh`: `_write_code_retry_recovery()` 関数を追加し、既存の `exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` 行 (現在 320 行目) の直前で呼び出す。bash 3.2+ 互換
 - `tests/run-code.bats`: 新規記録経路のテストケースを追加
-- [Steering Docs sync candidate] `docs/tech.md` (`## Architecture Decisions` 内 "code-side auto-retry (silent no-op)" 箇条書き、130 行目付近): `code_retry_fire` の exec ベース再起動を既に説明済み。新設する `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` への相互参照を追加するかは任意 (どの AC からも要求されていない) — `/code` が読んで要否を判断する
+- `docs/reports/orchestration-recoveries.md`: Entry Format テンプレートと Field Definitions テーブルを拡張し、`Outcome` に `retry fired (iteration <N>/<M>)` を、`Wrapper:` 行に `iteration: <N>/<M>` 代替形式を追加 (Code Retrospective 参照。rubric AC 2 の見出し・フィールド構成整合性要求により実装時に判明した追加スコープ)
+- `docs/tech.md` (`## Architecture Decisions` 内 "code-side auto-retry (silent no-op)" 箇条書き、130 行目付近): 新設の `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` への相互参照を追加 (実施判断: Code Retrospective 参照)
+- `docs/ja/tech.md`: 上記 `docs/tech.md` 変更の日本語訳を同期 (`docs/translation-workflow.md` 手順)
 
 ## Implementation Steps
 
@@ -31,6 +33,8 @@ Issue 本文の検討候補 (案 A: emit 直前に `run-code.sh` 自身が記録
    - レポートファイルのパスは `${MAIN_REPO_ROOT:-.}/docs/reports/orchestration-recoveries.md` (`MAIN_REPO_ROOT` は `scripts/run-code.sh` 冒頭で既に計算済み)。ファイルが存在しない場合は何もせず `return 0` (`apply-fallback.sh`/`spawn-recovery-subagent.sh`/`run-auto-sub.sh` の既存 3 実装と同じ skip-if-absent 規約)
 3. 同関数内で `git -C "$repo_root" add docs/reports/orchestration-recoveries.md` → `git commit -s -m "Record code_retry_fire recovery for issue #<issue>"` → push-with-retry (`scripts/run-auto-sub.sh` の `_push_with_retry()` 82-103 行目と同じ fetch+rebase 方式、最大 3 回) を行う (→ 受入条件 2, 3)。いずれかのステップが失敗しても `|| true` + stderr 警告に留め、リトライ自体をブロックしない。`_write_code_retry_recovery` の呼び出しは既存の `exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` 行の直前に置く (exec で処理が置き換わる前に完了させることで、受入条件 3 の fresh context 制約を構造的に満たす)
 4. `tests/run-code.bats` に新規 `@test` を追加する (→ 受入条件 4)。モックされたリポジトリルートに `<!-- Log entries appear below, newest first. -->` マーカーを含む `docs/reports/orchestration-recoveries.md` を作成し、既存の "preflight stashes" テスト (849 行目付近) と同じ `$MOCK_DIR/git` ロギングパターンで `git` をモックした上でリトライ発火シナリオ (`reconcile-phase-state.sh` が 1 回目 `matches_expected:false` を返す) を実行し、(a) ファイルに `code-retry-fire` の H2 エントリが追記されること、(b) 2 回目の `claude` 呼び出し (exec 後) より前に `git add`/`commit`/`push` が呼ばれたことをログから確認する。`docs/reports/orchestration-recoveries.md` を作成しない既存テスト群は本関数が `return 0` で早期終了するため無変更のまま回帰しないことを合わせて確認する
+5. (実装時に追加判明) `docs/reports/orchestration-recoveries.md` の Entry Format テンプレート / Field Definitions テーブルを更新し、`Outcome` の enum に `retry fired (iteration <N>/<M>)` を、`Wrapper:` 行のテンプレートに `iteration: <N>/<M>` 代替形式を追加する (→ 受入条件 2 の見出し・フィールド構成整合性)。Step 2 で書き込むエントリの `Outcome`/`Wrapper:` 値は元々 `success|partial|failed` / `exit code: <N>` という既存 enum と一致しないため、rubric grader による Step 10 検証で FAIL となった。`notification` フィールド (#1153) と同じ追加的ドキュメント拡張パターンで解消する。詳細は Code Retrospective を参照
+6. `docs/tech.md` の "code-side auto-retry (silent no-op)" 箇条書きに `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` への相互参照を追加し、`docs/translation-workflow.md` の同期手順に従って `docs/ja/tech.md` の対応箇所も更新する
 
 ## Verification
 
@@ -71,3 +75,30 @@ Issue 本文の検討候補 (案 A: emit 直前に `run-code.sh` 自身が記録
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- The Spec's Implementation Steps did not anticipate that `docs/reports/orchestration-recoveries.md` itself (the SSoT for the recoveries-log format, not just a Changed Files entry) would need editing. An adversarial rubric grading pass on AC pre-merge condition 2 (Step 10 of `/code`) FAILed on first evaluation: `_write_code_retry_recovery()`'s `### Outcome` value (`retry fired (iteration <N>/<M>)`, exactly as specified in Implementation Step 2) does not fit the pre-existing `success|partial|failed` enum documented in `docs/reports/orchestration-recoveries.md`'s own Entry Format / Field Definitions sections, and its `Wrapper:` line (`iteration: <N>/<M>`) likewise deviated from the documented `exit code: <N>` template. Resolved by extending `docs/reports/orchestration-recoveries.md`'s Entry Format template and Field Definitions table to document both as valid alternatives for retry-fired-type entries (same additive-documentation pattern the `notification` field used for its own Issue #1153 scope-limited addition), rather than changing the Outcome value itself — the Spec's rationale for writing `retry fired (...)` before the outcome is known (recording happens before `exec`, which replaces the process) is sound and preserved.
+- Added an optional cross-reference from `docs/tech.md` (and its `docs/ja/tech.md` mirror, per `docs/translation-workflow.md`) to the new `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` section — the Spec's Changed Files section listed this as optional ("`/code` が読んで要否を判断する"); judged worth adding since `docs/tech.md`'s existing "code-side auto-retry (silent no-op)" paragraph already documents the `exec`-based retry mechanism this recording hooks into, and the sibling `wrapper-retry-on-kill` pattern has an equivalent cross-reference precedent elsewhere in the same file.
+
+### Design Gaps/Ambiguities
+- The `## Sources` table in `docs/reports/orchestration-recoveries.md` (`fallback-catalog`/`wrapper-anomaly-detector`/`recovery-sub-agent`) is not a strict enum in practice — pre-existing entries already use `Source:` values absent from that table (e.g. `retry-on-kill.sh`, `parent-session-manual-recovery`). `Source: run-code.sh auto-retry-on-fail` follows this same descriptive-free-text precedent; no table update was needed or made.
+
+### Rework
+- N/A — no rework beyond the doc-conformance fix above (caught by the adversarial rubric grader during Step 10, not by a later fix cycle).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Recorded the retry-fired event in `run-code.sh` itself (案 A), matching the Spec's own resolved ambiguity point, since `run-auto-sub.sh`'s `run_phase_with_recovery()` layer is unreachable from `/auto`'s dominant single-Issue direct-dispatch path.
+- Fixed the AC 2 rubric FAIL by extending `docs/reports/orchestration-recoveries.md`'s own Entry Format/Field Definitions rather than altering the recorded `Outcome`/`Wrapper:` values — preserves the Spec's fresh-context rationale (outcome genuinely isn't known at write time) while making the format self-consistent for future readers and future entries of this same kind.
+- Left the `## Sources` table in `docs/reports/orchestration-recoveries.md` unmodified after confirming (via existing `retry-on-kill.sh` / `parent-session-manual-recovery` entries) it is descriptive precedent, not an enforced enum.
+
+### Deferred Items
+- Post-merge observation AC (checkbox unchecked, `verify-type: observation event=auto-run session=next`): the next real `code_retry_fire` firing in production must be confirmed to actually land a `code-retry-fire` entry in `docs/reports/orchestration-recoveries.md` for its Issue — this bats-mocked implementation cannot itself confirm real git/GitHub push behavior end-to-end.
+
+### Notes for Next Phase
+- `bats --jobs 18 tests/` (full suite, 1740 tests) passed with zero regressions; the two new `run-code.bats` tests are tagged `code_retry_fire` for quick re-filtering.
+- If a future `/audit recoveries` frequency-analysis change starts treating `Outcome` as a strict enum (currently descriptive only, confirmed via `scripts/collect-recovery-candidates.sh`), it will need to special-case the new `retry fired (iteration <N>/<M>)` value.
