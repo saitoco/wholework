@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（85 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（86 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（121 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（122 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents

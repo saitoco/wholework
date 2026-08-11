@@ -134,6 +134,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `spec-path` | string | `docs/spec` | Where specs are stored |
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
+| `capabilities.visual-diff` | boolean | `false` | Enable `visual_diff` verify commands (before/after screenshot comparison) |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
 | `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; ACs that can only be confirmed against the preview environment are classified as pre-merge-preview, whether or not they have a verify command (auto: executed at `/review` when `PREVIEW_URL` is set; manual: presented as a human-check item at `/review`). Skipped in `/verify` post-merge to prevent double verification; for the auto subcase, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. Also gates `/code`'s pr route: when `true`, `/code` waits for the deploy/preview build to complete after PR creation and pushes fix commits (bounded to 3 attempts) on failure before falling through to `/review`. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
