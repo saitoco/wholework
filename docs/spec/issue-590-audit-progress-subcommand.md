@@ -162,6 +162,9 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 ### Improvement Proposals
 - N/A
 
+### 2026-08-11 再確認 (/auto --batch --until 953 セッションから)
+
+`/auto --batch --until "label:theme/observability"` (session `29601-1786367167`) の Batch Completion Report observation scan で再度 dispatch された (14 回目)。本 run は List mode (spec→code→verify の順次単発実行) で XL 実行を伴わないため傍証なし。結論は変わらず SKIPPED を維持 — 実 XL Issue での `/audit progress` 実行を引き続き待つ。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/590#issuecomment-4700169062
