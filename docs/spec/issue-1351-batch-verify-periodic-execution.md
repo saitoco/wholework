@@ -135,3 +135,30 @@ Reason: Blocked by classifier.
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec 自体が実装成果物という特殊な形の Issue だったが、Pre-merge AC (rubric 型) は明確で、実行方法選定・動作確認記録・失敗時挙動という3観点への分解も適切だった。
+
+#### design
+- N/A (spec フェーズと code フェーズが一体で進行)
+
+#### code
+- `CronCreate` を実際に呼び出して分類器拒否を実証した上で `/loop` を選定するという、憶測ではなく実証ベースの意思決定プロセスが取られている点は質が高い。
+- headless skill execution 制約下で AC2 の実証範囲を「ランキング選抜段階のみ」に縮小した判断は Autonomous Auto-Resolve Log に理由が明記されており、追跡可能。
+- rubric グレーダーが Spec ファイルをデフォルトで入力範囲外とする仕様との相性問題 (Issue 本文の rubric 文言に対象ファイルパスを明示する必要があった) を Design Gaps/Ambiguities で報告済み。
+
+#### review
+- N/A (patch route、review フェーズなし)
+
+#### merge
+- N/A (patch route、merge フェーズなし)
+
+#### verify
+- Post-merge observation AC (`event=auto-run session=next`) は、人間が推奨コマンド (`/loop 1h /audit verify-backlog --top 10`) を対話セッションで実際に起動するまで発火しない設計。今回は未発火のため SKIPPED。`phase/verify` を維持し、次回定期実行後の再評価を待つ。
+
+### Improvement Proposals
+- **`modules/autonomy-tier.md` (L0 Layer Table) と `docs/guide/autonomy.md` (L3 tier 説明) の `CronCreate` に関する記述が実際の挙動と乖離している**: 両ドキュメントは `CronCreate` を OS レベルの永続スケジューラであるかのように記述している ("Persistence: Environment-dependent" / "may register persistent cron schedules via `CronCreate`. Fully unattended operation.") が、本 Issue の実装セッションで実際に検証した結果、(1) ツール自身の契約は session-scoped で `recurring` ジョブも7日で自動失効する in-memory 状態であり、(2) `permission-mode: auto` 下では無人 (headless) skill 実行から `CronCreate` を自己登録しようとすると Claude Code の auto モード分類器に明示的に拒否される (`Blocked by classifier`) ことが判明した。`autonomy: L3` を設定していても、L3 の「完全無人運用」という前提そのものが `CronCreate` の実際の permission モデル上は成立しない。Code Retrospective で「別の Follow-up Issue として起票する」と記録されていたが、本 Issue のクローズ時点でまだ起票されていない (未起票)。2ファイル (`modules/autonomy-tier.md`, `docs/guide/autonomy.md`) にまたがる SSoT ドキュメントの記述精度問題であり、`docs/guide/autonomy.md` は L0〜L3 autonomy tier の運用判断に直接使われるドキュメントであるため、起票を推奨する。
