@@ -161,6 +161,18 @@
 
 - N/A — `--commit=` バグの起票再検討トリガー (「同型が 2 例目として観測」) は他 Issue での同パターン再現を指すものであり、本 Issue 自身の再評価では発火しない。条件 6/7 の非発生も、現状は「機能が正しく動作しているが誘発条件がまだ発生していない」health signal であり、改善提案には至らない
 
+### 2026-08-14 re-run (条件 6/7 の 3 セッション目観測)
+
+`/auto --batch 1349 1350 1351 1352` (session `81722-1786714713`) の Batch Completion Report observation scan で `event=auto-run` が再発火。
+
+#### verify (再実行分)
+
+- **条件 6/7 は今回も SKIPPED**。本 batch は 4 Issue (#1349〜#1352) を処理し、うち #1351・#1352 は #1349 への blocked-by を持っていたが、いずれも #1349 が既に CLOSED だったためゲートは exit 0 (ブロッカーなし) で解放された。スキップ分岐は今回も通っていない。これで観測 3 セッション連続 (`97764-1786198856` → `29601-1786367167` → `81722-1786714713`) でシナリオ自体が未発生
+
+#### Improvement Proposals (再実行分)
+
+- N/A — 前回・前々回の判断を踏襲。3 セッション連続の非発生は「機能は正しく動作しているが誘発条件 (blocked-by 先が manual post-merge 保留のまま phase/verify に滞留する batch 実行) がまだ自然発生していない」health signal であり、改善提案の閾値には未到達
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/478#issuecomment-4703000955
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/478#issuecomment-5212257510
