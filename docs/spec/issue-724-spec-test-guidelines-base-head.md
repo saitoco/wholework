@@ -36,6 +36,15 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: post-merge verify-type を `observation event=spec` から `manual` に修正、post-merge 条件に `- [ ]` チェックボックスを追加 / [#issuecomment-4758917559](https://github.com/saitoco/wholework/issues/724#issuecomment-4758917559)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/724#issuecomment-4759084582
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5200981287
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5212260231
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5225314201
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5229258017
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5235400401
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5246553662
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5255740764
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5296375420
 ## Notes
 
 - 対象ファイル `skills/issue/spec-test-guidelines.md` は現時点で存在確認済み (domain file, type: domain, skill: issue)
