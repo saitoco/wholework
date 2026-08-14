@@ -40,3 +40,30 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 ## Consumed Comments
 
 前フェーズ以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1〜4 通りに実装した。
+
+### Design Gaps/Ambiguities
+- `resolve_default_branch()` の base ブランチ解決方法 (`origin/HEAD` symbolic ref → 未設定時は `main` にフォールバック) は Spec に明記がなかったため実装時に判断した。`git remote add` (clone ではなく) で作成したリポジトリでは `origin/HEAD` symbolic ref が自動設定されないため、フォールバックが実質的な既定動作になる。全 wholework worktree の base branch は `main` 固定という前提 (他のリポジトリ全体の慣習と一致) に立った判断であり、他プロジェクトへの配布を考慮する場合は再検討の余地がある。
+- kind=issue の祖先チェックは `git fetch origin refs/heads/<branch>:refs/remotes/origin/<branch>` でブランチ tip オブジェクトを都度取得する設計とした (任意 SHA1 の直接 fetch は GitHub 側で許可されないケースがあるため)。この fetch 回数は「安全策 (b) の判定に到達したブランチ」に絞られるよう `ensure_default_branch_ready()` で遅延評価しているが、Spec 自体はこの実装細部までは指定していなかった。
+
+### Rework
+- N/A — 手戻りなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 新規フラグ `--apply-remote` は既存 `--apply` から完全に独立させ、単独指定でリモート削除のみ実行できるようにした (Spec の設計判断どおり)。
+- リモートブランチ enumeration (`git ls-remote --heads origin 'worktree-*'`) は `--apply-remote` の有無にかかわらず常に実行し、dry-run レポートを既定動作とした (`--apply` の既存挙動と対称)。
+- kind=issue の祖先チェックに必要な base ブランチ解決は `origin/HEAD` symbolic ref → 未設定時 `main` にフォールバックする方式とした。
+
+### Deferred Items
+- 実データでの `--apply-remote` 実行 (Post-merge AC) はマージ後に実施する。
+
+### Notes for Next Phase
+- `/review` では、kind=pr の headRefOid 一致判定と kind=issue の祖先判定が Spec Notes の安全性設計 (Step E/F/G 相当) と整合しているかを重点的に確認してほしい。
+- 新規 bats テスト (9件) は実 bare リポジトリを `origin` として使用しており、git バイナリの非モック方針を踏襲している。
