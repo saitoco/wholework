@@ -44,11 +44,35 @@ if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
 fi
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
     num="$3"
+    if [ "$4" = "--json" ] && [ "$5" = "headRefOid" ] && [ -f "$MOCK_STATE_DIR/pr-$num-view-fail" ]; then
+        exit 1
+    fi
     state="OPEN"
     href=""
+    body=""
+    title=""
+    baseref="main"
     [ -f "$MOCK_STATE_DIR/pr-$num-state" ] && state="$(cat "$MOCK_STATE_DIR/pr-$num-state")"
     [ -f "$MOCK_STATE_DIR/pr-$num-headrefoid" ] && href="$(cat "$MOCK_STATE_DIR/pr-$num-headrefoid")"
-    printf '{"state":"%s","headRefOid":"%s"}\n' "$state" "$href"
+    [ -f "$MOCK_STATE_DIR/pr-$num-body" ] && body="$(cat "$MOCK_STATE_DIR/pr-$num-body")"
+    python3 - "$state" "$href" "$body" "$title" "$baseref" <<'PY'
+import json, sys
+state, href, body, title, baseref = sys.argv[1:6]
+print(json.dumps({"state": state, "headRefOid": href, "body": body, "title": title, "baseRefName": baseref}))
+PY
+    exit 0
+fi
+if [ "$1" = "pr" ] && [ "$2" = "list" ]; then
+    search=""
+    prev=""
+    for arg in "$@"; do
+        if [ "$prev" = "--search" ]; then
+            search="$arg"
+        fi
+        prev="$arg"
+    done
+    num="$(echo "$search" | grep -oE '[0-9]+' | head -1)"
+    [ -n "$num" ] && [ -f "$MOCK_STATE_DIR/closes-search-$num" ] && cat "$MOCK_STATE_DIR/closes-search-$num"
     exit 0
 fi
 echo "Error: unexpected gh mock invocation: $*" >&2
@@ -67,6 +91,31 @@ mock_issue() {
 mock_pr() {
     echo "$2" > "$MOCK_DIR/gh-state/pr-$1-state"
     echo "${3:-}" > "$MOCK_DIR/gh-state/pr-$1-headrefoid"
+}
+
+# mock_closes_pr <issue_num> <pr_num> <state> [headRefOid]
+# Makes `gh pr list --search "closes #<issue_num>" --state merged` return
+# <pr_num> as a candidate, and makes its (mocked) PR body resolve back to
+# <issue_num> via gh-extract-issue-from-pr.sh, so
+# resolve_merged_pr_head_ref_oid() in the script under test accepts it as a
+# match (mirrors kind=issue branches created by /code pr route, whose
+# "<phase>+issue-N" name does not itself carry a PR number).
+mock_closes_pr() {
+    local issue_num="$1" pr_num="$2" state="$3" href="${4:-}"
+    echo "$pr_num" >> "$MOCK_DIR/gh-state/closes-search-$issue_num"
+    echo "closes #$issue_num" > "$MOCK_DIR/gh-state/pr-$pr_num-body"
+    mock_pr "$pr_num" "$state" "$href"
+}
+
+# mock_pr_view_fail_headrefoid <pr_num>
+# Makes `gh pr view <pr_num> --json headRefOid` (the specific query used by
+# resolve_merged_pr_head_ref_oid's final headRefOid fetch) fail with a
+# non-zero exit, while other `gh pr view` queries for the same PR number
+# (e.g. gh-extract-issue-from-pr.sh's --json body,title,baseRefName call)
+# continue to succeed -- simulating a transient gh API failure at exactly
+# the call site that review found unguarded under `set -euo pipefail`.
+mock_pr_view_fail_headrefoid() {
+    touch "$MOCK_DIR/gh-state/pr-$1-view-fail"
 }
 
 # push_remote_branch <branch>
@@ -178,7 +227,7 @@ push_remote_branch_with_commit() {
     ! git -C "$MAIN_REPO" branch --list 'worktree-code+pr-1149' | grep -q "worktree-code+pr-1149"
 }
 
-@test "worktree removed but branch delete rejected (unmerged, no -D fallback for issue kind) is reported separately, not double-counted as reclaimed (worktree+branch)" {
+@test "worktree removed but branch delete rejected (unmerged, no closes-PR found for headRefOid fallback) is reported separately, not double-counted as reclaimed (worktree+branch)" {
     mock_issue 5000 CLOSED
     git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-5000 "$BATS_TEST_TMPDIR/wt5000"
     (
@@ -200,6 +249,31 @@ push_remote_branch_with_commit() {
 
     if git -C "$MAIN_REPO" worktree list | grep -q "wt5000"; then false; fi
     git -C "$MAIN_REPO" branch --list 'worktree-code+issue-5000' | grep -q "worktree-code+issue-5000"
+}
+
+@test "squash-merged issue-kind branch (git branch -d rejected) is safely -D deleted via matching closes-PR headRefOid (regression for #1355 verify FAIL)" {
+    mock_issue 6000 CLOSED
+    git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-6000 "$BATS_TEST_TMPDIR/wt6000"
+    (
+        cd "$BATS_TEST_TMPDIR/wt6000"
+        echo "unmerged change" >> file.txt
+        git add -A
+        git commit -q -m "unmerged commit"
+    )
+    tip_sha="$(git -C "$BATS_TEST_TMPDIR/wt6000" rev-parse HEAD)"
+    mock_closes_pr 6000 6100 MERGED "$tip_sha"
+
+    # sanity: plain -d must fail (branch not fully merged into main)
+    if git -C "$MAIN_REPO" branch -d worktree-code+issue-6000 2>/dev/null; then false; fi
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (worktree+branch): 1"* ]]
+    [[ "$output" == *"warned (branch tip diverges): 0"* ]]
+
+    if git -C "$MAIN_REPO" worktree list | grep -q "wt6000"; then false; fi
+    ! git -C "$MAIN_REPO" branch --list 'worktree-code+issue-6000' | grep -q "worktree-code+issue-6000"
 }
 
 @test "orphan branch (no worktree directory) is reclaimed via the same completion check (AC3)" {
@@ -330,6 +404,47 @@ push_remote_branch_with_commit() {
     [[ "$output" == *"worktree-code+issue-3006 (not an ancestor of origin/main)"* ]]
 
     git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-3006' | grep -q worktree-code+issue-3006
+}
+
+@test "remote reclaim: kind=issue branch not ancestor of main but matches closes-PR headRefOid is reclaimed (squash-merge fallback, regression for #1355 verify FAIL)" {
+    mock_issue 7006 CLOSED
+    push_remote_branch_with_commit "worktree-code+issue-7006"
+    mock_closes_pr 7006 7100 MERGED "$REMOTE_BRANCH_SHA"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (remote branch): 1"* ]]
+
+    run git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-7006'
+    [ -z "$output" ]
+}
+
+@test "remote reclaim: kind=issue branch with closes-PR but diverging headRefOid falls back to ancestor check and is warned (safety guard rejection)" {
+    mock_issue 7007 CLOSED
+    push_remote_branch_with_commit "worktree-code+issue-7007"
+    mock_closes_pr 7007 7101 MERGED "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-7007' | grep -q worktree-code+issue-7007
+}
+
+@test "resolve_merged_pr_head_ref_oid degrades to the ancestor-check fallback (no script abort) when the matched candidate PR's headRefOid gh pr view call fails transiently (regression for review MUST on #1355 PR #1360)" {
+    mock_issue 8000 CLOSED
+    push_remote_branch_with_commit "worktree-code+issue-8000"
+    mock_closes_pr 8000 8100 MERGED "$REMOTE_BRANCH_SHA"
+    mock_pr_view_fail_headrefoid 8100
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-8000' | grep -q worktree-code+issue-8000
 }
 
 @test "remote reclaim: kind=pr branch matching MERGED PR headRefOid is reclaimed (squash-merge case)" {

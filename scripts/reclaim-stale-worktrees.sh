@@ -16,7 +16,11 @@
 #     is left in place with a warning instead of being deleted
 #   - safe branch deletion: `git branch -d` first; if rejected (squash-merged
 #     branch, "not fully merged"), fall back to `-D` only when the branch tip
-#     matches the MERGED PR's headRefOid
+#     matches a MERGED PR's headRefOid -- for kind=pr that PR is #<num> itself;
+#     for kind=issue (which also covers /code pr route's "<phase>+issue-N"
+#     branches, squash-merged via their own PR) it is a MERGED PR found by
+#     searching "closes #<num>" and verifying the match, same technique as
+#     skills/verify's Step 2 PR search (see docs/spec/issue-1355-reclaim-remote-branches.md)
 #
 # Remote branch reclaim (origin/worktree-*, see docs/spec/issue-1355-reclaim-remote-branches.md):
 #   Always enumerated (dry-run report), regardless of --apply-remote. Branches
@@ -27,16 +31,19 @@
 #     (already tracked in SEEN_BRANCHES from the local enumeration above) is
 #     skipped here and left for the local reclaim path to handle when that
 #     worktree itself is eventually reclaimed
-#   - uncommitted-changes guard equivalent: kind=issue branches must be an
-#     ancestor of origin/<default-branch> (fetched on demand); kind=pr branches
-#     must match the MERGED PR's headRefOid exactly (squash merges do not
-#     preserve ancestry, so an ancestor check cannot be used for kind=pr)
-#   Actual deletion (`git push origin --delete`) only runs under --apply-remote.
+#   - uncommitted-changes guard equivalent: kind=pr branches must match the
+#     MERGED PR's headRefOid exactly (squash merges do not preserve ancestry,
+#     so an ancestor check cannot be used for kind=pr). kind=issue branches use
+#     the same headRefOid match when a "closes #<num>" MERGED PR is found
+#     (squash-merged /code pr route branches); otherwise they fall back to an
+#     ancestor-of-origin/<default-branch> check (patch route, ff-only merged)
 #
 # bash 3.2 compatible (no associative arrays, no mapfile/readarray) so it runs
 # under macOS system bash.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 APPLY=false
 APPLY_REMOTE=false
@@ -109,6 +116,37 @@ classify_name() {
   return 1
 }
 
+# resolve_merged_pr_head_ref_oid: best-effort search for a MERGED PR whose
+# actual "closes #<num>" reference matches issue <num>, to recover a
+# headRefOid for the squash-merge safety fallback below. Needed because
+# "<phase>+issue-N" branches are used by both /code patch route (ff-only
+# merge, ancestor check works) and /code pr route (squash merge via its own
+# PR, ancestor check always fails) -- see
+# docs/spec/issue-1355-reclaim-remote-branches.md. `gh pr list --search` is
+# full-text search and can rank an unrelated PR first, so each candidate's
+# actual closes-reference is verified via gh-extract-issue-from-pr.sh before
+# being trusted -- same technique as skills/verify's Step 2 PR search. Sets
+# COMPLETION_HEAD_REF_OID as a side effect; leaves it empty (no fallback
+# available) if no matching MERGED PR is found.
+resolve_merged_pr_head_ref_oid() {
+  local num="$1"
+  local candidates
+  candidates="$(gh pr list --search "closes #${num}" --state merged --json number --jq '.[].number' 2>/dev/null | head -10 || true)"
+  [ -z "$candidates" ] && return
+  local candidate extract_result candidate_issue
+  while IFS= read -r candidate; do
+    [ -z "$candidate" ] && continue
+    extract_result="$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$candidate" 2>/dev/null)" || continue
+    candidate_issue="$(echo "$extract_result" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))" 2>/dev/null || true)"
+    if [ "$candidate_issue" = "$num" ]; then
+      COMPLETION_HEAD_REF_OID="$(gh pr view "$candidate" --json headRefOid 2>/dev/null | jq -r '.headRefOid // empty')" || {
+        COMPLETION_HEAD_REF_OID=""
+      }
+      return
+    fi
+  done <<< "$candidates"
+}
+
 # check_completion: sets COMPLETION_STATE (done|not-done|unknown) and, for a
 # MERGED PR, COMPLETION_HEAD_REF_OID (used later for safe -D branch deletion).
 check_completion() {
@@ -124,6 +162,7 @@ check_completion() {
     }
     if [ "$state" = "CLOSED" ]; then
       COMPLETION_STATE="done"
+      resolve_merged_pr_head_ref_oid "$num"
     fi
   else
     local json
@@ -143,8 +182,9 @@ check_completion() {
 }
 
 # delete_branch_safe: `git branch -d`; on rejection, fall back to `-D` only when
-# kind=pr and the branch tip matches the MERGED PR's headRefOid. Returns 1 (and
-# records a "warned (branch tip diverges)" entry) when neither path applies.
+# the branch tip matches a MERGED PR's headRefOid (for kind=pr, that PR itself;
+# for kind=issue, one resolved via resolve_merged_pr_head_ref_oid). Returns 1
+# (and records a "warned (branch tip diverges)" entry) when neither path applies.
 delete_branch_safe() {
   local branch="$1"
   local kind="$2"
@@ -152,7 +192,7 @@ delete_branch_safe() {
   if git branch -d "$branch" 2>/dev/null; then
     return 0
   fi
-  if [ "$kind" = "pr" ] && [ -n "$head_ref_oid" ]; then
+  if [ -n "$head_ref_oid" ]; then
     local branch_tip
     branch_tip="$(git rev-parse "refs/heads/$branch" 2>/dev/null || true)"
     if [ -n "$branch_tip" ] && [ "$branch_tip" = "$head_ref_oid" ] && git branch -D "$branch" 2>/dev/null; then
@@ -457,6 +497,8 @@ if [ -n "$remote_refs" ]; then
 "
         continue
       fi
+    elif [ -n "$COMPLETION_HEAD_REF_OID" ] && [ "$remote_sha" = "$COMPLETION_HEAD_REF_OID" ]; then
+      : # matches a MERGED closes-PR's headRefOid (squash-merge case) -- safe, skip ancestor check
     else
       if ! ensure_default_branch_ready; then
         count_remote_warned_gh=$((count_remote_warned_gh + 1))
