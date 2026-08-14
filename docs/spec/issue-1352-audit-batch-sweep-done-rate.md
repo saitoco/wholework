@@ -87,3 +87,30 @@ Blocked by #1349 (CLOSED) — `scripts/rank-verify-backlog.sh` + `/audit verify-
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1-5 を Spec の記載順どおりに実装した。
+
+### Design Gaps/Ambiguities
+- `bash scripts/check-forbidden-expressions.sh` を実行したところ、本 Issue で変更していない `docs/spec/issue-1349-rank-verify-backlog-batch.md` (旧称: Dispatch という用語をそのまま引用した既存の Retrospective 記述) が無関係にフラグされ exit 1 になることを確認した。`git stash` で本 PR の変更を退避した状態でも同じ失敗が再現したため、本 Issue が持ち込んだものではないベースブランチの既存事象と判断し、対応をスコープ外とした。同種の問題 (無関係ファイルの forbidden expression が無関係 PR をブロックする) は既に #1139 で追跡済みのため、新規 follow-up Issue は起票しなかった。
+
+### Rework
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Batch sweep collection set is defined purely by marker presence (at least one `<!-- wholework-event: type=batch-verify-dispatch` comment), not by latest-wins timestamp resolution — matches the Spec's rationale that append-only Issue comments remain valid evidence even after repeated sweeps.
+- `collect-verify-path-done-rate.sh` hardcodes `docs/sessions` (no directory argument) since the Spec scopes opportunistic-verify aggregation to that fixed path; bats tests therefore run from a fresh `$BATS_TEST_TMPDIR` rather than `$PROJECT_ROOT` to avoid reading the real repository's `docs/sessions/`.
+- `gh` failure fails open uniformly across all three paths (not just the ones structurally dependent on `gh issue list`), per the Spec's explicit reasoning that partial fail-open would make "gh failed" indistinguishable from "measured 0%".
+
+### Deferred Items
+- None — all 5 Implementation Steps landed in this PR.
+
+### Notes for Next Phase
+- The three pre-merge AC are all `rubric` type; `/review` should re-verify Section 12's table/columns and the Spec's path-discrimination Notes section against the merged diff.
+- The post-merge AC is `verify-type: observation event=auto-run session=next` — it resolves the first time `/audit stats --retention` runs after merge, not tied to a specific dispatch path.
+- A pre-existing, unrelated forbidden-expression failure exists in `docs/spec/issue-1349-rank-verify-backlog-batch.md` (tracked separately by #1139) — do not attribute it to this PR's diff if `check-forbidden-expressions.sh` is re-run during review.
