@@ -96,17 +96,31 @@
 
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- No structural divergence between Spec and PR diff. The single recorded deviation (`docs/structure.md`'s `scripts/ (86 files)` kept unchanged rather than bumped to `87`) was independently re-verified against the actual file count (`find scripts -maxdepth 1 -type f | wc -l` → 86) during this review and confirmed correct, not a missed instruction.
+
+### Recurring issues
+
+- One documentation-consistency gap: `docs/guide/workflow.md` was updated with the new `/audit verify-backlog` line, but the `docs/ja/guide/workflow.md` mirror was not — confirmed via `git log` to be newly introduced by this PR, not pre-existing drift. `docs/translation-workflow.md` § "When to Sync" literally says "top-level `docs/*.md`", which reads as excluding `docs/guide/`, while `scripts/check-translation-sync.sh` actually tracks `docs/guide/*.md` too — this wording/implementation mismatch is a plausible root cause for this class of miss recurring across PRs that touch `docs/guide/*.md`. Fixed in this review (SHOULD); worth a follow-up doc clarification if the pattern repeats.
+
+### Acceptance criteria verification difficulty
+
+- None. All 4 Pre-merge conditions were `rubric` type and graded directly against the PR diff without ambiguity; the Post-merge condition (`verify-type: opportunistic`) correctly deferred to post-merge observation.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Ranking logic is scored per-Issue as `(auto_count desc, issue_number asc)` and truncated to `--top`, matching the manual trial's own selection order (rank by unchecked-AC-with-verify-command count, then pick the top N).
-- Fence exclusion uses a single `in_fence` toggle applied globally (not scoped to the Post-merge section only), so a fence that spans a section boundary cannot leak fenced sample text into either auto_count or manual_count.
-- `/audit verify-backlog` was added as a new subcommand on the existing `/audit` skill rather than a standalone skill, consistent with `/audit`'s existing multi-subcommand structure (`stats`, `progress`, `auto-session`, `premise`).
+- Fixed the SHOULD-level `docs/ja/guide/workflow.md` translation-sync gap directly in this review (low-risk, single-line doc fix) rather than deferring to a follow-up Issue.
+- Left the CONSIDER-level `rank-verify-backlog.sh` edge case (Issues with `auto_count == 0` can fill remaining `--top` slots) unfixed — current backlog scale and default `--top 10` make it unlikely to trigger, and the Spec does not mandate filtering zero-`auto_count` Issues out.
 
 ### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate against the actual `phase/verify` backlog — is intentionally left for post-merge opportunistic verification; it cannot be evaluated pre-merge.
+- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate against the actual `phase/verify` backlog — remains deferred to post-merge opportunistic verification, unchanged from the code phase's handoff.
+- CONSIDER-level edge case in `rank-verify-backlog.sh` (zero-`auto_count` Issues filling `--top` slots) — not fixed; worth revisiting only if `--top` is set much larger than the default or the backlog shrinks materially.
 
 ### Notes for Next Phase
-- `/review` should confirm the `docs/structure.md` file-count deviation recorded above (kept at `86`, not bumped to `87`) is intentional and not a missed instruction — the reasoning is in this Spec's Code Retrospective.
-- No `## Smoke Test` section exists in this Spec, so Step 11's Smoke Test subsection was a no-op; `/review`/`/verify` should rely on the bats suite (`tests/rank-verify-backlog.bats`) and the pre-merge rubric AC grading already recorded on the Issue for behavioral confidence.
+- `/merge` can proceed without further action — no MUST issues, CI all green (11/11), no unchecked Pre-merge AC.
+- Post-merge, `/verify` should evaluate the sole Post-merge AC (`phase/done` reach-rate observation) once `/audit verify-backlog` has had real-world runs against the backlog.
