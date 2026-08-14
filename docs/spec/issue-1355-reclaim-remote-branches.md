@@ -68,19 +68,19 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - Nothing to note — 3件の Pre-merge AC (rubric×2, grep×1) はいずれも safe mode で自動判定可能で、UNCERTAIN は発生しなかった。rubric 条件文は削除対象の安全策 (並行セッション除外相当・未コミット変更なし相当) を明示的に言及しており、grader が判定しやすい形になっていた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode) の MUST 指摘 (line 142、`resolve_merged_pr_head_ref_oid()` の `gh pr view --json headRefOid` が `set -euo pipefail` 下で未ガード) を採用し、`|| { COMPLETION_HEAD_REF_OID=""; }` ガードを追加。修正は既存の同ファイル内パターン (`check_completion()` の `gh pr view --json state,headRefOid` 呼び出しの `|| { ...; return; }`) に揃えただけで、新規の設計判断は行っていない。
-- SHOULD 指摘 (line 163、`resolve_merged_pr_head_ref_oid` の eager 呼び出し・非メモ化によるレート制限リスク) は本 PR のスコープでは見送った。lazy evaluation + memoization への再設計はローカル/orphan/リモートの3経路すべてに影響する構造変更でリスクが大きく、MUST 修正により「レート制限に当たってもスクリプト全体は中断せず個別ブランチが warned 報告される」動作は既に確保されているため、実データでの Post-merge AC 実行結果を見てから要否判断する方針とした。
+- Pre-merge AC ゲート (3件) はいずれも [x] 済みで unchecked_count=0、review-incomplete-fallback も検出されなかったため追加確認なしでマージを実行した。
+- Squash merge (gh pr merge --squash --delete-branch) を実行し、closes #1355 により Issue は auto-close される見込み。
 
 ### Deferred Items
-- Post-merge AC: `scripts/reclaim-stale-worktrees.sh --apply-remote` を実データで再実行し、`worktree-code+issue-*` 等の残留ブランチが (今度こそ) 解消されることを確認する (`/verify` フェーズで実施、iteration 2)。
-- SHOULD 指摘 (line 163 の eager 呼び出し・レート制限リスク) — Post-merge AC の実データ実行で実際にレート制限が問題化した場合、lazy evaluation + memoization への再設計を別 Issue で検討する。
+- Post-merge AC: scripts/reclaim-stale-worktrees.sh --apply-remote を実データで再実行し、worktree-code+issue-* 等の残留ブランチが解消されることを確認する (/verify フェーズで実施、iteration 2)。
+- SHOULD 指摘 (review フェーズ、resolve_merged_pr_head_ref_oid の eager 呼び出し・レート制限リスク) — Post-merge AC の実データ実行で実際にレート制限が問題化した場合、lazy evaluation + memoization への再設計を別 Issue で検討する。
 
 ### Notes for Next Phase
-- `/verify` 再実行時は、`--apply-remote` (dry-run ではない) を実データで実行し、`worktree-code+issue-*` の削除件数が 0 から改善していることを確認すること。dry-run report で対象ブランチの残存を先に確認してから実行するのが安全 (前回 iteration からの継続方針)。
-- `/verify` 実行中に `gh pr list --search` 由来のレート制限警告 (`warned (remote, unmerged/diverged)` の急増等) が出ていないか観察すること。出ていれば line 163 の SHOULD 指摘の優先度を上げて別 Issue 化する。
+- /verify 実行時は、--apply-remote (dry-run ではない) を実データで実行し、worktree-code+issue-* の削除件数が 0 から改善していることを確認すること。
+- /verify 実行中に gh pr list --search 由来のレート制限警告が出ていないか観察すること。出ていればレート制限リスクの SHOULD 指摘を別 Issue 化する優先度を上げること。
 
 ## Consumed Comments
 
