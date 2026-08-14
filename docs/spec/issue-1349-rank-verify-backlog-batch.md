@@ -124,3 +124,31 @@
 ### Notes for Next Phase
 - `/verify` should evaluate the sole Post-merge AC by running `/audit verify-backlog` against the live `phase/verify` backlog and comparing the `phase/done` reach rate to the 2026-08-10〜11 manual trial baseline.
 - Label transition to `phase/verify` and Issue-state fallback checks were applied in this run — Issue #1349 should be `CLOSED` with `phase/verify` label after this run completes.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 全4件の Pre-merge AC が rubric type で PR diff に対して曖昧さなく判定可能だった。AC 品質に問題なし。
+
+#### design
+- N/A
+
+#### code
+- `docs/structure.md` の `scripts/ (86 files)` 記載を巡る軽微な事前ズレ (本 Issue 起票以前からの既存 drift) を実カウントで確認し、変更なしと判断。手戻りなし。
+- `check-forbidden-expressions.sh` の大文字小文字を区別した用語チェック (`Dispatch`) に一度引っかかり、見出しを "Sequential Verify Execution" に変更して解消。
+
+#### review
+- Post-merge AC (`verify-type: opportunistic`) の判定は正しく post-merge observation に委譲された。
+- `docs/guide/workflow.md` は更新されたが `docs/ja/guide/workflow.md` ミラーが未更新という recurring な doc-sync gap を検出・修正 (SHOULD)。`docs/translation-workflow.md` § "When to Sync" の文言 ("top-level docs/*.md") が `docs/guide/` を除外しているように読める一方、`scripts/check-translation-sync.sh` は実際には `docs/guide/*.md` も追跡しており、文言と実装の不一致がこの種の見落としの再発要因になり得る。
+
+#### merge
+- PR #1356 はコンフリクトなくスムーズに squash merge。
+
+#### verify
+- Post-merge AC (verify-type: opportunistic) は長期的な運用観察 (`/audit verify-backlog` を live backlog に対して実行し、複数回の verify サイクルを経た `phase/done` 到達率を baseline と比較) を要するため、単発の `/verify` 実行では Claude 実行不可と判定 (reason=other)。`phase/verify` ラベルを維持し、検証ガイドを Issue コメントに記録した。
+
+### Improvement Proposals
+- `docs/translation-workflow.md` § "When to Sync" の文言を明確化する (現状 "top-level `docs/*.md`" と読めるが `scripts/check-translation-sync.sh` は `docs/guide/*.md` も追跡対象にしている) — 今回は review で個別修正済みだが、同種の見落としが `docs/guide/*.md` を触る別 PR で再発した場合は起票を検討。
+- `rank-verify-backlog.sh` の CONSIDER レベルの edge case (zero-`auto_count` の Issue が `--top` 枠を埋めてしまう) — 未修正のまま。実運用で実害が確認されたら起票を検討。
