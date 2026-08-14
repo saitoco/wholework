@@ -97,3 +97,32 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 
 ### Acceptance criteria verification difficulty
 - 3件の Pre-merge AC (rubric×2, grep×1) はいずれも前回サイクルで既に `[x]` 済みであり、今回の PR 差分に対する再検証でも同様に自動判定可能で UNCERTAIN は発生しなかった。Post-merge AC (`--apply-remote` の実データ実行確認) は `/verify` フェーズに引き続き持ち越し。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 3件 (rubric×2, grep×1) は両サイクルとも自動判定可能で問題なし。Post-merge AC の文言自体は明確だったが、「安全策を維持する」という Purpose の要求が `kind=issue`/`kind=pr` の分類軸まで踏み込んで規定していなかったため、実装時に安全策の適用範囲にギャップが生じた。今後同種の Issue では、Purpose に「既存の安全策と同水準」とだけ書くのではなく、対象となる分類軸 (今回で言えば worktree ブランチの kind) を明示するとギャップを未然に防げた可能性がある。
+
+#### design
+- N/A — 設計方針自体 (ローカルロジックを踏襲したリモート安全策) は最後まで妥当だった。
+
+#### code
+- 1周目の実装は Spec 通りに完了したが、`worktree-code+issue-N` (`/code` pr route の PR ブランチ) が `kind=issue` に分類されるため、squash merge 済みブランチの安全な削除に必要な headRefOid フォールバックが `kind=pr` 専用のままだった、という設計ギャップが実データ実行で初めて顕在化した。rubric ベースの Pre-merge AC はこのギャップを検出できなかった (機能の「存在」は確認できても、「特定の分岐に対して機能するか」までは検証範囲外だったため)。2周目の修正 (`closes #<N>` 検索による MERGED PR の headRefOid フォールバックを `kind=issue` にも追加) はスコープが明確で手戻りは最小限だった。
+
+#### review
+- review-light が2周目の修正自体に含まれていた新規バグ (`resolve_merged_pr_head_ref_oid()` の未ガード `gh pr view` 呼び出し) を MUST として検出し、実データ実行前に修正できた。実データで70件超のリモートブランチを操作する直前にこの防御漏れを塞げた意義は大きい。
+
+#### merge
+- 2回とも squash merge・CI green・pre-merge AC 全 PASS でクリーンに完了。conflict や CI failure は発生しなかった。
+
+#### verify
+- FAIL root cause は、pre-merge の rubric 判定では検出できない「特定の入力パターン (squash merge された `kind=issue` ブランチ) に対してのみ機能しない」という部分的な実装ギャップだった。dry-run ではなく実データで `--apply-remote` を実行して初めて発覚した — これは本 AC を post-merge・manual (dry-run 不可、実データ実行必須) として設計した判断が正しかったことの裏付けでもある。`AUTONOMY_TIER=L3` + `auto-retry-on-fail.enabled=true` による auto-retry (iteration 1) が正しく機能し、FAIL コメントの根本原因診断をそのまま `/code` の入力として消費し、1回の追加サイクルで収束した。
+
+### Retry Count
+
+Retry Count: 1/3
+
+### Improvement Proposals
+- N/A — 今回の FAIL は auto-retry サイクル内で完全に解消済み。review retrospective が指摘した「新規 `gh` 呼び出しのエラーガード規約」は単発の設計改善点として Spec に記録済みであり、複数ファイル/複数 Issue にまたがる再発性の証拠 (Tier 1 の positive-evidence gate) を今回時点では確認できないため、Issue化は見送る。
