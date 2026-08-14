@@ -137,7 +137,7 @@
 
 #### code
 - `docs/structure.md` の `scripts/ (86 files)` 記載を巡る軽微な事前ズレ (本 Issue 起票以前からの既存 drift) を実カウントで確認し、変更なしと判断。手戻りなし。
-- `check-forbidden-expressions.sh` の大文字小文字を区別した用語チェック (`Dispatch`) に一度引っかかり、見出しを "Sequential Verify Execution" に変更して解消。
+- `check-forbidden-expressions.sh` の大文字小文字を区別した用語チェック (旧称: `Dispatch`) に一度引っかかり、見出しを "Sequential Verify Execution" に変更して解消。
 
 #### review
 - Post-merge AC (`verify-type: opportunistic`) の判定は正しく post-merge observation に委譲された。
