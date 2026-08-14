@@ -44,6 +44,9 @@ if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
 fi
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
     num="$3"
+    if [ "$4" = "--json" ] && [ "$5" = "headRefOid" ] && [ -f "$MOCK_STATE_DIR/pr-$num-view-fail" ]; then
+        exit 1
+    fi
     state="OPEN"
     href=""
     body=""
@@ -102,6 +105,17 @@ mock_closes_pr() {
     echo "$pr_num" >> "$MOCK_DIR/gh-state/closes-search-$issue_num"
     echo "closes #$issue_num" > "$MOCK_DIR/gh-state/pr-$pr_num-body"
     mock_pr "$pr_num" "$state" "$href"
+}
+
+# mock_pr_view_fail_headrefoid <pr_num>
+# Makes `gh pr view <pr_num> --json headRefOid` (the specific query used by
+# resolve_merged_pr_head_ref_oid's final headRefOid fetch) fail with a
+# non-zero exit, while other `gh pr view` queries for the same PR number
+# (e.g. gh-extract-issue-from-pr.sh's --json body,title,baseRefName call)
+# continue to succeed -- simulating a transient gh API failure at exactly
+# the call site that review found unguarded under `set -euo pipefail`.
+mock_pr_view_fail_headrefoid() {
+    touch "$MOCK_DIR/gh-state/pr-$1-view-fail"
 }
 
 # push_remote_branch <branch>
@@ -417,6 +431,20 @@ push_remote_branch_with_commit() {
     [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
 
     git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-7007' | grep -q worktree-code+issue-7007
+}
+
+@test "resolve_merged_pr_head_ref_oid degrades to the ancestor-check fallback (no script abort) when the matched candidate PR's headRefOid gh pr view call fails transiently (regression for review MUST on #1355 PR #1360)" {
+    mock_issue 8000 CLOSED
+    push_remote_branch_with_commit "worktree-code+issue-8000"
+    mock_closes_pr 8000 8100 MERGED "$REMOTE_BRANCH_SHA"
+    mock_pr_view_fail_headrefoid 8100
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-8000' | grep -q worktree-code+issue-8000
 }
 
 @test "remote reclaim: kind=pr branch matching MERGED PR headRefOid is reclaimed (squash-merge case)" {

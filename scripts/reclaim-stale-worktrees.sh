@@ -139,7 +139,9 @@ resolve_merged_pr_head_ref_oid() {
     extract_result="$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$candidate" 2>/dev/null)" || continue
     candidate_issue="$(echo "$extract_result" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))" 2>/dev/null || true)"
     if [ "$candidate_issue" = "$num" ]; then
-      COMPLETION_HEAD_REF_OID="$(gh pr view "$candidate" --json headRefOid 2>/dev/null | jq -r '.headRefOid // empty')"
+      COMPLETION_HEAD_REF_OID="$(gh pr view "$candidate" --json headRefOid 2>/dev/null | jq -r '.headRefOid // empty')" || {
+        COMPLETION_HEAD_REF_OID=""
+      }
       return
     fi
   done <<< "$candidates"
