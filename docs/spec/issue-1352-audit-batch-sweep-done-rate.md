@@ -100,17 +100,27 @@ N/A — Implementation Steps 1-5 を Spec の記載順どおりに実装した�
 N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Batch sweep collection set is defined purely by marker presence (at least one `<!-- wholework-event: type=batch-verify-dispatch` comment), not by latest-wins timestamp resolution — matches the Spec's rationale that append-only Issue comments remain valid evidence even after repeated sweeps.
-- `collect-verify-path-done-rate.sh` hardcodes `docs/sessions` (no directory argument) since the Spec scopes opportunistic-verify aggregation to that fixed path; bats tests therefore run from a fresh `$BATS_TEST_TMPDIR` rather than `$PROJECT_ROOT` to avoid reading the real repository's `docs/sessions/`.
-- `gh` failure fails open uniformly across all three paths (not just the ones structurally dependent on `gh issue list`), per the Spec's explicit reasoning that partial fail-open would make "gh failed" indistinguishable from "measured 0%".
+- Fixed the pre-existing forbidden-expression violation in `docs/spec/issue-1349-rank-verify-backlog-batch.md:140` inline (added the 旧称 prefix) rather than waiting on #1139, following the same precedent #1139 itself documents (PR #1138) — currently the only available path to unblock CI for an unrelated pre-existing violation.
+- All 3 pre-merge rubric AC verified PASS directly against `skills/audit/SKILL.md` Section 12, `modules/l0-surfaces.md`, and the Spec's existing path-discrimination Notes section; no checkbox edits were needed (already `[x]` from a prior state).
 
 ### Deferred Items
-- None — all 5 Implementation Steps landed in this PR.
+- None — the only MUST finding (CI-blocking forbidden expression) was resolved in this phase.
 
 ### Notes for Next Phase
-- The three pre-merge AC are all `rubric` type; `/review` should re-verify Section 12's table/columns and the Spec's path-discrimination Notes section against the merged diff.
-- The post-merge AC is `verify-type: observation event=auto-run session=next` — it resolves the first time `/audit stats --retention` runs after merge, not tied to a specific dispatch path.
-- A pre-existing, unrelated forbidden-expression failure exists in `docs/spec/issue-1349-rank-verify-backlog-batch.md` (tracked separately by #1139) — do not attribute it to this PR's diff if `check-forbidden-expressions.sh` is re-run during review.
+- `/merge` can proceed: no unresolved MUST issues remain and CI is 11/11 SUCCESS as of the fix commit.
+- The post-merge AC (`verify-type: observation event=auto-run session=next`) resolves on the next `/audit stats --retention` run after merge — `/verify` should look for Section 12 output rather than trying to construct its own auto-run signal.
+- #1139 remains open and unrelated to this PR's own scope — this PR's inline fix does not close it; the systemic diff-scope-limiting fix is still pending.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — Implementation Steps 1-5 were followed as specified. The lightweight integrated review (review-light, all 4 aspects) found no MUST/SHOULD/CONSIDER-level issues against the diff, the Spec, or the steering documents.
+
+### Recurring issues
+- This PR hit the same structural pattern already tracked by #1139 (first observed on PR #1138, per #1139's own Background section): CI's `Forbidden Expressions check` failed on a pre-existing violation living in a *different* Issue's Spec file (`docs/spec/issue-1349-rank-verify-backlog-batch.md:140`, missing the 旧称/Formerly-called exemption phrasing around a deprecated term reference), unrelated to this PR's own diff. Following the same precedent #1139 documents, `/review` fixed it inline (adding the 旧称 prefix) since no diff-scope-limiting exception exists yet. A second occurrence of this exact pattern strengthens the case for prioritizing #1139's scope-limited check mode — this is recurring friction, not a one-off.
+
+### Acceptance criteria verification difficulty
+Nothing to note — all 3 pre-merge AC were `rubric` type with the target Spec file path named explicitly in the Issue body text (an Auto-Resolve Log correction already applied at Issue-authoring time, following the precedent set by #1351). The grader therefore had direct evidence access for all 3, and each verified as PASS without ambiguity.
