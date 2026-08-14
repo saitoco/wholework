@@ -36,3 +36,34 @@
 ## Consumed Comments
 
 前フェーズ以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (実装は Spec の Implementation Steps 通り)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- `bash scripts/check-forbidden-expressions.sh` 実行時、本 Issue と無関係な既存ファイル (`docs/spec/issue-1349-*.md`、大文字小文字を区別した用語チェックに引っかかる既存内容) で失敗を検出した。原因は #1139 (check-forbidden-expressions: diff スコープ限定モード未実装、repo 全体スキャンで無関係ファイルがブロックされる) と同一のため、重複起票はせず本 Issue の変更ファイルのみを個別確認して PASS を確認した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 追加先は `modules/verify-classifier.md` に一意決定 (`modules/l0-surfaces.md` は GitHub L0 サーフェスに scope が限定されているため、ローカル成果物ベースの4手法とは不整合)
+- `skills/verify/SKILL.md` Step 8c の Evidence collection 箇条書き末尾に参照ブレットを1行追加 (新セクションが実行時に参照されない「死んだドキュメント」化を防ぐため)
+- 4手法をテーブル形式で整理し、末尾に best-effort である旨と既存の UNCERTAIN/SKIPPED 維持方針との整合を明記
+
+### Deferred Items
+- Post-merge AC (#5) は次回 `/verify` が observation AC を処理する際の実観察待ち (`verify-type: observation event=auto-run session=next`)
+- `check-forbidden-expressions.sh` の diff スコープ限定 (#1139) は本 Issue のスコープ外、既存 Issue のまま据え置き
+
+### Notes for Next Phase
+- Pre-merge AC 1-4 は rubric による自己検証で PASS 済み、Issue 本文チェックボックス更新済み
+- 追加内容は `modules/verify-classifier.md` の新セクション `### observation Type: Evidence Collection Patterns` (Firing Likelihood Check 直後、Tag Assignment Example 直前)
+- フルテストスイート 1766件全 PASS (`bats --jobs 18 tests/`、behavioral change 検知により全件実行)
