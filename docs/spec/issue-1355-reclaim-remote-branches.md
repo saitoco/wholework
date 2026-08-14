@@ -43,6 +43,7 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - saito (MEMBER, first-class) — verify iteration 1/3、FAIL につき Issue を fix cycle 用に reopen した旨の通知: https://github.com/saitoco/wholework/issues/1355#issuecomment
 - saito (MEMBER, first-class) — `type=verify-fail` 診断コメント。post-merge AC の実データ実行結果、`worktree-code+issue-*` が 38→38 件で一件も削除されなかった根本原因 (`kind=issue` の headRefOid フォールバック欠如) と推奨修正方針を記録。本フェーズはこの診断を一級入力として本 PR の実装方針に採用した: https://github.com/saitoco/wholework/issues/1355#issuecomment
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-fail phase=verify issue=1355 iteration=1 --> / https://github.com/saitoco/wholework/issues/1355#issuecomment-5298543562
 ## Code Retrospective
 
 ### Deviations from Design
