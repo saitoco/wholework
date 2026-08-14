@@ -53,17 +53,26 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 ### Rework
 - N/A — 手戻りなし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light による突き合わせでも Spec の Implementation Steps 1〜4 との構造的乖離は検出されなかった。既知の設計ギャップ (`resolve_default_branch()` の `main` フォールバック) も Spec の Code Retrospective に明記済みで、fail-safe 側に倒れていることを確認した。
+
+### Recurring issues
+- Nothing to note — review-bug 相当の指摘は 0 件だった (SKIP_REVIEW_BUG=false の light mode だが review-light が bug/logic/security 観点も含めて 0 件と報告)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 3件の Pre-merge AC (rubric×2, grep×1) はいずれも safe mode で自動判定可能で、UNCERTAIN は発生しなかった。rubric 条件文は削除対象の安全策 (並行セッション除外相当・未コミット変更なし相当) を明示的に言及しており、grader が判定しやすい形になっていた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 新規フラグ `--apply-remote` は既存 `--apply` から完全に独立させ、単独指定でリモート削除のみ実行できるようにした (Spec の設計判断どおり)。
-- リモートブランチ enumeration (`git ls-remote --heads origin 'worktree-*'`) は `--apply-remote` の有無にかかわらず常に実行し、dry-run レポートを既定動作とした (`--apply` の既存挙動と対称)。
-- kind=issue の祖先チェックに必要な base ブランチ解決は `origin/HEAD` symbolic ref → 未設定時 `main` にフォールバックする方式とした。
+- MUST/SHOULD/CONSIDER 指摘が 0 件だったため、Step 12 (Issue Resolution) は実行せず COMMENT event でレビューを投稿した。
+- Base Branch Conflict Pre-check (`git merge-tree`) で `origin/main` との競合なしを確認済み。
 
 ### Deferred Items
-- 実データでの `--apply-remote` 実行 (Post-merge AC) はマージ後に実施する。
+- 実データでの `--apply-remote` 実行 (Post-merge AC) は `/merge` 後に実施する (Code フェーズからの引き継ぎ事項を継続)。
 
 ### Notes for Next Phase
-- `/review` では、kind=pr の headRefOid 一致判定と kind=issue の祖先判定が Spec Notes の安全性設計 (Step E/F/G 相当) と整合しているかを重点的に確認してほしい。
-- 新規 bats テスト (9件) は実 bare リポジトリを `origin` として使用しており、git バイナリの非モック方針を踏襲している。
+- `/merge` では Post-merge AC (`worktree-verify+issue-*` / `worktree-code+issue-*` 等の実データ検証) がマージ後に必要であることを踏まえ、マージ後は忘れずに `scripts/reclaim-stale-worktrees.sh --apply-remote` を実行して残留ブランチの解消を確認すること。
