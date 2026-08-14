@@ -68,20 +68,32 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - Nothing to note — 3件の Pre-merge AC (rubric×2, grep×1) はいずれも safe mode で自動判定可能で、UNCERTAIN は発生しなかった。rubric 条件文は削除対象の安全策 (並行セッション除外相当・未コミット変更なし相当) を明示的に言及しており、grader が判定しやすい形になっていた。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `/verify` iteration 1 の FAIL 診断コメントで示された推奨修正方針 (`closes #<N>` 検索による headRefOid フォールバックを `kind=issue` にも適用) をそのまま採用した。診断が根本原因・再現データ・修正方針まで具体的に記録していたため、別アプローチの検討は行わなかった。
-- ローカル `delete_branch_safe()` の `kind = pr` ゲートを撤廃し `headRefOid` の有無のみで判定するよう単純化した (`kind` 引数は事実上未使用になったが、呼び出し元シグネチャ変更を避けるため残置)。
-- PR #1357 (元実装、MERGED) とは別の新規 PR として本修正を提出した (`worktree-code+issue-1355` ブランチ・worktree は元 PR マージ後に削除済みのため、新規 worktree で再作成)。
+- review-light (light mode) の MUST 指摘 (line 142、`resolve_merged_pr_head_ref_oid()` の `gh pr view --json headRefOid` が `set -euo pipefail` 下で未ガード) を採用し、`|| { COMPLETION_HEAD_REF_OID=""; }` ガードを追加。修正は既存の同ファイル内パターン (`check_completion()` の `gh pr view --json state,headRefOid` 呼び出しの `|| { ...; return; }`) に揃えただけで、新規の設計判断は行っていない。
+- SHOULD 指摘 (line 163、`resolve_merged_pr_head_ref_oid` の eager 呼び出し・非メモ化によるレート制限リスク) は本 PR のスコープでは見送った。lazy evaluation + memoization への再設計はローカル/orphan/リモートの3経路すべてに影響する構造変更でリスクが大きく、MUST 修正により「レート制限に当たってもスクリプト全体は中断せず個別ブランチが warned 報告される」動作は既に確保されているため、実データでの Post-merge AC 実行結果を見てから要否判断する方針とした。
 
 ### Deferred Items
 - Post-merge AC: `scripts/reclaim-stale-worktrees.sh --apply-remote` を実データで再実行し、`worktree-code+issue-*` 等の残留ブランチが (今度こそ) 解消されることを確認する (`/verify` フェーズで実施、iteration 2)。
+- SHOULD 指摘 (line 163 の eager 呼び出し・レート制限リスク) — Post-merge AC の実データ実行で実際にレート制限が問題化した場合、lazy evaluation + memoization への再設計を別 Issue で検討する。
 
 ### Notes for Next Phase
-- `/review` では今回追加した bats 回帰テスト (closes-PR 経由の headRefOid フォールバック、divergence 時のフォールスルー) が実際のバグシナリオを再現しているか確認すること。
 - `/verify` 再実行時は、`--apply-remote` (dry-run ではない) を実データで実行し、`worktree-code+issue-*` の削除件数が 0 から改善していることを確認すること。dry-run report で対象ブランチの残存を先に確認してから実行するのが安全 (前回 iteration からの継続方針)。
+- `/verify` 実行中に `gh pr list --search` 由来のレート制限警告 (`warned (remote, unmerged/diverged)` の急増等) が出ていないか観察すること。出ていれば line 163 の SHOULD 指摘の優先度を上げて別 Issue 化する。
 
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `<!-- wholework-event: type=verify-fail phase=verify issue=1355 iteration=1 -->` (cross-phase marker、cutoff 以前だが exception により消費対象) — `/code` フェーズで既に一級入力として採用済みの診断コメント。本 review フェーズでは新規の未消費コメントなし: https://github.com/saitoco/wholework/issues/1355#issuecomment-5298543562
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- review-light (Perspective 2: Edge Cases and Robustness) が MUST を1件検出した: `resolve_merged_pr_head_ref_oid()` 内の `gh pr view "$candidate" --json headRefOid` 呼び出しが `set -euo pipefail` 下でエラーガードなしだったため、transient な gh API 失敗でスクリプト全体が中断しうる問題。これは Spec の Implementation Steps や Code Retrospective のどちらにも想定されていなかった実装細部で、「新規追加した `gh` 呼び出しは同ファイル内の既存パターン (`2>/dev/null` + `|| true`/`|| { ...; return; }`) に揃える」という暗黙の規約が Spec に明文化されていなかったために生じた漏れ。修正自体は Spec の設計方針を変更するものではなく、既存の防御パターンを新規関数にも適用しただけ (`docs/spec/issue-1355-reclaim-remote-branches.md` の Implementation Steps とは非整合ではない)。
+
+### Recurring issues
+- 同じ Issue #1355 のサイクル内で、`set -euo pipefail` とエラーハンドリングの整合性に起因する問題が2件連続で表面化した (1件目: `/verify` iteration 1 の `kind=issue` headRefOid フォールバック欠如そのもの、2件目: 今回のフォールバック実装自体が導入した未ガード `gh pr view` 呼び出し)。両者は原因は異なるが、「bash script に `gh` 呼び出しを追加する際、同ファイル内の既存ガードパターンとの整合を機械的にチェックする」観点があれば2件目は実装時点で防げた可能性がある。SHOULD 指摘 (line 163、eager 呼び出しによる API 呼び出し重複) も同根で、新規追加コードが既存ファイルの確立された設計原則 (`ensure_default_branch_ready()` の lazy 評価パターン) から逸脱していた。
+- review-light (light mode, 1エージェント) が bug/logic/edge-case/security/documentation の4観点を単独でカバーし、review-bug 相当の指摘も含め MUST 1件・SHOULD 1件を検出できた。Size M の light mode でも十分な指摘密度が得られており、fan-out (review-spec + review-bug×2) が必須ではないケースだったと言える。
+
+### Acceptance criteria verification difficulty
+- 3件の Pre-merge AC (rubric×2, grep×1) はいずれも前回サイクルで既に `[x]` 済みであり、今回の PR 差分に対する再検証でも同様に自動判定可能で UNCERTAIN は発生しなかった。Post-merge AC (`--apply-remote` の実データ実行確認) は `/verify` フェーズに引き続き持ち越し。
