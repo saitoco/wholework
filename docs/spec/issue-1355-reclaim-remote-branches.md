@@ -81,3 +81,7 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 ### Notes for Next Phase
 - `/review` では今回追加した bats 回帰テスト (closes-PR 経由の headRefOid フォールバック、divergence 時のフォールスルー) が実際のバグシナリオを再現しているか確認すること。
 - `/verify` 再実行時は、`--apply-remote` (dry-run ではない) を実データで実行し、`worktree-code+issue-*` の削除件数が 0 から改善していることを確認すること。dry-run report で対象ブランチの残存を先に確認してから実行するのが安全 (前回 iteration からの継続方針)。
+
+## Consumed Comments
+
+- saito / MEMBER / first-class / `<!-- wholework-event: type=verify-fail phase=verify issue=1355 iteration=1 -->` (cross-phase marker、cutoff 以前だが exception により消費対象) — `/code` フェーズで既に一級入力として採用済みの診断コメント。本 review フェーズでは新規の未消費コメントなし: https://github.com/saitoco/wholework/issues/1355#issuecomment-5298543562
