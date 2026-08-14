@@ -65,14 +65,14 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - Nothing to note — 3件の Pre-merge AC (rubric×2, grep×1) はいずれも safe mode で自動判定可能で、UNCERTAIN は発生しなかった。rubric 条件文は削除対象の安全策 (並行セッション除外相当・未コミット変更なし相当) を明示的に言及しており、grader が判定しやすい形になっていた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD/CONSIDER 指摘が 0 件だったため、Step 12 (Issue Resolution) は実行せず COMMENT event でレビューを投稿した。
-- Base Branch Conflict Pre-check (`git merge-tree`) で `origin/main` との競合なしを確認済み。
+- Pre-merge AC 3件はすべてチェック済み、review-incomplete-fallback は organic completion (fallback 経由ではない) と確認した上で squash merge を実行した。
+- `mergeable=true` (CI success, review approved, conflicts なし) だったため、conflict resolution ステップはスキップした。
 
 ### Deferred Items
-- 実データでの `--apply-remote` 実行 (Post-merge AC) は `/merge` 後に実施する (Code フェーズからの引き継ぎ事項を継続)。
+- Post-merge AC: `scripts/reclaim-stale-worktrees.sh --apply-remote` を実データで実行し、`worktree-verify+issue-*` / `worktree-code+issue-*` 等の残留ブランチが解消されることを確認する (`/verify` フェーズで実施)。
 
 ### Notes for Next Phase
-- `/merge` では Post-merge AC (`worktree-verify+issue-*` / `worktree-code+issue-*` 等の実データ検証) がマージ後に必要であることを踏まえ、マージ後は忘れずに `scripts/reclaim-stale-worktrees.sh --apply-remote` を実行して残留ブランチの解消を確認すること。
+- `/verify` では上記 Post-merge AC の実データ検証を忘れずに実施すること。dry-run report で対象ブランチの残存を先に確認してから `--apply-remote` を実行するのが安全。
