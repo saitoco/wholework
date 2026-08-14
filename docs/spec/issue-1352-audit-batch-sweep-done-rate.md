@@ -84,3 +84,6 @@ Blocked by #1349 (CLOSED) — `scripts/rank-verify-backlog.sh` + `/audit verify-
 - **`gh issue list --json comments` の採用理由**: `gh search issues --match comments` (Search API) との比較検討を行った。Search API は本リポジトリの既存スクリプトでの前例がなく、GitHub 側のレート制限が Core API と別枠 (認証済みで 30 req/min) でより厳しいため、既存の `gh issue list --json ...` (Core API、Section 1/Section 10 で使用中の規約) を用いる設計とした。実際に `gh issue list --state all --json number,comments --limit N` で comments 込みの一括取得が1回の呼び出しで機能することを本 Spec 作成セッション内で実地確認済み (`collect-verify-retention-stats.sh` の「Issue あたり `gh issue view` 1回、約800 Issue」という既存の N+1 パターンより効率的)。
 - **Step 4 Save 文言の "Sections 8, 9, and 10" 表記**: #1236 (Section 11 追加) 時点で "Sections 8, 9, and 10" のまま更新されておらず、Section 11 が抜けていた既存 drift。本 Issue で同じ文を編集する (Section 12 を追加する) ついでに "Sections 8, 9, 10, 11, and 12" に是正する。
 - 全角括弧表記 (`docs/ja/structure.md` の既存行) はグローバル CLAUDE.md の半角括弧規約の対象外 (既存ファイルの既存表記を維持するのみで、新規に日本語文を執筆する箇所ではないため)。
+
+## Consumed Comments
+No new comments since last phase.
