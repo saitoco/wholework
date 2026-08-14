@@ -100,19 +100,18 @@ N/A — Implementation Steps 1-5 を Spec の記載順どおりに実装した�
 N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the pre-existing forbidden-expression violation in `docs/spec/issue-1349-rank-verify-backlog-batch.md:140` inline (added the 旧称 prefix) rather than waiting on #1139, following the same precedent #1139 itself documents (PR #1138) — currently the only available path to unblock CI for an unrelated pre-existing violation.
-- All 3 pre-merge rubric AC verified PASS directly against `skills/audit/SKILL.md` Section 12, `modules/l0-surfaces.md`, and the Spec's existing path-discrimination Notes section; no checkbox edits were needed (already `[x]` from a prior state).
+- Pre-merge AC gate: `check-pre-merge-ac.sh` reported `unchecked_count=0` and `reconcile-phase-state.sh` reported no `review_incomplete_fallback` — merged directly without an override marker.
+- `gh-pr-merge-status.sh` reported `mergeable=true reason=clean ci_status=success review_status=approved` — squash-merged without conflict resolution (Step 3 skipped).
 
 ### Deferred Items
-- None — the only MUST finding (CI-blocking forbidden expression) was resolved in this phase.
+- None.
 
 ### Notes for Next Phase
-- `/merge` can proceed: no unresolved MUST issues remain and CI is 11/11 SUCCESS as of the fix commit.
-- The post-merge AC (`verify-type: observation event=auto-run session=next`) resolves on the next `/audit stats --retention` run after merge — `/verify` should look for Section 12 output rather than trying to construct its own auto-run signal.
-- #1139 remains open and unrelated to this PR's own scope — this PR's inline fix does not close it; the systemic diff-scope-limiting fix is still pending.
+- `/verify` should look for Section 12 output in the next `/audit stats --retention` run to resolve the post-merge observation AC.
+- #1139 remains open and unrelated to this PR's own scope (see review phase's inline forbidden-expression fix on `docs/spec/issue-1349-rank-verify-backlog-batch.md:140`).
 
 ## review retrospective
 
