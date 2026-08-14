@@ -80,3 +80,47 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / #1071 (fenced code block 内 checkbox 除外) との重複可能性を指摘。#1071 が先行着地した場合は本 Issue の実装をそのロジックに寄せるよう `/spec` でのスコーピングを依頼 (do not auto-close) / https://github.com/saitoco/wholework/issues/1349#issuecomment-5252687982
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 4 は `docs/structure.md` の Directory Layout `scripts/ (86 files)` を `(87 files)` に更新する指示だったが、実装前に `find scripts -maxdepth 1 -type f | wc -l` で実カウントを確認したところ、本 Issue の追加ファイル (`rank-verify-backlog.sh`) を含めて 86 だった (Spec 起票時点で既存記載の `86` 自体が実カウント 85 に対して 1 件先行して不正確だった、本 Issue と無関係の既存 drift)。`87` へ書き換えると新たな不整合を生むため、記載を `86` のまま変更しないことにした。`tests/ (122 files)` は Spec Notes の想定通り実カウントと一致し変更不要だった。
+- `## verify-backlog Subcommand` の Step 2 見出しを当初 "Sequential Verify Dispatch" としたが、`scripts/check-forbidden-expressions.sh` が `docs/product.md` § Terms の "Formerly called 'Dispatch'" (`/auto` の旧称) に大文字小文字を区別して一致し FAIL した。見出しを "Sequential Verify Execution" に変更して解消した (本文中の小文字 "dispatch" は許容される — チェッカーは `Dispatch` の大文字始まりのみを対象とする)。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- No structural divergence between Spec and PR diff. The single recorded deviation (`docs/structure.md`'s `scripts/ (86 files)` kept unchanged rather than bumped to `87`) was independently re-verified against the actual file count (`find scripts -maxdepth 1 -type f | wc -l` → 86) during this review and confirmed correct, not a missed instruction.
+
+### Recurring issues
+
+- One documentation-consistency gap: `docs/guide/workflow.md` was updated with the new `/audit verify-backlog` line, but the `docs/ja/guide/workflow.md` mirror was not — confirmed via `git log` to be newly introduced by this PR, not pre-existing drift. `docs/translation-workflow.md` § "When to Sync" literally says "top-level `docs/*.md`", which reads as excluding `docs/guide/`, while `scripts/check-translation-sync.sh` actually tracks `docs/guide/*.md` too — this wording/implementation mismatch is a plausible root cause for this class of miss recurring across PRs that touch `docs/guide/*.md`. Fixed in this review (SHOULD); worth a follow-up doc clarification if the pattern repeats.
+
+### Acceptance criteria verification difficulty
+
+- None. All 4 Pre-merge conditions were `rubric` type and graded directly against the PR diff without ambiguity; the Post-merge condition (`verify-type: opportunistic`) correctly deferred to post-merge observation.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the SHOULD-level `docs/ja/guide/workflow.md` translation-sync gap directly in this review (low-risk, single-line doc fix) rather than deferring to a follow-up Issue.
+- Left the CONSIDER-level `rank-verify-backlog.sh` edge case (Issues with `auto_count == 0` can fill remaining `--top` slots) unfixed — current backlog scale and default `--top 10` make it unlikely to trigger, and the Spec does not mandate filtering zero-`auto_count` Issues out.
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate against the actual `phase/verify` backlog — remains deferred to post-merge opportunistic verification, unchanged from the code phase's handoff.
+- CONSIDER-level edge case in `rank-verify-backlog.sh` (zero-`auto_count` Issues filling `--top` slots) — not fixed; worth revisiting only if `--top` is set much larger than the default or the backlog shrinks materially.
+
+### Notes for Next Phase
+- `/merge` can proceed without further action — no MUST issues, CI all green (11/11), no unchecked Pre-merge AC.
+- Post-merge, `/verify` should evaluate the sole Post-merge AC (`phase/done` reach-rate observation) once `/audit verify-backlog` has had real-world runs against the backlog.

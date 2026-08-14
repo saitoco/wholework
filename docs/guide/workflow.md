@@ -173,6 +173,7 @@ Detects gaps between documentation and implementation and automatically opens fi
 /audit                 # both perspectives
 /audit stats           # project health diagnostic report (throughput, backlog health)
 /audit premise         # re-evaluate premise markers in open issues
+/audit verify-backlog [--top N]  # rank phase/verify backlog and batch-run /verify
 ```
 
 Run periodically — for example, after a sprint or milestone — to keep docs, tests, and conventions aligned with the codebase.
