@@ -129,6 +129,19 @@ If the condition cannot state the second part — there is no describable eviden
 
 **Examples that fail the firing likelihood check** (cannot state evidence-on-fire): a condition assuming a specific downstream skill runs on a particular future `/auto` invocation (no guarantee it does), a condition awaiting "the next PR of a specific shape" (no guarantee the observation window sees one before it closes), a condition awaiting "the next Spec that touches a certain topic" (a Spec's subject matter is not itself an event `opportunistic-search.sh` can dispatch on).
 
+### observation Type: Evidence Collection Patterns
+
+Once an observation condition passes the Firing Likelihood Check above, the following four patterns are proven-effective evidence sources for actually resolving it — extracted from `/verify` Step 8c runs during the 2026-08-10〜11 `phase/verify` backlog batch (40 Issues, #1349). They are not exhaustive, and `/verify` Step 8c's own evidence collection list is not replaced by this table — treat these as concrete techniques to try first, alongside that list.
+
+| Pattern | When to use | How |
+|---------|-------------|-----|
+| `git blame` + post-fix `session.md` cross-search | `session=next` conditions ("confirm the feature works correctly in the next session") | `git blame` the changed skill/module to confirm the fix landed, then `grep` `docs/sessions/*/session.md` reports generated after the fix for evidence the feature actually ran and behaved correctly (effective in #1304, #1300, #1289) |
+| bats subset execution matching the condition's scenario | The condition text names a specific behavior with an existing or addable test case | Identify the bats test case whose name/scenario matches the condition wording and run it directly with `bats tests/foo.bats -f "test name"` (effective in #1307, #1318) |
+| Direct grep against operational log files | The condition's evidence is a real-world occurrence pattern already recorded in an operational log | `grep` directly against `docs/reports/orchestration-recoveries.md`, `.tmp/auto-events.jsonl`, or similar operational logs to confirm the pattern actually occurred (effective in #984, #318) |
+| On-the-fly lightweight live test construction | No natural occurrence can be waited for, but a minimal live test can be constructed on demand | Place a test handler at `.wholework/verify-commands/{name}.md` (or equivalent) to actually exercise the dispatch path being verified, rather than waiting for it to occur naturally (effective in #124) |
+
+All four patterns remain best-effort: if no evidence surfaces via any of them, do not force a PASS verdict — keep the existing conservative judgment policy (UNCERTAIN or SKIPPED, per `/verify` Step 8c) rather than resolving on partial or absent evidence.
+
 ### Tag Assignment Example
 
 ```markdown

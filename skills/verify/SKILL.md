@@ -449,6 +449,7 @@ GH_EXIT=$?
 - `.tmp/auto-events.jsonl` events for the relevant session_id, if the file currently exists
 - Read-only re-run of `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event <name>` (no side effects — confirmed it never calls `gh issue comment` / `gh issue edit`)
 - The target repository's `.wholework.yml` configuration and directory/file layout (whether the condition's premise holds in this repository)
+- See `modules/verify-classifier.md` § "observation Type: Evidence Collection Patterns" for proven-effective techniques (`git blame`+`session.md` cross-search, `bats -f` subset execution, direct grep against operational logs, on-the-fly live test construction)
 
 **3. Judgment**
 
