@@ -39,7 +39,9 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 
 ## Consumed Comments
 
-前フェーズ以降の新規コメントなし。
+- saito (MEMBER, first-class) — `/verify` の Acceptance Test Results コメント (`type=verify-executability`, post-merge AC #4 は実行可能と判定): https://github.com/saitoco/wholework/issues/1355#issuecomment
+- saito (MEMBER, first-class) — verify iteration 1/3、FAIL につき Issue を fix cycle 用に reopen した旨の通知: https://github.com/saitoco/wholework/issues/1355#issuecomment
+- saito (MEMBER, first-class) — `type=verify-fail` 診断コメント。post-merge AC の実データ実行結果、`worktree-code+issue-*` が 38→38 件で一件も削除されなかった根本原因 (`kind=issue` の headRefOid フォールバック欠如) と推奨修正方針を記録。本フェーズはこの診断を一級入力として本 PR の実装方針に採用した: https://github.com/saitoco/wholework/issues/1355#issuecomment
 
 ## Code Retrospective
 
@@ -51,7 +53,7 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - kind=issue の祖先チェックは `git fetch origin refs/heads/<branch>:refs/remotes/origin/<branch>` でブランチ tip オブジェクトを都度取得する設計とした (任意 SHA1 の直接 fetch は GitHub 側で許可されないケースがあるため)。この fetch 回数は「安全策 (b) の判定に到達したブランチ」に絞られるよう `ensure_default_branch_ready()` で遅延評価しているが、Spec 自体はこの実装細部までは指定していなかった。
 
 ### Rework
-- N/A — 手戻りなし。
+- Post-merge `/verify` FAIL (iteration 1) で判明: `worktree-code+issue-N` (= `/code` pr route が squash merge するブランチ) は `classify_name()` により `kind=issue` に分類されるが、`kind=issue` の安全性チェックは `origin/<default-branch>` への祖先チェックのみで、squash merge されたブランチは常にこれに失敗するため一件も削除されなかった (実データ: 38→38件。対照的に `worktree-verify+issue-*` は `/verify` 由来で ff-only マージ相当のため 93→20件と正常動作)。原因は当初の Spec/Notes (「未コミット変更なしガードの相当実装」) が「`kind=issue` = ff-only マージのみ」という前提に立っており、`/code` pr route のブランチ名も同じ `kind=issue` パターンに一致しうる点が設計時に考慮されていなかったこと。修正: `closes #<N>` を検索し `gh-extract-issue-from-pr.sh` で実際の紐付けを検証した MERGED PR から `headRefOid` を取得し (`/verify` Step 2 の PR 探索と同じ技法)、`kind=issue` にも `kind=pr` と同じ `headRefOid` フォールバックを適用 (ローカル `delete_branch_safe()` の `-D` フォールバック、リモート safety (b) の両方)。bats に回帰テスト3件を追加 (ローカル -D フォールバック1件、リモートの成功/divergence 各1件、計22件 PASS)。
 
 ## review retrospective
 
@@ -65,14 +67,16 @@ Issue #1119 で追加した `scripts/reclaim-stale-worktrees.sh` はローカル
 - Nothing to note — 3件の Pre-merge AC (rubric×2, grep×1) はいずれも safe mode で自動判定可能で、UNCERTAIN は発生しなかった。rubric 条件文は削除対象の安全策 (並行セッション除外相当・未コミット変更なし相当) を明示的に言及しており、grader が判定しやすい形になっていた。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: code -->
 
 ### Key Decisions
-- Pre-merge AC 3件はすべてチェック済み、review-incomplete-fallback は organic completion (fallback 経由ではない) と確認した上で squash merge を実行した。
-- `mergeable=true` (CI success, review approved, conflicts なし) だったため、conflict resolution ステップはスキップした。
+- `/verify` iteration 1 の FAIL 診断コメントで示された推奨修正方針 (`closes #<N>` 検索による headRefOid フォールバックを `kind=issue` にも適用) をそのまま採用した。診断が根本原因・再現データ・修正方針まで具体的に記録していたため、別アプローチの検討は行わなかった。
+- ローカル `delete_branch_safe()` の `kind = pr` ゲートを撤廃し `headRefOid` の有無のみで判定するよう単純化した (`kind` 引数は事実上未使用になったが、呼び出し元シグネチャ変更を避けるため残置)。
+- PR #1357 (元実装、MERGED) とは別の新規 PR として本修正を提出した (`worktree-code+issue-1355` ブランチ・worktree は元 PR マージ後に削除済みのため、新規 worktree で再作成)。
 
 ### Deferred Items
-- Post-merge AC: `scripts/reclaim-stale-worktrees.sh --apply-remote` を実データで実行し、`worktree-verify+issue-*` / `worktree-code+issue-*` 等の残留ブランチが解消されることを確認する (`/verify` フェーズで実施)。
+- Post-merge AC: `scripts/reclaim-stale-worktrees.sh --apply-remote` を実データで再実行し、`worktree-code+issue-*` 等の残留ブランチが (今度こそ) 解消されることを確認する (`/verify` フェーズで実施、iteration 2)。
 
 ### Notes for Next Phase
-- `/verify` では上記 Post-merge AC の実データ検証を忘れずに実施すること。dry-run report で対象ブランチの残存を先に確認してから `--apply-remote` を実行するのが安全。
+- `/review` では今回追加した bats 回帰テスト (closes-PR 経由の headRefOid フォールバック、divergence 時のフォールスルー) が実際のバグシナリオを再現しているか確認すること。
+- `/verify` 再実行時は、`--apply-remote` (dry-run ではない) を実データで実行し、`worktree-code+issue-*` の削除件数が 0 から改善していることを確認すること。dry-run report で対象ブランチの残存を先に確認してから実行するのが安全 (前回 iteration からの継続方針)。
