@@ -174,7 +174,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Cons
 After completing the Comment Consumption Procedure, run the deterministic bash fallback to ensure the section was written even if the LLM skipped it:
 
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER verify
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER verify --no-push
 ```
 
 (best-effort; always exits 0 — the call is mandatory but failures do not block the skill)

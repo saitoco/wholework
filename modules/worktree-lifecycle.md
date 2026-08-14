@@ -211,15 +211,14 @@ script itself — carries it to base. `/code` pr route also passes `--no-push`; 
 in *how* the commit reaches the remote — its own Step 12 pushes the worktree (= PR) branch
 directly afterward, since the PR branch has no `worktree-merge-push.sh` propagation path of its
 own. `/merge` also passes `--no-push`, riding the same push as its own Step 4 Phase Handoff
-commit. `/review` omits `--no-push` and pushes immediately — this is an intentional design
-choice, not the same gap as `/verify`'s below: `/review`'s Size XS/S early-exit branch can end
-the skill before reaching the later unconditional `## Retrospective` push, so deferring the push
-there is not safe. `/verify`'s call site does not yet pass `--no-push` — see the Known gap below.
+commit. `/verify` also passes `--no-push`, matching the `/spec`/`/code` patch-route pattern: the
+commit lands on the worktree branch and reaches base only through its own `Exit: merge-to-main`
+→ `worktree-merge-push.sh` (see #1354). `/review` omits `--no-push` and pushes immediately —
+this is an intentional design choice: `/review`'s Size XS/S early-exit branch can end the skill
+before reaching the later unconditional `## Retrospective` push, so deferring the push there is
+not safe.
 
 **Known gaps (not yet migrated):**
-- `skills/verify/SKILL.md`'s call site still omits `--no-push`
-  and pushes the worktree branch itself, which is the source of the residual
-  `origin/worktree-verify+issue-*` branches. Out of scope for #1058; tracked as a deferred item.
 - `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare
   `git push origin main` rather than routing through `worktree-merge-push.sh` (lock+push only),
   so this table's `/spec`, worktree-skipped row describes the intended propagation path, not the
