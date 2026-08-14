@@ -226,6 +226,20 @@ Resolution is delegated to `scripts/verify-executability-marker.sh resolve <issu
 view` rather than through the Comment Consumption Procedure, so no change to the Cross-phase
 marker exception in Processing Steps is needed for this marker type either.
 
+**`type=batch-verify-dispatch`**: posted by `/audit verify-backlog` (Step 2) immediately before
+each `wholework:verify` call, for every Issue selected by that run's ranking. Attributes:
+`phase=audit`, `issue=<N>` (no `event=` attribute — unlike `type=observation-trigger`, batch
+sweep dispatch has no named event to record). Example:
+```
+<!-- wholework-event: type=batch-verify-dispatch phase=audit issue=42 -->
+Selected by `/audit verify-backlog` ranking (batch verify sweep). Running `wholework:verify` now.
+```
+Resolution: unlike `type=pre-merge-ac-gate` / `type=preview-ac-unverified`, no latest-wins
+resolution is needed. The consumer (`scripts/collect-verify-path-done-rate.sh`) only checks
+whether **at least one** marker exists for a given Issue — since Issue comments are append-only,
+an older marker remains valid evidence even for an Issue that was selected by multiple batch
+sweep runs over time.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 
