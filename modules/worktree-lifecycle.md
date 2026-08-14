@@ -105,7 +105,12 @@ general inventory and reclaim of worktrees/branches whose corresponding Issue is
 MERGED/CLOSED, use `scripts/reclaim-stale-worktrees.sh` (dry-run by default; `--apply` to perform
 deletion). It applies the same safety guards as this module's own lifecycle (concurrent-session
 exclusion, uncommitted-changes protection) plus safe squash-merge branch deletion. See
-`docs/spec/issue-1119-reclaim-stale-worktrees.md` for the full design.
+`docs/spec/issue-1119-reclaim-stale-worktrees.md` for the full design. The same script also
+reclaims orphan `worktree-*` branches left behind on `origin` (e.g. by a `/verify` or `/code` pr
+route session that pushed a worktree branch but exited before deleting it): always enumerated as
+a dry-run report, with a separate `--apply-remote` flag (independent from `--apply`) gating the
+actual `git push origin --delete`. See `docs/spec/issue-1355-reclaim-remote-branches.md` for the
+full design.
 
 ### Editing `.claude/` files inside worktrees
 
