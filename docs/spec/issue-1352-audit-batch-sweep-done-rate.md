@@ -87,3 +87,40 @@ Blocked by #1349 (CLOSED) — `scripts/rank-verify-backlog.sh` + `/audit verify-
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1-5 を Spec の記載順どおりに実装した。
+
+### Design Gaps/Ambiguities
+- `bash scripts/check-forbidden-expressions.sh` を実行したところ、本 Issue で変更していない `docs/spec/issue-1349-rank-verify-backlog-batch.md` (旧称: Dispatch という用語をそのまま引用した既存の Retrospective 記述) が無関係にフラグされ exit 1 になることを確認した。`git stash` で本 PR の変更を退避した状態でも同じ失敗が再現したため、本 Issue が持ち込んだものではないベースブランチの既存事象と判断し、対応をスコープ外とした。同種の問題 (無関係ファイルの forbidden expression が無関係 PR をブロックする) は既に #1139 で追跡済みのため、新規 follow-up Issue は起票しなかった。
+
+### Rework
+N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the pre-existing forbidden-expression violation in `docs/spec/issue-1349-rank-verify-backlog-batch.md:140` inline (added the 旧称 prefix) rather than waiting on #1139, following the same precedent #1139 itself documents (PR #1138) — currently the only available path to unblock CI for an unrelated pre-existing violation.
+- All 3 pre-merge rubric AC verified PASS directly against `skills/audit/SKILL.md` Section 12, `modules/l0-surfaces.md`, and the Spec's existing path-discrimination Notes section; no checkbox edits were needed (already `[x]` from a prior state).
+
+### Deferred Items
+- None — the only MUST finding (CI-blocking forbidden expression) was resolved in this phase.
+
+### Notes for Next Phase
+- `/merge` can proceed: no unresolved MUST issues remain and CI is 11/11 SUCCESS as of the fix commit.
+- The post-merge AC (`verify-type: observation event=auto-run session=next`) resolves on the next `/audit stats --retention` run after merge — `/verify` should look for Section 12 output rather than trying to construct its own auto-run signal.
+- #1139 remains open and unrelated to this PR's own scope — this PR's inline fix does not close it; the systemic diff-scope-limiting fix is still pending.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — Implementation Steps 1-5 were followed as specified. The lightweight integrated review (review-light, all 4 aspects) found no MUST/SHOULD/CONSIDER-level issues against the diff, the Spec, or the steering documents.
+
+### Recurring issues
+- This PR hit the same structural pattern already tracked by #1139 (first observed on PR #1138, per #1139's own Background section): CI's `Forbidden Expressions check` failed on a pre-existing violation living in a *different* Issue's Spec file (`docs/spec/issue-1349-rank-verify-backlog-batch.md:140`, missing the 旧称/Formerly-called exemption phrasing around a deprecated term reference), unrelated to this PR's own diff. Following the same precedent #1139 documents, `/review` fixed it inline (adding the 旧称 prefix) since no diff-scope-limiting exception exists yet. A second occurrence of this exact pattern strengthens the case for prioritizing #1139's scope-limited check mode — this is recurring friction, not a one-off.
+
+### Acceptance criteria verification difficulty
+Nothing to note — all 3 pre-merge AC were `rubric` type with the target Spec file path named explicitly in the Issue body text (an Auto-Resolve Log correction already applied at Issue-authoring time, following the precedent set by #1351). The grader therefore had direct evidence access for all 3, and each verified as PASS without ambiguity.

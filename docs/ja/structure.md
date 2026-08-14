@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（86 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（87 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（122 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（123 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -205,6 +205,7 @@ wholework/
 - `scripts/collect-run-facts.sh` — 完走した `/auto` 実行の事実 (diff-less な operate 値を含む route・実行 mode・Size・各 phase の結果・PR 状態・anomaly 件数・recovery tier・fact token) を `.tmp/auto-events.jsonl` から JSON に構造化する。run-fact AC 照合 (`modules/run-fact-matching.md`) の入力
 - `scripts/scan-pending-ac.sh` — `phase/verify` の Issue (全 state) から未チェックの post-merge AC を列挙し、`collect-run-facts.sh` の fact token で事前絞り込みする
 - `scripts/rank-verify-backlog.sh` — `phase/verify` backlog の Issue を、verify command 付きの未チェック Post-merge AC (auto-checkable) 件数でランキングする。コードフェンス内のサンプルチェックボックス文字列は除外。`/audit verify-backlog` 向けに上位 N 件の Issue 番号を出力する
+- `scripts/collect-verify-path-done-rate.sh` — batch sweep / observation dispatch / opportunistic-verify の各ディスパッチ経路間で `phase/done` 到達率を比較する（前者2つは Issue コメントマーカー、後者は `docs/sessions/*/events.jsonl` を判別根拠とし、経路は互いに排他ではない）。`/audit stats --retention` Section 12 向け
 - `scripts/apply-run-fact-match.sh` — run-fact AC 照合の verdict (satisfied/not_satisfied/ambiguous) に対する決定的な autonomy tier ゲート: チェックボックスの自動チェック、`Recommend:` 候補提示、または無処理のいずれかを実行
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ
 

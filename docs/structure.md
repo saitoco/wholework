@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (86 files)
+├── scripts/             # Utility scripts used by skills and agents (87 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (122 files)
+├── tests/               # Bats test files for scripts (123 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -213,6 +213,7 @@ Key modules:
 - `scripts/collect-run-facts.sh` — structure a completed `/auto` run's facts (route including the diff-less operate value, run mode, Size, phase outcomes, PR state, anomaly counts, recovery tiers, fact tokens) as JSON from `.tmp/auto-events.jsonl`, for run-fact AC reconciliation (`modules/run-fact-matching.md`)
 - `scripts/scan-pending-ac.sh` — enumerate unchecked post-merge acceptance conditions across `phase/verify` Issues (all states), optionally pre-filtered by `collect-run-facts.sh` fact tokens
 - `scripts/rank-verify-backlog.sh` — rank `phase/verify` backlog Issues by unchecked Post-merge acceptance conditions carrying a verify command (auto-checkable), excluding code-fenced sample checkbox text; outputs the top N Issue numbers for `/audit verify-backlog`
+- `scripts/collect-verify-path-done-rate.sh` — compare `phase/done` reach rate across the batch sweep / observation dispatch / opportunistic-verify dispatch paths (Issue comment markers for the first two, `docs/sessions/*/events.jsonl` for the third; paths are not mutually exclusive), for `/audit stats --retention` Section 12
 - `scripts/apply-run-fact-match.sh` — deterministic autonomy-tier gate for a run-fact AC match verdict (satisfied/not_satisfied/ambiguous): auto-checks the checkbox, prints an advisory `Recommend:` line, or does nothing
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
