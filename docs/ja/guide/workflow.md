@@ -169,6 +169,7 @@ Steering Documents（`docs/product.md`、`tech.md`、`structure.md`）と `docs/
 /audit                 # 両観点
 /audit stats           # プロジェクト健全性診断レポート（スループット、バックログ健全性）
 /audit premise         # open issue の前提マーカーを再評価
+/audit verify-backlog [--top N]  # phase/verify backlog をランキング選抜し /verify をバッチ実行
 ```
 
 定期的に実行 — 例えばスプリントやマイルストーン後 — してドキュメント、テスト、規約をコードベースに合わせて揃え続けます。
