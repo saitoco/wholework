@@ -7,7 +7,7 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/reclaim-stale
 
 setup() {
     MAIN_REPO="$BATS_TEST_TMPDIR/main"
-    git init -q "$MAIN_REPO"
+    git init -q -b main "$MAIN_REPO"
     git -C "$MAIN_REPO" config user.email "test@example.com"
     git -C "$MAIN_REPO" config user.name "Test"
     (
@@ -19,6 +19,12 @@ setup() {
     # Resolve to the real path (e.g. macOS /tmp -> /private/tmp) so it matches
     # what `git worktree list` reports.
     MAIN_REPO="$(cd "$MAIN_REPO" && pwd -P)"
+
+    # Real bare repo used as `origin`, for remote branch reclaim tests.
+    ORIGIN_REPO="$BATS_TEST_TMPDIR/origin.git"
+    git init -q --bare -b main "$ORIGIN_REPO"
+    git -C "$MAIN_REPO" remote add origin "$ORIGIN_REPO"
+    git -C "$MAIN_REPO" push -q origin main
 
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
@@ -61,6 +67,33 @@ mock_issue() {
 mock_pr() {
     echo "$2" > "$MOCK_DIR/gh-state/pr-$1-state"
     echo "${3:-}" > "$MOCK_DIR/gh-state/pr-$1-headrefoid"
+}
+
+# push_remote_branch <branch>
+# Creates <branch> at the current main HEAD (trivially an ancestor of main),
+# pushes it to origin, then deletes the local branch -- simulating an orphan
+# remote-only branch with no local worktree/branch checkout.
+push_remote_branch() {
+    local branch="$1"
+    git -C "$MAIN_REPO" branch "$branch"
+    git -C "$MAIN_REPO" push -q origin "$branch"
+    git -C "$MAIN_REPO" branch -D "$branch"
+}
+
+# push_remote_branch_with_commit <branch>
+# Same as push_remote_branch, but the branch carries one extra commit not
+# merged into main (so it is NOT an ancestor of main). Sets
+# $REMOTE_BRANCH_SHA to the pushed commit's SHA for headRefOid-matching tests.
+push_remote_branch_with_commit() {
+    local branch="$1"
+    git -C "$MAIN_REPO" checkout -q -b "$branch"
+    echo "change for $branch" >> "$MAIN_REPO/file.txt"
+    git -C "$MAIN_REPO" add -A
+    git -C "$MAIN_REPO" commit -q -m "commit for $branch"
+    REMOTE_BRANCH_SHA="$(git -C "$MAIN_REPO" rev-parse HEAD)"
+    git -C "$MAIN_REPO" push -q origin "$branch"
+    git -C "$MAIN_REPO" checkout -q main
+    git -C "$MAIN_REPO" branch -D "$branch"
 }
 
 @test "default (no args) is dry-run: no worktree or branch is removed" {
@@ -217,4 +250,122 @@ mock_pr() {
 
     git -C "$MAIN_REPO" worktree list | grep -q "wt4000"
     git -C "$MAIN_REPO" branch --list 'worktree-code+issue-4000' | grep -q "worktree-code+issue-4000"
+}
+
+@test "remote reclaim: default (no args) is dry-run, reports without deleting (AC1)" {
+    mock_issue 1006 CLOSED
+    push_remote_branch "worktree-code+issue-1006"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"would delete (remote): worktree-code+issue-1006 (issue #1006, completed)"* ]]
+    [[ "$output" == *"[dry-run] No remote changes made. Re-run with --apply-remote to perform remote reclaim."* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-1006' | grep -q worktree-code+issue-1006
+}
+
+@test "remote reclaim: --apply-remote deletes a completed Issue's remote branch (AC1, AC2)" {
+    mock_issue 1006 CLOSED
+    push_remote_branch "worktree-code+issue-1006"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (remote branch): 1"* ]]
+
+    run git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-1006'
+    [ -z "$output" ]
+}
+
+@test "remote reclaim: --apply-remote alone does not trigger local worktree/branch removal (independent flags)" {
+    mock_issue 1006 CLOSED
+    push_remote_branch "worktree-code+issue-1006"
+    mock_issue 1007 CLOSED
+    git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-1007 "$BATS_TEST_TMPDIR/wt1007"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+
+    git -C "$MAIN_REPO" worktree list | grep -q "wt1007"
+    git -C "$MAIN_REPO" branch --list 'worktree-code+issue-1007' | grep -q "worktree-code+issue-1007"
+}
+
+@test "remote reclaim: branch with a live local checkout is excluded (concurrent-session guard equivalent)" {
+    mock_issue 1006 CLOSED
+    git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-1006 "$BATS_TEST_TMPDIR/wt1006"
+    git -C "$MAIN_REPO" push -q origin worktree-code+issue-1006
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"excluded (remote, local checkout present): 1"* ]]
+    [[ "$output" == *"worktree-code+issue-1006 (local checkout present)"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-1006' | grep -q worktree-code+issue-1006
+}
+
+@test "remote reclaim: kind=issue branch merged into main (ancestor) is reclaimed" {
+    mock_issue 2006 CLOSED
+    push_remote_branch "worktree-code+issue-2006"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (remote branch): 1"* ]]
+
+    run git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-2006'
+    [ -z "$output" ]
+}
+
+@test "remote reclaim: kind=issue branch not merged into main is warned, not deleted (safety guard rejection)" {
+    mock_issue 3006 CLOSED
+    push_remote_branch_with_commit "worktree-code+issue-3006"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
+    [[ "$output" == *"worktree-code+issue-3006 (not an ancestor of origin/main)"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-3006' | grep -q worktree-code+issue-3006
+}
+
+@test "remote reclaim: kind=pr branch matching MERGED PR headRefOid is reclaimed (squash-merge case)" {
+    push_remote_branch_with_commit "worktree-code+pr-4149"
+    mock_pr 4149 MERGED "$REMOTE_BRANCH_SHA"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (remote branch): 1"* ]]
+
+    run git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+pr-4149'
+    [ -z "$output" ]
+}
+
+@test "remote reclaim: kind=pr branch diverging from MERGED PR headRefOid is warned, not deleted (safety guard rejection)" {
+    push_remote_branch_with_commit "worktree-code+pr-4150"
+    mock_pr 4150 MERGED "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"warned (remote, unmerged/diverged): 1"* ]]
+    [[ "$output" == *"worktree-code+pr-4150 (branch tip diverges from merged PR head, or no merged PR found)"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+pr-4150' | grep -q worktree-code+pr-4150
+}
+
+@test "remote reclaim: open Issue's remote branch is left untouched (not completed)" {
+    mock_issue 5006 OPEN
+    push_remote_branch "worktree-code+issue-5006"
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply-remote
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (remote branch): 0"* ]]
+
+    git ls-remote --heads "$ORIGIN_REPO" 'worktree-code+issue-5006' | grep -q worktree-code+issue-5006
 }

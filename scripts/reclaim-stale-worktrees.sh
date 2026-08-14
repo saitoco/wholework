@@ -1,12 +1,15 @@
 #!/bin/bash
 # reclaim-stale-worktrees.sh - Inventory and reclaim stale worktrees and orphan
-# branches for Issues/PRs that have already completed (CLOSED/MERGED).
+# branches for Issues/PRs that have already completed (CLOSED/MERGED), plus
+# orphan `worktree-*` branches left behind on `origin`.
 #
-# Usage: reclaim-stale-worktrees.sh [--apply]
-#   (no args)  Dry-run: report only, no deletions performed (default)
-#   --apply    Actually perform worktree/branch removal
+# Usage: reclaim-stale-worktrees.sh [--apply] [--apply-remote]
+#   (no args)       Dry-run: report only, no deletions performed (default)
+#   --apply         Actually perform local worktree/branch removal
+#   --apply-remote  Actually perform remote (origin) worktree-* branch removal
+#   (both flags are independent and may be combined or used alone)
 #
-# Safety guards applied before any deletion (see docs/spec/issue-1119-reclaim-stale-worktrees.md):
+# Safety guards applied before any local deletion (see docs/spec/issue-1119-reclaim-stale-worktrees.md):
 #   - concurrent-session guard: a locked worktree whose HEAD matches the current
 #     main HEAD is excluded (may be in use by a live parallel session)
 #   - uncommitted-changes guard: a worktree with non-empty `git status --porcelain`
@@ -15,21 +18,41 @@
 #     branch, "not fully merged"), fall back to `-D` only when the branch tip
 #     matches the MERGED PR's headRefOid
 #
+# Remote branch reclaim (origin/worktree-*, see docs/spec/issue-1355-reclaim-remote-branches.md):
+#   Always enumerated (dry-run report), regardless of --apply-remote. Branches
+#   are classified/completion-checked with the same classify_name/check_completion
+#   logic as local reclaim above, then gated by safety guards equivalent to the
+#   local ones:
+#   - concurrent-session guard equivalent: a branch with a live local checkout
+#     (already tracked in SEEN_BRANCHES from the local enumeration above) is
+#     skipped here and left for the local reclaim path to handle when that
+#     worktree itself is eventually reclaimed
+#   - uncommitted-changes guard equivalent: kind=issue branches must be an
+#     ancestor of origin/<default-branch> (fetched on demand); kind=pr branches
+#     must match the MERGED PR's headRefOid exactly (squash merges do not
+#     preserve ancestry, so an ancestor check cannot be used for kind=pr)
+#   Actual deletion (`git push origin --delete`) only runs under --apply-remote.
+#
 # bash 3.2 compatible (no associative arrays, no mapfile/readarray) so it runs
 # under macOS system bash.
 
 set -euo pipefail
 
 APPLY=false
+APPLY_REMOTE=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply)
       APPLY=true
       shift
       ;;
+    --apply-remote)
+      APPLY_REMOTE=true
+      shift
+      ;;
     *)
       echo "Error: Invalid option: $1" >&2
-      echo "Usage: $0 [--apply]" >&2
+      echo "Usage: $0 [--apply] [--apply-remote]" >&2
       exit 1
       ;;
   esac
@@ -48,6 +71,12 @@ count_warned_diverge=0
 count_warned_gh=0
 count_skipped=0
 
+count_remote_reclaimed=0
+count_remote_excluded=0
+count_remote_warned_unmerged=0
+count_remote_warned_gh=0
+count_remote_skipped=0
+
 PRUNED_LIST=""
 RECLAIMED_WT_LIST=""
 RECLAIMED_WT_ONLY_LIST=""
@@ -57,6 +86,12 @@ WARNED_UNCOMMITTED_LIST=""
 WARNED_DIVERGE_LIST=""
 WARNED_GH_LIST=""
 SKIPPED_LIST=""
+
+REMOTE_RECLAIMED_LIST=""
+REMOTE_EXCLUDED_LIST=""
+REMOTE_WARNED_UNMERGED_LIST=""
+REMOTE_WARNED_GH_LIST=""
+REMOTE_SKIPPED_LIST=""
 
 SEEN_BRANCHES=""
 
@@ -127,6 +162,38 @@ delete_branch_safe() {
   count_warned_diverge=$((count_warned_diverge + 1))
   WARNED_DIVERGE_LIST="${WARNED_DIVERGE_LIST}${branch} (branch tip diverges from merged PR head, or no merged PR found — left in place)
 "
+  return 1
+}
+
+# resolve_default_branch: prints the base branch name used for the remote
+# kind=issue ancestor check (origin/HEAD's target if set, else "main").
+resolve_default_branch() {
+  local ref
+  ref="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null || true)"
+  if [ -n "$ref" ]; then
+    echo "${ref#refs/remotes/origin/}"
+  else
+    echo "main"
+  fi
+}
+
+# ensure_default_branch_ready: lazily resolves and fetches origin/<default-branch>
+# into a local remote-tracking ref, memoized via $default_branch_ready. Sets
+# $default_branch as a side effect. Returns 1 if the ref cannot be made
+# available locally (e.g. fetch failed and no prior local copy exists).
+ensure_default_branch_ready() {
+  if [ "$default_branch_ready" = "true" ]; then
+    return 0
+  fi
+  default_branch="$(resolve_default_branch)"
+  if git fetch --quiet origin "refs/heads/${default_branch}:refs/remotes/origin/${default_branch}" 2>/dev/null; then
+    default_branch_ready=true
+    return 0
+  fi
+  if git rev-parse -q --verify "refs/remotes/origin/${default_branch}" >/dev/null 2>&1; then
+    default_branch_ready=true
+    return 0
+  fi
   return 1
 }
 
@@ -340,6 +407,93 @@ if [ -n "$orphan_branches" ]; then
   done <<< "$orphan_branches"
 fi
 
+# --- Step J: remote (origin) worktree-* branch reclaim ---
+default_branch=""
+default_branch_ready=false
+
+remote_refs="$(git ls-remote --heads origin 'worktree-*' 2>/dev/null || true)"
+if [ -n "$remote_refs" ]; then
+  while IFS=$'\t' read -r remote_sha remote_ref; do
+    [ -z "$remote_ref" ] && continue
+    branch="${remote_ref#refs/heads/}"
+
+    # Safety (a): concurrent-session guard equivalent -- a branch with a live
+    # local checkout is left for the local reclaim path above to handle.
+    if printf '%s\n' "$SEEN_BRANCHES" | grep -qxF "$branch"; then
+      count_remote_excluded=$((count_remote_excluded + 1))
+      REMOTE_EXCLUDED_LIST="${REMOTE_EXCLUDED_LIST}${branch} (local checkout present)
+"
+      continue
+    fi
+
+    if ! classify_name "$branch"; then
+      count_remote_skipped=$((count_remote_skipped + 1))
+      REMOTE_SKIPPED_LIST="${REMOTE_SKIPPED_LIST}${branch} (unrecognized)
+"
+      continue
+    fi
+
+    kind="$CLASSIFY_KIND"
+    num="$CLASSIFY_NUM"
+
+    check_completion "$kind" "$num"
+
+    if [ "$COMPLETION_STATE" = "unknown" ]; then
+      count_remote_warned_gh=$((count_remote_warned_gh + 1))
+      REMOTE_WARNED_GH_LIST="${REMOTE_WARNED_GH_LIST}${branch} (${kind} #${num}, gh lookup failed)
+"
+      continue
+    fi
+
+    if [ "$COMPLETION_STATE" != "done" ]; then
+      continue
+    fi
+
+    # Safety (b): uncommitted-changes guard equivalent.
+    if [ "$kind" = "pr" ]; then
+      if [ -z "$COMPLETION_HEAD_REF_OID" ] || [ "$remote_sha" != "$COMPLETION_HEAD_REF_OID" ]; then
+        count_remote_warned_unmerged=$((count_remote_warned_unmerged + 1))
+        REMOTE_WARNED_UNMERGED_LIST="${REMOTE_WARNED_UNMERGED_LIST}${branch} (branch tip diverges from merged PR head, or no merged PR found)
+"
+        continue
+      fi
+    else
+      if ! ensure_default_branch_ready; then
+        count_remote_warned_gh=$((count_remote_warned_gh + 1))
+        REMOTE_WARNED_GH_LIST="${REMOTE_WARNED_GH_LIST}${branch} (origin/${default_branch} not available locally)
+"
+        continue
+      fi
+      if ! git cat-file -e "$remote_sha" 2>/dev/null; then
+        git fetch --quiet origin "${remote_ref}:refs/remotes/origin/${branch}" 2>/dev/null || true
+      fi
+      if ! git merge-base --is-ancestor "$remote_sha" "refs/remotes/origin/${default_branch}" 2>/dev/null; then
+        count_remote_warned_unmerged=$((count_remote_warned_unmerged + 1))
+        REMOTE_WARNED_UNMERGED_LIST="${REMOTE_WARNED_UNMERGED_LIST}${branch} (not an ancestor of origin/${default_branch})
+"
+        continue
+      fi
+    fi
+
+    if [ "$APPLY_REMOTE" != "true" ]; then
+      count_remote_reclaimed=$((count_remote_reclaimed + 1))
+      REMOTE_RECLAIMED_LIST="${REMOTE_RECLAIMED_LIST}would delete (remote): ${branch} (${kind} #${num}, completed)
+"
+      continue
+    fi
+
+    if git push origin --delete "$branch" 2>/dev/null; then
+      count_remote_reclaimed=$((count_remote_reclaimed + 1))
+      REMOTE_RECLAIMED_LIST="${REMOTE_RECLAIMED_LIST}${branch} (${kind} #${num})
+"
+    else
+      count_remote_skipped=$((count_remote_skipped + 1))
+      REMOTE_SKIPPED_LIST="${REMOTE_SKIPPED_LIST}${branch} (remote delete failed)
+"
+    fi
+  done <<< "$remote_refs"
+fi
+
 # --- Step I: summary ---
 print_section() {
   local title="$1"
@@ -361,8 +515,17 @@ print_section "warned (uncommitted changes)" "$count_warned_uncommitted" "$WARNE
 print_section "warned (branch tip diverges)" "$count_warned_diverge" "$WARNED_DIVERGE_LIST"
 print_section "warned (gh lookup failed)" "$count_warned_gh" "$WARNED_GH_LIST"
 print_section "skipped (unrecognized)" "$count_skipped" "$SKIPPED_LIST"
+print_section "reclaimed (remote branch)" "$count_remote_reclaimed" "$REMOTE_RECLAIMED_LIST"
+print_section "excluded (remote, local checkout present)" "$count_remote_excluded" "$REMOTE_EXCLUDED_LIST"
+print_section "warned (remote, unmerged/diverged)" "$count_remote_warned_unmerged" "$REMOTE_WARNED_UNMERGED_LIST"
+print_section "warned (remote, gh/fetch lookup failed)" "$count_remote_warned_gh" "$REMOTE_WARNED_GH_LIST"
+print_section "skipped (remote, unrecognized/delete failed)" "$count_remote_skipped" "$REMOTE_SKIPPED_LIST"
 
 if [ "$APPLY" != "true" ]; then
   echo ""
   echo "[dry-run] No changes made. Re-run with --apply to perform reclaim."
+fi
+if [ "$APPLY_REMOTE" != "true" ]; then
+  echo ""
+  echo "[dry-run] No remote changes made. Re-run with --apply-remote to perform remote reclaim."
 fi
