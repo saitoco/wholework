@@ -111,16 +111,16 @@
 - None. All 4 Pre-merge conditions were `rubric` type and graded directly against the PR diff without ambiguity; the Post-merge condition (`verify-type: opportunistic`) correctly deferred to post-merge observation.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the SHOULD-level `docs/ja/guide/workflow.md` translation-sync gap directly in this review (low-risk, single-line doc fix) rather than deferring to a follow-up Issue.
-- Left the CONSIDER-level `rank-verify-backlog.sh` edge case (Issues with `auto_count == 0` can fill remaining `--top` slots) unfixed — current backlog scale and default `--top 10` make it unlikely to trigger, and the Spec does not mandate filtering zero-`auto_count` Issues out.
+- Squash-merged PR #1356 into `main` (commit `4ec3cee1`) with no conflicts; all 4 Pre-merge ACs were already checked and CI was green, so no auto-resolve or override marker was needed.
+- No new Issue comments existed since the last `phase/*` label change, so the Consumed Comments section was written as "No new comments since last phase."
 
 ### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate against the actual `phase/verify` backlog — remains deferred to post-merge opportunistic verification, unchanged from the code phase's handoff.
-- CONSIDER-level edge case in `rank-verify-backlog.sh` (zero-`auto_count` Issues filling `--top` slots) — not fixed; worth revisiting only if `--top` is set much larger than the default or the backlog shrinks materially.
+- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate for `/audit verify-backlog` against the actual `phase/verify` backlog — carried forward unchanged from the review phase's handoff.
+- CONSIDER-level edge case in `rank-verify-backlog.sh` (zero-`auto_count` Issues filling `--top` slots) — still unfixed, per the review phase's decision.
 
 ### Notes for Next Phase
-- `/merge` can proceed without further action — no MUST issues, CI all green (11/11), no unchecked Pre-merge AC.
-- Post-merge, `/verify` should evaluate the sole Post-merge AC (`phase/done` reach-rate observation) once `/audit verify-backlog` has had real-world runs against the backlog.
+- `/verify` should evaluate the sole Post-merge AC by running `/audit verify-backlog` against the live `phase/verify` backlog and comparing the `phase/done` reach rate to the 2026-08-10〜11 manual trial baseline.
+- Label transition to `phase/verify` and Issue-state fallback checks were applied in this run — Issue #1349 should be `CLOSED` with `phase/verify` label after this run completes.
