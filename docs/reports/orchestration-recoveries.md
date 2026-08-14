@@ -74,6 +74,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-14 21:57 UTC: code-retry-fire
+
+### Context
+- Issue #1355, phase: code-pr
+- Source: run-code.sh auto-retry-on-fail
+- Wrapper: run-code.sh, iteration: 1/3
+
+### Diagnosis
+- cause: silent-no-op
+- reconcile-phase-state.sh --check-completion reported matches_expected:false (silent no-op) prior to this retry
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
+
+### Outcome
+- retry fired (iteration 1/3)
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-10 03:51 UTC: manual-recovery-respawn
 
 ### Context
