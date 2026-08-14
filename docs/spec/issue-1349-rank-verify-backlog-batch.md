@@ -80,3 +80,33 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / #1071 (fenced code block 内 checkbox 除外) との重複可能性を指摘。#1071 が先行着地した場合は本 Issue の実装をそのロジックに寄せるよう `/spec` でのスコーピングを依頼 (do not auto-close) / https://github.com/saitoco/wholework/issues/1349#issuecomment-5252687982
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 4 は `docs/structure.md` の Directory Layout `scripts/ (86 files)` を `(87 files)` に更新する指示だったが、実装前に `find scripts -maxdepth 1 -type f | wc -l` で実カウントを確認したところ、本 Issue の追加ファイル (`rank-verify-backlog.sh`) を含めて 86 だった (Spec 起票時点で既存記載の `86` 自体が実カウント 85 に対して 1 件先行して不正確だった、本 Issue と無関係の既存 drift)。`87` へ書き換えると新たな不整合を生むため、記載を `86` のまま変更しないことにした。`tests/ (122 files)` は Spec Notes の想定通り実カウントと一致し変更不要だった。
+- `## verify-backlog Subcommand` の Step 2 見出しを当初 "Sequential Verify Dispatch" としたが、`scripts/check-forbidden-expressions.sh` が `docs/product.md` § Terms の "Formerly called 'Dispatch'" (`/auto` の旧称) に大文字小文字を区別して一致し FAIL した。見出しを "Sequential Verify Execution" に変更して解消した (本文中の小文字 "dispatch" は許容される — チェッカーは `Dispatch` の大文字始まりのみを対象とする)。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Ranking logic is scored per-Issue as `(auto_count desc, issue_number asc)` and truncated to `--top`, matching the manual trial's own selection order (rank by unchecked-AC-with-verify-command count, then pick the top N).
+- Fence exclusion uses a single `in_fence` toggle applied globally (not scoped to the Post-merge section only), so a fence that spans a section boundary cannot leak fenced sample text into either auto_count or manual_count.
+- `/audit verify-backlog` was added as a new subcommand on the existing `/audit` skill rather than a standalone skill, consistent with `/audit`'s existing multi-subcommand structure (`stats`, `progress`, `auto-session`, `premise`).
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`) — observing real `phase/done` reach rate against the actual `phase/verify` backlog — is intentionally left for post-merge opportunistic verification; it cannot be evaluated pre-merge.
+
+### Notes for Next Phase
+- `/review` should confirm the `docs/structure.md` file-count deviation recorded above (kept at `86`, not bumped to `87`) is intentional and not a missed instruction — the reasoning is in this Spec's Code Retrospective.
+- No `## Smoke Test` section exists in this Spec, so Step 11's Smoke Test subsection was a no-op; `/review`/`/verify` should rely on the bats suite (`tests/rank-verify-backlog.bats`) and the pre-merge rubric AC grading already recorded on the Issue for behavioral confidence.
