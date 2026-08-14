@@ -166,6 +166,10 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 
 `/auto --batch --until "label:theme/observability"` (session `29601-1786367167`) の Batch Completion Report observation scan で再度 dispatch された (14 回目)。本 run は List mode (spec→code→verify の順次単発実行) で XL 実行を伴わないため傍証なし。結論は変わらず SKIPPED を維持 — 実 XL Issue での `/audit progress` 実行を引き続き待つ。
 
+### 2026-08-15 再確認 (/auto --batch 1349 1350 1351 1352 セッションから)
+
+`/auto --batch 1349 1350 1351 1352` (session `81722-1786714713`) の Batch Completion Report observation scan で再度 dispatch された (15 回目)。本 run も List mode で XL 実行を伴わないため傍証なし。結論は変わらず SKIPPED を維持 — 実 XL Issue での `/audit progress` 実行を引き続き待つ。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/590#issuecomment-4700169062
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4756911005
