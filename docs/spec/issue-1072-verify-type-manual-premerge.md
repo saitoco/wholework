@@ -54,3 +54,28 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Issue Retrospective コメント (`/issue --non-interactive` 実行時点)。#1072 起票時の非対話モード自動判断ログ (Post-merge AC の検証手段注記、「skill 自己変更 AC の manual/observation 分類」提案は本 Issue に不適用と判断、行番号の現状への更新) を記録したもの。Issue 本文の Autonomous Auto-Resolve Log と同内容の転記であり、本 Spec の設計判断に新規の変更は生じていない。(https://github.com/saitoco/wholework/issues/1072#issuecomment-5304571477)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 を Spec のとおり実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `docs/structure.md` / `docs/ja/structure.md` の Modules 表一行説明 ("post-merge condition verifiability classification" / 「マージ後条件の検証可能性分類」) は、`modules/verify-classifier.md` の Purpose 本文が pre-merge 拡張を反映する記述に変わった以上、一行要約だけが旧前提のまま残ると同じ種類のドリフトを再発させるため、更新対象とした (Spec Notes で「実際の更新要否は `/code` が判断する」とされていた判断ポイント)
+- `modules/verify-classifier.md` の既存の `auto|opportunistic|manual` タグ列挙 (`observation` が抜けている、本 Issue とは無関係の既存ギャップ) は変更しなかった — 本 Issue のスコープは pre-merge 拡張の反映のみ
+
+### Deferred Items
+- Post-merge AC (`/audit stats --retention` 実行時に pre-merge manual preview AC が Manual Waiting Count から除外されることの確認) は、本 repo に `capabilities.pr-preview` を有効化した Issue が存在しないため、検証用シナリオの一時構築が必要 — Issue 本文の Autonomous Auto-Resolve Log に記載済み
+
+### Notes for Next Phase
+- Post-merge AC の検証には `ac-tier: preview` + `verify-type: manual` を持つ AC を含む Issue を一時的に構築するか、`capabilities.pr-preview: true` を設定した検証用シナリオが必要
+- 修正した 3 ファイル (`skills/audit/SKILL.md`、`skills/auto/SKILL.md`、`modules/verify-classifier.md`) 以外に `verify-type: manual` を参照する箇所は、Spec Notes の consumer sweep (`grep -rn "verify-type: manual" skills/ modules/ scripts/`) で洗い出し済み — いずれも修正不要と判断済み
