@@ -399,7 +399,7 @@ EOF
 
 # --- inline code (double backtick) validation ---
 
-@test "success: double-backtick inline code with nested single backtick does not swallow surrounding content" {
+@test "error: unknown verify command adjacent to double-backtick inline code is not swallowed" {
     mkdir -p "$PROJECT_ROOT/skills/myskill"
     cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
 ---
@@ -411,14 +411,14 @@ description: A test skill
 
 Use double backticks when the code itself contains a backtick, e.g. ``the `foo` value``.
 
-- [ ] <!-- verify: file_exists "path/to/file" --> some acceptance condition
+- [ ] <!-- verify: totally_unknown_command "path/to/file" --> some acceptance condition
 
 Later, reference the raw `backtick` character again for emphasis.
 EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"0 error"* ]]
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"未知の verify コマンド"* ]]
 }
 
 # --- decimal step validation ---
