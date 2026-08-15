@@ -135,6 +135,10 @@
 ### Improvement Proposals
 - N/A
 
+### 2026-08-15 再確認 (/audit verify-backlog セッションから)
+
+Pre-merge 5件は変更なし PASS。Post-merge opportunistic 条件2件について、`/doc sync --deep` 等の実使用イベントが本セッション期間中に発生しておらず premise 不成立のまま UNCERTAIN。前回検証時と状況変化なし。改善提案なし。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results (/verify #53) / https://github.com/saitoco/wholework/issues/53#issuecomment-4232713643
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/53#issuecomment-5300727921
