@@ -82,3 +82,32 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Issue Retrospective — Step 7 (AC 分類・verify command 付与) で 2 点の機械的 defect を修正: (1) Post-merge AC の verify-type を `observation` から `opportunistic` へ再分類 (`modules/verify-classifier.md` の firing likelihood check 不合格のため)、(2) Pre-merge AC4 に `command "bats tests/verify-heuristics.bats"` を機械検証として補完 (rubric から bats 実行結果の言明を分離)。あわせて Background の `curl --config` 実例記述が `modules/verify-executor.md` の実装と一致することも確認済み。いずれも本 Spec 作成時点で Issue 本文に反映済みのため追加対応は不要と判断した。(https://github.com/saitoco/wholework/issues/1087#issuecomment-5302759410)
+- No new comments since last phase (cutoff: 最新の `phase/ready` ラベル付与時刻 2026-08-15T15:08:43Z 以降のコメントなし。cross-phase marker (`verify-fail` / `preview-ac-unverified`) も該当なし)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-3 をそのまま実施した。
+
+### Design Gaps/Ambiguities
+
+- Step 9 の Behavioral Change Detection により (`modules/verify-patterns.md` を参照する他の bats ファイルが存在するため) full suite (`bats --jobs 18 tests/`) を実行したところ、`tests/claude-watchdog.bats` の `WATCHDOG_TIMEOUT env var: custom value takes effect` が FAIL した。原因を切り分けるため `scripts/claude-watchdog.sh` を直接手動実行して再現したところ、`WATCHDOG_TIMEOUT=2` で `kill "$cmd_pid"` (SIGTERM) を送出した後も実際のプロセス終了までサンドボックス環境で約 60 秒 (`sleep 60` の全体時間) かかることを確認した — この Bash ツールのサンドボックスにおけるプロセス/シグナル伝播の挙動に起因するものであり、本 Issue の変更対象ファイル (`modules/verify-patterns.md`, `tests/verify-heuristics.bats`) やそれらが参照するテスト (`tests/audit-eager-load-capability.bats` 等 5 ファイル、個別実行で 33/33 PASS 確認済み) とは無関係。`docs/tech.md` の CI parallel/serial split 分類 (FAIL→FAIL は genuine failure) には該当しない — GitHub Actions 実行環境固有の並列実行競合ではなく、このローカルサンドボックス固有のプロセスkill遅延であり、`docs/tech.md` に記載された既知の flaky テスト一覧 (`tests/post_merge_check.bats` 系統) にも含まれていない。Pre-merge AC5 の実対象コマンド `bats tests/verify-heuristics.bats` は 9/9 PASS を個別に確認済み。`scripts/claude-watchdog.sh` / `tests/claude-watchdog.bats` は本 Issue のスコープ外のため変更していない。
+
+### Rework
+
+N/A — rework は発生していない。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- §23 の既存 step 2/3 は文言を維持しつつ「実装ファイルが既に存在する場合」の前提を条件句として追記するに留め、新規サブセクション「Pre-implementation anchor selection」を後続配置する構成にした (Spec Implementation Step 1 の指示通り、後方互換を優先)
+- Issue #1074 の real example はそのまま §23 内に転記し、汎化ガイドラインと具体例の対応関係を保った
+
+### Deferred Items
+- `tests/claude-watchdog.bats` の `WATCHDOG_TIMEOUT env var: custom value takes effect` が Claude Code Bash ツールサンドボックス下で決定論的に FAIL する件は、本 Issue のスコープ外のため Issue #1366 (`retro/code`) として別途起票した
+
+### Notes for Next Phase
+- Pre-merge AC1-AC5 は全て `/code` フェーズ内で PASS 確認済み、Issue 側チェックボックスも `[x]` 済み
+- `/verify` は Post-merge AC (opportunistic: 次回 `/issue`/`/spec` が非連続シンボルの verify command を実装前に生成する際の確認) を対象とする
