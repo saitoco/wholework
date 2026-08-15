@@ -34,3 +34,28 @@ No Spec existed prior to `/code` (Issue transitioned `phase/issue` → `phase/re
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Issue Retrospective
+
+### Ambiguity Points & Auto-Resolution
+
+Pre-merge AC3 の verify command が Step 7 の検証時点で **常時 PASS の no-op** であることが判明したため、非対話モードの Auto-resolve として修正した:
+
+- **修正前**: `command "python3 scripts/check-language-convention.py"`
+- **問題**: `scripts/check-language-convention.py` の `main()` は `sys.stdin.read()` で diff を読む設計で、標準入力なしで実行すると空文字列を渡され `find_violations` が常に空を返す。つまり「検査結果が変わらない」ことを一切検証せず常に exit 0 になる。
+- **選んだ選択肢**: `<!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->` に差し替え
+  - 理由: `.github/workflows/test.yml` の `language-convention` ジョブが `git diff ... | python3 scripts/check-language-convention.py` の形で実際の diff を検査する設計になっており、これが真の検証経路。Size=XS (patch route) のため `docs/spec/`(Standard Format ガイド) が示す `gh run list` 形式を採用。
+  - 他の候補: 検証用の固定 diff を用意して pipe する `command` 案も検討したが、diff 範囲の選び方が恣意的になり別 Issue の議論が必要になるため見送り、CI 経路への委譲を選んだ (least-risk かつ既存パターン踏襲)。
+
+Post-merge の observation 条件 (「二重バッククォートを含むドキュメントを追加・編集した際に…確認する」`event=auto-run`) は削除した:
+
+- **理由**: `modules/verify-classifier.md` § observation Type: Firing Likelihood Check の失格例 (「特定の未来の `/auto` 実行が該当条件を満たす保証がない」) に該当し、evidence-on-fire を条件文で明示できない。飲み込み解消の事実自体は Pre-merge AC2 のテスト追加で resolve now 済みのため、Alternative 3 (条件を削除) を適用した。
+
+### Policy Decisions
+
+- `### Pre-merge` の見出しを Standard Format の `### Pre-merge (auto-verified)` に正規化した (内容変更なし)。
+- AC1/AC2 の verify command は既存のまま維持 (Background の実測結果と一致することを再確認済み)。
+
+### Consumed Comments
+
+No new comments since last phase.
