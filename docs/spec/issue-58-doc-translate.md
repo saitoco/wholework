@@ -260,7 +260,14 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 - 11条件すべて PASS、FAIL/UNCERTAIN ゼロ。grep/section_contains ベースの verify commandは安定して機能した
 - Post-merge 5条件はすべて `verify-type: manual`。`/doc translate` の実行結果確認（翻訳品質・リンク切れ・sync 誤検知）は手動確認を要するため、適切な分類
 
+#### verify (2026-08-15 再検証、/audit verify-backlog)
+- `docs/ja/` が実在する運用中の成果物であることを活かし、Post-merge 5条件を実地調査で検証した（詳細は issuecomment 参照）。全5条件 PASS、`phase/done` へ遷移。
+- 実地検証の過程で `docs/ja/tech.md` に3件の相対リンク切れ（`../modules/*.md` が `docs/modules/*.md` に誤解決）を発見し、本セッション内で修正・コミット（`8e83deb0`）。Spec の Relative Link Rewriting Rules 自体は正しく、`/doc translate` 実行時に LLM がルール適用を一部のリンクに対して怠った執行時の欠落と判断。
+- 再発防止のため、Step 5 (Review Generated Translations) への機械的リンク検証追加を提案し #1361 として起票。
+
 ### Improvement Proposals
+
+- #1361: `/doc translate` Step 5 に生成後の相対リンク機械検証を追加（再検証セッションで発見した実バグの再発防止）。skill 基盤改善候補。
 - `skills/doc/SKILL.md` の translate セクション（約100行）を `skills/doc/translate-phase.md` に Progressive Disclosure 分離する。現在のSKILL.mdは 800行超に達しており、tech.md の Core/Domain 分離方針（構造的脆弱性として登録済みか要確認）に準拠した分割が保守性を高める
 
 ## Consumed Comments
