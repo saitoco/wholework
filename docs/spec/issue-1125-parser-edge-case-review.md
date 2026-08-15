@@ -63,19 +63,15 @@ PR #1120 (Issue #1055) の `/review --light` で、追加コードに silent fai
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 判定 (実行対象の信頼境界なし) を含む5件の指摘全てを `/review` フェーズ内で修正した (SHOULD/CONSIDER も含め、いずれも同一サブセクション内の低リスクなドキュメント/ロジック修正であり fix コストが低いため)
-- Trust gating は `modules/l0-surfaces.md` § Trust Boundary の既存分類 (OWNER/MEMBER/COLLABORATOR = first-class) をそのまま再利用し、新しい判定基準を作らなかった
-- 事前実測済み finding (`[Edge Case Execution]` マーカー) を下流フィルタ (10.3 検証 / Workflow adversarial-refute) でバイパスする設計とし、両経路に同じ考え方を反映した
+- Pre-merge AC 3件全 PASS・CI SUCCESS・review 承認済みの状態を確認したうえで squash merge を実行した (conflict なし、追加の conflict 解決手順は不要だった)
 
 ### Deferred Items
 - Post-merge AC (`verify-type: observation event=auto-run session=next`): パーサ系変更を含む次回 PR の `/review` で edge case pre-check が実際に発火するかは post-merge の観察待ち (未変更で継続)
-- 本 PR 自体はパーサ/バリデータ変更を含まないため、Parser/Validator Edge Case Pre-check 自体は本 PR のレビュー中に発火しなかった (発火条件 (a)(b)(c) いずれにも該当するファイル差分がなかった)。Trust gating・cleanup・bypass ロジックの実地検証は post-merge の Post-merge AC 観察を待つ
 
 ### Notes for Next Phase
-- `/merge` は CI 全 SUCCESS・Pre-merge AC 3件全 PASS の状態で実行可能
 - `/verify` では Post-merge AC (observation event=auto-run) の発火有無に加え、本 PR で追加した Trust gating (信頼境界判定) と fixture cleanup が実際のパーサ系 PR で機能するかを次回発火時に確認すること
 
 ## review retrospective
