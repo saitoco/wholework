@@ -204,6 +204,21 @@ If the Issue body's verify commands include command types not present in the `mo
 
 **Skip** if all Issue body verify commands use built-in command types.
 
+**Fail-safe critical script identification (regardless of SPEC_DEPTH; only when applicable):**
+
+When the implementation target matches any of the following, treat it as **fail-safe critical**:
+- (a) a gate that blocks/allows some operation (merge gate, precondition check, etc.)
+- (b) a validator that decides accept/reject based on input validation (e.g., `validate-recovery-plan.sh`)
+- (c) a script designed to return a "safe-side" default on failure (contains `fail_open()` / `|| true` / `2>/dev/null` or an equivalent pattern)
+
+Steps:
+1. Judge the role from the Issue body and Implementation Steps description. When modifying an existing script, confirm with `grep -nF -e 'fail_open' -e '|| true' -e '2>/dev/null' <file>`.
+2. If judged fail-safe critical, the Implementation Steps must state the expected behavior for the following edge cases: empty/oversized input; input containing special characters (`>`, `"`, newlines, CRLF, multibyte characters); the behavior when a dependent command fails (fail-open or fail-closed, and the rationale for that choice).
+
+**Example (Issue #1060)**: `scripts/check-pre-merge-ac.sh`'s `fail_open()` design carried two undetected fail-open bugs — an unintended fail-open path caused by `pipefail`, and an HTML comment removal failure on AC text containing `>` — that `/review 1079`'s bug-detection finder caught, but the 4 Pre-merge AC (which only checked whether the gate step existed) could not.
+
+**Skip** if the implementation target matches none of the three criteria above.
+
 ### Step 7: Ambiguity Resolution (clarify)
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
