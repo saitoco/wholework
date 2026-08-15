@@ -78,6 +78,10 @@
 #### verify
 - 全5条件がPASS。post-merge条件は`<!-- verify-type: manual -->`のため自動検証対象外。`phase/verify`ラベルは手動確認待ちとして適切に設定済み。
 
+#### verify (2026-08-15 再検証、/audit verify-backlog)
+- 唯一の Post-merge manual 条件 (ドキュメント通読確認) を `docs/product.md` / `docs/workflow.md` の実地読解で検証。issue triage 自動開始、spec 自動実行、`--batch`、XL sub-issue 並列実行、`--base` の全要素を確認し PASS。`phase/done` へ遷移。
+- 起票時点よりも `/auto` は更に拡張されている (`--batch --until`, `--max-rounds` 等) が、docs 側もそれに追従して更新済みであることを確認。
+
 ### Improvement Proposals
 - N/A
 
