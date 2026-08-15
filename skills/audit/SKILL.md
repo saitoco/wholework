@@ -362,14 +362,14 @@ Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`
 
 #### Manual Waiting Count
 
-Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: manual`. Count the number of such Issues (`N`).
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: manual`, excluding lines that also carry `ac-tier: preview` — those are pre-merge preview-tier AC already confirmed by `/review` before merge, not part of the post-merge human-confirmation queue this count measures (see `modules/verify-classifier.md` § Purpose). Count the number of such Issues (`N`).
 
 `N` alone does not distinguish "Claude could resolve this at the next `/verify`" from "a human is genuinely required" — most of `N` turns out to be the former (see `/verify` Step 8b's per-run executability judgment, recorded via `type=verify-executability` markers per `modules/l0-surfaces.md` § Machine-Readable Event Marker). Break `N` down into 4 mutually exclusive reason-based buckets so the WARNING threshold can apply to the genuine human queue only, not to the raw Issue count.
 
 For each of the `N` Issues:
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh resolve <issue>` to get the latest snapshot of recorded judgments (TSV: `ac_index`, `executable`, `reason`, `capability`). Check the exit code before interpreting empty output: **exit 0 with empty output** means no judgment has ever been recorded for this Issue; **exit 2** means `gh` itself failed (network/auth/rate-limit) and the result is undetermined this run — not the same as "no judgment." Track exit-2 Issues separately as `N0` (undetermined) and skip them from the priority-order assignment in step 4 below.
-2. Identify the 1-based indices of this Issue's currently-unchecked `verify-type: manual` post-merge conditions (same enumeration convention as `gh-issue-edit.sh --checkbox`).
+2. Identify the 1-based indices of this Issue's currently-unchecked `verify-type: manual` post-merge conditions, excluding any line that also carries `ac-tier: preview` (same enumeration convention as `gh-issue-edit.sh --checkbox`).
 3. Cross-reference the two: for each unchecked manual AC index, look up whether it appears in the resolved snapshot and, if so, with which `executable`/`reason`.
 4. Assign the Issue to exactly one bucket, evaluated in this priority order — first match wins, so `N1 + N2 + N3 + N4 = N` always holds:
    - **N4 (human queue)**: the Issue has at least one unchecked manual AC recorded with `reason` in `browser-required` / `external-service-required` / `production-action-required` / `subjective-judgment` / `other`. (`other` is included here, not in N3 — the vocabulary defines `other` as "none of the above," which carries no guarantee that a capability could resolve it, so it is counted on the safe side as human-required.)

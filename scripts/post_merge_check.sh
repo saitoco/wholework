@@ -36,10 +36,14 @@ RUN_TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$RUN_TMP_DIR"' EXIT
 
 # extract_manual_acs <file>
-# Print lines from <file> that contain verify-type: manual, stripped of checkbox and HTML comment markup.
+# Print lines from <file> that contain verify-type: manual, excluding lines that also
+# carry ac-tier: preview (pre-merge preview-tier AC already confirmed by /review before
+# merge — see modules/verify-classifier.md § Purpose), stripped of checkbox and HTML
+# comment markup.
 extract_manual_acs() {
     local src_file="$1"
     grep "verify-type: manual" "$src_file" \
+        | grep -v "ac-tier: preview" \
         | sed 's/^[[:space:]]*-[[:space:]]*//' \
         | sed 's/^\[[[:space:]xX]*\][[:space:]]*//' \
         | sed 's/[[:space:]]*<!--.*$//' \
