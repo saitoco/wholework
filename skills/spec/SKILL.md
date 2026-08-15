@@ -223,7 +223,7 @@ Steps:
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and check Issue requirements and implementation points against the pattern table — extract **at most 3** ambiguity points.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and check Issue requirements and implementation points against the pattern table. Detection limit: follow the "Size Routing Table" in `modules/ambiguity-detector.md` (XS/S/M or unset → at most 3; L/XL → at most 5), based on the Size fetched in Step 2.
 
 **Priority sort:**
 
