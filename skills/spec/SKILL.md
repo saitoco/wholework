@@ -454,6 +454,10 @@ When writing implementation steps that involve priority-ordered data constructio
 
 When the overwrite direction of a method is non-obvious, spell out the algorithm explicitly rather than specifying the method by name.
 
+**Costly/irreversible step marking:**
+
+For each Implementation Step, assess whether executing it is costly (incurs real expense or non-trivial token consumption, e.g. a new `--fable` run or a new `--opus` run) or irreversible (has a production/irreversible side effect, e.g. a mutating call to a production API). If either applies, read `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md` and follow its Producer Contract: append the `spec-approval-needed` marker to the step, and add a corresponding Deferral Protocol entry to the Spec's `## Notes` section. This exists because `/spec` pre-authorizing such a step and `/code` (non-interactive) independently reconsidering and deferring it has recurred twice (#903, #939) with the acceptance criteria left written as if the step had executed.
+
 **SHOULD-level acceptance criteria consideration:**
 
 When defining acceptance criteria, explicitly consider:
