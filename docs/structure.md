@@ -152,6 +152,7 @@ Key modules:
 - `modules/autonomy-tier.md` — autonomy tier (L2→L1 path permission) SSoT: tier × path matrix, Tier × L0 write matrix, skill frontmatter declaration rules
 - `modules/event-emission.md` — event emission contract SSoT (phase event schema, _EMIT_PHASE_OWNED pattern, wrapper coverage table for run-*.sh)
 - `modules/round-ordering.md` — `/auto --batch --until` Round `ROUND_LIST` reordering (ROI + title prefix clustering + semantic relationship judgment, cluster-first combination)
+- `modules/costly-step-protocol.md` — `spec-approval-needed` marker format, `/spec` producer contract, `/code` consumer contract, and mandatory Deferral Protocol notation for costly/irreversible Implementation Steps
 
 ### Agents
 

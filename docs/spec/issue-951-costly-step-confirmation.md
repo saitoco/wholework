@@ -77,3 +77,47 @@ Issue 本文 Background は `/spec`・`/code` を「`run-*.sh` で `claude -p --
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 意図: `/issue` フェーズの Issue Retrospective コメント — AC1 rubric 対象範囲を `modules/*.md` まで拡張した自動解決の根拠を記録 (Issue 本文には既に反映済みのため本 Spec での追加対応は不要) / URL: https://github.com/saitoco/wholework/issues/951#issuecomment-5303035979
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を Spec の記載順・挿入位置指定どおりに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec の Implementation Steps は忠実に実装されていた (deviation なし) が、レビューで確認された実質的な問題はいずれも「新規メカニズム (marker/deferral record) と、同一 skill file 内に既存の汎用ルール (Step 12 の Spec 同期ルール、Step 10 の checkbox-flip ループ) との間の意図しない相互作用」だった。Spec 自体にはこの相互作用への言及がなく、Implementation Steps は新規追加箇所の記述にとどまっていた。新しい marker/annotation を導入する Spec を書く際は、Implementation Steps に「同一 skill file 内の既存の汎用 sync/normalize/flip 系ルールが新しい record を意図せず上書き・無視しないか」を明示的な確認項目として含めることが望ましい。
+
+### Recurring issues
+
+review-bug の 2 エージェント (diff-bug scan / security scan) が、異なる着眼点から独立に同一の欠陥 (Step 12 が marker を削除してしまう) を発見した。review-spec も独立に並行する欠陥 (checkbox-flip ループが deferral された AC を除外しない) を発見しており、いずれも根は同じ形状 — 「新しい宣言的記録が、隣接する既存の汎用正規化ロジックによって明示的な除外なしに黙って上書き・無視されるリスク」。本 Issue のスコープ自体がまさにこの形状の再発防止 (#903/#939) だったことを踏まえると、実装フェーズでも同型の再発が起きたことは示唆的であり、`/verify` の documented-deferral detection や類似の新規 record 型を追加する将来の Issue では、レビューチェックリスト項目として明示的に確認する価値がある。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC 3件はすべて `rubric` (mode-independent) で、`/code` の自己判定と本レビューでの独立再判定がいずれも PASS で一致し、UNCERTAIN や verify command 品質の問題はなかった。rubric 文言が十分に精密だったことを示唆している。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 判定の確定済み findings 4件 (Step 12 の marker 削除競合、Consumer Contract の fallback 未定義、AC checkbox 除外漏れ、`docs/product.md` Terms 未登録) と、低リスクな CONSIDER 3件 (skip-tier warning message 欠落、code-side retry loop gap の明記、`skills/spec/SKILL.md` Step recording rules への追記) を修正した。CONSIDER 1件 (`modules/ambiguity-detector.md` Purpose 文の陳腐化) はスコープ対比で価値が低いため見送った
+- review-bug の findings 3件 (operate route nullification 主張、"only exception" overstated claim、reversibility 極性の曖昧さ主張) は検証サブエージェントが実コードを読んで false positive と確認し、修正不要と判断した
+- 全段階で MUST issue はゼロ (Step 8 AC 全PASS、Step 9 CI 全SUCCESS、Step 10 最大 severity は SHOULD) のため、レビューは `COMMENT` イベントで投稿した
+
+### Deferred Items
+- code-side auto-retry (`run-code.sh`) に `/verify` の #947 相当の documented-deferral escape hatch がない点は未対応のまま — `modules/costly-step-protocol.md` の Notes に scope外である旨と発火条件の narrow さを明記した。実際に発生が観測された場合は follow-up Issue の候補
+- `modules/ambiguity-detector.md` の Purpose 文の陳腐化 (CONSIDER) は未修正 — 複数 skill から参照される共有モジュールの Purpose 文への低優先度の文言修正であり、本 PR のスコープに対して見送った
+
+### Notes for Next Phase
+- `/merge` は本レビューの fix commit の CI (11/11 SUCCESS、確認済み) がそのまま有効であることを前提に進行可能
+- Post-merge AC (`verify-type: opportunistic`) は変更なし — 「次回 costly step を含む Issue の spec → code フェーズで確認/deferral protocol が発火することを観察」のまま

@@ -256,6 +256,14 @@ Implement the code following the "Implementation Steps" in the Spec.
 
 Implement every step listed in the Spec's "Implementation Steps" regardless of the verify-type of its associated acceptance condition. A step whose AC is marked `<!-- verify-type: post-merge manual -->` must still be implemented in this PR — "post-merge manual" describes *how the AC is verified* (by human observation after merge), not whether the step can be skipped. Omitting a step because its AC is post-merge manual is an implementation error.
 
+**Costly/irreversible step handling (the only exception to "all Spec steps are required" above):**
+
+Before executing an Implementation Step carrying the `<!-- spec-approval-needed: ... -->` marker, read `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md` and follow its Consumer Contract: in interactive mode, confirm via AskUserQuestion before executing; in non-interactive mode, treat it as a High-Stakes Decision per `modules/ambiguity-detector.md`'s skip tier — do not execute the step, follow the Spec's Deferral Protocol, and record the deferral under `## Code Retrospective` > `### Deviations from Design` (Step 12) tagged e.g. `(deferred — spec-approval-needed)`. Output the skip-tier warning: `[non-interactive mode] Skipping high-stakes action: costly/irreversible Implementation Step (spec-approval-needed). To execute it, run /code {number} interactively.`
+
+The acceptance criteria associated with a deferred step **must not be checked off** — leave it as `- [ ]` in Step 10's checkbox-flip loop (same treatment as the "Patch route branch-scoped CI AC exclusion" below), and do not count it toward "all PASS". `/verify` Step 11(b) will recognize it as a documented deferral from the Code Retrospective record.
+
+**When recording the deferral in Step 12**: leave the marked Implementation Step (and its `<!-- spec-approval-needed: ... -->` marker) intact in the Spec's `## Implementation Steps` — do not apply Step 12's "Sync Spec implementation steps" rewrite to it. A `spec-approval-needed` deferral is recorded in the retrospective only; the marker must survive so a later interactive `/code` re-run (or a follow-up pass) can still see the pending authorization.
+
 - Use TaskCreate/TaskUpdate to manage tasks while working
 - **DCO: always use `git commit -s` (--signoff)** — applies to all commits throughout this skill: Step 8 intermediate commits, Step 11 final commit, and Step 12 retrospective commit
 - Commit after each step completes
@@ -448,7 +456,7 @@ Handle results as follows:
 1. If all PASS, complete this step and update checkboxes:
    - Pre-create directory with `mkdir -p .tmp`
    - Fetch current Issue body with `gh issue view $NUMBER --json body`
-   - For each pre-merge condition line with verify command, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, verify command comments `<!-- verify: ... -->`, etc.) — **except** conditions excluded from this Step's verify-executor pass per the "Patch route branch-scoped CI AC exclusion" note above; leave those as `- [ ]`
+   - For each pre-merge condition line with verify command, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, verify command comments `<!-- verify: ... -->`, etc.) — **except** conditions excluded from this Step's verify-executor pass per the "Patch route branch-scoped CI AC exclusion" note above, or associated with a step deferred under the `spec-approval-needed` protocol per "Costly/irreversible step handling" above; leave those as `- [ ]`
    - Write updated body to `.tmp/issue-body-$NUMBER.md` with Write tool
    - Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
@@ -665,14 +673,16 @@ Append retrospective information to the Spec and commit.
 
 If there are items under "Deviations from Design" (reordering of implementation steps, omission/consolidation of steps, adoption of a different approach due to design changes, etc.), in addition to recording in the retrospective, also update the Spec "Implementation Steps" section itself to match the actual implementation. This allows the subsequent `/verify` phase to verify based on the latest implementation.
 
+**Exception**: a step deferred under the `spec-approval-needed` protocol (`modules/costly-step-protocol.md`, see "Costly/irreversible step handling" above) is not synced — leave the step and its marker intact in "Implementation Steps"; only the retrospective records the deferral.
+
 - No deviations: no need to update Spec implementation steps
-- Deviations exist: revise Spec implementation steps to match actual implementation and include in the same commit
+- Deviations exist (excluding `spec-approval-needed` deferrals): revise Spec implementation steps to match actual implementation and include in the same commit
 
 **Steps:**
 1. If no retrospective information, write "N/A"
 2. Append `## Code Retrospective` section after `## Spec Retrospective` in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) using the Edit tool
 3. If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/forbidden-expressions-check.md` and follow the "Retrospective Guard" section.
-4. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation
+4. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation, except for a `spec-approval-needed` deferral (leave the step and marker intact — see "Sync Spec implementation steps" above)
 5. **Phase Handoff write** (before commit):
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.

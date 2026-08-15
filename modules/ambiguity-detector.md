@@ -71,6 +71,7 @@ Output a warning message and continue the main workflow without executing the ri
 
 High-Stakes Decisions (exhaustive list — skip these in non-interactive mode):
 - **Sub-issue splitting**: creating sub-issues from a parent issue (irreversible structural change; high cost if wrong)
+- **Costly/irreversible Implementation Step execution**: an Implementation Step carrying the `spec-approval-needed` marker (see `modules/costly-step-protocol.md`) — skip execution and follow the Spec's Deferral Protocol instead
 - **Bulk approvals**: approving multiple issues/PRs at once in `--backlog` flows (high blast radius)
 - **Optional section additions**: adding optional steering document sections during `/doc` creation (user preference; safe to defer)
 - **Size downgrade from XL to L**: requires human judgment on scope; skip and retain XL label

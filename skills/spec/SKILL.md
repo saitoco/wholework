@@ -454,6 +454,10 @@ When writing implementation steps that involve priority-ordered data constructio
 
 When the overwrite direction of a method is non-obvious, spell out the algorithm explicitly rather than specifying the method by name.
 
+**Costly/irreversible step marking:**
+
+For each Implementation Step, assess whether executing it is costly (incurs real expense or non-trivial token consumption, e.g. a new `--fable` run or a new `--opus` run) or irreversible (has a production/irreversible side effect, e.g. a mutating call to a production API). If either applies, read `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md` and follow its Producer Contract: append the `spec-approval-needed` marker to the step, and add a corresponding Deferral Protocol entry to the Spec's `## Notes` section. This exists because `/spec` pre-authorizing such a step and `/code` (non-interactive) independently reconsidering and deferring it has recurred twice (#903, #939) with the acceptance criteria left written as if the step had executed.
+
 **SHOULD-level acceptance criteria consideration:**
 
 When defining acceptance criteria, explicitly consider:
@@ -725,6 +729,7 @@ When the Issue involves real external or MCP tool calls (examples: verify comman
 - **Acceptance criteria mapping**: note "(→ acceptance criteria X)" for each step
 - **post-merge manual steps are required**: even when an AC's verify-type is `post-merge manual`, the corresponding implementation step is mandatory in the current PR. "post-merge manual" describes how the AC is verified (human observation after merge), not whether implementation can be deferred. Record the step explicitly so the code phase does not skip it.
 - **Insertion position**: specify by nearby code context (e.g., "immediately before `--dangerously-skip-permissions`") rather than line numbers. Line numbers shift as files change and become unreliable guides for implementation.
+- **Costly/irreversible steps**: append `<!-- spec-approval-needed: cost=<low|high>, reversibility=<low|high> -->` to the step line and add the matching Deferral Protocol entry to `## Notes` (see the "Costly/irreversible step marking" subsection above and `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md`). This is the one case where `/code` may legitimately not execute a Spec step.
 
 1. Step 1 (→ acceptance criteria A)
 2. Step 2 (after 1) (→ acceptance criteria B)
