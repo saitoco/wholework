@@ -37,6 +37,28 @@ No Spec existed prior to `/code` (Issue already had `phase/ready` when this run 
 - Pre-merge AC4 (`github_check "gh run list"`, 旧 `github_check "gh pr checks"` から自動修正) は patch route の branch-scoped CI AC のため本フェーズでは未チェックのまま残しており、`/verify` post-merge で評価される。
 - Behavioral Change Detection により `bats --jobs 18 tests/` (フルスイート) を実行し、1786 件全て PASS を確認済み (ローカル実行結果。CI 上の実行結果は上記 AC4 で別途評価される)。
 
+## Issue Retrospective
+
+### Background 事実確認 (advisory)
+
+Background に記載された PR #1090 での 8 箇所の変更 (`skills/auto/SKILL.md`, `skills/code/SKILL.md`, `skills/spec/SKILL.md`, `skills/issue/SKILL.md`, `skills/issue/spec-test-guidelines.md`, `skills/triage/skill-dev-verify-audit.md`, `scripts/run-auto-sub.sh`) を `grep -rn "ALWAYS_PR"` で確認し、全て `ALWAYS_PR` を参照していることを確認した。また、指摘対象の 2 箇所 (`skills/review/SKILL.md` Step 3 の Size XS/S → `skip` 早期終了、`modules/next-action-guide.md` Step 2 の Size のみからの ROUTE 導出) も現状 `ALWAYS_PR` を一切参照していないことを確認した。Issue 本文の事実claim は正確。
+
+### Auto-Resolve Log (非対話モード)
+
+`--non-interactive` のため、以下 2 件のあいまいさを自動解決した:
+
+1. **`skills/review/SKILL.md` Step 3 の `always-pr: true` + Size XS/S 時の `REVIEW_DEPTH` 値** — `--light` を採用。`skills/auto/SKILL.md` Step 2 の REVIEW_DEPTH 導出テーブルに既存の safe fallback 前例 (`other/unset → --light`) があり、これを踏襲する方が新規の判断基準を導入するより一貫性が高いと判断した。
+2. **`modules/next-action-guide.md` への `ALWAYS_PR` 受け渡し方法** — 新規 optional Input パラメータとして追加し、呼び出し元が渡す方式を採用。既存の全 caller が `detect-config-markers.md` から `ALWAYS_PR` を既に retain 済みであり、`SIZE`/`ROUTE` と同じ受け渡しパターンに揃える方が、モジュール内での再読込より既存アーキテクチャと整合すると判断した。
+
+### Acceptance Criteria の変更理由
+
+- AC「`size-workflow-table.md` の caller 一覧に上記2箇所が追加されている」の verify command を `grep "ALWAYS_PR" "modules/size-workflow-table.md"` から `section_contains "### ALWAYS_PR Override" ...` (ファイル名を直接検索) に変更した。元の `grep "ALWAYS_PR"` は既に同ファイル内に `ALWAYS_PR Override` という見出しや複数の言及があり、caller 一覧への追加前でも PASS してしまう非discriminatingな検証だったため。
+- AC1・AC2 (rubric) に、対象セクション内で `ALWAYS_PR` へ言及していることを確認する `section_contains` の supplementary check を追加した (rubric 単独より機械的な安全網を持たせるため)。
+
+### Consumed Comments (at /issue time)
+
+No new comments since last phase.
+
 ## Consumed Comments
 
 No new comments since last phase.
