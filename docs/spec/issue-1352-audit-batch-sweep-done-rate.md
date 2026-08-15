@@ -123,3 +123,16 @@ Nothing to note — Implementation Steps 1-5 were followed as specified. The lig
 
 ### Acceptance criteria verification difficulty
 Nothing to note — all 3 pre-merge AC were `rubric` type with the target Spec file path named explicitly in the Issue body text (an Auto-Resolve Log correction already applied at Issue-authoring time, following the precedent set by #1351). The grader therefore had direct evidence access for all 3, and each verified as PASS without ambiguity.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+
+`session=next` の premise (skill self-update propagation — Section 12 が実際に反映された SKILL.md をロードしたセッションでの検証) について、本会話が compaction を経て `Skill(wholework:audit)` 再呼び出し時に完全な最新版 SKILL.md (Section 12 含む) を再ロードしたことを確認し、premise 成立と判断した。
+
+`/audit verify-backlog` の実運用データ (2026-08-15、10 Issue 処理) に対して `collect-verify-path-done-rate.sh --limit 1000` を実行し、batch sweep / observation dispatch / opportunistic-verify の3経路が比較可能な表形式で正しく表示されることを確認。Post-merge AC を PASS 判定し `phase/done` へ遷移。
+
+### Improvement Proposals
+- N/A

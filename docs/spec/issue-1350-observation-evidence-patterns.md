@@ -67,3 +67,14 @@
 - Pre-merge AC 1-4 は rubric による自己検証で PASS 済み、Issue 本文チェックボックス更新済み
 - 追加内容は `modules/verify-classifier.md` の新セクション `### observation Type: Evidence Collection Patterns` (Firing Likelihood Check 直後、Tag Assignment Example 直前)
 - フルテストスイート 1766件全 PASS (`bats --jobs 18 tests/`、behavioral change 検知により全件実行)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify (2026-08-15, `/audit verify-backlog` セッションから)
+
+実装 (`skills/verify/SKILL.md` commit `65785ee3` → `modules/verify-classifier.md` § Evidence Collection Patterns 参照) が正しく着地していることを確認。ただし Post-merge AC (`session=next`) は「追加された evidence source が実際に参照され、UNCERTAIN/SKIPPED 率が改善することを観察する」ことを求めており、今回の `/audit verify-backlog` セッション内の observation AC 処理では新手法 (git blame + session.md 横断検索等) を明示的に適用していないため、premise 未成立で UNCERTAIN のまま維持。
+
+### Improvement Proposals
+- N/A

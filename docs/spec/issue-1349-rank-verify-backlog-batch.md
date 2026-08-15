@@ -152,3 +152,7 @@
 ### Improvement Proposals
 - `docs/translation-workflow.md` § "When to Sync" の文言を明確化する (現状 "top-level `docs/*.md`" と読めるが `scripts/check-translation-sync.sh` は `docs/guide/*.md` も追跡対象にしている) — 今回は review で個別修正済みだが、同種の見落としが `docs/guide/*.md` を触る別 PR で再発した場合は起票を検討。
 - `rank-verify-backlog.sh` の CONSIDER レベルの edge case (zero-`auto_count` の Issue が `--top` 枠を埋めてしまう) — 未修正のまま。実運用で実害が確認されたら起票を検討。
+
+### 2026-08-15 Post-merge AC 確定 (`/audit verify-backlog` 実運用 + `collect-verify-path-done-rate.sh` から)
+
+`/audit verify-backlog` を実際の `phase/verify` backlog (10 Issue) に対して実行し、`collect-verify-path-done-rate.sh --limit 1000` で経路別到達率を比較: batch sweep 45.5% (11処理/5完了) / observation dispatch 40.7% (162処理/66完了) / opportunistic-verify 17.3% (75処理/13完了、性質が異なるため参考値)。batch sweep は比較可能な能動的ディスパッチ経路である observation dispatch と同程度 (やや上回る) の到達率を示した。Post-merge AC を PASS 判定し `phase/done` へ遷移。

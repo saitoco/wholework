@@ -162,3 +162,7 @@ No new comments since last phase.
 
 ### Improvement Proposals
 - **`modules/autonomy-tier.md` (L0 Layer Table) と `docs/guide/autonomy.md` (L3 tier 説明) の `CronCreate` に関する記述が実際の挙動と乖離している**: 両ドキュメントは `CronCreate` を OS レベルの永続スケジューラであるかのように記述している ("Persistence: Environment-dependent" / "may register persistent cron schedules via `CronCreate`. Fully unattended operation.") が、本 Issue の実装セッションで実際に検証した結果、(1) ツール自身の契約は session-scoped で `recurring` ジョブも7日で自動失効する in-memory 状態であり、(2) `permission-mode: auto` 下では無人 (headless) skill 実行から `CronCreate` を自己登録しようとすると Claude Code の auto モード分類器に明示的に拒否される (`Blocked by classifier`) ことが判明した。`autonomy: L3` を設定していても、L3 の「完全無人運用」という前提そのものが `CronCreate` の実際の permission モデル上は成立しない。Code Retrospective で「別の Follow-up Issue として起票する」と記録されていたが、本 Issue のクローズ時点でまだ起票されていない (未起票)。2ファイル (`modules/autonomy-tier.md`, `docs/guide/autonomy.md`) にまたがる SSoT ドキュメントの記述精度問題であり、`docs/guide/autonomy.md` は L0〜L3 autonomy tier の運用判断に直接使われるドキュメントであるため、起票を推奨する。
+
+### 2026-08-15 再確認 (`/audit verify-backlog` セッションから)
+
+`phase/verify` backlog の減少 (10 Issue 処理、5 Issue が `phase/done` 到達) が本セッションで実際に観測されたが、これはユーザーによる `/audit verify-backlog` の**手動ディスパッチ**によるものであり、Spec で選定した「確立した実行方法」(CronCreate による定期実行) を経由したものではない。加えて上記の通り CronCreate は無人実行下で分類器にブロックされることが実証済みであり、選定した実行方法自体が実際には無人稼働しない可能性が高い。Post-merge AC の premise (確立した方法での定期実行実施) は今回も成立せず、UNCERTAIN のまま維持。
