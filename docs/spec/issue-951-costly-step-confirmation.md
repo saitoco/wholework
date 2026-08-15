@@ -77,3 +77,30 @@ Issue 本文 Background は `/spec`・`/code` を「`run-*.sh` で `claude -p --
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 意図: `/issue` フェーズの Issue Retrospective コメント — AC1 rubric 対象範囲を `modules/*.md` まで拡張した自動解決の根拠を記録 (Issue 本文には既に反映済みのため本 Spec での追加対応は不要) / URL: https://github.com/saitoco/wholework/issues/951#issuecomment-5303035979
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を Spec の記載順・挿入位置指定どおりに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `modules/costly-step-protocol.md` の Notes に「(b) 不採用の根拠」を1項目のみ再掲し、詳細な比較は `docs/tech.md` Architecture Decisions 側に委譲した — 同じ判断根拠を2箇所にフルで重複させないための分担
+- Issue AC 3件はいずれも `rubric` (mode-independent) のため、`/code` 自身が grader として判定して PASS 確認しチェックボックスを更新した (verify-executor 経由の command 実行は不要)
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Post-merge AC (`verify-type: opportunistic`) は「次回 costly step を含む Issue の spec → code フェーズで確認/deferral protocol が発火することを観察」なので、`/verify` はこの Issue 単体では判定材料を持たない。次に costly step marking が実際に発火した別 Issue が出た時点で opportunistic 検出される想定
