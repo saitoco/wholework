@@ -32,6 +32,24 @@ No Spec existed prior to `/code` (Issue already had `phase/ready` when this run 
 - Behavioral Change Detection により `bats --jobs 18 tests/` (フルスイート) を実行し、1786 件全て PASS を確認済み。
 - Post-merge AC (`verify-type: manual` — Size L の Issue を `/spec` に通し、あいまいさ抽出が最大 5 件の上限で動作することを確認する) は未実施のまま残している。
 
+## Issue Retrospective
+
+### 実施内容
+
+- Background Factual Claim Verification: `skills/spec/SKILL.md:205` / `modules/ambiguity-detector.md:30-36` への言及を検証したところ、内容自体は正確だったが `skills/spec/SKILL.md` 側の該当行が既に L226 にドリフトしていた (Issue 起票後の別編集による行番号ズレ)。Background / 対応方針 / Related の行番号参照を L205 → L226 に更新。
+- 重複記述の横断確認: `grep -rn "at most 3\|at most 5"` で `skills/spec/SKILL.md:226` 以外の該当箇所 (`skills/issue/SKILL.md:51,506`) を確認したが、いずれも Size Routing Table と整合する記述だった (Unset→Max3, XS/S/M→Max3/L/XL→Max5 の対応が正しい) ため、修正対象は `skills/spec/SKILL.md:226` の 1 箇所のみと確定。AC2 (「他に同じ上限値を独自に記述している箇所が残っていないこと」) の検証範囲として記録。
+- `/spec` の Size 取得タイミングを確認 (`skills/spec/SKILL.md:36`、Step 2 で取得): あいまいさ抽出 (Step 7, L226) より先に Size が確定しているため、Detection Limit をテーブル参照に変更する実装に手戻りリスクがないことを Background に追記。
+- rubric + 補助的機械チェックの追加 (`modules/verify-patterns.md` §9 のガイドラインに従い): AC1 に `section_contains "skills/spec/SKILL.md" "### Step 7" "ambiguity-detector.md"` を追加し、rubric 単独では見落としうる「参照先ファイルが変わらず残っているか」を機械的に補強。
+
+### Auto-Resolve Log (non-interactive mode)
+
+- **行番号参照の更新 (L205→L226)** — reason: 現在のファイル内容と Issue 記載箇所を突き合わせた結果、コード内容は Issue の指摘通り正確だったが行番号のみドリフトしていた。AC のテキスト (rubric) はファイルパス・記述内容ベースで判定するため行番号の正誤に依存せず、Issue 本文の可読性向上のみが目的。他の選択肢 (行番号を更新しない) は Spec 作成時の混乱を招くため不採用。
+- **補助 verify command の追加方式** — reason: `modules/verify-patterns.md` §9 の precedent (同モジュール内の自己言及 AC 例) に倣い、rubric と同一の意味を持つ独立した AC 行として追加 (1 行に複数 `<!-- verify: ... -->` を連結する形式ではなく)。他候補 (rubric のみで運用) は却下 — rubric 単独だと「テーブル参照に変わったが誤って別ファイルへの参照になった」ケースを見逃しうる。
+
+### Consumed Comments (at /issue time)
+
+No new comments since last phase.
+
 ## Consumed Comments
 
 No new comments since last phase.
