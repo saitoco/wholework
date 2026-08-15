@@ -116,6 +116,12 @@ verify command はすべて `section_contains` / `file_contains` / `file_not_con
 ### Improvement Proposals
 - `section_contains` verify command を Spec に記述する際、その固定文字列が実装ファイルに literally 含まれることを `/spec` や `/code` のチェックリストに追加することを検討する。verify-driven な開発で rework を防ぐための事前チェックとして有効。
 
+### 2026-08-15 再確認 (/audit verify-backlog セッションから)
+
+Pre-merge 4件は変更なし PASS。Post-merge opportunistic 条件2件は premise (auto-close 無効設定のリポジトリ) が wholework 自身では成立せず、本 sweep で処理した他 Issue (#53/#55/#56/#58/#60) も含め全て verify 前から CLOSED 状態だったため、OPEN → 手動チェック → 再 verify → close というシナリオが組織的に発生していない。UNCERTAIN のまま維持。
+
+上記 Improvement Proposals (`section_contains` 固定文字列の事前チェック) について重複起票の有無を確認、既存 Issue になし。ただし単発発生で多重発生の証跡がないため、Issue 起票抑制方針に従い起票は見送り、この Spec 記録のみとする。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## 受入テスト結果 /verify #64 / https://github.com/saitoco/wholework/issues/64#issuecomment-4233116852
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/64#issuecomment-5300794293
