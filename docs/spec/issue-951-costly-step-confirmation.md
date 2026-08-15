@@ -120,3 +120,28 @@ Pre-merge AC 3件はすべて `rubric` (mode-independent) で、`/code` の自�
 ### Notes for Next Phase
 - `/verify` では post-merge AC (`verify-type: opportunistic`) の「次回 costly step を含む Issue の spec → code フェーズで確認/deferral protocol が発火することを観察」を確認する
 - ISSUE_NUMBER=951, BASE_BRANCH=main のため `closes #951` により Issue は自動クローズされる見込み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。Implementation Steps は Changed Files (8件) を具体的なファイル・挿入位置指定つきで記述しており、Code Retrospective も Deviations from Design を N/A としている。
+
+#### design
+- `modules/costly-step-protocol.md` を新規 SSoT として切り出し、producer (`/spec`) / consumer (`/code`) の contract を分離する設計自体は review でも指摘なく、Spec の判断根拠 (docs/tech.md への (a)+(c) 採用・(b) 不採用の記録) も rubric AC で明確に PASS 判定できた。
+
+#### code
+- Deviations from Design: N/A (Implementation Steps 1-5 に忠実な実装)。
+
+#### review
+- review-bug の 2 エージェント (diff-bug scan / security scan) が独立に同一欠陥 (Step 12 の Spec 同期ルールが新規 marker/deferral record を削除してしまう) を発見し、review-spec も並行して別の同型欠陥 (checkbox-flip ループが deferral された AC を除外しない) を発見した。両者は「新しい宣言的記録が、隣接する既存の汎用正規化ロジックによって明示的な除外なしに黙って上書き・無視されるリスク」という共通の形状を持つ。本 Issue 自体が #903/#939 の再発防止 (同型パターンの構造的解消) を目的としていたにもかかわらず、実装フェーズで同型の欠陥が混入したことは示唆的であり、review retrospective は「新しい宣言的record型を追加する将来の Issue では、同一 skill file 内の既存の汎用 sync/normalize/flip 系ルールとの相互作用を明示的なレビューチェックリスト項目として確認する価値がある」と結論づけている。この提案は妥当と判断し、Improvement Proposals に転記する。
+
+#### merge
+- PR #1367 は mergeable=true (reason=clean) で conflict なし、pre-merge AC 全 checked・review-incomplete-fallback 未検出のためそのまま squash merge。
+
+#### verify
+- FAIL/UNCERTAIN なし。Pre-merge AC 3件 (rubric×3) はいずれも already-checked としてSKIPPED。Post-merge の opportunistic AC は本 `/verify` 実行の対象外 (別スキル実行が該当 Issue を対象にした際に `opportunistic-verify.md` が判定する設計) のため未チェックのまま — `phase/verify` を維持する。
+
+### Improvement Proposals
+- review retrospective (Recurring issues) が指摘した「新しい宣言的 record/marker 型を skill file に追加する際、同一ファイル内の既存の汎用 sync/normalize/flip 系ルール (例: Spec 同期ルール, checkbox-flip ループ) が明示的な除外なしにそれを黙って上書き・無視しないかを確認する」観点を、review-bug / review-spec の観点定義または関連する共有レビューチェックリストに明文化することを提案する。本 Issue 自体の実装フェーズで review-bug (2エージェント独立) と review-spec が同型の欠陥を同時に発見しており、単発の指摘ではなく再現性のある観点。
