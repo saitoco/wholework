@@ -105,3 +105,37 @@ Issue 本文 Background の `run-code.sh` 行番号記載 (`:302`) は現行コ�
 ### Notes for Next Phase
 - 本 Issue はドキュメントのみの変更 (prose diff 12 行) — `/verify` は 3 件の pre-merge AC (rubric x2 + bats command) と 1 件の post-merge observation AC のみを扱う
 - pre-merge AC のうち rubric 2 件は `/code` 内で自己判定し PASS 済みとして checkbox を `[x]` 済みにした。`/verify` での再検証時、rubric grader が同じ diff から同一の結論に達するか確認すること
+
+## Issue Retrospective
+
+### 非対話モード実行
+
+`--non-interactive` で実行。Step 12 (sub-issue splitting scope assessment) は High-Stakes Decision のためスキップ (Size S でありそもそも該当しないが、方針上明示)。
+
+### 事実確認 (Background)
+
+Background に記載された具体的な claim (grep 結果・行番号) を現行コードに対して再検証した:
+- `grep -n "retry\|RETRY" scripts/run-spec.sh` → `:150` `:176` `:190` にヒット (retry-on-kill.sh の source と `run_with_retry_on_kill` 呼び出しのみ) — 記載どおり一致
+- `grep -n "AUTO_RETRY_ENABLED\|CODE_RETRY_COUNT" scripts/run-code.sh` → `:133` `:137` `:143` `:144` に加え `:387` `:388` `:389` `:390` `:391` `:394` `:406` `:410` `:411` にもヒット (本文記載の `:302` は現行行番号とずれているが、対象シンボルの存在自体は一致)
+- `run-issue.sh` / `run-review.sh` / `run-merge.sh` は `retry-on-kill.sh` の source のみで `auto-retry-on-fail` 相当の分岐は無し — 記載どおり一致
+
+### 自動解決したあいまいポイント
+
+**AC1/AC2 の rubric 根拠ファイル不在** (Priority: 高 — AC の合否判定そのものに影響):
+
+`modules/verify-executor.md` § Rubric Command Semantics により、`rubric` grader の既定入力範囲は Issue body + git diff のみで、Spec ファイルは含まれない。本 Issue の Purpose は「決める」ことそのものが目的であり、決定内容が Spec のみに記録された場合、grader はその根拠を参照できず、AC1/AC2 が意図せず FAIL/UNCERTAIN になるリスクがあった。
+
+`modules/orchestration-fallbacks.md` には同種の retry 機構の設計判断の先例が既に記録されており、本 Issue の Related セクションも同ファイルを「復旧経路のカタログ」として既に参照していたため、この既存パターンに沿って AC1/AC2 の rubric text に `modules/orchestration-fallbacks.md` を明示した。
+
+他候補 (ファイル名を明示せず git diff 参照に委ねる) は、決定が Spec のみに残るケースを排除できないため却下した。
+
+### Auto-Resolve Log 以外の検討事項 (変更不要と判断)
+
+- **AC3 の bats スコープ**: AC3 は回帰保護のみを目的とする AC と明記済みで、他 wrapper の回帰は CI が別途検知するため、AC 変更は不要と判断した。
+- **`verify-type: observation event=auto-run session=next` の妥当性**: `modules/verify-classifier.md` § Firing Likelihood Check に照らし、既存の確立されたパターンと一致するため変更不要と判断した。
+- **`session=next` の要否**: `scripts/check-skill-change-observation-ac.sh` を実行し exit 0 (該当なし) を確認。
+- **AC checkbox format**: `scripts/check-ac-checkbox-format.sh` を実行し exit 0 (問題なし) を確認。
+
+### Consumed Comments (at /issue time)
+
+No new comments since last phase.
