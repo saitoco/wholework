@@ -27,6 +27,11 @@
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212862164
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5213280537
 
+### verify フェーズ (2026-08-16 re-run #18, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-10 re-run #17) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1341 (Issue #1124) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートの `capabilities.workflow` キー言及への部分一致誤発火が17件目として再現 / https://github.com/saitoco/wholework/issues/476#issuecomment-5244928894
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=476 event=pr-review-light --> observation event 再発火通知 (`/review --light` PR #1364, Issue #1125 完了) / https://github.com/saitoco/wholework/issues/476#issuecomment-5302921137
+
 ### verify フェーズ (2026-08-07 re-run #11, cutoff: 2026-06-14T21:50:38Z)
 
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-07 re-run #10) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1244 (Issue #1117) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートの誤発火が10件目として再現 / https://github.com/saitoco/wholework/issues/476#issuecomment-5213746899
@@ -279,4 +284,16 @@
 
 ### Improvement Proposals
 - 17 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。Issue #1220 (`observation-trigger: keyword= フィルタの部分一致誤検知を解消`) が根本原因を追跡済みのため、本 re-run でも重複起票は行わない。件数の増加自体は re-run #16 までの傾向の継続であり、新たな示唆はない
+
+## Verify Retrospective (2026-08-16 re-run #18)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1364、Issue #1125) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカー計20件) したが、今回の発火元 PR #1364 の diff (`skills/review/SKILL.md`, `skills/review/workflow-guidance.md`, `agents/review-bug.md`, `agents/review-light.md`, `tests/workflow-guidance.bats`, `docs/spec/issue-1125-*.md` — review フェーズへの Parser/Validator Edge Case Pre-check 追加) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートは本 PR 自身が Wholework `/review` の "Workflow path" / `capabilities.workflow` (内部の Workflow tool 連携機能) を主題としているため発火しており、18件目の誤発火/無関係発火パターンとして再現した
+- **重要な新規観測**: re-run #17 は「Issue #1220 が根本原因を追跡済み」と記録したが、これは誤りだった。`gh issue view 1220` で確認したところ #1220 は **2026-08-07T11:09:30Z (PR #1258 merge) に既に CLOSE 済み**であり、re-run #11 (2026-08-07T12:17:02Z 以降。#1220 close の約1時間後) 〜 本 re-run #18 までの **8件 (#11〜#18)** はすべて **#1220 の fix がマージされた後**に発生している。`modules/observation-trigger.md` を確認したところ、#1220 の fix はファイルパス断片 (`docs/workflow.md` 等、`/` を含むトークン) と CLI フラグ断片 (`--workflow=test.yml` 等) の2種類のみをストリップする設計であり、`capabilities.workflow` (ドット区切り、`/` も `--` も含まない config key) や "Workflow path" (独立した単語としての "workflow") のような**正当な単独単語としての "workflow" の出現**はどちらの除去ルールにも該当せず、素通りする。これは #1220 が対象とした2種類の誤検知パターン (ファイルパス断片・CLI フラグ断片) とは異なる**第三のサブパターン** (config key / 独立単語としての意味的無関係語一致) であり、#1220 の fix では解消されない
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14/#15/#16/#17 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- 18 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。**re-run #17 までの「#1220 が対応済みだから重複起票しない」という判断根拠が誤りだったことが判明した** — #1220 は既に CLOSE 済みで、その fix (path-like/CLI-flag-like トークン除去) は本 Issue が実際に踏んでいる第三のサブパターン (config key `capabilities.workflow` / 独立単語 "workflow" への意味非依存の部分一致) を対象としていない。#1220 close 後だけで8件 (#11〜#18) の再現があり、re-run #7 で採用した「3回連続再現で起票水準」の閾値をこのサブパターン単体でも上回っている。Step 16 (retro-proposals) では本知見 (「#1220 は解決済みだが対象外のサブパターンが残っている」) を根拠に、新規 follow-up Issue の起票または #1220 の re-open を検討する
 
