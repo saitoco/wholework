@@ -71,3 +71,35 @@ No new comments since last phase.
 - **#1315** — Pattern 2 の被覆表の出典。「充足不能 (定義矛盾)」サブパターン
 - **#1294** — 「既存グリーンテスト」サブパターン。本件と層が異なる
 - **#1310** — 「常時 UNCERTAIN」サブパターン
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-3 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+### Smoke Test
+
+N/A — Spec に `## Smoke Test` セクションが存在しないため対象外。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Step 1 の指示通り、フィクスチャの verify コマンドを `file_exists` → `totally_unknown_command` に変更し、assert を `status -eq 1` + `未知の verify コマンド` 照合へ反転した
+- 反転後の検出力を、`#1130` 修正前コミット (`10dc158d^`) の `INLINE_CODE_PATTERN` を用いた空撃ちで実測確認した (PRE-FIX: exit 0 / POST-FIX: exit 1)。Spec Notes の実測記録と一致
+
+### Deferred Items
+- Post-merge の observation AC (「以降の `/issue` Step 15 AC 監査で検出力の確認を促す指摘が出ることを確認する」) は次回 `/triage`/`/issue` 実行時の実観測に委ねる — 本フェーズでは対応不要
+
+### Notes for Next Phase
+- `/verify` は Pre-merge AC 3件全て PASS 済み (Issue チェックボックス更新済み) の状態から開始する
+- Post-merge AC は `verify-type: observation event=auto-run` のため、発火済みイベントがなければ SKIPPED 判定が正常
