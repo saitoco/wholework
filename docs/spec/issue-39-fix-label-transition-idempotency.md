@@ -38,6 +38,14 @@
 - Pre-merge の全3条件が PASS。特に bats テスト #11/#12 で冪等性を直接検証している。
 - Post-merge の2条件（opportunistic/manual）はユーザー検証待ち。
 
+### 2026-08-15 追記 (/audit verify-backlog 経由の再確認)
+
+`/audit verify-backlog` のランキング選抜バッチ verify (rank 1位) で再 dispatch。両 Post-merge 条件を Claude Execute で実地確認できた:
+- opportunistic AC (「patch route で /auto 完了後に phase/done 付与」): #1353 (`tech.md の "Default parent" 用語スコープを明確化`、patch route 直コミット) が実際に `phase/done` へ到達済みであることを `git log`/`gh pr list` で確認
+- manual AC (「既に phase/done の Issue に再実行しても維持される」): #1355 に対して `scripts/gh-label-transition.sh 1355 done` を実際に再実行し、`phase/done` が維持されることを確認 — 本 Issue が修正した冪等性バグが再発していないことを実地で裏付けた
+
+全5条件解消、`phase/done` へ遷移しクローズ。
+
 ### Improvement Proposals
 - N/A
 
