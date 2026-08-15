@@ -262,3 +262,7 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 
 ### Improvement Proposals
 - `skills/doc/SKILL.md` の translate セクション（約100行）を `skills/doc/translate-phase.md` に Progressive Disclosure 分離する。現在のSKILL.mdは 800行超に達しており、tech.md の Core/Domain 分離方針（構造的脆弱性として登録済みか要確認）に準拠した分割が保守性を高める
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/58#issuecomment-4211794077
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/58#issuecomment-5300760142
