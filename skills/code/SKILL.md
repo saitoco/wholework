@@ -256,6 +256,10 @@ Implement the code following the "Implementation Steps" in the Spec.
 
 Implement every step listed in the Spec's "Implementation Steps" regardless of the verify-type of its associated acceptance condition. A step whose AC is marked `<!-- verify-type: post-merge manual -->` must still be implemented in this PR — "post-merge manual" describes *how the AC is verified* (by human observation after merge), not whether the step can be skipped. Omitting a step because its AC is post-merge manual is an implementation error.
 
+**Costly/irreversible step handling (the only exception to "all Spec steps are required" above):**
+
+Before executing an Implementation Step carrying the `<!-- spec-approval-needed: ... -->` marker, read `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md` and follow its Consumer Contract: in interactive mode, confirm via AskUserQuestion before executing; in non-interactive mode, treat it as a High-Stakes Decision per `modules/ambiguity-detector.md`'s skip tier — do not execute the step, follow the Spec's Deferral Protocol, and record the deferral under `## Code Retrospective` > `### Deviations from Design` (Step 12) tagged e.g. `(deferred — spec-approval-needed)`.
+
 - Use TaskCreate/TaskUpdate to manage tasks while working
 - **DCO: always use `git commit -s` (--signoff)** — applies to all commits throughout this skill: Step 8 intermediate commits, Step 11 final commit, and Step 12 retrospective commit
 - Commit after each step completes
