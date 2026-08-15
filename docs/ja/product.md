@@ -160,6 +160,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Autonomy tier | `autonomy:` フィールド（`L1` / `L2` / `L3`）で、スキルが L0 GitHub 状態をどこまで書き込み、L2→L1 パスを起動できるかを宣言する。SSoT: `modules/autonomy-tier.md`。`permission-mode` とは直交する概念 | スキル開発、設定 | Autonomy tier |
 | Capability | `.wholework.yml` `capabilities.*`（例: `capabilities.browser: true`）で宣言する機能の可用性。`HAS_{NAME}_CAPABILITY` 環境変数に変換され、スキルが補助ファイルの読み込みや adapter の呼び出し前に確認する。実行環境に応じたプログレッシブ・ディスクロージャーを実現する | スキル開発、設定 | Capability |
 | Config marker | `.wholework.yml` のキー（例: `capabilities.browser`）。`modules/detect-config-markers.md` がランタイムフラグ（`HAS_BROWSER_CAPABILITY`）に変換する。スキルは補助 Domain file の読み込みや adapter の呼び出し前にこれらのフラグを確認する | スキル開発 | コンフィグマーカー |
+| Deferral Protocol | Spec approval marker とペアで必須となる Spec の `## Notes` エントリ。マーカー付きステップを deferral する際に `/code` が代わりに行うべきことを記述する。SSoT: `modules/costly-step-protocol.md` | /spec, /code | Deferral Protocol |
 | Domain file | スキルから marker 検出、ファイル存在確認、ディレクトリスキャンによって条件付きで読み込まれる補助 Markdown。SKILL.md のコアを補い、環境やプロジェクト固有のロジックを加えつつコアを軽量に保つ。プロジェクトローカルのカスタマイズは `.wholework/domains/{skill}/` で対応 | スキル開発 | Domain file |
 | Drift | ドキュメント化された仕様（Steering Documents や Spec）と実際のコード実装とのあいだの意味的乖離。`/audit drift` で検出 | /audit Skill | ドリフト |
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
@@ -179,6 +180,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Smoke Test | `/code` が commit/push 前に実行するオプショナルな最小 behavioral sanity check。Spec の `## Smoke Test` セクションに既存の full-mode verify command（例: `mcp_call`, `command`）で定義する。`/verify` より早く code phase 内で behavioral 不整合を検知できる。opt-in: Spec にセクションがある場合のみ動作 | /spec, /code | Smoke Test |
 | Skill | Claude Code の拡張。処理ステップが `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code | スキル |
 | Spec | `/spec` により作成される実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各スキル実行後の Retrospective も蓄積し、ワークフロー横断のメモリとして機能する**。旧称: 'Design file' / 'Issue Spec' | 開発ワークフロー | Spec |
+| Spec approval marker | `/spec` が costly/irreversible な Implementation Step に付与する HTML コメントマーカー (`<!-- spec-approval-needed: cost=..., reversibility=... -->`)。`/code` はマーカー付きステップを High-Stakes Decision として扱い、非対話モードではペアの Deferral Protocol に従い deferral する。SSoT: `modules/costly-step-protocol.md` | /spec, /code | Spec approval マーカー |
 | Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存 | /doc Skill | Steering Documents |
 | Steering hint | `modules/steering-hint.md` が出力する動的ガイダンス。Steering Documents が存在しない場合に `/doc init` を推奨する。`.wholework.yml` に `steering-hint: false` を設定すると無効化される | スキル開発 | Steering hint |
 | Sub-agent | Task ツール経由で起動されるサブエージェント。メインエージェントには結果のみを返す | Claude Code | サブエージェント |

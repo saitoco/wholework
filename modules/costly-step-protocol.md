@@ -25,6 +25,8 @@ Two-value scale only (`low`/`high`) — matches the Issue #951 approach (a) exam
 
 **Tagging criterion**: apply the marker only when a step is `cost=high` or `reversibility=low`. Routine steps — a git commit, a file edit, a CLI call with no real expense — are not marked.
 
+**Attribute values are currently inert metadata**: the Consumer Contract below triggers identically on marker presence alone — `cost`/`reversibility` values are not consumed by any branching logic today. They exist as a human-readable record of *why* the step was flagged (useful when a human reviews the Deferral Protocol later), not as a machine-actionable signal. Wiring finer-grained consumer behavior to these values (e.g. auto-resolving `reversibility=high`-only steps to a lighter-weight tier) is out of scope for this module.
+
 ## Producer Contract (`/spec`)
 
 When authoring an Implementation Step that triggers a new costed-model run (e.g. a new `--fable` run, a new `--opus` run) or a production/irreversible side effect (e.g. a mutating call to a production API), `/spec` must:
@@ -38,11 +40,13 @@ Both are required together: a step marked but with no Deferral Protocol leaves `
 
 Before executing a step carrying the `spec-approval-needed` marker:
 
-- **Interactive mode**: confirm via `AskUserQuestion` before executing.
-- **Non-interactive mode**: treat as a High-Stakes Decision under `modules/ambiguity-detector.md`'s Three-Tier Policy (skip tier) — do not execute the step. Instead, follow the Spec's Deferral Protocol and record the deferral under `## Code Retrospective` > `### Deviations from Design`, tagged (e.g. `(deferred — spec-approval-needed)`). This ensures the associated acceptance criteria is never reported as passing when the step was not actually run.
+- **Interactive mode**: confirm via `AskUserQuestion` before executing. If the user declines, apply the non-interactive fallback below instead of inventing a substitute action.
+- **Non-interactive mode**: treat as a High-Stakes Decision under `modules/ambiguity-detector.md`'s Three-Tier Policy (skip tier) — do not execute the step. Instead, follow the Spec's Deferral Protocol and record the deferral under `## Code Retrospective` > `### Deviations from Design`, tagged (e.g. `(deferred — spec-approval-needed)`). Leave the marked Implementation Step and its marker intact in the Spec (do not let a later "sync Spec to actual implementation" pass strip it), and leave the associated acceptance criteria unchecked (`- [ ]`) rather than marking it as passing.
+- **Deferral Protocol missing** (Producer Contract violation — reachable via pre-existing or hand-written Specs): if the marker is present but no matching Deferral Protocol entry exists in the Spec's `## Notes`, do not invent a substitute action. Apply the same non-interactive handling above — record the planned action (command/arguments, or a one-line description of the step) verbatim under `### Deviations from Design`, do not execute it, and leave the associated AC unchecked.
 
 The deferral record lands in the same location `/verify` Step 11(b) (Documented deferral detection) already reads — `skills/verify/SKILL.md` requires no change for this module to take effect.
 
 ## Notes
 
 - Why not an interactive fallback from `/code` to a parent session (rejected alternative (b))? `/code`'s non-interactive execution has no guaranteed live interactive parent — `/auto --batch` and scheduled runs are normal cases with no human watching. Introducing a "fall back to the parent session" channel would contradict the premise of non-interactive execution itself. The Three-Tier Policy's skip tier already handles this exact shape of problem (a high-risk decision that cannot be made non-interactively) via one more High-Stakes Decision entry, with no new mechanism required.
+- **Code-side auto-retry (`run-code.sh`'s `auto-retry-on-fail`) is out of scope for this module.** Unlike `/verify`'s auto-retry gate, it has no documented-deferral escape hatch analogous to #947. In the narrow case of an Issue whose Implementation Steps consist entirely of one deferred `spec-approval-needed` step, `reconcile-phase-state.sh`'s `matches_expected` check could still classify the run as a silent no-op and trigger a retry that defers again. Addressing this is deferred to a follow-up Issue rather than this module.
