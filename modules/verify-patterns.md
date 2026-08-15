@@ -857,8 +857,20 @@ This pattern applies whenever option flags are inserted between a command name a
 **Decision procedure:**
 
 1. Before writing `file_contains "path" "<command> <subcommand>"` (e.g., `"git commit"`, `"git push"`, `"kubectl apply"`, `"docker compose up"`, `"ssh user@host"`), check whether the implementation may insert flags between the command name and sub-command (e.g., `git -C`, `ssh -i ~/.ssh/key user@host`, `kubectl --context prod`, `docker compose -f`)
-2. If yes (or uncertain): use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead
-3. Verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
+2. If yes (or uncertain) **and the implementation file already exists**: use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead. If the implementation does not yet exist (pre-implementation — the `/issue` or `/spec` phase, before `/code` runs), see "Pre-implementation anchor selection" below instead of steps 2–3.
+3. When the implementation file already exists, verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
+
+**Pre-implementation anchor selection (issue/spec phase, before `/code` runs):**
+
+Steps 2 and 3 above assume the implementation file already exists — there is code to select a contiguous sub-string anchor from, and a file to cross-reference the choice against. That assumption does not hold when an acceptance condition's verify command is authored at `/issue` or `/spec` time, i.e. pre-implementation, before `/code` has produced any code: there is nothing to select an anchor from, and §3's cross-reference procedure has no file to check against.
+
+Rather than re-selecting the anchor from code that does not exist yet, require the implementation to conform to the anchor:
+
+1. Choose the contiguous anchor the verify command needs (e.g., `curl --config`)
+2. State, in the Spec's `## Implementation Steps`, an explicit requirement that the implementation include that literal contiguous substring — together with the reason (which acceptance condition's verify target string it satisfies) — so `/code` satisfies the requirement by constructing the implementation to match, instead of an anchor being selected post-hoc from existing code
+3. Keep the acceptance condition's FAIL-before-implementation / PASS-after-implementation property: do not choose an anchor already present in the codebase before implementation — that would make the condition an always-PASS defect, the same defect class `/issue`'s AC audit detects
+
+**Real example (Issue #1074):** the acceptance condition's verify command needed the anchor `curl --config` (`modules/verify-executor.md`'s translation table calls curl as `curl -s --connect-timeout 5 --max-time 10 [--config "$config_file"]`, where `curl` and `--config` are not contiguous). No implementation existed yet at `/spec` time, so instead of steps 2–3 above, Implementation Step 1 stated the literal-substring requirement directly: the description text must contain the contiguous string `curl --config` verbatim, because it is the AC's verify target string. `/code` satisfied this by writing `curl --config "$config_file"` in prose, and the acceptance condition correctly transitioned from FAIL (pre-implementation) to PASS (post-implementation).
 
 ### 24. Behavioral Changes — Prefer Full Test Suite for Verify Commands
 

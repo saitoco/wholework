@@ -30,3 +30,11 @@ VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 @test "verify-heuristics: §23 ssh example uses real key path" {
     grep -q "~/.ssh/" "$VERIFY_PATTERNS"
 }
+
+@test "verify-heuristics: §23 documents pre-implementation anchor selection branch" {
+    grep -q "Pre-implementation anchor selection" "$VERIFY_PATTERNS"
+}
+
+@test "verify-heuristics: §23 pre-implementation branch preserves FAIL-before PASS-after invariant" {
+    grep -q "always-PASS defect" "$VERIFY_PATTERNS"
+}
