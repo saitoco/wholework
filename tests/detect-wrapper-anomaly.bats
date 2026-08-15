@@ -384,6 +384,16 @@ MOCK
     [[ "$output" != *"preview-deployment-absent"* ]]
 }
 
+@test "preview deployment absent: IMPROVEMENT_HINT embedded gh api command survives escaping intact" {
+    printf 'PENDING: PR preview deployment not confirmed for PR #362 (branch=worktree-code+issue-334 state=none); skipping review session\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 2 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    embedded_cmd=$(echo "$output" | grep -o '`gh api[^`]*`' | head -1 | sed 's/^`//; s/`$//')
+    [[ "$embedded_cmd" == "gh api 'repos/:owner/:repo/deployments?per_page=1' --jq 'length'" ]]
+    bash -n <<< "$embedded_cmd"
+    [ "$?" -eq 0 ]
+}
+
 @test "silent no-op: no false positive for code-patch when commit found on origin/main" {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'

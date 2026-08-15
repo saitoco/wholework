@@ -1081,6 +1081,31 @@ Anchored on `### Step 1`, the scanned range ends at the next `###`-or-higher hea
 3. If the AC is fundamentally about meaning rather than placement, use `rubric` with a supplementary structural check (pattern 3).
 4. Only anchor on a coarse, multi-subsection heading when scoping to that whole section is the actual intent — and if so, document the heading-level constraint this creates (pattern 4).
 
+### 30. Diagnostic Messages Embedding User-Executable Commands — Verify Shell Validity, Not Just Substring Presence
+
+A bats assertion that only checks whether a pattern name or keyword appears as a substring of a script's output cannot detect that an *embedded, user-executable command string* inside that output has been corrupted by an escaping bug. The pattern name can be present and correct while the command text next to it is broken beyond use.
+
+**Background (Issue #1128)**: `scripts/detect-wrapper-anomaly.sh`'s `preview-deployment-absent` pattern builds an `IMPROVEMENT_HINT` that embeds a ready-to-run `gh api` command for the user to copy and paste. A double-escaping bug (`\\\"` leaking a literal backslash into the output) was introduced while editing that string. `tests/detect-wrapper-anomaly.bats`'s existing assertions for this pattern only checked substring presence/absence of the pattern name (`[[ "$output" == *"preview-deployment-absent"* ]]`), never the `IMPROVEMENT_HINT` content itself, so the bug passed CI green. It was caught only by `/review`'s Workflow mode (finder × 3 → adversarial verify) — detection depended on review depth rather than the test suite.
+
+**Trigger condition (all three must hold — AND)**:
+(a) The script's diagnostic/error/improvement-hint output embeds a command string intended for the user to copy and paste and run as-is (typically inline code wrapped in backticks, e.g. `` `gh api ...` ``) — not merely a keyword, path, or pattern name.
+(b) That embedded command is constructed inside the script's own source via string interpolation/escaping (nested quotes or backticks inside a bash double-quoted string literal, etc.) — i.e. an escaping layer exists that can silently break on edit.
+(c) The corresponding bats test currently asserts only substring presence of the pattern name or a keyword, not the embedded command's content.
+
+**Verification means (two-pronged; neither alone is sufficient)**:
+
+1. **Shell syntax validity (`bash -n`)**: extract the embedded command substring from the output and run `bash -n <<< "$extracted_command"` (or write it to a file and run `bash -n <file>`), then confirm exit code 0. This catches syntactically broken cases — unbalanced quotes, mismatched parentheses, a trailing unterminated backslash continuation.
+   - **Known limitation**: `bash -n` alone cannot detect every escaping corruption. A backslash-escaped double quote outside the surrounding quotes (`\"`) is syntactically valid to bash — it is simply treated as a literal `"` character — even though it silently changes the meaning of the arguments passed to the embedded command. This is exactly the shape of the #1128 bug: verified at Spec authoring time by reproducing the pre-fix code, `bash -n` returned exit code 0 for it. Never treat `bash -n` alone as sufficient; always pair it with verification means 2.
+2. **Content-level check**: assert the extracted command matches the expected literal string exactly (`[[ "$extracted" == "expected literal command" ]]`). When a fully-fixed expected literal is impractical (e.g. the command contains dynamic values), assert instead that the extracted command contains no unexpected backslash characters (`[[ "$extracted" != *'\'* ]]`) — applicable when the implementation uses only single-quoted arguments and therefore needs no escaping at all. This second means catches the class of bug that is syntactically valid but semantically broken, which means 1 (`bash -n`) alone cannot catch.
+
+**Recommended bats pattern**: anchor a `grep -o` extraction on a stable command prefix (e.g. `` `gh api[^`]*` ``) rather than a naive backtick-pair scan, which risks capturing an unrelated backtick span elsewhere in the output. Order the assertions: extraction → exact-match assertion → `bash -n` assertion.
+
+**Decision procedure**:
+1. Check whether the script's output embeds a user-executable command string per trigger condition (a). If not, this section does not apply — ordinary substring assertions are sufficient.
+2. Confirm trigger conditions (b) and (c): the command passes through source-level escaping, and the existing test does not already assert on the command's content.
+3. Add a `grep -o`-based extraction of the embedded command per the recommended bats pattern, and assert the extracted string is exactly the expected literal (verification means 2), or falls back to the no-unexpected-backslash form when a fixed literal is impractical.
+4. Add a `bash -n` syntax-validity assertion on the extracted string (verification means 1) alongside the content-level assertion from step 3 — never as its sole check, per the known limitation above.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
