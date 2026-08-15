@@ -85,3 +85,19 @@ VERIFY_SKILL="$PROJECT_ROOT/skills/verify/SKILL.md"
         printf '%s' "$row" | grep -q -- '--config "\$config_file"'
     done
 }
+
+@test "verify-executor: CI Reference Fallback converts SUCCESS to PASS only when identity is confirmed" {
+    grep -q "identity is confirmed (Step 2a)" "$VERIFY_EXECUTOR"
+    grep -q -- "→ \*\*PASS\*\* (detail: record the confirmed signal and reasoning" "$VERIFY_EXECUTOR"
+}
+
+@test "verify-executor: CI Reference Fallback falls back to UNCERTAIN when identity is unconfirmed" {
+    grep -q "but identity could not be confirmed" "$VERIFY_EXECUTOR"
+    grep -q "could not be confirmed to cover the AC's verification target" "$VERIFY_EXECUTOR"
+}
+
+@test "verify-executor: CI Reference Fallback lists the three identity confirmation signals" {
+    grep -q "Run command containment" "$VERIFY_EXECUTOR"
+    grep -q "Exact job name match" "$VERIFY_EXECUTOR"
+    grep -q "Execution target path containment" "$VERIFY_EXECUTOR"
+}

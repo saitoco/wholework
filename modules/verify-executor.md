@@ -356,8 +356,15 @@ When processing `command` hints in safe mode with a PR number provided:
 1. Get CI status with `gh pr view "$PR_NUMBER" --json statusCheckRollup`
 2. Match the `command` hint content (command name, test file paths, etc.) against CI job names and workflow names (inference-based)
    - Example: `command "bats tests/setup-labels.bats"` → `test-scripts` job
+
+2a. Before converting a SUCCESS result to PASS, confirm the identity (同一性) of the verification target — that the matched job's actual run scope covers what the AC's `command` requires, not merely that its name resembles the target. Any one of the following signals is sufficient to treat identity as confirmed:
+   - **Run command containment**: the job's step definitions in `.github/workflows/*.yml` run a command whose target contains the AC's `command` target (e.g., the workflow step runs `bats tests/`, which contains `tests/setup-labels.bats`)
+   - **Exact job name match**: the job name inferred in Step 2 is an exact match, not a partial/substring match
+   - **Execution target path containment**: the workflow step's execution target path (directory or glob) contains the AC's target path — not merely an adjacent or similarly-named path
+
 3. Determine based on match result:
-   - Related job is **SUCCESS** → **PASS** (detail: "Alternative verification via CI job `job-name` success")
+   - Related job is **SUCCESS** and identity is confirmed (Step 2a) → **PASS** (detail: record the confirmed signal and reasoning, e.g. "Alternative verification via CI job `test-scripts` success (identity confirmed via run command containment: workflow step runs `bats tests/`, which includes `tests/setup-labels.bats`)")
+   - Related job is **SUCCESS** but identity could not be confirmed → **UNCERTAIN** (detail: "CI job `job-name` succeeded but its run scope could not be confirmed to cover the AC's verification target")
    - Related job is **FAILURE** → First determine if failure is due to CI infrastructure (step 3a)
    - Related job status is **IN_PROGRESS** → **PENDING** (detail: "CI job is in_progress; re-verify after CI completes")
    - Related job is **incomplete** (QUEUED, etc.) → **UNCERTAIN** (detail: "CI incomplete")
