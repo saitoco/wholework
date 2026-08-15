@@ -92,6 +92,10 @@
 #### verify
 - pre-merge 3条件すべて PASS。post-merge 2条件（`verify-type: opportunistic`）は自動検証対象外でユーザー手動確認が必要。`phase/verify` ラベルで継続管理。
 
+### 2026-08-15 追記 (/audit verify-backlog 経由の再確認)
+
+`/audit verify-backlog` のランキング選抜バッチ verify (rank 4位) で再 dispatch。残り post-merge AC (「Size=S PR で新しい早期終了メッセージが表示される」) は Step 3 の実装コードを確認したところ、`REVIEW_DEPTH=skip` 判定後は条件分岐なく無条件でメッセージを出力する単純な構造であり、静的コード確認で動作を確定できた (PASS)。全5条件解消、`phase/done` へ遷移。
+
 ### Improvement Proposals
 - N/A
 
