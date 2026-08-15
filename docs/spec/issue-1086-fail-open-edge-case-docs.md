@@ -67,3 +67,22 @@
 - No dedicated `tests/spec.bats` case was added, per the Spec's Notes — matches the precedent of the three sibling Step 6 subsections (Credential/security policy alignment check, Tool detection pattern consistency check, Adapter pattern survey), which are verified by rubric + existing suite regression only.
 - All 3 Pre-merge AC (2 `rubric` + 1 `command "bats tests/spec.bats"`) verified PASS in this phase; Issue checkboxes already updated via `gh-issue-edit.sh`.
 - The Post-merge opportunistic AC remains open — `/audit` or a future `/spec` run on a gate/validator Issue is expected to surface it.
+
+## Issue Retrospective
+
+### Auto-Resolve Log
+
+- **Post-merge AC の `verify-type` を `manual` → `opportunistic` に変更** — 理由: `modules/verify-classifier.md` の Tag Assignment Example が「`/spec` 実行時に X を確認する」という文言パターンを `opportunistic` の具体例として明示している。本 Issue の post-merge AC (「ゲートまたは validator を新規追加する Issue を `/spec` に通し、Implementation Steps に edge case の期待動作が記載されることを確認する」) は同じ文言形状に一致するため、Classification Criteria の優先順位 (`auto > opportunistic > observation > manual`) に従い `opportunistic` を採用した。
+  - 他の候補: `manual` のまま維持 (元の設定) — `opportunistic` の方が `/auto` 実行時の自動消費対象になり将来の該当 Issue を取りこぼしにくいため不採用。
+
+### Background Factual Claim Verification (advisory)
+
+`scripts/check-pre-merge-ac.sh` / `fail_open()` / `scripts/validate-recovery-plan.sh` への言及はいずれもコードベースに実在を確認済み (advisory チェック PASS、本文修正なし)。
+
+### AC Verify Command Integrity Audit
+
+`scripts/check-skill-change-observation-ac.sh` / `scripts/check-ac-checkbox-format.sh` はいずれも exit 0 (指摘なし)。
+
+### Consumed Comments (at /issue time)
+
+No new comments since last phase.
