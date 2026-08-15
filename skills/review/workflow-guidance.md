@@ -150,12 +150,19 @@ const finderResults = await pipeline(
   }),
   finderResult => {
     if (!finderResult) return []
-    return parallel(finderResult.findings.map(finding =>
-      () => agent(
+    return parallel(finderResult.findings.map(finding => {
+      if (finding.body && finding.body.includes('[Edge Case Execution]')) {
+        // Already confirmed by actually executing the target code with real fixture
+        // inputs (see SKILL.md Parser/Validator Edge Case Pre-check) — not a speculative
+        // diff-reading finding, so adversarial refutation (which defaults to refuted=true
+        // on uncertainty) must not re-litigate it.
+        return Promise.resolve({ ...finding, refuted: false })
+      }
+      return agent(
         `Adversarially refute the following review finding. Default to refuted=true if uncertain.\n\nFinding:\npath: ${finding.path}\nline: ${finding.line}\nbody: ${finding.body}\nseverity: ${finding.severity}\nconfidence: ${finding.confidence}\n\nTry to find a concrete reason why this finding is NOT a real issue. Only set refuted=false if the finding is clearly a genuine problem.`,
         { label: `verify:${finding.path || 'general'}:${finding.severity}`, phase: 'Verify', schema: VERDICT_SCHEMA }
       ).then(verdict => ({ ...finding, refuted: verdict ? verdict.refuted : true }))
-    ))
+    }))
   },
 )
 
