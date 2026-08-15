@@ -38,7 +38,11 @@ import re
 import sys
 
 CJK_PATTERN = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
-INLINE_CODE_PATTERN = re.compile(r"`[^`]*`")
+# Captures the opening backtick run and requires a closing run of the same length
+# (Markdown code span rule), so a double-backtick span containing a nested single
+# backtick (e.g. ``the `foo` value``) is recognized as one span instead of the
+# unmatched first backtick greedily consuming the rest of the document.
+INLINE_CODE_PATTERN = re.compile(r'(`+)(?:(?!\1).)+?\1', re.DOTALL)
 DOUBLE_QUOTED_PATTERN = re.compile(r'"[^"]*"')
 FENCE_PATTERN = re.compile(r"^\s*```")
 

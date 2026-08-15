@@ -37,3 +37,9 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/check-languag
   run bash -c "printf '+++ b/skills/verify/SKILL.md\n@@ -10,7 +10,7 @@\n \`\`\`\n existing english line\n-old english line\n+新しい日本語の行\n \`\`\`\n other line\n' | python3 '$SCRIPT'"
   [ "$status" -eq 0 ]
 }
+
+@test "true positive: CJK after a double-backtick span with an odd embedded backtick is not swallowed" {
+  run bash -c "printf '+++ b/modules/example.md\n@@ -1,0 +1,1 @@\n+\`\`he said\` hello\`\`日本語プローズ\`end\`\n' | python3 '$SCRIPT'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"modules/example.md:"* ]]
+}
