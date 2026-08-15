@@ -41,12 +41,12 @@ Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop)**
 
 ### L3 Unattended
 
-Skills write GitHub state and may register persistent cron schedules via `CronCreate`. **Fully unattended operation.**
+Skills write GitHub state (label transitions, close/reopen, comments) fully unattended. `CronCreate` is available as an L2→L1 path (B), but it is session-scoped and in-memory — nothing is written to disk, registered jobs auto-expire after 7 days, and under `permission-mode: auto` unattended self-registration is blocked by the Claude Code auto mode classifier. Registering a `CronCreate` schedule therefore requires an attended session; it is not something an unattended L3 run can do on its own.
 
 Use L3 when:
 - You have verified that L2 works well for your project
-- You want recurring tasks (drift detection, progress audits) to run without any human trigger
-- You accept that Wholework will modify GitHub state and register cron jobs autonomously
+- You want GitHub-state work (label transitions, close/reopen, comments) to proceed without any human trigger
+- You accept that Wholework will modify GitHub state autonomously, while registering any `CronCreate` schedule still requires an attended session
 
 Allowed L2→L1 paths: **A, B (CronCreate), C**
 
