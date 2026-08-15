@@ -1264,7 +1264,7 @@ After all Issues are processed, report results (success/skip/failure) for each I
 1. For each issue in BATCH_LIST, run `gh issue view $NUMBER --json labels -q '.labels[].name'` and check whether the output contains `phase/verify`. Collect matching issues into `PENDING_LIST`.
 2. If `PENDING_LIST` is empty: output "No issues pending manual confirmation." and continue to the next step.
 3. For each issue in `PENDING_LIST`, run `gh issue view $NUMBER --json body -q '.body'` and count:
-   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: manual` → `MANUAL_N`
+   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: manual`, excluding lines that also contain `<!-- ac-tier: preview` (pre-merge preview-tier AC already confirmed by `/review` before merge — see `modules/verify-classifier.md` § Purpose) → `MANUAL_N`
    - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: observation` → `OBS_N`
    - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: opportunistic` → `OPP_N`
 4. Accumulate `TOTAL_MANUAL`, `TOTAL_OBS`, `TOTAL_OPP` across all issues in `PENDING_LIST`.

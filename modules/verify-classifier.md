@@ -1,20 +1,22 @@
 # verify-classifier
 
-Classification criteria and logic for determining the verifiability type of post-merge conditions.
+Classification criteria and logic for determining the verifiability type of post-merge conditions. The `manual` tag value this criteria produces is also assigned to pre-merge conditions via a separate path — see Purpose.
 
 ## Purpose
 
 This file provides classification criteria for assigning `<!-- verify-type: auto|opportunistic|manual -->` tags to each condition in the post-merge acceptance criteria section. Caller: `/issue`. Expected to also be referenced by `/verify` in the future.
 
+Separately, `/issue` Step 4's pre-merge-preview tier (`ac-tier: preview`, gated on `HAS_PR_PREVIEW_CAPABILITY`) assigns `verify-type: manual` to **pre-merge** conditions that require human confirmation against the PR preview environment — a distinct assignment path from this module's own priority-ordered classification below, which evaluates post-merge conditions only. `verify-type: manual` is therefore not exclusively post-merge: consumers that scan for it to mean "awaiting human confirmation post-merge" (e.g., a Manual Waiting Count) must exclude AC lines that also carry `ac-tier: preview`, since those were already confirmed pre-merge by `/review` against the preview URL, not left pending post-merge.
+
 ## Input
 
 Information provided by the calling skill:
 
-- Each acceptance condition from the post-merge section
+- Each acceptance condition from the post-merge section. (Pre-merge `ac-tier: preview` conditions are classified by `/issue` Step 4 directly, not through this module's criteria — see Purpose.)
 
 ## Processing Steps
 
-Skills that Read this file should evaluate each post-merge condition against the classification criteria **in order from top to bottom**, assigning the `<!-- verify-type: TYPE -->` tag of the first matching type.
+Skills that Read this file should evaluate each post-merge condition against the classification criteria **in order from top to bottom**, assigning the `<!-- verify-type: TYPE -->` tag of the first matching type. This ordered evaluation applies to post-merge conditions only; the pre-merge `ac-tier: preview` manual assignment (see Purpose) is decided by `/issue` Step 4's own preview-environment axis, not by this priority order.
 
 ### Classification Criteria (Priority: auto > opportunistic > observation > manual)
 

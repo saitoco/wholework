@@ -101,7 +101,7 @@ wholework/
 
 主要モジュール:
 - `modules/verify-patterns.md` — verify command パターン精度ガイドライン
-- `modules/verify-classifier.md` — マージ後条件の検証可能性分類
+- `modules/verify-classifier.md` — マージ後条件の検証可能性分類（このモジュールが生成する `manual` 値は、別経路 (`/issue`) でマージ前条件にも付与されうる — 詳細はモジュール本文を参照）
 - `modules/observation-trigger.md` — observation AC trigger 機構の設計（呼び出し元インターフェース・emitter 一覧・dispatch 契約）
 - `modules/run-fact-matching.md` — run-fact AC 照合機構の SSoT: 完走した `/auto` 実行の事実を構造化し、`phase/verify` に滞留する post-merge AC (manual/observation/opportunistic/auto いずれも対象) と照合、autonomy tier でゲート
 - `modules/verify-executor.md` — verify command の変換と実行

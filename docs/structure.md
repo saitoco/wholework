@@ -108,7 +108,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 
 Key modules:
 - `modules/verify-patterns.md` — verify command pattern accuracy guidelines
-- `modules/verify-classifier.md` — post-merge condition verifiability classification
+- `modules/verify-classifier.md` — post-merge condition verifiability classification (the `manual` value it produces is also assigned to pre-merge conditions via a separate `/issue` path — see module)
 - `modules/observation-trigger.md` — observation AC trigger mechanism design (caller interface, emitter lookup, and dispatch contract)
 - `modules/run-fact-matching.md` — run-fact AC reconciliation SSoT: structures a completed `/auto` run's facts and matches them against pending `phase/verify` post-merge AC (manual/observation/opportunistic/auto alike), gated by autonomy tier
 - `modules/verify-executor.md` — verify command translation and execution
