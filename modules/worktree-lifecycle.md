@@ -209,19 +209,12 @@ no Spec write and therefore no worktree requirement.
 | `/review` | worktree branch (= PR branch) | script's own push (no `--no-push`) → PR merge (`/merge`) |
 | `/merge` | worktree branch, fast-forwarded to `origin/main` after squash merge | Step 4 substep 4's `git push origin HEAD:main` |
 
-`/spec`'s and `/code`'s in-session call sites to `append-consumed-comments-section.sh` (see
-`modules/l0-surfaces.md` § "Bash wrapper fallback") pass `--no-push`: the commit lands on the
-working branch shown above, and this table's propagation path — not a push issued by the
-script itself — carries it to base. `/code` pr route also passes `--no-push`; it differs only
-in *how* the commit reaches the remote — its own Step 12 pushes the worktree (= PR) branch
-directly afterward, since the PR branch has no `worktree-merge-push.sh` propagation path of its
-own. `/merge` also passes `--no-push`, riding the same push as its own Step 4 Phase Handoff
-commit. `/verify` also passes `--no-push`, matching the `/spec`/`/code` patch-route pattern: the
-commit lands on the worktree branch and reaches base only through its own `Exit: merge-to-main`
-→ `worktree-merge-push.sh` (see #1354). `/review` omits `--no-push` and pushes immediately —
-this is an intentional design choice: `/review`'s Size XS/S early-exit branch can end the skill
-before reaching the later unconditional `## Retrospective` push, so deferring the push there is
-not safe.
+Phases that pass `--no-push` to `append-consumed-comments-section.sh` rely on this table's
+propagation path — not a push issued by the script itself — to carry the commit to base;
+phases that omit `--no-push` push immediately for reasons specific to their own early-exit
+shape. For the exhaustive per-phase enumeration of which phases pass `--no-push`, why, and how
+each phase's commit reaches the remote, see [`modules/l0-surfaces.md`](l0-surfaces.md) §
+"Bash wrapper fallback" (the SSoT for `append-consumed-comments-section.sh` callers).
 
 **Known gaps (not yet migrated):**
 - `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare
