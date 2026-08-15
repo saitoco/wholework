@@ -145,6 +145,7 @@ wholework/
 - `modules/autonomy-tier.md` — autonomy tier（L2→L1 経路許可）SSoT: tier × 経路マトリクス、Tier × L0 書き込みマトリクス、skill frontmatter 宣言ルール
 - `modules/event-emission.md` — event emission contract SSoT (phase event スキーマ、_EMIT_PHASE_OWNED パターン、run-*.sh ラッパーカバレッジ表)
 - `modules/round-ordering.md` — `/auto --batch --until` の Round `ROUND_LIST` 並び替え (ROI + title prefix クラスタリング + 意味的関係判断、cluster-first の組み合わせ)
+- `modules/costly-step-protocol.md` — costly/irreversible な Implementation Step に対する `spec-approval-needed` マーカー形式、`/spec` producer contract、`/code` consumer contract、Deferral Protocol 必須記載ルール
 
 ### Agents
 
