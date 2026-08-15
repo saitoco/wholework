@@ -1021,6 +1021,54 @@ An acceptance condition that is worded as a conditional over some count or class
 
 **Real example (Issue #1275)**: Pre-merge AC 4/5 were conditional statements of the form "classification D rows have been retired per the #1166 method, and ... Issues with no remaining unchecked conditions transition to `phase/done`". At verify time, classification D turned out to have **zero** rows. Because the AC's conditional wording did not state what to judge when D = 0, the verifier used discretion, judging both AC as "vacuously satisfied" on the basis that the report explicitly documented D = 0. This Issue (#1310) generalizes that ad hoc call into the default rule stated above, so future zero-count conditionals do not each require a fresh discretionary judgment.
 
+### 29. `section_contains` / `section_not_contains` Scanning Range Constrains Implementation Heading Levels
+
+`section_contains "path" "heading" "text"` and `section_not_contains "path" "heading" "text"` scan from the specified heading line to just before the **next heading of the same level or higher** (see `modules/verify-executor.md`). This scanning rule creates a hidden coupling: whatever heading level the implementation chooses for content that must fall inside — or must stay outside — the AC's scanned range directly determines whether the AC evaluates the intended text at all. An AC is meant to state *what* must be true; with `section_contains`/`section_not_contains`, it can silently also constrain *what heading level the implementation must use*, without that constraint ever being written down.
+
+**Real example (#1060)**: `skills/merge/SKILL.md` Step 1 added a pre-merge AC gate, verified with:
+
+```
+<!-- verify: section_contains "skills/merge/SKILL.md" "Step 1" "pre-merge AC" -->
+```
+
+Anchored on `### Step 1`, the scanned range ends at the next `###`-or-higher heading. The gate's own explanatory heading (`Post-Review Re-Verification Responsibility`) therefore had to be written as **h4 (`####`)** rather than the more natural **h3 (`###`)** — an h3 heading would itself have ended the `"Step 1"` scan, pushing everything after it out of the AC's verified range. The `/spec 1060` Judgment rationale records this as a design-time trade-off, not an accident.
+
+**Why this matters:**
+
+- The AC (a verification means) ends up dictating implementation document structure, inverting the usual "AC states the requirement, implementation satisfies it" relationship.
+- The coupling is invisible until someone tries to change the heading level. A later edit that promotes the explanatory heading from h4 to h3 (a purely structural, seemingly safe change) silently moves it out of the scanned range — the AC then evaluates the wrong content and can FAIL or return UNCERTAIN even though the requirement is still met.
+- The reverse also happens: a scanned range can be unintentionally too wide (capturing an unrelated subsection that happens to share the same enclosing heading) or too narrow (excluding content the author assumed was covered).
+
+**Alternative patterns to avoid or mitigate the coupling:**
+
+1. **Anchor on the finer-grained heading directly, not an enclosing parent heading.** If the content to verify has its own heading, scan from that heading instead of a coarse ancestor — this removes the dependency on sibling heading levels entirely.
+   ```
+   ❌ <!-- verify: section_contains "skills/merge/SKILL.md" "Step 1" "pre-merge AC" -->
+   ✅ <!-- verify: section_contains "skills/merge/SKILL.md" "Post-Review Re-Verification Responsibility" "pre-merge AC" -->
+   ```
+   The second form scans from the explanatory heading itself, so it stays correct regardless of whether that heading is h3 or h4.
+
+2. **Switch to `file_contains` when section-scoping is not actually required.** `file_contains` has no heading-level dependency because it scans the whole file. This trades away section scoping (the inverse of §8's "When to use `section_not_contains` instead of `file_not_contains`" guidance), so only use this when the target text is unlikely to appear elsewhere in the file.
+   ```
+   ❌ <!-- verify: section_contains "modules/foo.md" "## Parent Section" "new keyword" -->
+   ✅ <!-- verify: file_contains "modules/foo.md" "new keyword" -->
+   ```
+
+3. **Use `rubric` for the semantic requirement, optionally paired with a structural check anchored on the specific heading being added (per §9's "Combining `rubric` with supplementary `file_contains`/`section_contains`").** This shifts the AC's real assertion to meaning rather than document structure, while the supplementary check still confirms placement without constraining sibling heading levels.
+   ```
+   <!-- verify: rubric "the gate's re-verification responsibility is explained near Step 1" -->
+   <!-- verify: file_contains "skills/merge/SKILL.md" "Post-Review Re-Verification Responsibility" -->
+   ```
+
+4. **When section-scoping on a parent heading is unavoidable, decide and record the required heading level at design time.** If the AC must anchor on a coarse heading (e.g., to bound a whole numbered step), state the implementation's required heading level explicitly in the Spec or AC description, so a later structural edit is recognized as an AC-breaking change rather than a harmless rename.
+
+**Decision procedure:**
+
+1. Identify whether the text to verify has its own dedicated heading. If yes, anchor `section_contains`/`section_not_contains` there (pattern 1) instead of an enclosing heading.
+2. If no dedicated heading exists and the text is unlikely to appear elsewhere in the file, use `file_contains` (pattern 2).
+3. If the AC is fundamentally about meaning rather than placement, use `rubric` with a supplementary structural check (pattern 3).
+4. Only anchor on a coarse, multi-subsection heading when scoping to that whole section is the actual intent — and if so, document the heading-level constraint this creates (pattern 4).
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
