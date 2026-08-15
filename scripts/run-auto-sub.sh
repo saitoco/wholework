@@ -318,7 +318,7 @@ def _is_duplicate(tail):
         re.DOTALL | re.MULTILINE,
     ):
         ts_str, existing_symptom, block = m.group(1), m.group(2), m.group(3)
-        if existing_symptom != symptom_short or context_line not in block:
+        if existing_symptom != symptom_short or (context_line + "\n") not in block:
             continue
         try:
             existing_ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)

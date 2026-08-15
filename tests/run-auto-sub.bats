@@ -1981,6 +1981,50 @@ MOCK
     [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 1 ]
 }
 
+@test "run-auto-sub: manual recovery: a new phase that is a prefix of an existing entry's phase is not a false-positive duplicate" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    # 1st call: existing entry recorded against phase "code-patch".
+    run bash "$SCRIPT" --write-manual-recovery 42 code-patch respawn
+    [ "$status" -eq 0 ]
+    [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 1 ]
+
+    # 2nd call: new event against phase "code" -- a prefix of the existing entry's phase
+    # "code-patch". Before the fix, the "context_line not in block" substring check matched
+    # "- Issue #42, phase: code" inside "- Issue #42, phase: code-patch" and wrongly deduped
+    # this as the same event, so the recoveries log entry count stayed at 1.
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn
+    [ "$status" -eq 0 ]
+    [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 2 ]
+}
+
 @test "run-auto-sub: manual recovery: an existing entry outside the dedup window is treated as a separate event" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
     mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
