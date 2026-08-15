@@ -36,6 +36,34 @@
 - **`docs/ja/` translation sync check**: Changed Files が `skills/spec/SKILL.md` のみであり、`docs/translation-workflow.md` の同期対象 (top-level `docs/*.md`) 外のため対象外。
 - **tests/spec.bats への新規テスト追加は見送り**: 既存の類似 Step 6 サブセクション (Credential/security policy alignment check、Tool detection pattern consistency check、Adapter pattern survey) はいずれも `tests/spec.bats` に専用テストを持たず、rubric verify command による検証のみで運用されている前例を確認した。本 Issue の AC 構成 (rubric 2件 + 既存スイート回帰確認 1件) もこの前例と一致するため、新規 bats テストは追加しない。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Step 1 was applied as written; no reordering, omission, or approach change occurred.
+
+### Design Gaps/Ambiguities
+- N/A — the insertion point and subsection content specified in the Spec (Notes: "挿入位置の判断") matched the actual `skills/spec/SKILL.md` Step 6 structure exactly.
+
+### Rework
+- N/A
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (post-merge AC の verify-type を manual → opportunistic に自動解決。判断根拠は `modules/verify-classifier.md` の Tag Assignment Example との文言一致。Background 記載事実 (`check-pre-merge-ac.sh`/`fail_open()`/`validate-recovery-plan.sh`) はコードベース実在確認済み) / https://github.com/saitoco/wholework/issues/1086#issuecomment-5303694902
+- No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted the new "Fail-safe critical script identification" subsection immediately after "Adapter pattern survey" and before "### Step 7", matching the Spec's Notes rationale (the identification criteria depend on inspecting existing code for `fail_open()`/validator patterns, so it belongs after codebase investigation, not before it like the Credential/security policy alignment check).
+- Wrote the new subsection content in English to match `skills/spec/SKILL.md`'s existing language (source code convention per project `CLAUDE.md`).
+- Followed the Spec's Implementation Step 1 verbatim (3-criteria identification + edge case enumeration + #1060 example citation) without adding scope beyond it.
+
+### Deferred Items
+- None — the Post-merge AC (`verify-type: opportunistic`) is left unchecked by design; it observes a future gate/validator Issue passing through `/spec`, not something deferrable within this phase.
+
+### Notes for Next Phase
+- No dedicated `tests/spec.bats` case was added, per the Spec's Notes — matches the precedent of the three sibling Step 6 subsections (Credential/security policy alignment check, Tool detection pattern consistency check, Adapter pattern survey), which are verified by rubric + existing suite regression only.
+- All 3 Pre-merge AC (2 `rubric` + 1 `command "bats tests/spec.bats"`) verified PASS in this phase; Issue checkboxes already updated via `gh-issue-edit.sh`.
+- The Post-merge opportunistic AC remains open — `/audit` or a future `/spec` run on a gate/validator Issue is expected to surface it.
