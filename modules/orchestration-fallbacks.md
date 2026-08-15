@@ -539,6 +539,17 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 ### Applicable Phases
 - code phase only (patch and pr routes alike)
 - Applies regardless of the calling path — `/auto` single-Issue direct dispatch, `run-auto-sub.sh`-mediated XL sub-issue / Batch Mode execution, or a standalone `run-code.sh` invocation — since `run-code.sh` itself is the recording subject in all of them
+- This scope is a deliberate, evidence-gated decision confirmed by Issue #1329 (details below in Phase Scope Decision), not an unaddressed gap
+
+### Phase Scope Decision
+
+Whether this mechanism should extend beyond the code phase was evaluated in Issue #1329, prompted by a spec-phase silent no-op (#1130) that had no wrapper-level retry and fell through to Tier 3 recovery — costlier than the code-phase equivalent (#1102), which this entry's own mechanism resolved in ~25 minutes. The code-only scope is confirmed as deliberate, evidence-gated policy, not an unaddressed gap, decided per phase:
+
+- **spec**: structurally the same shape as `code-patch` — single wrapper, local `reconcile-phase-state.sh <phase> --check-completion` signature (`modules/phase-state.md` Phase Table), no partial external side effect to double-apply on retry. `scripts/run-spec.sh` already calls this check and sets `EXIT_CODE=1` on `matches_expected:false` (mirroring `run-code.sh`'s own detection) — only the retry-vs-fail branch itself is missing. Recommended as a follow-up Issue on the strength of the #1130 incident; not implemented by #1329 itself (Size S / documentation-only scope).
+- **issue, review**: same low-risk shape as spec (local completion signature, no partial side effect), but no observed silent-no-op incident to date. Left unextended for now, consistent with Wholework's evidence-gated recalibration pattern elsewhere (e.g. #903, #939, #1301: act after a real measured incident, not pre-emptively) — re-evaluate if one occurs.
+- **merge**: not safely portable as-is. `gh pr merge --squash --delete-branch` is an irreversible external side effect; a local-completion-only gate (the pattern `code`/`spec` use) risks a second merge attempt if that check is stale or racy. A safe design would need the same live `gh pr view --json state` check `detect-wrapper-anomaly.sh` already uses for merge-phase anomaly detection (see `#code-patch-silent-no-op`'s Exception Condition above), not the simpler local gate — a materially different, not-yet-designed mechanism. Deferred until a real merge-phase silent-no-op incident justifies the added design and implementation cost.
+
+Tier 2 (`apply-fallback.sh`)'s `code-patch-silent-no-op` handler is also code-phase-specific in its retry action (`apply_code_patch_silent_no_op_retry()` hardcodes `run-code.sh --patch`) even though `detect_symptom_anchor()`'s underlying symptom detection is phase-agnostic — so today, a non-code-phase silent no-op has no automatic recovery below Tier 3, matching the #1130 Background exactly.
 
 ### Fallback Steps
 1. Immediately before the `exec` self-restart, `run-code.sh` itself calls `_write_code_retry_recovery(issue, iteration)`, which appends a `code-retry-fire` entry to `docs/reports/orchestration-recoveries.md`, commits it (`git commit -s`), and pushes with fetch+rebase retry (same pattern as `_push_with_retry()` below)
@@ -554,6 +565,7 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 - Placing the recording inside `run-code.sh` itself, immediately before `exec`, uniformly covers every calling shape (single-Issue direct dispatch, XL sub-issue, Batch Mode, standalone invocation) with one implementation
 - `run-code.sh`'s top-level bash code runs in `MAIN_REPO_ROOT` (the main repository, not the `/code` `claude -p` child's own worktree), so `modules/worktree-lifecycle.md`'s worktree write-path constraints do not apply here — the same execution context `_write_wrapper_retry_recovery()` already relies on
 - Pointer comment `# See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire` is placed immediately above the `_write_code_retry_recovery` call in `scripts/run-code.sh`
+- Issue #1329 is the decision record for scoping this mechanism to the code phase only — see Phase Scope Decision above for the per-phase evaluation
 
 ---
 
