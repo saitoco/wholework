@@ -81,6 +81,8 @@ patch route (Size XS/S):
 
 **Route selection:** Size XS/S → patch route → use `gh run list` form; Size M/L → PR route → use `gh pr checks` form. For detailed routing logic (UNCERTAIN handling when PR_NUMBER is absent, etc.), see `modules/verify-classifier.md` § Patch Route CI Verification Note. Exception: when `.wholework.yml` sets `always-pr: true` (`ALWAYS_PR=true`), Size XS/S is promoted to pr route, so use the `gh pr checks` form regardless of Size (see `modules/size-workflow-table.md` § "ALWAYS_PR Override").
 
+**Worktree caveat:** Do not add a `--commit=` scope resolved via `git rev-parse HEAD` to the `gh run list` form above. `/verify` executes inside its own worktree (see `modules/worktree-lifecycle.md`), so `git rev-parse HEAD` there resolves to the worktree's own local HEAD — which can be a commit that was never pushed at all — not the actual pushed `origin/<base>` HEAD. See `modules/verify-classifier.md` § Patch Route CI Verification Note ("Worktree HEAD pitfall") for the concrete failure mode and the resolution if a commit-scoped check is ever needed.
+
 **Pattern to avoid (requires local execution or fallback inference):**
 
 ```markdown
