@@ -19,3 +19,7 @@ GUIDANCE_FILE="$PROJECT_ROOT/skills/review/workflow-guidance.md"
 @test "workflow-guidance: verify stage thunk array is executed via parallel()" {
     grep -q "return parallel(finderResult.findings.map(finding =>" "$GUIDANCE_FILE"
 }
+
+@test "workflow-guidance: EDGE_CASE_SUFFIX is applied to finder prompts" {
+    grep -q '${CONFLICT_SUFFIX}${EDGE_CASE_SUFFIX}' "$GUIDANCE_FILE"
+}

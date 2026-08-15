@@ -58,6 +58,8 @@ Analyze the PR diff and detect issues for each perspective:
 - Processing on external command failure or file read failure
 - Temporary file cleanup omissions
 
+When the prompt includes a pre-measured edge case execution result (from `skills/review/SKILL.md` § Parser/Validator Edge Case Pre-check), take it directly into this perspective's findings rather than re-deriving it.
+
 **Date/File-Naming Semantics Cross-Check:**
 When the PR diff contains `date +%` or `date -u +%` used in a file path expression:
 - Check the generator function or script for the same artifact family (off-diff context) and existing artifact file names (`ls` of the output directory) to confirm the date naming convention

@@ -99,6 +99,10 @@ When the PR diff contains `date +%` or `date -u +%` used in a file path expressi
 - If the date convention in the diff differs from the generator's convention, report at MUST level — the constructed path will deterministically never match the generated file names
 - If no existing generated artifacts can be found for comparison, report at SHOULD level to flag the unverified assumption
 
+**Pre-measured Edge Case Execution Results:**
+When the prompt includes a pre-measured edge case execution result (from `skills/review/SKILL.md` § Parser/Validator Edge Case Pre-check):
+- Do not re-derive it — reflect the reported findings directly in Detected Issues, keeping the severity already assigned by the measurement
+
 ### 2. False Positive Filtering
 
 For each detected issue, verify whether it should be flagged:

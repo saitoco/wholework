@@ -384,6 +384,26 @@ Run this section first, before evaluating either branch-decision paragraph below
 5. If one or more paths were found, write path / `[SSoT]` flag / base-side diff for each to `.tmp/base-conflict-context-$NUMBER.md`. If zero paths were found, do not write the file — no additional context is passed to the review agents below.
 6. Add `.tmp/base-conflict-context-$NUMBER.md` to the `rm -f` cleanup list in 14.2.
 
+### Parser/Validator Edge Case Pre-check
+
+Run this section after the Base Branch Conflict Pre-check above, before evaluating either branch-decision paragraph below (Workflow path / light mode) — this applies to every review path (light, full, and Workflow) equally.
+
+**Firing conditions** (fires when any diff `+` line matches one of the following; exhaustive):
+- (a) Addition or modification of a regular expression used to match, validate, or extract an input string
+- (b) Addition or modification of a `case`/`if` chain that branches on the shape of an input value (aimed at format detection, not a fixed enum check)
+- (c) Addition or modification of a function/script that takes a string supplied from outside the process (config file content, CLI argument, environment variable, user input, etc.) as an argument and interprets/validates/normalizes it
+
+**Minimum input axes to cover** (same 5 axes as the Issue body; exhaustive): empty input / unexpected nesting or hierarchy depth / input containing metacharacters / incidental syntax such as comments / structure shallower or deeper than expected
+
+**Trust gating (execution safety)**: This procedure executes PR-diff-introduced code with the reviewer's own credentials and permissions (the same worktree `/review` itself runs in — `git push`, `gh api`, etc. are reachable from that environment). Before running steps 1-4 below, resolve the PR author's trust tier the same way as `modules/l0-surfaces.md` § Trust Boundary: `gh pr view "$NUMBER" --json authorAssociation --jq .authorAssociation`. `OWNER`/`MEMBER`/`COLLABORATOR` are first-class; `CONTRIBUTOR`/`NONE` are external. Only first-class PRs proceed to actual code execution (steps 1-4). For an external-authored PR, skip step 3's execution entirely and instead write a single line to `.tmp/edge-case-context-$NUMBER.md` noting that edge case execution was skipped for this PR due to the external-contributor trust boundary — so downstream review agents and the human reviewer both know real-input execution did not happen and static review remains the only coverage.
+
+1. If zero files match the firing conditions above, skip the rest of this subsection (do not write a context file).
+2. If more than 2 files match, process only the top 2 by diff hunk size, and record the excluded files in the context file's header (cap rationale: this measurement sub-agent carries out heavier work than the 10.3 verification sub-agent, so it uses a more conservative cap). This cap-triggered case always produces a context file (see step 4) — the excluded-file record must not silently disappear because the top-2 processed files happened to report zero findings.
+3. For each matching file (first-class PRs only — see Trust gating above), launch a `subagent_type="general-purpose"` Task sub-agent in parallel. Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, writing any fixture files only under `.tmp/edge-case-fixtures-$NUMBER/` and deleting that directory before returning, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug.
+4. Write `.tmp/edge-case-context-$NUMBER.md` when either condition holds: (a) one or more sub-agents report 1+ findings, or (b) the cap in step 2 triggered (so the excluded-file header is preserved even if the processed files report zero findings). Do not write the file when neither condition holds (zero matches, or matches processed with zero findings and no cap triggered). Add this file, and `.tmp/edge-case-fixtures-$NUMBER/` as a defensive backstop in case a sub-agent's own cleanup (step 3) did not run, to the `rm -f`/`rm -rf` cleanup list in 14.2.
+
+**Review depth and rationale**: fires under `--light`, `--full`, and the Workflow path alike (independent of `REVIEW_DEPTH`). Rationale: the originating defect (#1055 / PR #1120) was found under `--light` — limiting this to `--full` only would reopen the detection gap this Issue is closing. Cost is bounded by the firing-condition gating (most PRs that never touch a parser/validator/normalizer see zero matches) and the 2-file cap.
+
 **Workflow path (opt-in)**: After the Base Branch Conflict Pre-check above, when `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
 
 **In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
@@ -411,11 +431,13 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
 
    If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to the prompt below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
 
+   If `.tmp/edge-case-context-$NUMBER.md` exists (written by the Parser/Validator Edge Case Pre-check above), append its content to the same prompt, followed by: "The above is a pre-measured edge case execution result for this diff's parser/validator/normalizer changes. Do not re-derive it — reflect it directly in Perspective 2 (Edge Cases and Robustness)."
+
    ```text
    Task(
      subagent_type="review-light",
      description="Lightweight integrated review (all 4 aspects)",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
@@ -467,23 +489,25 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
    If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to each of the 3 prompts below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
 
+   If `.tmp/edge-case-context-$NUMBER.md` exists (written by the Parser/Validator Edge Case Pre-check above), append its content to each of the 3 prompts below, followed by: "The above is a pre-measured edge case execution result for this diff's parser/validator/normalizer changes. Do not re-derive it — reflect it directly in Detected Issues (review-bug)."
+
    ```text
    Task(
      subagent_type="wholework:review-spec",
      description="Spec review",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (diff bug scan)",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (security scan)",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
@@ -511,7 +535,9 @@ Run only when `SKIP_REVIEW_BUG=false` (skip if review-bug was skipped).
 
 Launch verification sub-agents (Opus) in parallel for each issue collected from review-bug×2 to filter false positives. Issue limit: **10**; excess issues are passed to Step 10 without verification.
 
-1. **Collect issues**: list review-bug issues from 10.2 results
+**Pre-measured edge case findings bypass verification**: an issue whose title matches the `**[Edge Case Execution] path:line**` format (see Parser/Validator Edge Case Pre-check, step 3(6)) was already confirmed by actually executing the target code with real fixture inputs — it is not a speculative diff-reading finding. Do not send it through the verification sub-agent below; treat it as `VERDICT: PASS` directly and include it in Step 10's integrated results unchanged.
+
+1. **Collect issues**: list review-bug issues from 10.2 results, excluding any `**[Edge Case Execution] ...**` issues per the bypass rule above
 2. **Launch verification sub-agents in parallel** (one inline prompt per issue):
 
    ```text
@@ -828,7 +854,8 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 ```bash
 mkdir -p .tmp
 gh pr comment "$NUMBER" --body-file .tmp/review-summary-$NUMBER.md
-rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md
+rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md .tmp/edge-case-context-$NUMBER.md
+rm -rf .tmp/edge-case-fixtures-$NUMBER/
 ```
 
 **On failure**: output summary to terminal (fallback).

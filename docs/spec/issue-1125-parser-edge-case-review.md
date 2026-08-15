@@ -50,3 +50,44 @@ PR #1120 (Issue #1055) の `/review --light` で、追加コードに silent fai
 | Login | Association | Trust tier | Summary | URL |
 |-------|-------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。`triaged` 済みのため triage auto-chain はスキップ、steering docs との用語抵触なし、曖昧ポイント検出なし。Post-merge AC の `verify-type: observation event=auto-run` に `session=next` が欠落していたため追加済み (本 Spec 作成時点の Issue body で反映済みを確認)。手順順序の補正メモ (comment consumption を label transition より先に実行すべきところ誤って逆順で実行、実害なし) | https://github.com/saitoco/wholework/issues/1125#issuecomment-5302569064 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-5 を Spec の記述どおりに実装した)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 判定 (実行対象の信頼境界なし) を含む5件の指摘全てを `/review` フェーズ内で修正した (SHOULD/CONSIDER も含め、いずれも同一サブセクション内の低リスクなドキュメント/ロジック修正であり fix コストが低いため)
+- Trust gating は `modules/l0-surfaces.md` § Trust Boundary の既存分類 (OWNER/MEMBER/COLLABORATOR = first-class) をそのまま再利用し、新しい判定基準を作らなかった
+- 事前実測済み finding (`[Edge Case Execution]` マーカー) を下流フィルタ (10.3 検証 / Workflow adversarial-refute) でバイパスする設計とし、両経路に同じ考え方を反映した
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=auto-run session=next`): パーサ系変更を含む次回 PR の `/review` で edge case pre-check が実際に発火するかは post-merge の観察待ち (未変更で継続)
+- 本 PR 自体はパーサ/バリデータ変更を含まないため、Parser/Validator Edge Case Pre-check 自体は本 PR のレビュー中に発火しなかった (発火条件 (a)(b)(c) いずれにも該当するファイル差分がなかった)。Trust gating・cleanup・bypass ロジックの実地検証は post-merge の Post-merge AC 観察を待つ
+
+### Notes for Next Phase
+- `/merge` は CI 全 SUCCESS・Pre-merge AC 3件全 PASS の状態で実行可能
+- `/verify` では Post-merge AC (observation event=auto-run) の発火有無に加え、本 PR で追加した Trust gating (信頼境界判定) と fixture cleanup が実際のパーサ系 PR で機能するかを次回発火時に確認すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+実装は Spec の Implementation Steps 1-5 におおむね忠実で、Code Retrospective も「Deviations from Design: N/A」としている。今回 `--light` review で検出された5件の指摘 (MUST 1件・SHOULD 3件・CONSIDER 1件) はいずれも Spec が明記していなかった論点に関するものだった。特に、PR diff 由来コードを実際に実行するという設計そのものが持つセキュリティ含意 (実行対象の信頼境界・サンドボックス化) を Spec の Notes セクションは議論していなかった (Notes は allowed-tools 権限設計の議論はあったが、「誰の PR に対して実行するか」という信頼境界の論点はなかった)。今後、diff 由来コードを実際に実行する設計を Spec 化する際は、実行対象の信頼境界を明示的な論点として立てることが望ましい。
+
+### Recurring issues
+
+単一のサブセクション追加でありながら、下流ステップへの伝播漏れ (10.3 検証・Workflow adversarial-refute が事前実測済み finding を認識しない)・cap 発動時の記録欠落・fixture cleanup 未定義・illustrative example の非対称、という複数の統合ギャップが同時に見つかった。「新しい実行系ステップを追加する際、既存の後続ステップ (検証 sub-agent・Workflow 経路・14.2 クリーンアップ・illustrative 例) すべてに一貫して伝播しているか」を横断チェックする観点は、review-light の4観点定義に明示的には存在しない。今回は `--light` review でも機能したため検出できたが、経験1件のみで一般化根拠が薄く、別 Issue 化は見送る。
+
+### Acceptance criteria verification difficulty
+
+3件の Pre-merge AC (rubric×2, github_check×1) はいずれも UNCERTAIN なく明確に判定できた。rubric の文言が「発火条件と入力軸が示されている」「review 深度と選択理由が明記されている」という検証可能な具体的表現になっていたため、grader 判定は容易だった。verify command の記述に問題は見つからなかった。
