@@ -66,16 +66,31 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec Notes のコンシューマー総ざらい (`grep -rn "verify-type: manual" skills/ modules/ scripts/`) は grep 自体は網羅的に実行されていたが、ヒットしたファイルの分類判断に誤りがあった。`scripts/post_merge_check.sh` の `extract_manual_acs()` は同じ grep に一致するにもかかわらず「修正不要」と判断されていたが、review で `ac-tier: preview` を除外しておらず既確認 preview AC を再確認プロンプトに出してしまう欠陥が見つかった。grep による発見の網羅性と、ヒットしたファイルごとの判定の正確性は別問題であるという教訓 — 総ざらいの結果は「対象ファイル一覧」として扱い、各ファイルの要修正/不要の判断は個別に再確認する運用が望ましい。
+
+### Recurring issues
+- Nothing to note. 検出された 2 件の SHOULD 指摘は異なる性質 (見落とされたコンシューマー vs. 新しい除外ロジック自体の設計ギャップ) で、同一パターンの繰り返しではない。
+
+### Acceptance criteria verification difficulty
+- Nothing to note. Pre-merge AC 4 件 (`rubric` ×3、`command` ×1) はいずれも UNCERTAIN なく明確に PASS 判定できた。`bats tests/*.bats` は safe mode の CI 参照フォールバックが `Run bats tests` ジョブへの exact job name match により正しく機能した。
+
+### Improvement proposal
+- `skills/audit/SKILL.md` / `skills/auto/SKILL.md` に本 PR で追加した `ac-tier: preview` 除外ロジックは無条件除外のため、`/review` が preview AC を UNCERTAIN のまま残した場合 (`type=preview-ac-unverified` マーカーが残っているケース) まで誤って Manual Waiting Count / Pending manual confirmation から除外してしまい undercounting が生じうる。`/verify` が既に持つ `resolve-preview-ac-fallback.sh` 相当のマーカー解決ロジックを、これら 2 つの集計処理にも統合するフォローアップが必要 (本 Issue のスコープ外と判断し今回は見送り。`/verify` でのフォローアップ集約に委ねる)。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `docs/structure.md` / `docs/ja/structure.md` の Modules 表一行説明 ("post-merge condition verifiability classification" / 「マージ後条件の検証可能性分類」) は、`modules/verify-classifier.md` の Purpose 本文が pre-merge 拡張を反映する記述に変わった以上、一行要約だけが旧前提のまま残ると同じ種類のドリフトを再発させるため、更新対象とした (Spec Notes で「実際の更新要否は `/code` が判断する」とされていた判断ポイント)
-- `modules/verify-classifier.md` の既存の `auto|opportunistic|manual` タグ列挙 (`observation` が抜けている、本 Issue とは無関係の既存ギャップ) は変更しなかった — 本 Issue のスコープは pre-merge 拡張の反映のみ
+- Review 指摘のうち `scripts/post_merge_check.sh` の `ac-tier: preview` 未除外 (SHOULD) と `docs/structure.md` / `docs/ja/structure.md` の因果関係表現の食い違い (CONSIDER) は、audit/auto に既に適用したパターンと同型かつ低リスクな修正のため、その場で修正した
+- `skills/audit/SKILL.md` / `skills/auto/SKILL.md` の除外ロジックが `type=preview-ac-unverified` マーカーを考慮しない undercounting の可能性 (SHOULD) は、`/verify` が持つマーカー解決ロジックの統合という設計変更を要し本 Issue のスコープを超えるため、修正せず retrospective の improvement proposal として記録した
 
 ### Deferred Items
-- Post-merge AC (`/audit stats --retention` 実行時に pre-merge manual preview AC が Manual Waiting Count から除外されることの確認) は、本 repo に `capabilities.pr-preview` を有効化した Issue が存在しないため、検証用シナリオの一時構築が必要 — Issue 本文の Autonomous Auto-Resolve Log に記載済み
+- Post-merge AC (`/audit stats --retention` 実行時に pre-merge manual preview AC が Manual Waiting Count から除外されることの確認) は引き続き未検証 — 検証用シナリオの一時構築が必要 (Issue 本文の Autonomous Auto-Resolve Log に記載済み)
+- `ac-tier: preview` 除外ロジックの undercounting 改善 (improvement proposal 参照) はフォローアップ Issue 化が未実施
 
 ### Notes for Next Phase
-- Post-merge AC の検証には `ac-tier: preview` + `verify-type: manual` を持つ AC を含む Issue を一時的に構築するか、`capabilities.pr-preview: true` を設定した検証用シナリオが必要
-- 修正した 3 ファイル (`skills/audit/SKILL.md`、`skills/auto/SKILL.md`、`modules/verify-classifier.md`) 以外に `verify-type: manual` を参照する箇所は、Spec Notes の consumer sweep (`grep -rn "verify-type: manual" skills/ modules/ scripts/`) で洗い出し済み — いずれも修正不要と判断済み
+- `/merge` 前提: MUST issue なし、CI 全 11 ジョブ SUCCESS、Pre-merge AC 4/4 PASS。Post-merge AC 1 件は `/verify` で検証用シナリオの一時構築が必要
+- 修正コミット 2 件はいずれも Refs リンク付きで push 済み
