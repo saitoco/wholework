@@ -294,3 +294,8 @@ Nothing to note. 今回の指摘（SHOULD 1件、CONSIDER 3件）はすべて独
 
 - Spec の Changed Files セクションに「新規スクリプト追加時は `docs/structure.md` Key Files テーブルを必ず更新する」旨を明文化し、チェックリスト化する（review retrospective で既に指摘済み、skill 基盤レベルの改善候補）。
 - `STEERING_DOCS_PATH`（単数）と `STEERING_DOCS_PATHS`（複数）の命名衝突について、将来のリネーム方針を別 Issue で追跡する（skill 基盤改善候補）。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/56#issuecomment-4231499327
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /spec execution) / https://github.com/saitoco/wholework/issues/56#issuecomment-4231571467
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/56#issuecomment-5300747616
