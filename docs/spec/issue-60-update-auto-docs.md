@@ -80,3 +80,7 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results (Issue #60) / https://github.com/saitoco/wholework/issues/60#issuecomment-4211252686
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/60#issuecomment-5300782776
