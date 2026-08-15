@@ -848,6 +848,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `SKILL_NAME=issue`
 - `ISSUE_NUMBER=$NUMBER`
 - `SIZE={fetched size}`
+- `ALWAYS_PR=$ALWAYS_PR` (retained in Step 2 / Step 4)
 - `RESULT={success|blocked}`
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.

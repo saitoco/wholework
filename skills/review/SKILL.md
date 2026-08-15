@@ -110,6 +110,8 @@ Determine the review mode using ARGUMENTS and the linked Issue's Size, and store
 
 **Exclusivity check:** if both `--light` and `--full` are specified, display error and exit.
 
+**Load `ALWAYS_PR` (before Size branching):** read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` for use in the Size mapping below.
+
 **Detection priority:**
 
 1. `--light` in ARGUMENTS → `REVIEW_DEPTH=light`
@@ -123,6 +125,8 @@ Determine the review mode using ARGUMENTS and the linked Issue's Size, and store
 | `M`  | light | Run Step 10 as lightweight integrated review (1 agent) |
 | `L`  | full | Run all steps |
 | `XL` | full | Run all steps |
+
+**`ALWAYS_PR` override**: when `ALWAYS_PR=true` (`.wholework.yml` `always-pr: true`), Size `XS`/`S` no longer routes to `/code`'s patch route — `/code` promotes it to pr route (see `modules/size-workflow-table.md` § "ALWAYS_PR Override"), so a PR necessarily exists here and the `skip` row above does not apply. In this case, set `REVIEW_DEPTH=light` instead of `skip` for `XS`/`S` — the same safe fallback `skills/auto/SKILL.md`'s REVIEW_DEPTH derivation table already uses for a size that isn't `M`/`L`/`XL` under `--pr`, since `XS`/`S` remains the minimal-scope end of the Size scale even when promoted to pr route. `M`/`L`/`XL` rows are unaffected.
 
 4. Size unset (or Issue number not extractable) → `REVIEW_DEPTH=full` (safe fallback)
 

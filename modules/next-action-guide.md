@@ -16,6 +16,7 @@ Variables passed by the calling skill:
 - `PR_NUMBER` (int, optional): PR number. Pass when available (primarily for `code`, `review`, `merge`)
 - `SIZE` (string, optional): Issue size. One of: `XS` / `S` / `M` / `L` / `XL` / empty string
 - `ROUTE` (string, optional): Workflow route. One of: `patch` / `pr` / `sub_issue` / `operate`. When omitted, derived from SIZE using `modules/size-workflow-table.md`. `operate` cannot be derived from SIZE (it is an orthogonal diff-less-axis value — see `modules/size-workflow-table.md` § "Diff-less Axis (operate route)") and must always be passed explicitly by the caller
+- `ALWAYS_PR` (bool, optional, default `false`): Value of `.wholework.yml`'s `always-pr` key (`ALWAYS_PR` as retained by `modules/detect-config-markers.md`). Used only in Step 2's SIZE→ROUTE derivation (ignored when `ROUTE` is passed explicitly) — see `modules/size-workflow-table.md` § "ALWAYS_PR Override"
 - `BLOCKED_BY_OPEN` (bool, optional, default `false`): Whether open blocked-by relationships exist
 
 ## Processing Steps
@@ -37,6 +38,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` to derive ROUTE from
 - `M` or `L` → `pr`
 - `XL` → `sub_issue`
 - SIZE empty → treat as unknown; omit route-specific reasoning
+
+**ALWAYS_PR override**: if `ALWAYS_PR=true` and the derived route above is `patch`, promote it to `pr` (see `modules/size-workflow-table.md` § "ALWAYS_PR Override" — under `always-pr: true`, Size `XS`/`S` resolves to pr route, not patch, so a caller that omits this override would derive a stale `patch` route and steer the next-action guidance toward `/merge`-adjacent commands for an Issue that actually has an open PR). Routes other than `patch` (`pr`, `sub_issue`) are unaffected.
 
 ### Step 3: Select recommendation using judgment table
 

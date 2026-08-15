@@ -79,7 +79,7 @@ When `.wholework.yml` sets `always-pr: true` (`modules/detect-config-markers.md`
 
 This override applies not only to the route value itself but to any **route-dependent behavior** derived from Size. A rule that assumes "Size XS/S implies patch route, therefore no PR exists" is in scope of this override: under `always-pr: true`, Size XS/S resolves to pr route, a PR does exist, and a `github_check "gh pr checks"` acceptance condition is valid and must not be rewritten to `gh run list` form. See `modules/verify-classifier.md` § "Patch Route CI Verification Note".
 
-**Callers that must apply this override (exhaustive)**: `skills/auto/SKILL.md` (Step 2, Step 3a), `skills/code/SKILL.md` (Step 0, Patch route verify command check), `skills/spec/SKILL.md` (Patch route verify command check, Step 18), `skills/issue/SKILL.md` (Acceptance Criteria Writing Guide), `skills/issue/spec-test-guidelines.md` (Route selection), `skills/triage/skill-dev-verify-audit.md` (Pattern 4), `scripts/run-auto-sub.sh`.
+**Callers that must apply this override (exhaustive)**: `skills/auto/SKILL.md` (Step 2, Step 3a), `skills/code/SKILL.md` (Step 0, Patch route verify command check), `skills/spec/SKILL.md` (Patch route verify command check, Step 18), `skills/issue/SKILL.md` (Acceptance Criteria Writing Guide), `skills/issue/spec-test-guidelines.md` (Route selection), `skills/triage/skill-dev-verify-audit.md` (Pattern 4), `skills/review/SKILL.md` (Step 3: Review Mode Detection), `modules/next-action-guide.md` (Step 2: Derive ROUTE from SIZE), `scripts/run-auto-sub.sh`.
 
 ### Diff-less Axis (operate route)
 
