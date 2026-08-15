@@ -63,3 +63,29 @@ Step 3 の「Related job is SUCCESS → PASS」分岐は、CI ジョブの SUCCE
 - **既存の前方参照**: `modules/verify-classifier.md:206` に本 Issue (#1126) を先行して引用する記述がある ("the same operational stance as the CI Reference Fallback (#1126), applied here as guidance rather than an automated check")。ポリシースタンスの引用に留まり、具体的な文言には依存しないため変更不要と判断した
 - **doc-checker 影響評価**: `docs/workflow.md` に `verify-executor.md` への参照が存在しないことを grep で確認した (0 件)。モジュールの役割・名称自体は変更しないため、`README.md` / `docs/workflow.md` の更新は不要と判断した
 - **Related**: #1055 / PR #1120 (本 Issue の起点となった review retrospective の観察)。#1083 (逆方向 — 常時 UNCERTAIN になる verify command の検出) とは PASS/UNCERTAIN の境界を挟んで対になる
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps に記載された内容通りに実装した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A — フルスイート bats 実行が並行セッション (別 Issue の worktree) との CPU 競合で 600 秒の Bash ツール上限を一度超過し、バックグラウンドへ自動移行された。実装の手戻りではなく、環境側のリソース競合による遅延。フォアグラウンドの新規 Bash 呼び出しでプロセス終了を待ち受け直し、結果を回収した (exit code 0、全 1786 件 PASS)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 通りに Step 2a を挿入し、Step 3 の SUCCESS 分岐を「同一性確認済み → PASS」「同一性未確認 → UNCERTAIN」に分割した。3つの identity confirmation signal (run command containment / exact job name match / execution target path containment) はいずれか1つで確認済みとする Spec の設計をそのまま採用
+- テストは既存の `tests/verify-executor.bats` にドキュメント内容の文字列一致で検証する `@test` を3件追加 (PASS 条件・UNCERTAIN 条件・3シグナル列挙)。既存の grep ベース検証パターンを踏襲し、新規モックやフィクスチャは導入していない
+- `modules/verify-executor.md` を参照する他のテストファイル (verify.bats, review-rubric-safe.bats, check-eager-load-capability.bats, verify-rubric.bats, ci-failure-classifier.bats) が存在したため behavioral change 判定によりフルスイートを `--jobs` で実行し、回帰なしを確認した
+
+### Deferred Items
+- Post-merge AC (`/review` safe mode で CI Reference Fallback の判定根拠が Details に記録されることの確認、opportunistic) は本 PR merge 後に確認する
+
+### Notes for Next Phase
+- Pre-merge AC 4件すべて PASS 判定済み、Issue 側チェックボックスも更新済み
+- フルスイート bats 実行中、他セッション (issue-951 worktree) と並行して重い CI/bats 系テストが走っていたため、Bash ツールの 600 秒上限に一度到達しバックグラウンド移行が発生した (プロセス自体は正常終了、exit code 0)。実装や verify-executor.md の変更内容に起因する問題ではない
