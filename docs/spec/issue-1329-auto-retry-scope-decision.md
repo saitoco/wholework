@@ -73,3 +73,35 @@ Issue 本文 Background の `run-code.sh` 行番号記載 (`:302`) は現行コ�
 ## Consumed Comments
 
 - saito (MEMBER、first-class): Issue Retrospective — #1130 spec-phase 事例の Background 記載事実 (grep 行番号) を再検証し一致を確認、AC1/AC2 の rubric 根拠ファイル明示という自動解決あいまいポイントを記録。https://github.com/saitoco/wholework/issues/1329#issuecomment-5303444795
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 2 に記載された `### Phase Scope Decision` 本文をほぼ逐語的に反映した。順序・構成の変更なし
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+
+- `tests/orchestration-fallbacks.bats` の Behavioral Change Detection (`modules/verify-patterns.md` §24 相当) により、`modules/orchestration-fallbacks.md` を参照する既存テストが `tests/run-code.bats` / `tests/run-auto-sub.bats` にも存在すると判定されたため、AC3 で指定された `tests/run-spec.bats tests/run-code.bats` に加えてフルスイート (`bats --jobs 18 tests/`, 1786 件) を実行し、回帰がないことを確認した (全 PASS)
+- Spec Notes の「スコープ判断: Option B (spec phase 拡張) は推奨に留め、本 Issue では未実装」を受け、follow-up Issue #1369 を作成した (`retro/code` ラベル)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 2 に記載された `### Phase Scope Decision` 本文を `modules/orchestration-fallbacks.md` の `## auto-retry-on-fail (code_retry_fire)` セクションへ逐語的に反映した (Applicable Phases への 1 文追加、新規 `### Phase Scope Decision` サブセクション挿入、`### Rationale` への 1 文追記)
+- `tests/orchestration-fallbacks.bats` の「5 セクション出現数が全エントリで一致する」制約を守るため、新規 `##` トップレベルエントリではなく既存エントリへのサブセクション追加として実装した
+- Behavioral Change Detection の結果、AC3 の narrow scope (`tests/run-spec.bats tests/run-code.bats`) に加えてフルスイートを実行し回帰なしを確認した
+
+### Deferred Items
+- Option B (spec phase への実際の auto-retry-on-fail 実装) は follow-up Issue #1369 として起票し、本 Issue のスコープ外とした (Spec Notes 記載通り)
+- Post-merge AC (次回 silent no-op 発生時の挙動確認、`event=auto-run session=next`) は `/verify` 以降の observation 待ち
+
+### Notes for Next Phase
+- 本 Issue はドキュメントのみの変更 (prose diff 12 行) — `/verify` は 3 件の pre-merge AC (rubric x2 + bats command) と 1 件の post-merge observation AC のみを扱う
+- pre-merge AC のうち rubric 2 件は `/code` 内で自己判定し PASS 済みとして checkbox を `[x]` 済みにした。`/verify` での再検証時、rubric grader が同じ diff から同一の結論に達するか確認すること
