@@ -42,6 +42,10 @@
 - 全5件のプレマージ条件が PASS。Post-merge の opportunistic 条件（`/doc init` 実行時のエラーメッセージ確認）はユーザー検証待ち（`phase/verify` ラベル付与）。
 - `section_not_contains` ヒントが正確に動作し、特定セクション内の文字列不在を検証できた。
 
+### 2026-08-15 追記 (/audit verify-backlog 経由の再確認)
+
+`/audit verify-backlog` のランキング選抜バッチ verify (rank 3位) で再 dispatch。post-merge opportunistic 条件はエラーメッセージの静的文言確認で解決可能な内容と判断し、`skills/doc/SKILL.md:188,371` を直接確認したところ plugin 方式に整合済みであることを確認 (PASS)。全6条件解消、`phase/done` へ遷移。
+
 ### Improvement Proposals
 - N/A
 
