@@ -115,3 +115,7 @@ verify command はすべて `section_contains` / `file_contains` / `file_not_con
 
 ### Improvement Proposals
 - `section_contains` verify command を Spec に記述する際、その固定文字列が実装ファイルに literally 含まれることを `/spec` や `/code` のチェックリストに追加することを検討する。verify-driven な開発で rework を防ぐための事前チェックとして有効。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## 受入テスト結果 /verify #64 / https://github.com/saitoco/wholework/issues/64#issuecomment-4233116852
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/64#issuecomment-5300794293
