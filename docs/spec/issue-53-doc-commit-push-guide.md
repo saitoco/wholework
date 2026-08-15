@@ -134,3 +134,7 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results (/verify #53) / https://github.com/saitoco/wholework/issues/53#issuecomment-4232713643
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/53#issuecomment-5300727921
