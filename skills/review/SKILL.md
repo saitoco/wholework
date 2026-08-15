@@ -384,6 +384,24 @@ Run this section first, before evaluating either branch-decision paragraph below
 5. If one or more paths were found, write path / `[SSoT]` flag / base-side diff for each to `.tmp/base-conflict-context-$NUMBER.md`. If zero paths were found, do not write the file — no additional context is passed to the review agents below.
 6. Add `.tmp/base-conflict-context-$NUMBER.md` to the `rm -f` cleanup list in 14.2.
 
+### Parser/Validator Edge Case Pre-check
+
+Run this section after the Base Branch Conflict Pre-check above, before evaluating either branch-decision paragraph below (Workflow path / light mode) — this applies to every review path (light, full, and Workflow) equally.
+
+**Firing conditions** (fires when any diff `+` line matches one of the following; exhaustive):
+- (a) Addition or modification of a regular expression used to match, validate, or extract an input string
+- (b) Addition or modification of a `case`/`if` chain that branches on the shape of an input value (aimed at format detection, not a fixed enum check)
+- (c) Addition or modification of a function/script that takes a string supplied from outside the process (config file content, CLI argument, environment variable, user input, etc.) as an argument and interprets/validates/normalizes it
+
+**Minimum input axes to cover** (same 5 axes as the Issue body; exhaustive): empty input / unexpected nesting or hierarchy depth / input containing metacharacters / incidental syntax such as comments / structure shallower or deeper than expected
+
+1. If zero files match the firing conditions above, skip the rest of this subsection (do not write a context file).
+2. If more than 2 files match, process only the top 2 by diff hunk size, and record the excluded files in the context file's header (cap rationale: this measurement sub-agent carries out heavier work than the 10.3 verification sub-agent, so it uses a more conservative cap).
+3. For each matching file, launch a `subagent_type="general-purpose"` Task sub-agent in parallel. Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug.
+4. Write the results of any sub-agent with 1 or more findings to `.tmp/edge-case-context-$NUMBER.md` (do not write if all sub-agents report zero findings or zero matches). Add this file to the `rm -f` cleanup list in 14.2.
+
+**Review depth and rationale**: fires under `--light`, `--full`, and the Workflow path alike (independent of `REVIEW_DEPTH`). Rationale: the originating defect (#1055 / PR #1120) was found under `--light` — limiting this to `--full` only would reopen the detection gap this Issue is closing. Cost is bounded by the firing-condition gating (most PRs that never touch a parser/validator/normalizer see zero matches) and the 2-file cap.
+
 **Workflow path (opt-in)**: After the Base Branch Conflict Pre-check above, when `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
 
 **In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
@@ -410,6 +428,8 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
 4. **Launch 1 `review-light` agent**:
 
    If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to the prompt below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
+
+   If `.tmp/edge-case-context-$NUMBER.md` exists (written by the Parser/Validator Edge Case Pre-check above), append its content to the same prompt, followed by: "The above is a pre-measured edge case execution result for this diff's parser/validator/normalizer changes. Do not re-derive it — reflect it directly in Perspective 2 (Edge Cases and Robustness)."
 
    ```text
    Task(
@@ -466,6 +486,8 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    Launch these subagents in a single message to ensure parallel fan-out (single-message fan-out prevents serialization regardless of model generation):
 
    If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to each of the 3 prompts below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
+
+   If `.tmp/edge-case-context-$NUMBER.md` exists (written by the Parser/Validator Edge Case Pre-check above), append its content to each of the 3 prompts below, followed by: "The above is a pre-measured edge case execution result for this diff's parser/validator/normalizer changes. Do not re-derive it — reflect it directly in Detected Issues (review-bug)."
 
    ```text
    Task(
@@ -828,7 +850,7 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 ```bash
 mkdir -p .tmp
 gh pr comment "$NUMBER" --body-file .tmp/review-summary-$NUMBER.md
-rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md
+rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md .tmp/edge-case-context-$NUMBER.md
 ```
 
 **On failure**: output summary to terminal (fallback).
