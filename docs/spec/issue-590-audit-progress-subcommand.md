@@ -195,3 +195,5 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/590#issuecomment-5249995994
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/590#issuecomment-5255740340
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/590#issuecomment-5296375044
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/590#issuecomment-5296542488
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/590#issuecomment-5304271221
