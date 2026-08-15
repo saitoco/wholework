@@ -81,16 +81,17 @@
 - `skills/audit/SKILL.md` / `skills/auto/SKILL.md` に本 PR で追加した `ac-tier: preview` 除外ロジックは無条件除外のため、`/review` が preview AC を UNCERTAIN のまま残した場合 (`type=preview-ac-unverified` マーカーが残っているケース) まで誤って Manual Waiting Count / Pending manual confirmation から除外してしまい undercounting が生じうる。`/verify` が既に持つ `resolve-preview-ac-fallback.sh` 相当のマーカー解決ロジックを、これら 2 つの集計処理にも統合するフォローアップが必要 (本 Issue のスコープ外と判断し今回は見送り。`/verify` でのフォローアップ集約に委ねる)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Review 指摘のうち `scripts/post_merge_check.sh` の `ac-tier: preview` 未除外 (SHOULD) と `docs/structure.md` / `docs/ja/structure.md` の因果関係表現の食い違い (CONSIDER) は、audit/auto に既に適用したパターンと同型かつ低リスクな修正のため、その場で修正した
-- `skills/audit/SKILL.md` / `skills/auto/SKILL.md` の除外ロジックが `type=preview-ac-unverified` マーカーを考慮しない undercounting の可能性 (SHOULD) は、`/verify` が持つマーカー解決ロジックの統合という設計変更を要し本 Issue のスコープを超えるため、修正せず retrospective の improvement proposal として記録した
+- Pre-merge AC ゲートは 4/4 チェック済み、review-incomplete-fallback もなしと確認できたため、追加確認なしで squash merge を実行した
+- Squash merge 後に origin/main へ ff-only で追従し、Phase Handoff (本セクション) を merge フェーズの内容へローテーションした
 
 ### Deferred Items
-- Post-merge AC (`/audit stats --retention` 実行時に pre-merge manual preview AC が Manual Waiting Count から除外されることの確認) は引き続き未検証 — 検証用シナリオの一時構築が必要 (Issue 本文の Autonomous Auto-Resolve Log に記載済み)
+- Post-merge AC (`/audit stats --retention` 実行時に pre-merge manual preview AC が Manual Waiting Count から除外されることの確認) は未検証のまま — 検証用シナリオの一時構築が必要 (Issue 本文の Autonomous Auto-Resolve Log に記載済み)
 - `ac-tier: preview` 除外ロジックの undercounting 改善 (improvement proposal 参照) はフォローアップ Issue 化が未実施
 
 ### Notes for Next Phase
-- `/merge` 前提: MUST issue なし、CI 全 11 ジョブ SUCCESS、Pre-merge AC 4/4 PASS。Post-merge AC 1 件は `/verify` で検証用シナリオの一時構築が必要
+- `/verify` 前提: PR #1370 は squash merge 済み、CI 全 11 ジョブ SUCCESS、Pre-merge AC 4/4 PASS
+- Post-merge AC 1 件 (`/audit stats --retention` の Manual Waiting Count 除外確認) の検証シナリオ構築が `/verify` 側の主タスクになる
 - 修正コミット 2 件はいずれも Refs リンク付きで push 済み
