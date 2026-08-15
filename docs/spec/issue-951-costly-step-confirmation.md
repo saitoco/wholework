@@ -107,17 +107,16 @@ review-bug の 2 エージェント (diff-bug scan / security scan) が、異な
 Pre-merge AC 3件はすべて `rubric` (mode-independent) で、`/code` の自己判定と本レビューでの独立再判定がいずれも PASS で一致し、UNCERTAIN や verify command 品質の問題はなかった。rubric 文言が十分に精密だったことを示唆している。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 判定の確定済み findings 4件 (Step 12 の marker 削除競合、Consumer Contract の fallback 未定義、AC checkbox 除外漏れ、`docs/product.md` Terms 未登録) と、低リスクな CONSIDER 3件 (skip-tier warning message 欠落、code-side retry loop gap の明記、`skills/spec/SKILL.md` Step recording rules への追記) を修正した。CONSIDER 1件 (`modules/ambiguity-detector.md` Purpose 文の陳腐化) はスコープ対比で価値が低いため見送った
-- review-bug の findings 3件 (operate route nullification 主張、"only exception" overstated claim、reversibility 極性の曖昧さ主張) は検証サブエージェントが実コードを読んで false positive と確認し、修正不要と判断した
-- 全段階で MUST issue はゼロ (Step 8 AC 全PASS、Step 9 CI 全SUCCESS、Step 10 最大 severity は SHOULD) のため、レビューは `COMMENT` イベントで投稿した
+- Pre-merge AC 3件は全て checked 済みで、review-incomplete-fallback も検出されなかったため、pre-merge AC gate をそのまま通過して squash merge を実行した
+- PR #1367 は conflict なし (mergeable=true, reason=clean) だったため、Step 3 のコンフリクト解消手順は不要だった
 
 ### Deferred Items
-- code-side auto-retry (`run-code.sh`) に `/verify` の #947 相当の documented-deferral escape hatch がない点は未対応のまま — `modules/costly-step-protocol.md` の Notes に scope外である旨と発火条件の narrow さを明記した。実際に発生が観測された場合は follow-up Issue の候補
-- `modules/ambiguity-detector.md` の Purpose 文の陳腐化 (CONSIDER) は未修正 — 複数 skill から参照される共有モジュールの Purpose 文への低優先度の文言修正であり、本 PR のスコープに対して見送った
+- code-side auto-retry の documented-deferral escape hatch 未対応の件は review フェーズからの引き継ぎのまま — 発生が観測された場合の follow-up Issue 候補として維持
+- `modules/ambiguity-detector.md` の Purpose 文陳腐化 (CONSIDER) も未修正のまま持ち越し
 
 ### Notes for Next Phase
-- `/merge` は本レビューの fix commit の CI (11/11 SUCCESS、確認済み) がそのまま有効であることを前提に進行可能
-- Post-merge AC (`verify-type: opportunistic`) は変更なし — 「次回 costly step を含む Issue の spec → code フェーズで確認/deferral protocol が発火することを観察」のまま
+- `/verify` では post-merge AC (`verify-type: opportunistic`) の「次回 costly step を含む Issue の spec → code フェーズで確認/deferral protocol が発火することを観察」を確認する
+- ISSUE_NUMBER=951, BASE_BRANCH=main のため `closes #951` により Issue は自動クローズされる見込み
