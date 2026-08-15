@@ -173,6 +173,18 @@
 
 - N/A — 前回・前々回の判断を踏襲。3 セッション連続の非発生は「機能は正しく動作しているが誘発条件 (blocked-by 先が manual post-merge 保留のまま phase/verify に滞留する batch 実行) がまだ自然発生していない」health signal であり、改善提案の閾値には未到達
 
+### 2026-08-16 re-run (条件 6/7 の 4 セッション目観測)
+
+`/auto --batch 1362 1358 1125 951 1329 1086 1328 1092 1085` (session `63449-1786797049`) の Batch Completion Report observation scan で `event=auto-run` が再発火。
+
+#### verify (再実行分)
+
+- **条件 6/7 は今回も SKIPPED**。本 batch の 9 Issue (#1362, #1358, #1125, #951, #1329, #1086, #1328, #1092, #1085) 全件について `scripts/get-blocked-by.sh` を個別実行し確認したところ、いずれも exit 0 (ブロッカーなし、または全ブロッカー CLOSED) だった。blocked-by ゲートのスキップ分岐が発火する前提条件 (blocker が phase/verify OPEN で滞留したまま次の Issue が処理される状況) 自体が本 batch でも発生しなかった。これで観測 4 セッション連続 (`97764-1786198856` → `29601-1786367167` → `81722-1786714713` → `63449-1786797049`) でシナリオ自体が未発生
+
+#### Improvement Proposals (再実行分)
+
+- N/A — 前回までの判断を踏襲。4 セッション連続の非発生も同一の health signal であり、改善提案の閾値には未到達
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/478#issuecomment-4703000955
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/478#issuecomment-5212257510
