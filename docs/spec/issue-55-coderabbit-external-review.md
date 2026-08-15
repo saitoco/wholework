@@ -220,3 +220,7 @@ code フェーズの Code Retrospective に「7.4 の proceed 先が漏れてお
 
 ### Improvement Proposals
 - `COPILOT_REVIEW_TIMEOUT` 環境変数を 3 ツール共有を明示した名前（例: `EXTERNAL_REVIEW_TIMEOUT`）にリネームする（backward compat を考慮した移行手順も含む）。Code 改善。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/55#issuecomment-4221496493
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/55#issuecomment-5300738408
