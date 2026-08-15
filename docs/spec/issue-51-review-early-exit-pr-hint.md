@@ -94,3 +94,8 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/51#issuecomment-4211360121
+- saito / MEMBER / first-class / ## Opportunistic Verification (/review 実行時) / https://github.com/saitoco/wholework/issues/51#issuecomment-4215706621
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=51 --> / https://github.com/saitoco/wholework/issues/51#issuecomment-5300705269
