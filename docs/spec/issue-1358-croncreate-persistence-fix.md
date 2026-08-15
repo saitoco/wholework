@@ -41,3 +41,29 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Issue Retrospective (`/issue 1358 --non-interactive` 実行結果)。Auto-Resolve Log として、修正スコープを Issue 本文が明示的に引用する3箇所に限定する判断と、2件の rubric 補完 `section_contains` AC を追加した理由を記録。https://github.com/saitoco/wholework/issues/1358#issuecomment-5302371969
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Triage AC audit。Issue 本文の2件の `section_contains` verify command で heading 引数に `#`/`##`/`###` プレフィックスが残り恒久的に UNCERTAIN になるバグを指摘。本 `/spec` 実行で Issue 本文を修復案の通り修正済み (Notes 参照)。https://github.com/saitoco/wholework/issues/1358#issuecomment-5302385400
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Implementation Steps 1-3 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+- None newly found。Step 9 の `docs/ja/` sync gap-detection チェックで、`docs/guide/autonomy.md` が翻訳同期スコープ外である Notes 記載の既存判断 (`docs/ja/guide/autonomy.md` 自体が未作成、`docs/guide/` 配下 nested ファイルのため top-level sync procedure 対象外) を機械チェックで再確認した。新規ギャップは見つからなかった。
+
+### Rework
+- None。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Issue 本文が明示する3ファイル (`modules/autonomy-tier.md` / `docs/guide/autonomy.md` / `docs/tech.md`) + `docs/translation-workflow.md` Sync Procedure が要求する `docs/ja/tech.md` の計4ファイルのみを修正対象とし、`/issue` retrospective・`/spec` Notes が検出した追加ドリフト候補 (`docs/product.md`、`modules/autonomy-tier.md` の Path Catalog B 行・Tier×Path Matrix の L3 Unattended 行、`docs/guide/autonomy.md` の "B (CronCreate)" 列挙行) はスコープ外のまま維持した。
+- `docs/guide/autonomy.md` の "Allowed L2→L1 paths: **A, B (CronCreate), C**" 行は Spec 指示通り変更しなかった (CronCreate 自体は依然として L3 で利用可能な経路であり、変わったのは「無人で自己登録できるか」であって「経路として許可されているか」ではないため)。
+
+### Deferred Items
+- `docs/product.md` (line 79) の類似表現 ("L1 (... CronCreate) / ... / L3 (OS scheduler)") は Follow-up 候補として記録するに留め、本セッションでは新規 Issue を起票しなかった (Spec Notes の既存判断を維持)。
+- `modules/autonomy-tier.md` の Path Catalog B 行「registers a persistent schedule」、Tier×Path Matrix の L3 Unattended 行「CronCreate allows self-rescheduling」も同様に Follow-up 候補としてスコープ外のまま。
+
+### Notes for Next Phase
+- Pre-merge AC 5件 (rubric 3件 + section_contains 2件) はすべて `/code` 内で PASS 判定済みで Issue 本文のチェックボックスも更新済み。Post-merge AC は Issue 本文記載の通り N/A。
+- ドキュメントのみの変更のため CI 上の追加リスクは低いが、`docs/ja/tech.md` の同期漏れがないか `/verify` でも念のため確認するとよい。
