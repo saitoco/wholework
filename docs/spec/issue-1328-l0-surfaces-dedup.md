@@ -23,3 +23,6 @@ Step 1 のコメント消費手続きで Triage AC audit コメント (2026-08-1
 ### Consumed Comments (at /issue time)
 
 - saito / MEMBER / first-class / Triage AC audit: 3件目のverify commandが常時PASSするパターンであることを指摘し、より具体的な文字列を対象にするか section_contains への変更を提案 / https://github.com/saitoco/wholework/issues/1328#issuecomment-5237595903
+
+## Consumed Comments
+No new comments since last phase.
