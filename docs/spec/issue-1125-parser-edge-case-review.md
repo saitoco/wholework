@@ -50,3 +50,29 @@ PR #1120 (Issue #1055) の `/review --light` で、追加コードに silent fai
 | Login | Association | Trust tier | Summary | URL |
 |-------|-------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。`triaged` 済みのため triage auto-chain はスキップ、steering docs との用語抵触なし、曖昧ポイント検出なし。Post-merge AC の `verify-type: observation event=auto-run` に `session=next` が欠落していたため追加済み (本 Spec 作成時点の Issue body で反映済みを確認)。手順順序の補正メモ (comment consumption を label transition より先に実行すべきところ誤って逆順で実行、実害なし) | https://github.com/saitoco/wholework/issues/1125#issuecomment-5302569064 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-5 を Spec の記述どおりに実装した)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Notes に既に記録済みの設計判断 (review-light/review-bug の `tools:` frontmatter を変更せず `general-purpose` sub-agent 都度起動パターンを再利用する方針) をそのまま踏襲した
+- 10.2 (full mode) の 3 プロンプト (review-spec + review-bug×2) すべてに edge case context を注入する設計とした。base-conflict-context の既存注入パターンと対称にし、review-spec 向けの注入は実質的に no-op (review-spec は edge case を扱わない) だが、パターンの一貫性を優先した
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=auto-run session=next`): パーサ系変更を含む次回 PR の `/review` で edge case pre-check が実際に発火するかは post-merge の観察待ち
+- AC3 (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前の Step 10 実行時点では評価不可(UNCERTAIN) につき未チェックのまま。CI 完了後に `/verify` で確認される
+
+### Notes for Next Phase
+- ローカルで `bats --jobs 18 tests/` (全 1780 件) を実行し全 PASS を確認済み。CI 上の `Run bats tests` job 結果は本 PR の CI 完了を待って確認すること
+- `skills/review/SKILL.md` は SSoT モジュールではないため SSoT Module Cross-Check の対象外
