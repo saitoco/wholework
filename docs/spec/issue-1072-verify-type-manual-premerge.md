@@ -95,3 +95,28 @@
 - `/verify` 前提: PR #1370 は squash merge 済み、CI 全 11 ジョブ SUCCESS、Pre-merge AC 4/4 PASS
 - Post-merge AC 1 件 (`/audit stats --retention` の Manual Waiting Count 除外確認) の検証シナリオ構築が `/verify` 側の主タスクになる
 - 修正コミット 2 件はいずれも Refs リンク付きで push 済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Nothing to note. Pre-merge AC 4 件はいずれも rubric/command で明確に判定可能だった。
+
+#### design
+- Nothing to note.
+
+#### code
+- Nothing to note. Implementation Steps どおり実施され、rework なし。
+
+#### review
+- review retrospective で検出済みの「grep 総ざらいの網羅性とヒットファイルごとの判定精度は別問題」という教訓が既に記録されている。
+
+#### merge
+- Nothing to note. CI 全 11 ジョブ SUCCESS、conflict なし。
+
+#### verify
+- Post-merge AC 1 件は `capabilities.pr-preview` が本 repo で未設定のため自然発生シナリオが存在せず、一時的なテスト構築が必要と判断し unresolved のまま `phase/verify` を維持した (executable=false, reason=capability-unavailable)。
+
+### Improvement Proposals
+- `skills/audit/SKILL.md` / `skills/auto/SKILL.md` に追加された `ac-tier: preview` 除外ロジックが無条件除外であるため、`/review` が preview AC を UNCERTAIN のまま残した場合 (`type=preview-ac-unverified` マーカーが残るケース) にも誤って Manual Waiting Count / Pending manual confirmation から除外してしまい、undercounting が生じうる。`/verify` が既に持つ `resolve-preview-ac-fallback.sh` 相当のマーカー解決ロジックを、これら2つの集計処理にも統合するフォローアップが必要 (review retrospective に記録済み、本 Issue のスコープ外として `/verify` フォローアップ集約に委ねられていたもの)。
