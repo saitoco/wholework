@@ -82,3 +82,34 @@
 - All 3 file_contains ACs are already checked (`- [x]`) in the Issue body; only the `github_check` CI AC remains.
 - No new scripts, modules, or structure changes — documentation-only change, so `/verify` should be straightforward.
 - `validate-skill-syntax.py` does not scan domain files — no syntax validation concern for `spec-test-guidelines.md`.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の `### base/head 比較 bats テスト` (レベル3見出し提案) を、既存節スタイルに合わせレベル2に変更する判断が適切だった
+
+#### code
+- rework なし。Spec の Implementation Steps をそのまま実装
+
+#### review/merge
+- patch route のため review/merge フェーズなし
+
+#### verify
+- pre-merge AC 4 件全 PASS。post-merge observation 条件は Issue body 上で `manual` → `observation event=auto-run` へ再変更されている (Spec の Verification 節記載時点の `manual` は古いスナップショット、Issue body が SSoT)
+
+### Improvement Proposals
+- N/A
+
+### 2026-08-16 re-run (/auto --batch 1362 1358 1125 951 1329 1086 1328 1092 1085 セッションからの再評価)
+
+`/auto --batch 1362 1358 1125 951 1329 1086 1328 1092 1085` (session `63449-1786797049`) の Batch Completion Report observation scan で `event=auto-run` が dispatch された (comment 履歴上は9回目の fired だが、Verify Retrospective への persist はこれが初回 — 過去の dispatch は都度 SKIPPED で "notable content なし" として Step 12 の skip 条件に該当し続けていたと推測される)。
+
+#### verify (再評価分)
+
+- 本 batch の 9 Issue (#1362, #1358, #1125, #951, #1329, #1086, #1328, #1092, #1085) の Spec を `grep -l "base/head 比較 bats\|marker-\${branch}\|branch-specific marker file"` で横断確認したが、いずれも該当なし。9 Issue のいずれも git diff ベース比較ロジックの bats テストを新規実装するものではなく、本条件が観察対象とする「次回 git diff ベース比較ロジックの Spec で本節が参照される」シナリオの前提自体が発生しなかった
+- SKIPPED と判定 (観察対象の前提が本 run で成立しなかったため)
+
+#### Improvement Proposals (再評価分)
+- N/A — 前提未発生の health signal であり、改善提案の閾値には未到達
