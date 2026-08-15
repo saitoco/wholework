@@ -221,6 +221,10 @@ code フェーズの Code Retrospective に「7.4 の proceed 先が漏れてお
 ### Improvement Proposals
 - `COPILOT_REVIEW_TIMEOUT` 環境変数を 3 ツール共有を明示した名前（例: `EXTERNAL_REVIEW_TIMEOUT`）にリネームする（backward compat を考慮した移行手順も含む）。Code 改善。
 
+### 2026-08-15 再確認 (/audit verify-backlog セッションから)
+
+Pre-merge 11件は変更なし PASS。Post-merge manual 条件4件は live 外部レビューツール連携が前提のため premise 不成立のまま UNCERTAIN。前回提案の `EXTERNAL_REVIEW_TIMEOUT` リネームは #92 として既に起票・クローズ済みであることを確認、重複提案なし。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/55#issuecomment-4221496493
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/55#issuecomment-5300738408
