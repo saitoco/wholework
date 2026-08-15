@@ -119,6 +119,10 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 
 `/auto --batch 1349 1350 1351 1352` (session `81722-1786714713`) の Batch Completion Report observation scan により6回目の dispatch。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一セッションが処理した #1349/#1350/#1351/#1352 の各 verify フェーズが自身の Spec の Phase Handoff / Consumed Comments を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。#1118 CLOSED 後、本 AC 自体の再設計は未着手のまま6回連続で確認された。前回セッションの判断 (重複起票しない) を継続する。
 
+### 追記 (2026-08-16, /auto --batch 1362 1358 1125 951 1329 1086 1328 1092 1085 セッションからの再評価)
+
+`/auto --batch 1362 1358 1125 951 1329 1086 1328 1092 1085` (session `63449-1786797049`) の Batch Completion Report observation scan により7回目の dispatch。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一セッションが処理した9 Issue (#1362, #1358, #1125, #951, #1329, #1086, #1328, #1092, #1085) の各 verify フェーズが自身の Spec の Phase Handoff / Consumed Comments を読み判断に反映している (本 Issue #562 自身の verify も、この Spec 内の既存 Verify Retrospective 6 件を参照してから追記している点も同型の一例)。後半「重複/矛盾記述が減っている」は引き続き測定不能 — ベースライン不在という構造的限界は解消されていない。#1118 CLOSED 後、本 AC 自体の再設計は未着手のまま7回連続で確認された。前回までのセッション判断 (重複起票しない) を継続する。
+
 ## Phase Handoff
 <!-- phase: code -->
 
