@@ -87,3 +87,29 @@ PR #1120 (Issue #1055) の `/review --light` で、追加コードに silent fai
 ### Acceptance criteria verification difficulty
 
 3件の Pre-merge AC (rubric×2, github_check×1) はいずれも UNCERTAIN なく明確に判定できた。rubric の文言が「発火条件と入力軸が示されている」「review 深度と選択理由が明記されている」という検証可能な具体的表現になっていたため、grader 判定は容易だった。verify command の記述に問題は見つからなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。Implementation Steps は具体的で、Changed Files (5件) は light 上限の範囲内に収まっていた。
+
+#### design
+- review retrospective が指摘した通り、diff 由来コードを実際に実行する設計の Notes セクションで、実行対象の信頼境界 (誰の PR に対して実行するか) が論点として立てられていなかった。allowed-tools 権限設計の議論はあったが、信頼境界そのものは Spec 化時に見落とされていた。
+
+#### code
+- Deviations from Design: N/A (Code Retrospective 記載通り、Implementation Steps 1-5 に忠実な実装)。
+
+#### review
+- `--light` review が実際に5件 (MUST 1・SHOULD 3・CONSIDER 1) を検出し、静的な diff 読解では検出不能だった論点 (信頼境界) をカバーした。
+- Recurring Issues として、新規実行系ステップ追加時に既存の後続ステップ (検証 sub-agent・Workflow 経路・cleanup・illustrative example) への伝播漏れが複数同時に見つかった横断チェック観点の欠如が指摘されたが、経験1件のみで一般化根拠が薄いとして review 自身が別 Issue 化を見送っている。この判断は妥当と判断し、本 retrospective でも新規提案は起票しない。
+
+#### merge
+- Pre-merge AC 全PASS・CI SUCCESS・review 承認済みを確認したうえで conflict なく squash merge。
+
+#### verify
+- FAIL/UNCERTAIN なし。verify command (rubric×2, github_check×1) に構文・常時PASS/FAIL・常時UNCERTAINの兆候は見られなかった。Post-merge observation AC (`event=auto-run session=next`) は未発火のため SKIPPED — `phase/verify` を維持し次回発火を待つ。
+
+### Improvement Proposals
+- N/A (review retrospective が同種の提案を検討済みで、根拠不足を理由に見送り済み — 本 retrospective でもその判断を追認する)
