@@ -70,6 +70,32 @@
 - Implementation Step 2 の bats テストコードは、Spec 作成時に一時ファイル (`.tmp/` 配下、作業完了後に削除済み) で実際に `bats` 実行し、現行の (修正済み) 実装に対して pass することを確認済み。
 - **Step 18 での Size 再評価と route 変更**: Spec の Changed Files が 2 件 (`modules/verify-patterns.md`, `tests/detect-wrapper-anomaly.bats`) のみであり、2軸判定法の Axis 1 (ファイル数) で Size S 相当と判定されたため、トリアージ時の Size M から S へ更新した (`modules/project-field-update.md` の手順で Project Size field を更新済み、read-back で確認済み)。これに伴い route が pr → patch に変わり、PR が存在しなくなるため、Issue 本文 AC5 の `github_check "gh pr checks" "Run bats tests"` は `modules/verify-classifier.md` § "Patch Route CI Verification Note" の正準形 `github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` に修正し、Spec と Issue 本文の両方に反映した。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — the implementation followed Implementation Steps 1–3 as written: §30 inserted at the exact position specified (directly before `## Output`), and the bats test inserted at the exact line specified (directly after the "no detection with only one of the two required strings" test, before the "silent no-op" test).
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's pre-validated three-part convention (trigger condition AND-list → two-pronged verification means → 4-step decision procedure) verbatim rather than reinterpreting it, since the Spec already recorded a hands-on verification of the `bash -n` limitation at authoring time.
+- Used the Spec's exact bats test code block for Implementation Step 2 rather than rewriting it, since the Spec noted it had already been confirmed passing against the current (fixed) implementation.
+
+### Deferred Items
+- AC5 (`github_check "gh run list ..."`) left unchecked per the patch route branch-scoped CI AC exclusion — this Issue's own commit had no CI run yet at Step 10 time. `/verify` evaluates it post-merge against the run triggered by this commit on `main`.
+- Retroactive application of the new §30 convention to other embedded-command sites (`modules/orchestration-fallbacks.md` catalog procedures, `run-*.sh` next-action messages) is Out of Scope per the Issue body — expected as separate follow-up Issues.
+
+### Notes for Next Phase
+- No PR exists (patch route, direct commit to `main`) — `/verify` should check CI status via `gh run list --branch=main`, not `gh pr checks`.
+- Full bats suite (`bats --jobs 18 tests/`, 1787 tests) passed after the change; `modules/verify-patterns.md` is referenced by multiple other test files (`tests/verify-heuristics.bats`, `tests/audit-eager-load-capability.bats`, `tests/verify-executor.bats`, `tests/review-rubric-safe.bats`, `tests/verify-rubric.bats`, `tests/check-eager-load-capability.bats`), which is why the full suite (not just `tests/detect-wrapper-anomaly.bats`) was run.
+
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class
