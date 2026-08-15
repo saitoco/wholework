@@ -56,7 +56,7 @@
 - <!-- verify: rubric "追加された規約が、どのようなスクリプト・出力を対象とするかの発火条件を判定可能な基準として明示している (例: 出力文字列にバッククォート・引用符で囲まれたコマンドを含む、利用者がコピー&ペーストして実行することを想定した文字列を生成する、等)" --> 規約に発火条件が判定可能な基準として明示されている
 - <!-- verify: grep "bash -n" "modules/verify-patterns.md" --> 規約が具体的な検証手段 (`bash -n` によるシェル構文チェック等) を提示している
 - <!-- verify: rubric "tests/detect-wrapper-anomaly.bats が IMPROVEMENT_HINT の内容そのものに対するアサーションを持ち、埋め込みコマンド文字列のエスケープが壊れていないことを検証している" --> 既知ケース (`scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT`) に規約が適用され、回帰テストが追加されている
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> bats テストが全て pass する (PR route)
+- <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> bats テストが全て pass する (patch route — Step 18 の Size 再評価で S に更新され、PR が存在しないため `gh run list` 形式に修正)
 
 ### Post-merge
 
@@ -68,6 +68,7 @@
 - **`bash -n` の限界に関する実機検証結果**: Spec 作成時に、Issue #1128 の実際の修正前コード (`\\\"` による二重エスケープ、PR #1131 のレビューコメント r3689276393 で指摘された形) を再現し `bash -n` に通したところ、終了コード 0 (構文エラーなし) が返ることを確認した。理由は、引用符の外側にあるバックスラッシュエスケープされたダブルクォート (`\"`) は bash にとって「リテラルの `"` 文字」として構文的に妥当であり、埋め込みコマンドの意味 (`gh api` に渡る引数) が壊れていても構文エラーにはならないため。この実機検証結果を踏まえ、規約は `bash -n` 単独ではなく内容レベルのチェックとの併用を必須とする設計とした (Implementation Step 1 参照)。
 - **allowed-tools impact chain check**: `modules/verify-patterns.md` への追加内容は `scripts/detect-wrapper-anomaly.sh` を実例として文中で言及するのみで、新たな `scripts/*.sh` 呼び出し (Skill が実行する新規スクリプト起動命令) を導入するものではない。したがって `allowed-tools impact chain check` のゲート条件 (変更内容が `scripts/*.sh` パスへの新規呼び出しを含むか) には該当せず、`skills/*/SKILL.md` の `allowed-tools` 更新は不要と判断した。
 - Implementation Step 2 の bats テストコードは、Spec 作成時に一時ファイル (`.tmp/` 配下、作業完了後に削除済み) で実際に `bats` 実行し、現行の (修正済み) 実装に対して pass することを確認済み。
+- **Step 18 での Size 再評価と route 変更**: Spec の Changed Files が 2 件 (`modules/verify-patterns.md`, `tests/detect-wrapper-anomaly.bats`) のみであり、2軸判定法の Axis 1 (ファイル数) で Size S 相当と判定されたため、トリアージ時の Size M から S へ更新した (`modules/project-field-update.md` の手順で Project Size field を更新済み、read-back で確認済み)。これに伴い route が pr → patch に変わり、PR が存在しなくなるため、Issue 本文 AC5 の `github_check "gh pr checks" "Run bats tests"` は `modules/verify-classifier.md` § "Patch Route CI Verification Note" の正準形 `github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` に修正し、Spec と Issue 本文の両方に反映した。
 
 ## Consumed Comments
 
