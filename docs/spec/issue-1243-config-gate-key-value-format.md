@@ -58,3 +58,38 @@
 | login | authorAssociation | trust tier | 意図 | URL |
 |-------|-------------------|-----------|------|-----|
 | saito | MEMBER | first-class | Issue Retrospective — Triage AC audit が指摘した常時 PASS パターン 4 件の修正、Auto-Resolve Log (曖昧性解決 3 件)、Post-merge AC の `manual` 再分類の判断根拠を記録 | https://github.com/saitoco/wholework/issues/1243#issuecomment-5305371884 |
+
+No new comments since last phase (cutoff: 2026-08-16T02:57:29Z, `phase/ready` label assignment).
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 を Spec の記述どおりに実施した。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Auto-Resolved Ambiguity Points (コロン分割方法、サニタイズ文字集合、フェイルモード) がそのまま実装に適用でき、追加の曖昧性は発生しなかった。
+
+### Rework
+- N/A — 手戻りなし。
+
+### Test Results
+- `bats tests/opportunistic-search.bats`: 61/61 green (既存58 + 新規3)。
+- フルスイート `bats --jobs 18 tests/` (Behavioral Change Detection により起動 — `tests/check-known-events-firing.bats` が `scripts/opportunistic-search.sh` を参照): 1 件の pre-existing 不整合 (`tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route") を検出。`main` ブランチで再現確認済みで本 Issue の変更と無関係。フォローアップ #1377 を起票。
+
+### Follow-up Issues
+- #1377 — `tests/code.bats` の stale assertion 修正 (本 Issue のスコープ外、フルスイート実行時に検出)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `config=<key>:<value>` の分割方法・サニタイズ文字集合・フェイルモードは Spec の Auto-Resolved Ambiguity Points をそのまま採用 (最初の `:` で分割、`[A-Za-z0-9._-]`、fail-closed)。
+- `scripts/opportunistic-search.sh` の CONFIG_ATTR 抽出後の分岐は既存の `when=<axis>:<value>` ゲートと同じ `case "$VAR" in *:*) ... ;; *) ... ;; esac` パターンを踏襲し、実装スタイルの一貫性を優先した。
+- ドキュメント同期は `modules/observation-trigger.md` (SSoT) と `modules/verify-classifier.md` の2箇所のみ更新し、`docs/guide/customization.md` は Spec Notes の事前確認どおり変更不要と判断した。
+
+### Deferred Items
+- Post-merge AC (`verify-type: manual`) — #783 を `config=auto-stop-at:merge` 相当で再型付けできるかの判断は post-merge に委ねる。
+
+### Notes for Next Phase
+- フルテストスイートで検出した `tests/code.bats` の pre-existing 不整合はフォローアップ #1377 として起票済み、本 PR のスコープ外。
+- Pre-merge AC 8件すべて確認済みで Issue 側チェックボックスも更新済み (config=/observation-trigger.md 系のみで docs/guide/ 側は変更不要のため対象外)。
