@@ -30,11 +30,15 @@
 #
 # When action=auto-check and --dry-run is not given, in this order:
 #   1. `gh-issue-edit.sh <N> --checkbox <index> --check`
-#   2. `gh-issue-comment.sh` posts an audit-trail comment whose first line is the
-#      marker `<!-- wholework-event: type=run-fact-ac-match phase=run-fact-match
-#      issue=<N> ac=<index> verdict=satisfied -->`, followed by human-readable evidence.
-#   Either step failing prints a stderr warning and still exits 0 (fail-open —
-#   this must never abort /auto).
+#   2. Only if step 1 succeeded: `gh-issue-comment.sh` posts an audit-trail
+#      comment whose first line is the marker `<!-- wholework-event:
+#      type=run-fact-ac-match phase=run-fact-match issue=<N> ac=<index>
+#      verdict=satisfied -->`, followed by human-readable evidence.
+#   Step 2 is gated on step 1's success so a failed checkbox write never
+#   leaves an orphaned comment claiming the AC was checked (the pipeline's
+#   "cannot become a candidate again" invariant depends on this). Either
+#   step failing prints a stderr warning and still exits 0 (fail-open — this
+#   must never abort /auto).
 #
 # --dry-run performs no L0 writes; only the action= (and advisory) lines are printed.
 #
@@ -117,7 +121,7 @@ esac
 
 TIER="${AUTONOMY_TIER:-}"
 if [ -z "$TIER" ]; then
-  TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1)
+  TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1 2>/dev/null || echo L1)
 fi
 case "$TIER" in
   L1 | L2 | L3) ;;
@@ -151,22 +155,22 @@ if [ "$ACTION" = "advisory" ]; then
 fi
 
 if [ "$ACTION" = "auto-check" ] && [ "$DRY_RUN" = false ]; then
-  if ! "$SCRIPT_DIR/gh-issue-edit.sh" "$ISSUE_NUMBER" --checkbox "$AC_INDEX" --check >/dev/null 2>&1; then
-    echo "Warning: failed to check AC #${AC_INDEX} on issue #${ISSUE_NUMBER}" >&2
-  fi
+  if "$SCRIPT_DIR/gh-issue-edit.sh" "$ISSUE_NUMBER" --checkbox "$AC_INDEX" --check >/dev/null 2>&1; then
+    COMMENT_FILE=$(mktemp)
+    trap 'rm -f "$COMMENT_FILE"' EXIT
+    {
+      printf '%s\n' "<!-- wholework-event: type=run-fact-ac-match phase=run-fact-match issue=${ISSUE_NUMBER} ac=${AC_INDEX} verdict=satisfied -->"
+      printf '%s\n' "Post-merge AC #${AC_INDEX} on issue #${ISSUE_NUMBER} was detected as satisfied by this run's facts."
+      printf '%s\n' "${EVIDENCE_TEXT}"
+    } > "$COMMENT_FILE"
 
-  COMMENT_FILE=$(mktemp)
-  trap 'rm -f "$COMMENT_FILE"' EXIT
-  {
-    printf '%s\n' "<!-- wholework-event: type=run-fact-ac-match phase=run-fact-match issue=${ISSUE_NUMBER} ac=${AC_INDEX} verdict=satisfied -->"
-    printf '%s\n' "Post-merge AC #${AC_INDEX} on issue #${ISSUE_NUMBER} was detected as satisfied by this run's facts."
-    printf '%s\n' "${EVIDENCE_TEXT}"
-  } > "$COMMENT_FILE"
-
-  if ! "$SCRIPT_DIR/gh-issue-comment.sh" "$ISSUE_NUMBER" "$COMMENT_FILE" >/dev/null 2>&1; then
-    echo "Warning: failed to post audit-trail comment on issue #${ISSUE_NUMBER}" >&2
+    if ! "$SCRIPT_DIR/gh-issue-comment.sh" "$ISSUE_NUMBER" "$COMMENT_FILE" >/dev/null 2>&1; then
+      echo "Warning: failed to post audit-trail comment on issue #${ISSUE_NUMBER}" >&2
+    fi
+    rm -f "$COMMENT_FILE"
+  else
+    echo "Warning: failed to check AC #${AC_INDEX} on issue #${ISSUE_NUMBER}; skipping audit-trail comment" >&2
   fi
-  rm -f "$COMMENT_FILE"
 fi
 
 exit 0

@@ -121,6 +121,11 @@ if [ -n "$FACTS_PATH" ]; then
     echo "Error: failed to parse --facts file: $FACTS_PATH" >&2
     exit 1
   }
+  if [ -z "$FACT_TOKENS_LOWER" ]; then
+    echo "Warning: --facts contains no fact tokens; no candidates can match." >&2
+    echo "[]"
+    exit 0
+  fi
 fi
 
 # Rule 2 keyword list (case-insensitive substring match against condition text).
