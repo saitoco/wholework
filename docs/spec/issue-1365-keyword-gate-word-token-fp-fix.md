@@ -73,14 +73,4 @@ Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-
 
 **New test case requirement 要約 (Step 13 は SPEC_DEPTH=light のため skip — ここに要約を記録)**: Implementation Step 1 (`resolve_filtered_context()` への `-e` 節追加) は新規分岐ロジックであるため、Implementation Step 3 で `tests/opportunistic-search.bats` に新規 `@test` を 3 件追加する: (a) config-key 形式トークンのみでの一致は除外される、(b) ベアファイル名トークンのみでの一致は除外される、(c) 独立単語としての出現は引き続き一致に含まれる (設計上の受容の回帰ロック)。
 
-## spec retrospective
-
-### Minor observations
-- Nothing to note
-
-### Judgment rationale
-- ハイブリッド方針 (config-key/ベアファイル名は根本修正、独立単語出現は設計上の受容) の採用根拠は `## Notes` に記録した。両サブパターンが共有する「`/` を含まない `word.word` 形状」という構造的類似性に気づいたことで、2 つの具体例 (config-key・ベアファイル名) を単一の sed 節で一括対応できた — 個別に対応する場合よりシンプルな実装になった。
-- `docs/spec/issue-476-review-severity-classification.md` の Verify Retrospective を re-run #1〜#20 まで通読したことで、Issue #476 が本 Spec 作成中 (2026-08-16) に偶然 PASS へ到達し `phase/done` に遷移済みであることを発見した。これは Issue 本文には反映されていない新事実であり、Post-merge AC の観測可能性に影響する重要な前提条件として `## Notes` に記録した。
-
-### Uncertainty resolution
-- Nothing to note (SPEC_DEPTH=light のため Step 8 Uncertainty Detection は skip)
+両サブパターンが共有する「`/` を含まない `word.word` 形状」という構造的類似性に気づいたことで、2 つの具体例 (config-key・ベアファイル名) を単一の sed 節で一括対応できた — 個別に対応する場合よりシンプルな実装になった。
