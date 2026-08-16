@@ -645,3 +645,37 @@ Sessions dispatching past 131.6h ran at **1–2 concurrent**, against the baseli
 The operational answer to the question that started this investigation — "can `/auto` be run concurrently again?" — is **yes, unreservedly**. 289 dispatches across 6 days, single and batch routes, up to 8 concurrent in the preceding window, zero external kills, and a compensation layer that has recovered every occurrence it ever saw.
 
 **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) stays on standby, and deliberately so.** Running it now would test detachment under conditions where nothing is being killed — the same design flaw that made Arm 1 unable to reproduce. It becomes informative only against a live reproduction, i.e. after uptime returns to the kill-producing range. If periodic reboot is adopted as the workaround before then, Arm 3 loses its test conditions permanently and should be recorded as "not tested — workaround adopted instead" rather than left open.
+
+## 2026-08-16 Update (respawn compensation layer scale-down decision for #1070 / #1081 / #1093, Issue #1381)
+
+The 2026-08-16 decisive observation above (H-b' falsified, 0 external kills across 289 dispatches, rule-of-three upper bound **< 1.04%/dispatch**) is the input this Issue (**#1381**) uses to decide whether the three remaining Icebox proposals for the respawn compensation layer — **#1070**, **#1081**, **#1093** (**#1119** already landed and closed) — should be kept (維持), scaled down (縮退), or closed (クローズ). Per #1381's Purpose, the question is **maintenance cost, not reliability**: the compensation layer (parent-session respawn) has never failed across all 12 recorded occurrences to date.
+
+**Grounding facts common to all three judgments** (all three are required inputs per #1381 AC2):
+
+- Current kill rate upper bound: **< 1.04%/dispatch** (rule of three, 289 dispatch / 0 kill — see the 2026-08-16 decisive observation above)
+- Compensation layer track record: **12/12** — parent-session respawn has recovered every recorded external-kill occurrence to date, with zero failures
+- The sole remaining hypothesis, **H-a** (harness-side episodic background-task supervision), is **unresolved and not verifiable from local data alone** — it requires either an upstream response on `anthropics/claude-code` #76974/#76942/#83814, or the task-notification-wording discriminator tracked in #1153
+
+### #1070 — 維持 (keep, Icebox)
+
+#1070 (明文化: ensure the Step 4 completion check runs before `skills/auto/SKILL.md` Step 6's Tier recovery, so a completed non-idempotent phase — e.g. `merge` — is not respawned unnecessarily) targets a **correctness gap that is independent of kill frequency**: a single occurrence of the described mis-sequencing (respawning an already-merged PR) would be harmful regardless of how rare kills are, since it was already observed once (source Issue #1062). Its own re-evaluation trigger — "a duplicate execution or missed completion caused by completion-check ordering is observed" — has **not fired again** since that original detection. Implementation cost is low (a prose clarification to `skills/auto/SKILL.md` Step 6 plus a `--check-completion` cross-reference, per its own Proposal), which is the cheapest of the three, but low cost does not by itself override the compensation-layer moratorium's structural-judgment-first framing (`docs/reports/ja/project-structural-review-2026-07-31.md:61` Phase 0 item 2) that all three Icebox items share. With the kill rate now bounded at <1.04%/dispatch and no recurrence of the triggering incident, there is no new evidence compelling immediate implementation. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (kill rate <1.04%/dispatch, compensation layer 12/12, H-a unresolved).
+
+### #1081 — 維持 (keep, Icebox)
+
+#1081 (preserve an already-committed, not-yet-pushed patch-route worktree commit from being discarded by a naive respawn) addresses the **highest-consequence** failure mode of the three (data loss of completed implementation work), but it is also the **narrowest edge case**: it requires the intersection of (a) patch route, (b) an external kill landing in the brief window after the implementation commit but before push, and (c) the existing `code-completed-no-pr` catalog entry not applying (it is pr-route-only). No occurrence of actual commit loss has been recorded — the one real incident that motivated this Issue (#1074, 2026-07-29) was caught and manually recovered (`manual-recovery-push-only`) precisely because the parent session anticipated the gap, and every other one of the 12 recorded respawns succeeded without hitting this narrow window. Implementation cost is moderate: a new `modules/orchestration-fallbacks.md` catalog entry (`code-patch-unpushed-commit`) plus `tests/orchestration-fallbacks.bats` coverage. Given the current kill rate bound (<1.04%/dispatch) and zero observed data-loss incidents against 12/12 successful recoveries, there is no urgency signal. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (fires on an actual lost-commit occurrence, or on the shared kill-rate/moratorium triggers).
+
+### #1093 — 維持 (keep, Icebox)
+
+#1093 (scope `detect-external-kill.sh`'s trailer/`wrapper_exit` detection to the `--phase` in question, rather than the whole concatenated `run-auto-sub.sh` log, so a completed earlier phase's success trailer does not mask a later phase's kill) is, by its own freeze reason, **detection-precision polish**: the one recorded false negative (#1066, 2026-07-29) still recovered successfully via the Tier 1→2→3 diagnostic fallback — the pre-check's early-exit fast path was skipped, costing extra diagnosis steps, but recovery was not compromised. This is structurally the same shape as #1070/#1081 in one respect (the false negative recurs deterministically whenever a kill lands on phase 2+ of a concatenated log) but the impact is bounded to diagnostic overhead, not correctness or data loss. Implementation cost is moderate (log-scoping logic change plus a new concatenated-log test case). With the kill rate now bounded at <1.04%/dispatch and no incident where the false negative caused an actual recovery failure, this remains the lowest-priority of the three. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (fires on an actual mis-detection incident, or on the shared kill-rate/moratorium triggers).
+
+### 縮退時の要素別扱い (AC3) — 該当なし (N/A)
+
+#1070 / #1081 / #1093 のいずれも「維持」と判断され、「縮退」と判断された Issue はない。したがって、`detect-external-kill.sh` / `--write-manual-recovery` / `retry-on-kill.sh` / 親セッション respawn 手順の各要素を残すか落とすかの判断は **該当なし (N/A)** — 4 要素とも現状の実装のまま維持する。
+
+### #596 との整合 (scope 外、参考メモ)
+
+#596 (XL 並列度の adaptive throttling、kill 率ベース) は本 Issue の Acceptance Criteria の対象外だが、判断の過程で扱いを揃えるべきと分かった点を一言記録する: 本 Issue が確定させた kill 率上限 (<1.04%/dispatch) は #596 が想定する「throttling が必要になるほど高い kill 率」の閾値を大きく下回っており、#596 の設計前提 (kill 率ベースの動的スロットリング) 自体の必要性が薄れている可能性がある。#596 自体の Icebox 扱い見直しは別途判断されたい。
+
+### まとめ
+
+3 件とも **維持**。判断根拠 (kill 率上限 <1.04%/dispatch・補償層実績 12/12・H-a 未解決) は上記の通り。Icebox 本文側 (#1070 / #1081 / #1093) の「再評価トリガー」節は、この判断結果に合わせて既に新しい基準値で更新済み。本 Update セクションは **Issue #1381** の補償層縮退可否判断を記録するものである。
