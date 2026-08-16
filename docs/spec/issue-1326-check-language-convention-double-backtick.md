@@ -35,6 +35,8 @@ No Spec existed prior to `/code` (Issue transitioned `phase/issue` → `phase/re
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1326#issuecomment-5302729384
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1326 --> / https://github.com/saitoco/wholework/issues/1326#issuecomment-5306088721
 ## Issue Retrospective
 
 ### Ambiguity Points & Auto-Resolution
