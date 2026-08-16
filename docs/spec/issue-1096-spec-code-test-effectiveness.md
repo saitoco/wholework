@@ -61,3 +61,6 @@ Steering Docs sync candidate check (grep -rn による横断検索) を実施済
 - **Auto-Resolve Log (SPEC_DEPTH=light につき Step 7 は本来スキップだが、非対話モード全体方針に基づき記録)**: `/spec` 側の新セクションが要求する「Spec Retrospective への概要記録」は、Issue 本文が SPEC_DEPTH=full の Step 13 を前提に書かれているが、SPEC_DEPTH=light では Step 13 自体がスキップされ `## spec retrospective` セクションを持たない。Implementation Step 3 で「light の場合は Notes セクションで代替する」という分岐を明示することで解決した。
 - **コンフリクト検出**: `skills/code/SKILL.md` には既に類似目的に見える `Stale Test Assertion Check` が存在したため精査した。目的が「削除文字列の残存確認」対「新規追加テストの実効性確認」で異なると判断し、別サブセクションとして追加する設計にした (統合は不採用: 対象の識別ロジックとタイミング (削除時 vs. 新規追加時) が異なり、統合すると条件分岐が複雑化するため)。
 - **常時 PASS でないことの実行確認**: `grep -c "新規テストケース" skills/spec/SKILL.md`、`grep -c "New Verification-Test Pre-implementation FAIL Check" skills/code/SKILL.md`、`grep -c "New test case requirement for new branch logic" skills/spec/SKILL.md` をいずれも実装前の状態で実行し、0 件であることを確認済み。対応する `tests/code.bats` / `tests/spec.bats` の新規テストケース (Implementation Steps 2, 4) も同じ理由で実装前 FAIL が保証される。
+
+## Consumed Comments
+No new comments since last phase.
