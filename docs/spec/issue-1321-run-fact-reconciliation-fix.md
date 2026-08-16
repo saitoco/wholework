@@ -100,6 +100,11 @@
 - `/code` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:35:39Z`) 以降の新規コメントなし。
 - `/review` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:41:58Z`) 以降の新規コメントなし (Issue/PR とも)。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1321#issuecomment-5249093394
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5249505615
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5296393097
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5304278319
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1321 --> / https://github.com/saitoco/wholework/issues/1321#issuecomment-5306116846
 ## Code Retrospective
 
 ### Deviations from Design
