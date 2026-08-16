@@ -206,3 +206,24 @@ MOCK
     # Verify command was invoked exactly once (no retry)
     [ "$(cat "$COUNTER_FILE")" -eq 1 ]
 }
+
+@test "orphan grandchild: process spawned inside the watched command is killed too" {
+    PID_FILE="$BATS_TEST_TMPDIR/grandchild.pid"
+
+    cat > "$MOCK_DIR/cmd.sh" <<MOCK
+#!/bin/bash
+sleep 60 &
+echo \$! > "$PID_FILE"
+wait
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -ne 0 ]
+    [ -f "$PID_FILE" ]
+
+    grandchild_pid=$(cat "$PID_FILE")
+    # Allow the OS a brief moment to reap the killed process
+    sleep 1
+    ! kill -0 "$grandchild_pid" 2>/dev/null
+}

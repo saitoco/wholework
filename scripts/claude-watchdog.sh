@@ -7,7 +7,7 @@
 #   WATCHDOG_TIMEOUT             - Seconds of no output before killing the process (default: 1800)
 #   WATCHDOG_HEARTBEAT_INTERVAL  - Seconds between heartbeat messages during silence (default: 60)
 
-set -uo pipefail
+set -umo pipefail
 
 # Load emit_event when AUTO_EVENTS_LOG is set
 [[ -n "${AUTO_EVENTS_LOG:-}" ]] && [[ -f "$(dirname "$0")/emit-event.sh" ]] && source "$(dirname "$0")/emit-event.sh" || true
@@ -77,7 +77,7 @@ _run_with_watchdog() {
           echo "" >&2
           echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
           _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
-          kill "$cmd_pid" 2>/dev/null
+          kill -- "-$cmd_pid" 2>/dev/null
           _watchdog_killed=true
         fi
         break
@@ -97,7 +97,7 @@ _run_with_watchdog() {
             echo "" >&2
             echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
             _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
-            kill "$cmd_pid" 2>/dev/null
+            kill -- "-$cmd_pid" 2>/dev/null
             _watchdog_killed=true
           fi
           break
