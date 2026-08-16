@@ -58,6 +58,10 @@ cutoff: `2026-08-16T05:12:40Z` (直近の `phase/*` ラベル付与)
 
 2 件目の指摘は採用した (Pattern 2 は実在する問題)。ただし修復手段は `--count --filter` 形ではなく `file_contains` + `command` の 2 コマンド形を採る — 理由は Notes「Triage AC 監査の修復案からの逸脱」参照。
 
+### review phase (cutoff: `2026-08-16T06:33:35Z`)
+
+No new comments since last phase.
+
 ## Changed Files
 
 - `modules/verify-classifier.md`: `### Tag Extraction Rule (consumers)` セクションを新設 — タグは HTML コメント内からのみ読むという正準ルール、awk 形 (`[ \t]*`) と `grep -E` 形 (`[[:space:]]*`) の両方の canonical pattern、および consumer 一覧を記載 (SSoT)
