@@ -129,7 +129,11 @@ docs/product.md の Non-Goals セクションが変更対象ファイルリス�
 - Pre-merge 全11条件 PASS。条件 9（`section_contains` の `|` 含む文字列）は fixed string 検索として解釈すると誤検知になるため AI 判定でカバーした。verify command の OR 代替パターン表現（`"A|B|C"`）は verify-executor の `section_contains` では曖昧であり、複数条件を一つの hint に詰め込むより個別の hint に分割する方が明確。
 
 ### Improvement Proposals
-- `section_contains` verify command でOR代替パターン（`"A|B|C"` 形式）を使用すると fixed string として解釈され意図通りに動作しない可能性がある。verify command 作成ガイドラインに「OR検索が必要な場合は hint を分割する」旨を追記することを検討する。
+- `section_contains` verify command でOR代替パターン（`"A|B|C"` 形式）を使用すると fixed string として解釈され意図通りに動作しない可能性がある。verify command 作成ガイドラインに「OR検索が必要な場合は hint を分割する」旨を追記することを検討する。→ 既に `modules/verify-patterns.md` L37 に本 Issue (#72) 由来として反映済みであることを確認 (重複提案なし)。
+
+### 2026-08-16 初回 /verify 実行 (/audit verify-backlog セッションから)
+
+Pre-merge 全11件は変更なし PASS。Post-merge 4件のうち2件 (`/doc translate` 引数なし時の Usage 表示確認、`/doc sync --deep` の新言語ディレクトリ除外確認) は、`skills/doc/SKILL.md` Command Routing および `modules/doc-scan-exclusions.md` の該当ロジックを直接確認する静的検証で PASS と判定した。残り2件 (`/doc translate ja`/`ko` の実行確認) は steering docs / 新規言語ファイルへの実書き込みを伴うため、本 routine sweep では見送り manual のまま維持。改善提案は既に反映済みを再確認、新規提案なし。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/72#issuecomment-4217673809
