@@ -37,6 +37,11 @@
 
 前フェーズ以降の新規コメントなし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1350#issuecomment-5295300406
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1350#issuecomment-5296393600
+- saito / MEMBER / first-class / ## Post-merge 条件の再確認 (`/audit verify-backlog` セッションから) / https://github.com/saitoco/wholework/issues/1350#issuecomment-5302102781
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1350#issuecomment-5304278734
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1350 --> / https://github.com/saitoco/wholework/issues/1350#issuecomment-5306062749
 ## Code Retrospective
 
 ### Deviations from Design
