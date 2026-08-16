@@ -27,3 +27,7 @@ batch_completion_section() {
 @test "Batch Completion Report: Recommended next action guidance present" {
     batch_completion_section | grep -q "Recommended next action"
 }
+
+@test "Batch Completion Report: preview-ac-unverified marker resolution present" {
+    batch_completion_section | grep -q "preview-ac-unverified"
+}
