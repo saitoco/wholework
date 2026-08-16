@@ -98,6 +98,18 @@ For each file changed in the PR that is a `modules/*.md` or `skills/*/SKILL.md` 
 
 **If no prose-literal pairs exist in the changed files**: Skip this perspective and report no issues.
 
+### 4. New Marker/Record Type Interaction Check
+
+Origin: Issue #951 review phase — `review-bug` (2 independent agents) and `review-spec` each independently found a defect of this same shape (see `docs/spec/issue-951-costly-step-confirmation.md` § review retrospective / Verify Retrospective), which motivated adding this as an explicit perspective rather than relying on ad hoc discovery.
+
+For each file changed in the PR that is a `modules/*.md` or `skills/*/SKILL.md` file:
+
+1. **Identify newly introduced declarative record/marker types**: Find new persistent marker conventions added by the diff — e.g. a new `<!-- xyz-marker: ... -->` HTML comment convention, a new Spec subsection meant to persist across phases (e.g. a deferral record), or a new flag/tag attached to an existing line format.
+2. **Identify existing generic sync/normalize/flip rules in the same file**: Find pre-existing rules in the **same file** that unconditionally rewrite, resync, or flip state across a whole section or all matching lines (e.g. a "Sync Spec implementation steps" rule, a checkbox-flip loop over all AC lines, a normalization pass that rewrites an entire section).
+3. **Check for explicit exclusion**: Verify the generic rule's own text explicitly excludes the newly introduced marker/record type from its sweep (e.g. "except a `spec-approval-needed` deferral" or equivalent carve-out). If the new marker/record type is not explicitly excluded, flag as MUST — the generic rule can silently overwrite or ignore the new marker/record on a future run.
+
+**If no new declarative record/marker type is introduced in the changed files**: Skip this perspective and report no issues.
+
 ## Output Format
 
 Output findings in the following format:
@@ -141,6 +153,17 @@ Recommended fix:
 ### Perspective 3: Prose-Literal Consistency
 
 **[Prose-Literal Inconsistency] filename:line-number vicinity**
+- path: file path (relative to repository root; null if not identifiable)
+- line: line number (corresponding line in diff; null if not identifiable)
+- confidence: high / medium / low
+Issue description. Severity: MUST / SHOULD / CONSIDER
+
+Recommended fix:
+(specific fix suggestion)
+
+### Perspective 4: New Marker/Record Type Interaction
+
+**[New Marker/Record Type Interaction] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
 - confidence: high / medium / low
