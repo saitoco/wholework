@@ -114,3 +114,4 @@ N/A
 
 ## Consumed Comments
 No new comments since last phase.
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=71 --> / https://github.com/saitoco/wholework/issues/71#issuecomment-5305293113
