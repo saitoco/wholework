@@ -189,7 +189,7 @@ Size L のため検出上限は 5 点 (`modules/ambiguity-detector.md` Size Rout
 `scripts/scan-pending-ac.sh` は「`gh` 失敗時に `[]` を返して exit 0」と明記された fail-open 設計 (criterion (c))、`scripts/opportunistic-search.sh` は `|| true` を含む (同じく (c))、`scripts/check-skill-change-observation-ac.sh` は入力検証で exit 2 を返す validator (criterion (b)) — いずれも fail-safe critical。期待挙動:
 
 - **空入力 / 該当行 0 件**: 従来どおり `[]` / 空出力 / exit 0。本修正はマッチ条件を狭めるだけなので、空入力の経路は不変
-- **`>` を含む条件文**: canonical pattern の `[^>]*` は `<!--` の位置から開始するため、コメントより前の散文に `>` があってもマッチ開始位置に影響しない。コメント内では `-->` の `>` で確実に停止する
+- **`>` を含む条件文**: canonical pattern の `[^>]*` は `<!--` の位置から開始するため、コメントより前の散文に `>` があってもマッチ開始位置に影響しない。ただし当初の想定 (`[^>]*` はコメント内の `-->` で確実に停止する) は誤りだった — `[^>]*` は `-->` ではなく、コメント本体中の**最初の**リテラル `>` (例: `note="a>b"` のような属性値) で停止してしまい、`event=` 等の後続属性を取りこぼす。実装では `[^>]*` の代わりに `([^-]|-[^-]|--[^>])*-->` を使い、コメントの実際の終端 `-->` まで到達させることでこれを解消した (`scripts/opportunistic-search.sh:391`、`scripts/check-skill-change-observation-ac.sh:43`、`scripts/get-auto-session-report.sh:613`、新設 bats テストの `note="a>b"` / `count>10` ケースで固定)
 - **`"` を含む条件文**: `awk index()` / `grep -F` は literal 照合のためクォートの影響を受けない。ERE へ外部入力を内挿しないこと (Step 4 の `EVENT_NAME`) で注入面も作らない
 - **CRLF**: 末尾 `\r` は `[a-zA-Z_]+` の文字クラス外なのでタグ名に混入しない (既存の trailing `[ \t\r]+` 除去も維持)
 - **マルチバイト**: awk / grep のバイト単位マッチで、日本語の条件文はパターンに影響しない
@@ -267,7 +267,8 @@ Implementation Steps 2-6 はいずれも既存スクリプトへの分岐ロジ�
 
 ### Deviations from Design
 
-- N/A — all Implementation Steps (1-8) were executed as designed, using the exact canonical patterns specified in the Spec.
+- **Span-termination pattern strengthened past the Spec's own `[^>]*`** (found and fixed during `/review`, PR #1383): Implementation Step 4 specified `match($0, /<!--[ \t]*verify-type:[ \t]*observation[^>]*/)` for the event-mode extraction span. `[^>]*` stops at the *first* literal `>` inside the comment body (e.g. `note="a>b"`), not at the comment's own closing `-->` — the Spec's own "fail-safe critical" Notes bullet claiming reliable `-->` termination was itself wrong (see Notes § fail-safe critical, corrected below). The actual implementation uses `([^-]|-[^-]|--[^>])*-->` instead, in `scripts/opportunistic-search.sh` (`TAG_COMMENT`, and — after a `/review` fix — `WHEN_ATTR`), `scripts/check-skill-change-observation-ac.sh`, and `scripts/get-auto-session-report.sh`. New bats cases (`note="a>b"`, `count>10`) lock in the fix.
+- **`TAG_COMMENT`-scoped `keyword=`/`config=`/`when=` extraction added beyond Step 4's stated scope**: Step 4 only specified fixing the two match paths (event-mode `observation` match, opportunistic-mode match); it did not mention comment-scoping the sibling `keyword=`/`config=`/`when=` attribute reads in `scripts/opportunistic-search.sh`. These were nonetheless comment-scoped (via the new `TAG_COMMENT` variable) — `keyword=`/`config=` during initial implementation, and `when=`/`AC_TAG` during a `/review` (PR #1383) fix cycle after `/review` found it was the one gate left on the old line-scoped pattern.
 
 ### Design Gaps/Ambiguities
 
