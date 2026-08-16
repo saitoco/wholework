@@ -166,8 +166,12 @@ Issue Q&A で確定した方針:
 - Post-merge opportunistic 条件（DCO check の PASS/FAIL 動作）は実際の PR CI が必要なため未チェックのまま。これは設計通りの判断
 
 ### Improvement Proposals
-- CI workflow の受け入れ条件に `file_contains` だけでなく `github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` 形式の verify command を追加することで、Action の設定ミスを /verify 段階で検出できる。外部 GitHub Action を導入する Issue のテンプレートとして整備する価値がある
-- `/spec` で外部 GitHub Action を参照スニペットに含める場合、Action の `action.yml` を確認して必須入力（`required: true`）をスニペットに反映するステップを追加することを検討する
+- CI workflow の受け入れ条件に `file_contains` だけでなく `github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` 形式の verify command を追加することで、Action の設定ミスを /verify 段階で検出できる。外部 GitHub Action を導入する Issue のテンプレートとして整備する価値がある → 既に Issue #143 で解消済み (CLOSED)
+- `/spec` で外部 GitHub Action を参照スニペットに含める場合、Action の `action.yml` を確認して必須入力（`required: true`）をスニペットに反映するステップを追加することを検討する → 既に Issue #144 で解消済み (CLOSED)
+
+### 2026-08-16 再検証 (/audit verify-backlog セッションから)
+
+未チェックだった Post-merge opportunistic 条件「`Signed-off-by:` なしの commit を含む PR で DCO check が FAIL する」について、`gh run list --workflow=dco.yml --status=failure` で実際の CI 実行履歴を検索したところ、run 28303973143 (Issue #791, 2026-06-27) の DCO job が実際に失敗しており、ログに規定の DCO エラーメッセージが出力されていることを確認した。これにより全 8 条件が checked となり `phase/done` に遷移した。改善提案は両方とも既存 Issue で解消済みを再確認、新規提案なし。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results `/verify #73` / https://github.com/saitoco/wholework/issues/73#issuecomment-4232958902
