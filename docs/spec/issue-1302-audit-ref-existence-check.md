@@ -91,3 +91,34 @@ Issue 本文が示す対応方針のうち、(a) を本筋として採用する:
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1・2 は Spec の記述内容をそのまま `skills/spec/SKILL.md` / `agents/review-spec.md` の挿入位置に反映した。挿入位置・文言ともに Spec 通り。
+
+### Design Gaps/Ambiguities
+- Pre-merge AC 3 の rubric grader は Spec ファイルを入力対象外とする (`modules/verify-executor.md` § Rubric Command Semantics)。Spec の Notes に書いた #1274/#1276 の実在確認ウォークスルーは grader からは見えないため、rubric テキストが要求する「Spec または実装内で確認されている」を満たすには、実装 (`skills/spec/SKILL.md` の新設 Example パラグラフ) 側にも #1274/#1276 の具体的な誤参照と検出可能性の説明を書く必要があった。Implementation Steps 1 の Example にその説明を含めることで対応した。
+
+### Rework
+N/A — 手戻りなし。
+
+## Smoke Test
+N/A — Spec に `## Smoke Test` セクションなし。
+
+## Test Results
+`bats --jobs 18 tests/`: 1802/1803 PASS。1件の FAIL (`tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route") は、本PRの変更 (`skills/spec/SKILL.md` / `agents/review-spec.md`) を `git stash` で除去した状態でも再現することを確認済みの既存の不整合であり、本 Issue の実装とは無関係。Follow-up Issue #1377 として既に追跡されている (重複作成はスキップ)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1・2 の文言をそのまま `skills/spec/SKILL.md` Step 6 (Step 7 見出し直前) と `agents/review-spec.md` Perspective 1 (2.5 直後・3 直前) に反映した。挿入位置・文言ともに Spec の指示通りで、追加の判断は不要だった。
+- Pre-merge AC 3 (rubric) は grader が Spec ファイルを読まないため、Spec の Notes に書いた #1274/#1276 の実在確認ウォークスルーとは別に、`skills/spec/SKILL.md` の Example パラグラフ自体に両ケースの具体的な誤参照を明記する形で満たした。
+
+### Deferred Items
+- `tests/code.bats` の既存 FAIL (Step 10 の期待文字列と `skills/code/SKILL.md` の実際の文言の乖離) は本 Issue のスコープ外・既存の不整合として特定し、重複起票を避けて既存の Follow-up Issue #1377 に委ねた。本 PR では対処しない。
+
+### Notes for Next Phase
+- `/review` は本 PR で新設した `agents/review-spec.md` の "2.6. Cited reference existence check" 自身が正しく機能するかも間接的に検証対象になる (review-spec 自身のロジック変更のため、通常の Spec Deviation Check の一部として評価される)。
+- Post-merge AC (observation, `event=auto-run session=next`) は次に監査・実査系 Issue が実行されたときに評価される。`/verify` 初回実行時点ではまだ発火していない可能性が高い (SKIPPED 想定)。
