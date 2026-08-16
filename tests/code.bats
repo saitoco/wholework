@@ -161,5 +161,5 @@ step10_section() {
 
 @test "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" {
     run step10_section "$SKILL_FILE"
-    [[ "$output" == *"For patch or operate route, Step 10 runs before"* ]]
+    [[ "$output" == *"Step 10 runs before the commit or PR that would produce a CI run"* ]]
 }
