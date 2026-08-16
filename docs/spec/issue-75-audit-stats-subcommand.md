@@ -107,3 +107,7 @@
 ### Improvement Proposals
 - 新規出力ディレクトリ（`docs/stats/` 等）を生成する Skill を Spec に記載する際は、`docs/structure.md` の更新も Changed Files に含めるチェックリストを `/spec` SKILL.md に追加する。
 - Skill が新規 `gh` コマンドを使用する場合、Spec の Changed Files に `allowed-tools` の更新を必須記載項目として明示する。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results (/verify #75) / https://github.com/saitoco/wholework/issues/75#issuecomment-4231317099
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=75 --> / https://github.com/saitoco/wholework/issues/75#issuecomment-5305327283
