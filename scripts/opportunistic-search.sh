@@ -480,12 +480,16 @@ for N in $ISSUE_NUMBERS; do
         # (resolve_run_facts fail-open), a missing --execution-context, unknown axes, and
         # malformed clauses are all per-clause fail-open (that single clause is ignored
         # rather than excluding the line).
-        # Extraction is scoped to the HTML comment tag (not the whole line) and takes only the
-        # last match: the AC's human-readable prose may itself quote "when=..." syntax (e.g. to
-        # describe the attribute), and matching against the whole line would corrupt WHEN_ATTR
-        # with an embedded newline from grep -o's one-match-per-line output.
-        AC_TAG=$(echo "$line" | grep -oE '<!--.*-->' || true)
-        WHEN_ATTR=$(echo "$AC_TAG" | grep -oE 'when=[^ >]+' | tail -n 1 | sed -e 's/^when=//' -e 's/-*$//' || true)
+        # Extraction is scoped to the verify-type HTML comment (TAG_COMMENT, same span
+        # already computed above for keyword=/config=) and takes only the last match: the
+        # AC's human-readable prose, or an unrelated adjacent HTML comment, may itself
+        # quote "when=..." syntax (e.g. to describe the attribute), and matching against
+        # the whole line would corrupt WHEN_ATTR with an embedded newline from grep -o's
+        # one-match-per-line output, or pick up an unrelated comment's when=-like text
+        # (Issue #1273 — this line previously used a greedy <!--.*--> span reaching the
+        # line's last -->, the same "Route B" problem this Issue's fix closes for
+        # keyword=/config= above).
+        WHEN_ATTR=$(echo "$TAG_COMMENT" | grep -oE 'when=[^ >]+' | tail -n 1 | sed -e 's/^when=//' -e 's/-*$//' || true)
         if [ -n "$WHEN_ATTR" ]; then
             WHEN_MATCH=true
             # IFS=',' read -a splits on commas without word-splitting/globbing the result,

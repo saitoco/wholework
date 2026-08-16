@@ -647,6 +647,25 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 712' > /dev/null
 }
 
+@test "when gate: when= inside an unrelated adjacent HTML comment does not gate a tag with no when= of its own (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 913}]'
+    export MOCK_ISSUE_BODY_913='## Post-merge
+- [ ] AC condition text A <!-- note: legacy config used when=route:operate here --> <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":913,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event pr-review-full
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    # WHEN_ATTR must be read only from inside the real verify-type comment
+    # (TAG_COMMENT), not from an unrelated adjacent comment. The real tag here
+    # carries no when= attribute at all, so the AC must match unconditionally —
+    # not be excluded because a different, unrelated comment's text happens to
+    # contain "when=route:operate" (which mismatches facts route "pr").
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 913' > /dev/null
+}
+
 @test "when gate: when= appearing in AC prose text (outside the tag) does not corrupt gate matching" {
     export MOCK_ISSUE_LIST='[{"number": 707}]'
     export MOCK_ISSUE_BODY_707='## Post-merge
