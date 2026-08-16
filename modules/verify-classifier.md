@@ -162,6 +162,53 @@ All four patterns remain best-effort: if no evidence surfaces via any of them, d
 - [ ] User visually confirms no confirmation dialog appears <!-- verify-type: manual -->
 ```
 
+### Tag Extraction Rule (consumers)
+
+Every consumer that *reads back* a `verify-type` (or `ac-tier`) tag from an Issue body/Spec —
+as opposed to `/issue`'s own assignment pass above — must read the tag value **only from inside
+its own HTML comment** (`<!-- verify-type: <type> ... -->`). A pattern that matches the tag name
+anywhere on the line is unsafe: condition prose legitimately quotes tag names when an Issue
+discusses AC type/classification itself (e.g. "confirm this line is excluded from the
+`verify-type: manual` tally"), and such prose is indistinguishable from a real tag unless the
+match is anchored to the comment boundary. Issue #1273 is the reference incident: a post-merge
+condition whose prose quoted `` `verify-type: manual` `` while its real tag was `observation` was
+misclassified as `manual` by a substring match.
+
+**Canonical patterns:**
+
+- awk: `/<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/` — `[ \t]` is unambiguously interpreted as a
+  space-or-tab character class by awk.
+- `grep -E`: `<!--[[:space:]]*verify-type:[[:space:]]*<type>` — use the POSIX `[[:space:]]` class,
+  not a literal `\t` inside a bracket expression. Different grep implementations disagree on
+  whether `[ \t]` inside brackets means "tab" or "literal backslash-or-t", so `\t` must not be
+  used in a grep bracket expression here.
+
+Extract the matched span, then strip the `<!--[ \t]*verify-type:[ \t]*` prefix (awk `match` +
+`substr` + `sub`, mirroring the reference implementation) to obtain the bare type value. The same
+comment-scoping requirement applies to sibling tags read by the same consumers, e.g. `ac-tier:`
+and the `event=`/`session=` attributes nested inside a `verify-type: observation` comment — an
+attribute is only valid when it appears inside the same HTML comment as the tag it modifies.
+
+**Reference implementation:** `scripts/collect-verify-retention-stats.sh` (`count_body()`) already
+extracts `verify-type` this way and is the pattern all other consumers should match.
+
+**Consumers (exhaustive):**
+
+| Consumer | What it extracts |
+|----------|-------------------|
+| `scripts/scan-pending-ac.sh` | `verify-type` tag (post-merge AC candidates) |
+| `scripts/post_merge_check.sh` | `verify-type: manual` and `ac-tier: preview` (manual AC extraction) |
+| `scripts/opportunistic-search.sh` | `verify-type: observation` + `event=` attribute; `verify-type: opportunistic` |
+| `scripts/check-skill-change-observation-ac.sh` | `verify-type: observation` + `session=next` attribute |
+| `scripts/get-auto-session-report.sh` | `verify-type: observation` + `event=` attribute; `verify-type: opportunistic` |
+| `scripts/collect-verify-retention-stats.sh` | `verify-type` tag (reference implementation) |
+| `scripts/rank-verify-backlog.sh` | `verify:` command presence |
+| `skills/audit/SKILL.md` (Waiting Count definitions) | `verify-type: manual` / `observation` / `opportunistic` |
+
+Not every occurrence of a tag-name-like string is a consumer — e.g. a skill name inside a
+`verify-type: opportunistic` condition's own prose (see the Tag Assignment Example above) is
+matched at line scope by design, because the skill name itself is not part of the tag.
+
 ### Constraint: Required Rule When Using auto Type
 
 When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... -->` verify command **must be present**.
