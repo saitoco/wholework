@@ -56,6 +56,11 @@ Execute only when a Spec path is provided:
    - For each enum definition found, verify that every enum value has a corresponding implementation in the PR diff (case branch, if-elif chain, dictionary entry, mapping table entry, etc.)
    - Missing enum value coverage → MUST finding
 
+2.6. **Cited reference existence check** (execute only for audit/investigation-type Issues — see `skills/spec/SKILL.md` § "Audit/investigation-type Issue identifier verification requirement" for the judgment criteria):
+   - Judge whether the Issue is audit/investigation-type using the same criteria as `/spec`: it investigates/classifies multiple existing items against defined categories, and the per-item judgment rationale is recorded in a persistent artifact that a later process will read as a decision basis.
+   - When judged audit/investigation-type, for each concrete identifier (function name, file path, section heading, configuration key) cited in the PR diff as judgment rationale, verify with Grep/Read that the identifier still exists in the current codebase.
+   - Flag any identifier that cannot be found (e.g., a function deleted by a later Issue, a path never created, a section heading that does not exist) as a MUST finding.
+
 3. **Uncertainty verification check**:
    - If the Spec has an "Uncertainties" section, verify each uncertainty is addressed in the PR:
      - Test additions (bats files, added test cases)
