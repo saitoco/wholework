@@ -77,19 +77,18 @@ Note: the bash safety net (`append-consumed-comments-section.sh`) recomputed cut
 - N/A — no rework occurred; single implementation pass.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed 2 SHOULD findings (fail-open `gh`-failure ambiguity in `resolve-preview-ac-fallback.sh` consumption, in both `skills/audit/SKILL.md:365` and `skills/auto/SKILL.md:1267`) with a documentation-only note rather than a fail-closed rewrite — stays within this Issue's scope (fix unconditional exclusion, not redesign the fallback script's failure contract).
-- Skipped 1 CONSIDER finding (duplicate `resolve-preview-ac-fallback.sh <issue>` invocation in `skills/audit/SKILL.md`'s N-calculation and per-Issue loop) — best-effort stats scan, caching would add disproportionate complexity at this scope.
-- AC5 (`command "bats tests/*.bats"`) resolved to PASS via CI reference fallback: `Run bats tests` job SUCCESS on the latest commit (identity confirmed via run command containment), superseding the Code Retrospective's local-run FAIL observation — Issue #1377's stale assertion did not reproduce in this PR's CI run.
+- Squash-merged PR #1385 to `main` with no conflicts (`mergeable=true`, `reason=clean`, CI success, review approved) — no rebase or conflict resolution needed.
+- Pre-merge AC gate confirmed all 5 Pre-merge acceptance conditions checked and no `review_incomplete_fallback` before proceeding — no override marker required.
 
 ### Deferred Items
-- None — all 5 Pre-merge acceptance conditions are now checked; Issue #1377 (`tests/code.bats` stale assertion) remains open but is confirmed unrelated to this PR's files and does not block merge.
+- Issue #1377 (`tests/code.bats` stale assertion) remains open, confirmed unrelated to this PR's files — not addressed here, tracked separately.
+- The `resolve-preview-ac-fallback.sh` fail-open recurring pattern (see review retrospective's "Recurring issues" below) remains undocumented at the script level — worth a follow-up Issue if a fourth consumer is added.
 
 ### Notes for Next Phase
-- `/merge` can proceed once approval workflow (if any) completes — no MUST issues, no unchecked Pre-merge AC, all CI green.
-- The `resolve-preview-ac-fallback.sh` fail-open recurring pattern (see `## review retrospective` § Recurring issues below) is documented but not fixed at the script level — worth a follow-up Issue if a fourth consumer is added.
+- `/verify` should confirm post-merge state: Issue has no Post-merge AC section per the PR body, so `/verify` completes as a pass-through once the Issue reaches `phase/verify` and closes.
 
 ## review retrospective
 
