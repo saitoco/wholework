@@ -107,3 +107,9 @@
 
 ### Improvement Proposals
 - `file_contains` チェックで特定キーワードを使う場合、Spec の acceptance criteria 作成時に「case-sensitive であるため小文字表現を実装に含めること」を注記する習慣を推奨する。`/spec` の acceptance condition 作成ガイドラインに case-sensitivity の注意書きを追加することで、同種の rework を防止できる。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/65#issuecomment-4211916090
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /issue execution) / https://github.com/saitoco/wholework/issues/65#issuecomment-4221932888
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /issue execution) / https://github.com/saitoco/wholework/issues/65#issuecomment-4229476715
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=65 --> / https://github.com/saitoco/wholework/issues/65#issuecomment-5305281189
