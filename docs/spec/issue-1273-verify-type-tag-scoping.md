@@ -211,3 +211,76 @@ Implementation Steps 2-7 はいずれも既存スクリプトへの分岐ロジ�
 ### Spec 本文でのタグ表記
 
 本 Spec は `verify-type` タグ名を多数引用するが、実タグと誤認されないよう `<!--` で始まる完全形の記述をサンプルとして書かない (インラインコードでタグ名のみを引用する)。これは本 Issue が扱う誤分類そのものを Spec 自身が引き起こさないための措置であり、修正後は不要になる性質のものではない (`post_merge_check.sh` は Spec ファイルを直接走査するため)。
+
+## issue retrospective
+
+### Auto-Resolve Log (非対話モード)
+
+- **判断が要る点 (Waiting Count 定義変更の過去レポート非互換の扱い): (a) 定義変更を明記し、以降のレポートに「計測方法の変更」注記を入れる** — reason: `docs/stats/2026-08-05.md` § 11 (訂正 1 / 訂正 2) に、代用計測の不整合を過去レポートの再出力・二重表示なしに追記注記のみで扱った既存先例があり、(a) はこれと同型。(b) 並行出力には対応する先例がなく、過去レポート全件の再計算コストが発生する
+  - Other candidates: (b) 変更前後の両方を出力し、移行期間を設ける
+  - 最終確認と Spec への記録は実装時 (`/spec`) に行う旨、本文に残した
+
+### Acceptance Criteria 変更の理由
+
+このIssueに既に投稿されていた `/triage` の AC verify command 整合性監査コメント (2026-08-08) を消費し、指摘された always-PASS パターン 5 件のうち Pre-merge の 4 件 (AC 1-4 の `grep -n "verify-type" <file>`) を修正した:
+
+- **AC 1-3 (`scan-pending-ac.sh` / `post_merge_check.sh` / `opportunistic-search.sh`)**: 監査コメントの提案どおり、各スクリプトに対応する既存 bats ファイル (`tests/scan-pending-ac.bats` 等) の実行に verify command を差し替えた。「3 ケースを検証している」という条件文も個別 AC に統合し、単独の `ls tests/` AC は削除した (ディレクトリ存在は既存 bats ファイルがある時点で常に真であり、監査コメントが指摘した通り検証にならないため)
+- **AC 4 (`check-skill-change-observation-ac.sh`)**: `/issue` フェーズで背景記載の合成再現ケース (`verify-type: manual` 実タグ + プロースでの `observation` 引用) をこのスクリプトに対して実行したところ、誤検知は再現しなかった (`exit 0`)。理由はこのスクリプトの抽出が既に 2 段階 (`grep -oE '<!--.*-->'` で HTML コメント区間を先に切り出し、そのあとでタグ文字列と照合) になっており、コメント外のプロース引用を拾わない構造だったため。影響箇所表の当該行の判定を「同上 (潜在)」から「誤分類なし (再検証済み)」に訂正し、AC の条件文も「修正」ではなく「HTML コメント内タグ抽出のみを見る挙動の回帰テスト確認」に改めた
+  > **訂正 (`/spec`, 2026-08-16)**: この判定は誤り。`grep -oE '<!--.*-->'` は greedy であり、同一行に HTML コメントが 2 つある場合 (典型は先行する `verify: rubric` コメント) は中間のコメント内容ごと `tag` に取り込むため誤検知する。`/issue` の再現試行はプロースが HTML コメントの **外側**にあるケースのみを試したため、この経路を見落とした。実測結果と修正方針は本 Spec の `## Notes` § 実装との矛盾 を参照。AC 4 は「回帰テスト確認」から「抽出の修正 + テスト」へ戻した
+- **Post-merge AC**: Issue 本文が `skills/audit/SKILL.md` を参照しており、`verify-type: observation` タグを持つ post-merge AC が `session=next` を欠いていたため (self-update propagation check で検出)、`session=next` を付与した
+
+### Consumed Comments
+
+| login | authorAssociation | trust tier | 内容の要約 | URL |
+|---|---|---|---|---|
+| saito | MEMBER | first-class | `/triage` の AC verify command 整合性監査。Pre-merge AC 5 件が always-PASS パターンであると指摘し、AC 1-4 (grep 系) と AC 7 (`ls tests/`) の置き換えを提案 | https://github.com/saitoco/wholework/issues/1273#issuecomment-5226551031 |
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の影響箇所表は「調査済み」と読める形で 7 行が列挙されていたが、実測すると 2 行 (`check-skill-change-observation-ac.sh` / `get-auto-session-report.sh`) が誤っていた。前フェーズが「再検証済み」と明記した行であっても、合成ケースを 1 パターンだけ試した結論は網羅性を保証しない — 同じ根 (substring マッチ) から派生する経路が複数ある場合、経路ごとに再現を試す必要がある。
+- `/triage` の AC 監査が提案した修復案 (`bats --count --filter` 形) は Pattern 2 の解消には有効だが、`modules/verify-patterns.md:32` が別途アンチパターンとして挙げるカウント集計形に該当する。監査ロジック同士が衝突しうるため、監査コメントの修復案は `/spec` で他の規約と突き合わせてから採否を決めるのが正しい (監査コメント自身も「判断は `/spec` フェーズに委ねます」と明記していた)。
+- `verify-type` タグを扱う Issue の Spec / Issue 本文自体が、修正対象のスクリプトの走査対象 (`docs/spec/*.md` / Issue body) になるという自己参照がある。完全形のタグをサンプルとして書かない運用で回避したが、この制約は本 Issue 固有ではなく、AC の型を議論するすべての Issue に共通する。
+
+### Judgment rationale
+
+- **共通ヘルパー化を採らなかった理由**: 5 つの consumer は awk / `grep -E` / bash `case` と実行形態が異なり、単一の呼び出し可能インタフェースに畳めない。加えて新規 `scripts/*.sh` は 6 つの reader SKILL.md の `allowed-tools` 更新を招き、worktree 内では `source` ベースの関数呼び出しが isolation guard に阻まれる。SSoT はドキュメント側 (`modules/verify-classifier.md`) に置き、実装はインライン展開する — 参照実装 `collect-verify-retention-stats.sh` と同じ形。
+- **`opportunistic-search.sh` でスキル名を行スコープに残した理由**: `event=` はタグ属性だがスキル名は条件文の散文に正当に現れる (`modules/verify-classifier.md:161` が実例)。両方を一律にコメント内へ限定すると既存 AC が一斉にマッチしなくなる。「HTML コメント内に限定する」という原則は、その文字列がタグの一部である場合にのみ適用される。
+- **`EVENT_NAME` を ERE へ内挿しなかった理由**: `--event` の値は無検証の外部入力であり、正準パターンへ内挿すると正規表現メタ文字の注入面ができる。awk `index()` による literal 照合なら注入面を作らずコメント内スコープを実現できる。
+
+### Uncertainty resolution
+
+- **grep ERE のブラケット内 `\t` の解釈**: macOS の実測ではタブとして解釈された (`<!--tverify-type:` は不一致) が、GNU grep のドキュメントはバックスラッシュまたは `t` のリテラル集合と規定する。いずれの解釈でも通常のタグはマッチするため実害はないが、曖昧さを排すため grep 経路は POSIX クラス `[[:space:]]*` に統一し、awk 経路は `[ \t]` を維持 (awk では確実にタブと解釈される) と決めた。
+- **`bats --count --filter` 形の safe mode 挙動**: `/review` は `command` を safe mode で評価し CI 参照フォールバックを試みるため、カウント集計形は UNCERTAIN 化する懸念があった。`file_contains` (`always_allow`) + `command "bats tests/<file>.bats"` (CI ジョブへマップ可能) の 2 コマンド形に置き換えることで、Pattern 2 の解消と safe mode での決定性を両立できることを確認した。
+- **フィルタ文字列の衝突**: 5 つのテスト名部分文字列がいずれも既存テストと衝突しないことを `bats --count --filter 'html-comment scoped' tests/<file>.bats` が 0 を返すことで実測確認済み (5 ファイルすべて)。
+
+### 新規テストケース要求 (分岐ロジック追加に伴う)
+
+Implementation Steps 2-6 はいずれも既存スクリプトへの分岐ロジック変更を含むため、受入条件 1-5 は「既存スイートが PASS すること」に加え、新規ロジックを検証する新規テストケースの追加を要求する: `tests/scan-pending-ac.bats` の `html-comment scoped tag extraction` / `tests/post_merge_check.bats` の `html-comment scoped manual extraction` / `tests/opportunistic-search.bats` の `html-comment scoped tag match` / `tests/check-skill-change-observation-ac.bats` の `html-comment scoped tag regression` / `tests/audit-auto-session.bats` の `html-comment scoped residual tally`。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- タグ抽出は共通ヘルパー化せず各スクリプトへインライン展開し、正準ルールは `modules/verify-classifier.md` の新設セクションに SSoT として置く (新規スクリプトによる `allowed-tools` 波及と worktree の `source` 制約を回避)
+- Issue 本文の影響箇所表 2 行を実測で訂正し、`check-skill-change-observation-ac.sh` を「回帰テストのみ」から「抽出の修正 + テスト」へ、`get-auto-session-report.sh` を「潜在」からスコープ内へ変更した (受入条件 4 / 5)
+- Pre-merge AC の verify command は `/triage` 監査が提案した `bats --count --filter` 形ではなく `file_contains` + `command` の 2 コマンド形を採用 (safe mode での UNCERTAIN 化を回避しつつ Pattern 2 を解消)
+- `skills/audit/SKILL.md` の Waiting Count 定義変更に伴う過去レポート非互換は (a) 追記注記方式で確定 (過去レポートの再出力・並行出力は行わない)
+- `opportunistic-search.sh` の `event=` はコメント内スコープ、スキル名は行スコープのまま (スキル名は条件文の散文に正当に現れるため)
+
+### Deferred Items
+
+- Post-merge 受入条件 1 件: `collect-verify-retention-stats.sh --window 2026-05-07` と `scan-pending-ac.sh` の manual 分類結果の突き合わせ (現状 19 対 18)。`/auto` 実行後の observation として次セッションで確認する
+- `scripts/collect-verify-retention-stats.sh` / `scripts/rank-verify-backlog.sh` / `skills/auto/SKILL.md` / `skills/verify/SKILL.md` は既に正しい形のため変更しない (grep で確認済み。`/code` で「念のため」修正しないこと)
+- `docs/structure.md` / `docs/ja/structure.md` は抽出方式に言及しないため変更不要 (確認済み)
+
+### Notes for Next Phase
+
+- `EVENT_NAME` は無検証の外部入力。`opportunistic-search.sh` の event モードでは ERE へ内挿せず awk `index()` の literal 照合を使うこと
+- grep 経路は `[[:space:]]*`、awk 経路は `[ \t]*` を使い分ける (grep ERE のブラケット内 `\t` の解釈が実装依存のため)
+- `scan-pending-ac.sh` / `get-auto-session-report.sh` の「タグ無し行は manual」既定と、`scan-pending-ac.sh` の fail-open (`gh` 失敗時 `[]` + exit 0) は**変更しない**。本 Issue は分類精度のみを扱う
+- `get-auto-session-report.sh` の新規テストは `tests/get-auto-session-report.bats` ではなく `tests/audit-auto-session.bats` へ置く (verify-type breakdown の既存テストが後者の `:141` にあるため)
+- `tests/post_merge_check.bats` は並列実行時のみ FAIL する既知フレークがある (`docs/tech.md` § CI bats Parallel/Serial Split)。全件実行で FAIL した場合は単独再実行で切り分けること
+- 実装で書く Spec / テストフィクスチャに完全形のタグを書くと、修正対象スクリプト自身の走査対象になる。フィクスチャは意図的にそう書く箇所 (bats のヒアドキュメント内) に限定すること
