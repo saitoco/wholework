@@ -40,7 +40,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     "- [ ]"*) ;;
     *) continue ;;
   esac
-  tag=$(printf '%s\n' "$line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*[a-zA-Z_]+[^>]*' || true)
+  tag=$(printf '%s\n' "$line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*[a-zA-Z_]+([^-]|-[^-]|--[^>])*-->' || true)
   case "$tag" in
     *"verify-type: observation"*) ;;
     *) continue ;;

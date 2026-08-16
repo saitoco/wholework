@@ -610,8 +610,9 @@ if [[ -n "$VERIFY_RESIDUALS" ]]; then
         continue
       fi
       if [[ "$_in_post_merge" == "true" ]] && echo "$_line" | grep -qE "^- \[ \]"; then
-        if echo "$_line" | grep -qE '<!--[[:space:]]*verify-type:[[:space:]]*observation[^>]*event='; then
-          _evt=$(echo "$_line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*observation[^>]*event=[^ >]+' | sed 's/.*event=//')
+        _comment=$(echo "$_line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*observation([^-]|-[^-]|--[^>])*-->' || true)
+        if [[ -n "$_comment" && "$_comment" == *event=* ]]; then
+          _evt=$(echo "$_comment" | grep -oE "event=[^ >]+" | sed 's/^event=//')
           _obs_count=$(( _obs_count + 1 ))
           if [[ -z "$_obs_events" ]]; then
             _obs_events="$_evt"

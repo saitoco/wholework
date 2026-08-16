@@ -273,6 +273,33 @@ teardown() {
     echo "$result" | jq -e '[.[] | select(.number == 812)] | length == 0' > /dev/null
 }
 
+@test "html-comment scoped tag match: event mode still matches when the comment body contains a literal > before event= (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 820}]'
+    export MOCK_ISSUE_BODY_820='## Post-merge
+- [ ] a legitimate observation AC whose comment contains a literal > before event= <!-- verify-type: observation note="count>10" event=pr-review-full -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 820' > /dev/null
+}
+
+@test "context gate: keyword= in a separate comment from verify-type is not applied as a gate (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 821}]'
+    export MOCK_ISSUE_BODY_821='## Post-merge
+- [ ] /issue AC whose keyword= sits in condition prose, not inside the verify-type comment <!-- verify-type: opportunistic --> keyword=unrelated-prose-token'
+    echo "This context file does not mention the prose token at all." > "$BATS_TEST_TMPDIR/context-no-match.md"
+
+    run bash "$SCRIPT" /issue --context-file "$BATS_TEST_TMPDIR/context-no-match.md"
+    [ "$status" -eq 0 ]
+    # keyword= is only read from inside the same HTML comment as the verify-type
+    # tag it modifies (modules/verify-classifier.md § Tag Extraction Rule). Since
+    # keyword= here sits outside that comment (in condition prose after -->), no
+    # keyword gate applies and the AC matches unconditionally.
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 821' > /dev/null
+}
+
 @test "context gate: keyword found in context file includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 500}]'
     export MOCK_ISSUE_BODY_500='## Post-merge

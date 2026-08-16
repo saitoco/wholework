@@ -351,10 +351,15 @@ for N in $ISSUE_NUMBERS; do
         # Tag and event= attribute are both read only from inside the same HTML
         # comment (per modules/verify-classifier.md § Tag Extraction Rule) — condition
         # prose that quotes "verify-type: observation" (Issue #1273) must not match.
-        # EVENT_NAME is unvalidated external input, so it is compared with index()
-        # (literal substring) rather than interpolated into the ERE.
+        # The span is matched through the comment's own closing --> (not a bare
+        # [^>]* run, which would stop at any literal > inside the comment body,
+        # e.g. a note="a>b" attribute placed before event=) so that event= is
+        # never truncated out of the extracted span.
+        # EVENT_NAME is enum-validated above (KNOWN_EVENTS) before reaching this
+        # point; index() is used for literal substring matching so the value is
+        # never interpreted as an ERE.
         MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | awk -v evt="$EVENT_NAME" '
-            match($0, /<!--[ \t]*verify-type:[ \t]*observation[^>]*/) {
+            match($0, /<!--[ \t]*verify-type:[ \t]*observation([^-]|-[^-]|--[^>])*-->/) {
                 tag = substr($0, RSTART, RLENGTH)
                 if (index(tag, "event=" evt) > 0) print
             }
@@ -376,6 +381,14 @@ for N in $ISSUE_NUMBERS; do
         CONDITION=$(echo "$line" \
             | sed 's/^- \[ \] //' \
             | sed 's/ *<!--.*-->//g')
+
+        # HTML comment span carrying this line's verify-type tag (observation or
+        # opportunistic) — keyword=/config= attributes below are read only from
+        # within this span (per modules/verify-classifier.md § Tag Extraction
+        # Rule), so condition prose that happens to contain the literal text
+        # "keyword=..." or "config=..." outside the comment is never mistaken
+        # for a real attribute (Issue #1273).
+        TAG_COMMENT=$(echo "$line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*(observation|opportunistic)([^-]|-[^-]|--[^>])*-->' || true)
 
         # Fact-token relevance tag (opportunistic mode only, --event unset): a line whose
         # lowercased CONDITION contains at least one --facts token as a substring is tagged
@@ -407,7 +420,7 @@ for N in $ISSUE_NUMBERS; do
         # (backward compatible). See modules/observation-trigger.md § Condition
         # Check Gate (keyword=) — Path-like token exclusion (Issue #1220) and
         # CLI-flag-like token exclusion (Issue #1293).
-        KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
+        KEYWORD=$(echo "$TAG_COMMENT" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
         if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
             resolve_filtered_context
             if ! echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"; then
@@ -420,7 +433,7 @@ for N in $ISSUE_NUMBERS; do
         # the config=<key>:<value> form, Issue #1243) whose resolved value
         # doesn't case-insensitively equal <value>. No config= attribute
         # means unconditional match (backward compatible).
-        CONFIG_ATTR=$(echo "$line" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
+        CONFIG_ATTR=$(echo "$TAG_COMMENT" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
         if [ -n "$CONFIG_ATTR" ]; then
             case "$CONFIG_ATTR" in
                 *:*)
