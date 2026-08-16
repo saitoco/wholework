@@ -168,3 +168,8 @@ Issue Q&A で確定した方針:
 ### Improvement Proposals
 - CI workflow の受け入れ条件に `file_contains` だけでなく `github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` 形式の verify command を追加することで、Action の設定ミスを /verify 段階で検出できる。外部 GitHub Action を導入する Issue のテンプレートとして整備する価値がある
 - `/spec` で外部 GitHub Action を参照スニペットに含める場合、Action の `action.yml` を確認して必須入力（`required: true`）をスニペットに反映するステップを追加することを検討する
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results `/verify #73` / https://github.com/saitoco/wholework/issues/73#issuecomment-4232958902
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /verify execution) / https://github.com/saitoco/wholework/issues/73#issuecomment-4244412382
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=73 --> / https://github.com/saitoco/wholework/issues/73#issuecomment-5305316743
