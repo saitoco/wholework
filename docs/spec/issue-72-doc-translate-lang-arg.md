@@ -130,3 +130,7 @@ docs/product.md の Non-Goals セクションが変更対象ファイルリス�
 
 ### Improvement Proposals
 - `section_contains` verify command でOR代替パターン（`"A|B|C"` 形式）を使用すると fixed string として解釈され意図通りに動作しない可能性がある。verify command 作成ガイドラインに「OR検索が必要な場合は hint を分割する」旨を追記することを検討する。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/72#issuecomment-4217673809
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=72 --> / https://github.com/saitoco/wholework/issues/72#issuecomment-5305306122
