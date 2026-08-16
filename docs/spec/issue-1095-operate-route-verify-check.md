@@ -51,3 +51,6 @@ PR #1090 は `ALWAYS_PR=true` 下で Size XS/S が pr route に昇格するケ�
 - **スコープについて**: Issue の AC は「Patch route verify command check」の発火条件のみを明示的に要求しているが、`skills/code/SKILL.md` 側の修正では直後の「Patch route branch-scoped CI AC exclusion」も合わせて修正する。理由は Root Cause 参照。この修正によって operate route の AC が同じ Step 10 内で `gh run list` へ変換されるようになるため、除外ノート側も追随しないと、変換直後に誤評価される新規到達可能なバグを残すことになるため。
 - **Steering Docs sync candidate**: `modules/verify-classifier.md` § "Patch Route CI Verification Note" の scope 記述 ("patch route" のみ) を patch/operate 両対応に更新するかどうかは `/code` が実装時に判断する (Changed Files 参照)。技術的な置換フォームは route に依存しないため、更新は必須ではない。
 - **`modules/size-workflow-table.md` の Diff-less Axis 記述との関係**: 同モジュール § "Diff-less Axis (operate route)" は「evaluated by `/spec` from the Spec it produces, and re-checked by `/code` from the same Spec」と既に記述しており、本 Issue で `/spec` Step 10 が同基準を Step 18 より前倒しで参照するようになっても、この記述と矛盾しない (Step 18 の判定自体は変更されない)。
+
+## Consumed Comments
+No new comments since last phase.
