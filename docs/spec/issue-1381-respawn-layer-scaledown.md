@@ -39,3 +39,6 @@
 - 本 Issue は監査/調査型 (既存の複数項目 (#1070/#1081/#1093) を定義済みカテゴリ (維持/縮退/クローズ) に分類し、判定根拠を将来の再評価が参照する永続的アーティファクト (`docs/reports/external-kill-investigation.md`) に記録する) と判定した。Implementation Steps で引用する 4 コンポーネントは Spec 作成時点で実在確認済み: `scripts/detect-external-kill.sh`、`scripts/retry-on-kill.sh`、`scripts/run-auto-sub.sh:357` (`--write-manual-recovery` サブコマンド)、`modules/orchestration-fallbacks.md:572` (`external-kill-parent-respawn`)、`skills/auto/SKILL.md:927,935` (Step 6 / External kill pre-check)。/code 実行時に新たな具体的識別子 (関数名・ファイルパス・行番号等) を判断根拠として引用する場合は、`grep -rn` / Read で実在確認すること。
 - `#596` (XL 並列度の adaptive throttling) は本 Issue の Acceptance Criteria 対象外 (Purpose が #1070/#1081/#1093 の 3 件に限定)。判断の過程で #596 の扱いを揃えるべきと分かった場合は Update セクションに一言記録するに留め、新規 AC は追加しない。
 - SPEC_DEPTH=light のため Step 7 (Ambiguity Resolution) の形式的な Auto-Resolve Log は生成していない。上記 Notes は Spec 作成時の調査に基づく判断メモである。
+
+## Consumed Comments
+No new comments since last phase.
