@@ -225,7 +225,7 @@ Judge the target Issue as **audit/investigation-type** when it meets both of the
 - (a) Its purpose is to investigate and classify multiple existing items (acceptance-condition lines, functions, code paths, configuration entries, etc.) against defined categories — not to build new functionality.
 - (b) The classification's per-item judgment rationale is recorded in a persistent artifact (Issue body, Spec, or a `docs/reports/*.md`-style report) that a later process — automated (`/verify`, `/audit`) or human — will read as the basis for a decision, rather than for one-time human reading only.
 
-Signals (use together with the criteria above, not as a standalone trigger): the Issue title/body uses 実査/監査/audit/分類-type language, and Implementation Steps call for producing a per-item table or list with a judgment column (e.g., A/B/C/D classification, PASS/FAIL, retire/keep).
+Signals (use together with the criteria above, not as a standalone trigger): the Issue title/body uses `実査`/`監査`/audit/`分類`-type language, and Implementation Steps call for producing a per-item table or list with a judgment column (e.g., A/B/C/D classification, PASS/FAIL, retire/keep).
 
 Steps:
 1. When judged audit/investigation-type, add an Implementation Step (or extend the relevant investigation step) requiring: any concrete identifier written as judgment rationale — function name, file path, section heading, configuration key, etc. — must be existence-verified with `grep -rn` / `Read` against the current codebase before being written, with specific attention to whether a later implementation change removed the referenced target.
