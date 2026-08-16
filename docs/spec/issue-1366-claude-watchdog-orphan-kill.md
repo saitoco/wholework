@@ -46,3 +46,6 @@
 - **Fail-safe critical script 判定**: `claude-watchdog.sh` は `2>/dev/null` や `|| true` を含むが (grep で確認済み)、その役割はプロセス監視ラッパーであり、他の処理の accept/reject を決定するゲート/バリデータではないため、fail-safe critical には該当しないと判定した。既存の `2>/dev/null` はいずれも「対象プロセスが既に終了しているレースコンディション」を吸収する定型パターンであり、本修正はその種類を変えない (`kill -- "-$cmd_pid" 2>/dev/null` も同じレースコンディション吸収)
 - **#1142 (spawn detachment) との非干渉確認**: `run-auto-sub.sh` 自身の spawn detachment shim (`WHOLEWORK_SPAWN_DETACH`) と `claude-watchdog.sh` は入れ子関係にない — `claude-watchdog.sh` は `run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-issue.sh` / `run-merge.sh` それぞれの内部で `claude -p` 呼び出しを直接ラップしており (grep で確認済み)、`run-auto-sub.sh` 自身は `claude-watchdog.sh` を呼ばない。プロセスツリー上の別階層のため本修正の影響範囲外
 - **Spec investigation 時点での動作確認 (`/code` での再実装後の確認は別途必要)**: 候補修正 (`set -umo pipefail` + 両 kill 呼び出しの `kill -- "-$cmd_pid"` 化) を `.tmp/` 上のコピーに適用し、(a) 孫プロセスが残存しないこと、(b) exit code semantics (`143`) が変化しないこと、(c) 既存 12 テストが無改修のまま全て PASS すること、(d) Implementation Steps 2 で追加する新規テストケースが未修正版で FAIL・修正版で PASS することを確認した。macOS の `/bin/bash` (3.2 系相当) で確認しており、Linux CI 環境での再確認は `/code` の通常のテスト実行に委ねる
+
+## Consumed Comments
+No new comments since last phase.
