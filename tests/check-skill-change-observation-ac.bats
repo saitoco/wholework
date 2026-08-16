@@ -132,6 +132,33 @@ EOF
     [ "$output" = "" ]
 }
 
+@test "html-comment scoped tag regression: a preceding comment quoting verify-type: observation does not misclassify a manual line (issue #1273)" {
+    write_fixture "$FIXTURE_DIR/issue.md" <<'EOF'
+## Changed Files
+
+- `skills/audit/SKILL.md`: change Waiting Count definition
+
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] leading comment quotes verify-type observation but the real tag is manual <!-- verify: rubric "confirm the verify-type: observation tally excludes this line" --> middle text <!-- verify-type: manual -->
+- [ ] normal observation line missing session=next <!-- verify-type: observation event=auto-run -->
+- [ ] observation line with session=next already assigned <!-- verify-type: observation event=auto-run session=next -->
+EOF
+    run bash "$REAL_SCRIPT" "$FIXTURE_DIR/issue.md"
+    [ "$status" -eq 2 ]
+    # (a) the leading verify: rubric comment quoting "verify-type: observation"
+    # must not cause the manual-tagged line to be reported
+    # (bash 3.2's `set -e` does not propagate a bare `[[ ]]` failure unless it
+    # is the function's last command, so gate explicitly with `|| return 1`)
+    [[ "$output" != *"leading comment quotes verify-type observation"* ]] || return 1
+    # (b) a normal observation line missing session=next is still reported
+    [[ "$output" == *"normal observation line missing session=next"* ]] || return 1
+    # (c) an observation line that already carries session=next is not reported
+    [[ "$output" != *"observation line with session=next already assigned"* ]]
+}
+
 @test "condition text mentions session=next but tag lacks it: exit 2 (not masked by prose)" {
     write_fixture "$FIXTURE_DIR/issue.md" <<'EOF'
 ## Changed Files
