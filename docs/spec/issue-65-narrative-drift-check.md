@@ -106,7 +106,11 @@
 - Issue はクローズ済み、`phase/verify` ラベルで opportunistic 確認待ち状態が正しく維持されている。
 
 ### Improvement Proposals
-- `file_contains` チェックで特定キーワードを使う場合、Spec の acceptance criteria 作成時に「case-sensitive であるため小文字表現を実装に含めること」を注記する習慣を推奨する。`/spec` の acceptance condition 作成ガイドラインに case-sensitivity の注意書きを追加することで、同種の rework を防止できる。
+- `file_contains` チェックで特定キーワードを使う場合、Spec の acceptance criteria 作成時に「case-sensitive であるため小文字表現を実装に含めること」を注記する習慣を推奨する。`/spec` の acceptance condition 作成ガイドラインに case-sensitivity の注意書きを追加することで、同種の rework を防止できる。既に Issue #69 として起票・クローズ済みであることを確認 (重複提案なし)。
+
+### 2026-08-16 再確認 (/audit verify-backlog セッションから)
+
+Pre-merge 5件は変更なし PASS。Post-merge opportunistic 条件のうち AC6 (`docs/tech.md` L41 の partial description drift 検出確認) は、想定していた具体例自体が `docs/tech.md` L63-64 で既に `/issue` の sub-agent 利用が明記され解消済みであることを確認した — この AC の premise はもはや存在しない。narrative drift check 機能自体の健全性を実地確認するには、別の partial description drift 事例が必要（ただし Pre-merge 検証で実装ロジック自体の健全性は確認済みであり、機能不全を示す根拠ではない）。AC7 (manual, 別プロジェクトでの動作確認) は premise 不成立のまま UNCERTAIN。改善提案なし（既存提案は #69 で解消済みを再確認）。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/65#issuecomment-4211916090
