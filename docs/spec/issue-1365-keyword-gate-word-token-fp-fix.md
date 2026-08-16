@@ -124,3 +124,30 @@ Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-
 ### Notes for Next Phase
 - `/verify` は Post-merge AC (`keyword=workflow` 観測) について、Issue #476 が既に `phase/done` である前提を踏まえた判定が必要 (詳細は上記 Deferred Items 参照)。
 - `/verify` は本 PR に review フェーズでの追加修正 commit 445974b3 (3 セグメント以上のネスト config-key チェーン対応) が含まれていることを踏まえ、squash merge commit 1007a888 の内容で判定すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。
+
+#### design
+- 特記事項なし。
+
+#### code
+- 特記事項なし (Code Retrospective の Recurring issues / Acceptance criteria verification difficulty は既存の仕組みで検出済み、対応不要と判断されている)。
+
+#### review
+- 特記事項なし。
+
+#### merge
+- 特記事項なし。
+
+#### verify
+- Pre-merge AC 3件はすべて `/review` 時点で既に checked 済みのため SKIPPED (再検証なし)。
+- Post-merge の observation AC (`event=pr-review-light keyword=workflow`) は未発火のため SKIPPED。`phase/verify` に留め、次回イベント発火時に再評価する。
+- `/auto --batch` の `run-auto-sub.sh` 実行が code phase 開始直後にバックグラウンドタスクとして外部要因 (status: killed、数値 exit code 観測なし) で停止した。`worktree-code+issue-1365` ブランチと stale worktree が残存していたため、再実行 (`run-auto-sub.sh 1365`) 時に `code_phase_milestone` の resume 機構が `pre-commit` マイルストーンを観測し、stale worktree/branch をクリーンアップした上で code phase を正常に再実行、PR #1384 を作成し review→merge まで完走した。再発時のために `docs/reports/orchestration-recoveries.md` に manual-recovery-respawn として記録済み (cause: `background-task-killed-mid-code-phase`)。
+
+### Improvement Proposals
+- N/A
