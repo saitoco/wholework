@@ -110,18 +110,17 @@ Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-
 - rubric AC2 の文言 (「対応方針に沿った実装...が反映されている」) は、根本修正の「完全性」(全深さのネストを正しく処理するか) までは明示的に要求していなかったため、rubric grader (および `/code` の自己採点) が 2 セグメント例のみのテストで PASS 判定を出せてしまう余地があった。`modules/verify-executor.md` の rubric ガイドライン (「セキュリティ関連のサブフィールドを明示的に rubric 文言に含める」原則) と同様に、「トークン形状クラスの根本修正」を検証する rubric 文言には、代表的な境界条件 (例: 「2 セグメントおよび 3 セグメント以上のネストの両方で正しく除去されること」) を明示的に含めることが望ましい。次回同種の Issue (`keyword=` ゲート系) を起票する際の Acceptance Criteria 文言作成時に反映を検討する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 10 (light mode) の review-light と Parser/Validator Edge Case Pre-check (実コード実行) が検出した 3 セグメント以上のネスト config-key チェーン未対応の SHOULD 指摘を、`/review` 内で修正 (パターンを繰り返しグループ `(\.[A-Za-z0-9_-]+)+` に変更) し、回帰テストを追加した (commit 445974b3)。
-- 先頭ドットの単一セグメントトークン (`.workflow`) 未対応の CONSIDER 指摘は、実世界での発生可能性が低いと判断し、今回は対応せず既知の軽微なギャップとして記録するに留めた。
-- MUST 相当の指摘は無く、レビューは `COMMENT` イベントで投稿した。
+- PR #1384 は mergeable=true (CI success / review approved)、pre-merge AC ゲートは unchecked 0 件・review_incomplete_fallback なしで通過したため、conflict 解決や auto-resolve を経由せずそのまま squash merge した。
+- squash merge 後、worktree を `origin/main` (commit 1007a888) へ ff-only で追従させ、Phase Handoff をこのコミットに含めて `main` へ直接コミット・push する。
 
 ### Deferred Items
 - 先頭ドット単一セグメントトークン (`.workflow`) が `keyword=` ゲートで除去されない件は未対応のまま。実際に問題化した場合は別 Issue で対応を検討する。
-- Post-merge AC (`event=pr-review-light keyword=workflow` の観測) は `/code` の Phase Handoff で記載された通り、対象 Issue #476 が既に `phase/done` へ遷移済みのため文字通りには観測不能な可能性が高い。`/verify` はこの前提を踏まえて判定する必要がある。
+- Post-merge AC (`event=pr-review-light keyword=workflow` の観測) は Issue #476 が既に `phase/done` へ遷移済みのため文字通りには観測不能な可能性が高い。`/verify` はこの前提を踏まえて判定する必要がある。
 - 本 Issue とは無関係な pre-existing test FAIL (`tests/code.bats` の Step 10 branch-scoped CI AC exclusion アサーション、Issue #1377 で追跡済み) は今回の PR でも CI 上に現れる可能性があるが、本 Issue の変更に起因するものではないため対応不要。
 
 ### Notes for Next Phase
-- `/merge` は commit 445974b3 (review フェーズでの追加修正) を含めて squash merge すること。
 - `/verify` は Post-merge AC (`keyword=workflow` 観測) について、Issue #476 が既に `phase/done` である前提を踏まえた判定が必要 (詳細は上記 Deferred Items 参照)。
+- `/verify` は本 PR に review フェーズでの追加修正 commit 445974b3 (3 セグメント以上のネスト config-key チェーン対応) が含まれていることを踏まえ、squash merge commit 1007a888 の内容で判定すること。
