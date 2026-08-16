@@ -71,20 +71,20 @@ PR #1090 は `ALWAYS_PR=true` 下で Size XS/S が pr route に昇格するケ�
 - `bats tests/code.bats` and `tests/spec.bats`: PASS (32 tests). Full suite (`bats --jobs 18 tests/`, triggered by Behavioral Change Detection since `operate-route.bats`, `run-code.bats`, `run-code-mergeability.bats`, `reconcile-phase-state.bats`, `check-file-overlap.bats`, `run-spec.bats`, and `verify-executor.bats` all reference the modified files beyond their direct counterpart): PASS (1800 tests, 0 failures).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran review as lightweight integrated review (`REVIEW_DEPTH=light`, per `--light` flag and Size=M) — 2 independent full passes of the review-light agent, cross-checked against the actual diff/code before acting.
-- Fixed both SHOULD findings pre-merge rather than deferring: (1) `skills/spec/SKILL.md` Step 10's `ALWAYS_PR=true` guard now evaluates the Diff-less Axis (operate route) criteria before skipping, so operate-route Specs under `always-pr: true` are no longer missed by `/spec`'s own pre-check; (2) `skills/verify/SKILL.md`'s "Patch route detection" prose was updated to "patch or operate route" terminology to match the SSoT note this PR generalized in `modules/verify-classifier.md`.
-- Posted the `skills/verify/SKILL.md` finding as a PR comment rather than an inline review comment — that file was not part of the PR's original diff, so GitHub's review-comment API could not attach a line comment to it.
+- PR branch had diverged from `main` since review (single-file conflict in `skills/code/SKILL.md`, Step 10's "CI verification AC exclusion" block) — `main` had independently generalized the same block to a route-agnostic form (patch + pr) while this PR generalized it differently (patch/operate + pr route bullet). Resolved by merging both: kept the route-agnostic framing from `main` and added the operate-route coverage from this PR, preserving both bullets (patch/operate and pr route).
+- The conflict-resolution edit initially dropped the exact wording asserted by `tests/code.bats` test 22 ("Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route") — caught by re-running `bats tests/code.bats` post-resolution, fixed with a follow-up commit re-inserting the literal phrase.
+- Used a detached-HEAD checkout inside the merge worktree to run `gh pr merge` and the post-merge `git checkout`, since the primary worktree already holds `main` checked out and blocks a second worktree from checking out the same branch.
 
 ### Deferred Items
-- Post-merge manual AC (operate route + `github_check "gh pr checks"` → auto-fix to `gh run list` confirmation) remains for `/verify` per its `verify-type: manual` tag — unaffected by this phase's fixes.
+- Post-merge manual AC (operate route + `github_check "gh pr checks"` → auto-fix to `gh run list` confirmation) remains for `/verify` per its `verify-type: manual` tag — unaffected by this phase's conflict resolution.
 
 ### Notes for Next Phase
-- All 3 pre-merge AC confirmed PASS (2 rubric, 1 command via CI reference fallback); CI all green (11/11 checks).
-- No policy change detected in Step 13 — the 2 review fixes are implementation refinements consistent with the Issue's stated intent, not scope or behavior changes; no Issue body/verify command update was needed.
-- Full targeted suite (`bats tests/spec.bats tests/code.bats tests/verify.bats`, 58 tests) and `validate-skill-syntax.py` both pass after the fixes; `/merge` can proceed directly.
+- `bats tests/code.bats` (22 tests) and `bats tests/spec.bats` (10 tests) both PASS on the post-rebase, post-fix branch state actually pushed and merged.
+- Squash-merged as commit `fa8aed4e` on `main`; remote branch `worktree-code+issue-1095` deleted.
+- No policy change; the conflict resolution combined two independently-generalized versions of the same Step 10 exclusion block without altering either side's intent.
 
 ## Consumed Comments
 No new comments since last phase.
