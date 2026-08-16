@@ -127,18 +127,18 @@ Parser/Validator Edge Case Pre-check (実行確認ベース) で、`scripts/coll
 Nothing to note。Pre-merge AC1〜4 は `/code` フェーズの自己検証時点で既に PASS・チェック済みであり、`/review` Step 8 では rubric/grep/command の再実行で同じ結果を再確認しただけだった。UNCERTAIN や verify command の不備は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 10 (light mode) の review-light 出力と、Parser/Validator Edge Case Pre-check の実行確認済み findings を統合し、SHOULD 2件 + CONSIDER 1件をインラインコメントとして投稿した。MUST 相当の指摘はなかったため `event=COMMENT` で投稿。
-- SHOULD/CONSIDER 3件はいずれも Spec の Root Cause が明示的にスコープした範囲外 (隣接エッジケース) と判断し、本 PR での追加修正は行わずスキップした。
+- CI 全件 SUCCESS・review 承認済み・pre-merge AC 全4件チェック済みのため、コンフリクト解消・追加テストなしで squash merge を直接実行した。
+- squash merge 後、worktree ブランチを `origin/main` に ff-only で同期し、この Phase Handoff を main に直接コミットする方式 (`/merge` Step 4 の post-squash 手順) に従った。
 
 ### Deferred Items
-- `scripts/collect-run-facts.sh`: `.issue` が `"null"` 以外の JSON リテラル文字列 (`"true"`/`"false"` 等) の場合に `issues[]` へ不正エントリが混入する残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636271)。
-- `scripts/scan-pending-ac.sh`: `fact_tokens` のネスト/非文字列要素混入時に過小/過大マッチが発生する残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636274)。
+- `scripts/collect-run-facts.sh`: `.issue` が `"null"` 以外の JSON リテラル文字列の場合に混入する残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636271)。
+- `scripts/scan-pending-ac.sh`: `fact_tokens` のネスト/非文字列要素混入時の過小/過大マッチ残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636274)。
 - `modules/run-fact-matching.md`: checkbox 書き込み失敗時の `action=auto-check` 表示と caller 向け説明文の精度改善 (任意対応、CONSIDER)。
+- いずれも本 PR ではフォローアップ Issue 化を見送り。頻度・実害が確認された場合に検討。
 
 ### Notes for Next Phase
-- `/merge` 実行前提: CI 全11件 SUCCESS、Pre-merge AC1〜4 全て PASS 済み、MUST issue なし。
-- Post-merge AC は「なし」のため `/verify` は実質作業なしの想定 (Spec の既存 Notes for Next Phase を踏襲)。
-- 上記 Deferred Items 3件は、頻度や実害が確認された場合にフォローアップ Issue 化を検討 (本セッションでは Issue 起票は見送り、Retrospective 記録のみ)。
+- Post-merge AC は「なし」のため `/verify` は実質作業なしの想定。
+- Issue #1363 は `closes #1372` により自動クローズ、`phase/verify` ラベルへの遷移を Step 5 で実施予定。
