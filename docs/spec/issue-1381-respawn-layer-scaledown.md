@@ -41,4 +41,6 @@
 - SPEC_DEPTH=light のため Step 7 (Ambiguity Resolution) の形式的な Auto-Resolve Log は生成していない。上記 Notes は Spec 作成時の調査に基づく判断メモである。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / [comment](https://github.com/saitoco/wholework/issues/1381#issuecomment-5306102807)
+  - 内容: `/issue` フェーズの Issue Retrospective (曖昧性の自動解決ログ)。「Icebox 起票規約」の解釈 (#1070/#1081/#1093 の凍結理由・再評価トリガー形式を規約の実体として採用) と「#596 の scope 内外」(Purpose の #1070/#1081/#1093 限定に合わせ AC 対象外とした) の 2 点の Auto-Resolve 根拠を記録している。いずれも Issue 本文の「Auto-Resolved Ambiguity Points」節に既に反映済みの内容で、本 Spec に追加で取り込むべき新規情報はなし。
