@@ -110,18 +110,17 @@ N/A — Spec に `## Smoke Test` セクションなし。
 `bats --jobs 18 tests/`: 1802/1803 PASS。1件の FAIL (`tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route") は、本PRの変更 (`skills/spec/SKILL.md` / `agents/review-spec.md`) を `git stash` で除去した状態でも再現することを確認済みの既存の不整合であり、本 Issue の実装とは無関係。Follow-up Issue #1377 として既に追跡されている (重複作成はスキップ)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 3 件はいずれも `rubric` タイプで、PR diff (Example パラグラフの #1274/#1276 明記、判定基準の (a)(b) 記述) から明確に PASS 判定した。UNCERTAIN・FAIL は発生しなかった。
-- CI `Language Convention check` の FAILURE (1 件、MUST) を検出し、`skills/spec/SKILL.md:228` の CJK トリガー語彙 (`実査`/`監査`/`分類`) をインラインコードスパンで囲む修正で解消した。修正後 CI 11/11 SUCCESS を確認済み。
+- mergeable=true (CI 11/11 SUCCESS、review approved) を確認し、conflict 解消ステップは不要だった。squash merge をそのまま実行した。
+- pre-merge AC gate は unchecked_count=0、review_incomplete_fallback も未検出で、override 不要のままクリーンにマージ可能と判定した。
 
 ### Deferred Items
-- `tests/code.bats` の既存 FAIL (Step 10 の期待文字列と `skills/code/SKILL.md` の実際の文言の乖離) は本 Issue のスコープ外・既存の不整合として特定し、重複起票を避けて既存の Follow-up Issue #1377 に委ねた。本 PR では対処しない。
+- `tests/code.bats` の既存 FAIL (Step 10 の期待文字列と `skills/code/SKILL.md` の実際の文言の乖離) は本 Issue のスコープ外・既存の不整合として特定済み。Follow-up Issue #1377 に委ねられている。本 PR では対処していない。
 
 ### Notes for Next Phase
 - Post-merge AC (observation, `event=auto-run session=next`) は次に監査・実査系 Issue が実行されたときに評価される。`/verify` 初回実行時点ではまだ発火していない可能性が高い (SKIPPED 想定)。
-- `/merge` 実行前に CI が全て SUCCESS であることは本フェーズで確認済み (11/11)。
 
 ## review retrospective
 
