@@ -679,3 +679,59 @@ The 2026-08-16 decisive observation above (H-b' falsified, 0 external kills acro
 ### まとめ
 
 3 件とも **維持**。判断根拠 (kill 率上限 <1.04%/dispatch・補償層実績 12/12・H-a 未解決) は上記の通り。Icebox 本文側 (#1070 / #1081 / #1093) の「再評価トリガー」節は、この判断結果に合わせて既に新しい基準値で更新済み。本 Update セクションは **Issue #1381** の補償層縮退可否判断を記録するものである。
+
+> **[2026-08-16 追記] 本節が根拠とする「kill 率上限 <1.04%/dispatch」は同日中に撤回された。** 下記 § 2026-08-16 Update (2) を参照。維持という結論自体は変わらない (発生率が上振れするなら補償層はより必要になるため)。
+
+## 2026-08-16 Update (2) — a 3-session burst invalidates the same day's rate estimate
+
+The conclusion recorded above and in § 2026-08-16 Update — that the kill rate is bounded under ~1%/dispatch and the local-variable investigation had concluded — **is wrong, and was falsified within hours of being written.**
+
+### The observation
+
+On 2026-08-16 at ~07:07Z, three concurrent sessions were killed at the same moment:
+
+| Issue | Phase | Phase start | Respawn | Elapsed | Parent session (started) |
+|---|---|---|---|---|---|
+| #1273 | review | 06:30:47Z | **07:09:24Z** | 38m37s | `58212-1786837134` (batch, 08-15 23:38Z) |
+| #1365 | code-pr | 06:45:34Z | **07:09:32Z** | 23m58s | `78405-1786860922` (batch, 08-16 06:15Z) |
+| #1381 | code-patch | 06:46:11Z | **07:09:40Z** | 23m29s | `11685-1786860974` (single, 08-16 06:16Z) |
+
+**The three respawns fall within 16 seconds of each other.** Each is an independent parent session reacting to its own kill notification, so the kills themselves were simultaneous. Nothing else is shared: phase start times differ by 15 minutes, elapsed-before-kill differs by 15 minutes, parent session ages differ by 7 hours, and the underlying `claude` CLI process ages ranged from ~1 hour to 6 days. The only common factor is *being in flight at that instant*.
+
+All three recovered on respawn (compensation layer now 15/15).
+
+### Why the rate estimate was wrong
+
+§ 2026-08-16 Update derived `< 1.04%/dispatch` from 289 dispatches with 0 kills via the rule of three, and used it to declare the investigation concluded. **The arithmetic is fine; the model it assumes is not.**
+
+That same section quotes upstream [#76974](https://github.com/anthropics/claude-code/issues/76974) describing the phenomenon as "**BURSTY** — several within a few minutes, then days of silence — suggesting an episodic supervision state rather than per-job decisions." A rule-of-three bound assumes independent, identically-distributed trials. Under an episodic process, a long run of zeros is not evidence of a low per-dispatch rate — **it is the silent interval between bursts, which is exactly what the upstream report says the normal shape looks like**. This report quoted that finding and then modelled the phenomenon as if it had not.
+
+The correct reading of 289 dispatches / 0 kills is "289 dispatches fell inside a silent interval," not "the rate is below 1%."
+
+### Hypothesis status, corrected
+
+| Hypothesis | Status after this burst |
+|---|---|
+| **H-a** — harness background task-supervision, episodic | **最有力、大幅に強化.** Simultaneous kill of three unrelated process trees, uncorrelated with per-process attributes, is the defining signature of an episodic supervision state acting host-wide. This is the closest local match to #76974 obtained so far |
+| **H-b'** — host uptime / PID reuse | **未決に戻す.** § 2026-08-16 Update declared it falsified on 111 dispatches in the 120–144h band with 0 kills. That measurement stands as fact, but its interpretation assumed the i.i.d. model corrected above — a silent interval inside a band proves nothing about the band. Note this burst occurred at **146.3h uptime**, and the prior reproduction at 131.6h; both remain in the long-uptime region |
+| Concurrency as driver | **否定のまま.** Unchanged — peak 8 concurrent at 0 kills still stands, and this burst hit sessions at differing concurrency |
+| Batch route as driver | **否定のまま.** This burst hit two batch sessions and one single-route session indifferently |
+| **Parent session age** | **否定.** Raised and discarded within the same session: ages of 7.5h / 53m / 53m were killed together |
+
+### Recording gap: 2 of 3
+
+`docs/reports/orchestration-recoveries.md` has only two entries for this burst (07:43 UTC for #1381, 08:22 UTC for #1365). **#1273's kill is unrecorded** — recoverable only from the duplicate `phase_start` in `.tmp/auto-events.jsonl`.
+
+This is the limitation § 2026-08-16 Update itself stated ("negative result の根拠が `manual-recovery-respawn` エントリの不在である場合、それが「親セッションが認識・記録した kill」の不在を意味する") firing in practice. Any negative result in this report inherits the parent sessions' recording discipline as a hidden dependency. Tracked as **#1387**.
+
+### Classification inconsistency was our own error, not an ambiguous criterion
+
+The two recorded entries classified the same burst differently — #1365 as `notification: indeterminate`, #1381 as `cause: harness-task-stop`. On inspection this is **not** a discriminator problem: #1153 shipped `--notification CLASS` with a fixed 4-value vocabulary (`harness-stop` / `external-signal` / `indeterminate` / `unobserved`), #1365's session used it correctly, and #1381's session invented a `--cause` slug without checking the argument spec. The correct call was `--cause external-kill --notification harness-stop`. Recorded here because the resulting entry is now inconsistent with the vocabulary and would otherwise look like evidence of an unreliable criterion.
+
+### Consequences
+
+1. **The investigation is not concluded.** § 2026-08-16 Update's closure is withdrawn. H-a remains untestable from this side, so the practical position is unchanged — but it must be stated as "unresolved and untestable locally," not as "concluded, rate bounded."
+2. **Do not compute a per-dispatch rate bound from a quiet window.** Any future rate statement in this report must either model the burst structure explicitly or be stated as "no kills observed across N dispatches in the window from X to Y," with no extrapolation. This is the single most reusable lesson from the 2026-08-16 sequence.
+3. **#1070 / #1081 / #1093 remain 維持**, and their re-evaluation triggers ("kill 率の上限が本判断時点の基準を上回る新たな観測が得られた時") are **fired** by this burst. Their trigger text should be rewritten to drop the `< 1.04%/dispatch` baseline, which no longer means anything.
+4. **#596** (kill-rate-based adaptive throttling): the note above suggesting its premise had weakened is likewise withdrawn — a bursty process is precisely the shape adaptive throttling would target.
+5. The compensation layer absorbed all three kills without loss. Its value is reaffirmed, independent of rate.
