@@ -125,3 +125,28 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 - Post-merge AC はなし (Issue #1374 本文の `### Post-merge` セクションに記載どおり) — `/verify` は特段の検証作業なしで Issue クローズ状態を確認するのみでよい。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。
+
+#### design
+- 特記事項なし。
+
+#### code
+- 特記事項なし。
+
+#### review
+- Improvement Proposals (review retrospective 記載): Parser/Validator Edge Case Pre-check が本 PR 自身の決定論的フォールバックスクリプトの盲点 (フェンスコードブロック非考慮の見出し検出) を MUST/SHOULD 各1件検出し、merge 前に修正済み。Pre-check の有効性が実証された事例。Issue 起票不要と review retrospective に明記済み。
+
+#### merge
+- 特記事項なし。
+
+#### verify
+- Pre-merge AC 3件はすべて `/review` 時点で既に checked 済みのため SKIPPED (再検証なし)。Post-merge セクションなし、pass-through で完了。本 Issue 自身の Spec (`docs/spec/issue-1374-phase-handoff-rotation-fix.md`) を確認したところ `## Phase Handoff` は1個のみで正しくローテーションされていた (dogfooding確認)。
+
+### Improvement Proposals
+- N/A (review retrospective に記載済みの所見は「Issue 起票不要」と明記されており、追加のアクションは不要)
