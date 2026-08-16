@@ -218,15 +218,21 @@ survives both stripping rules above because it contains neither `/` nor `--`: a 
 token (e.g. `capabilities.workflow`) or a directory-prefix-free bare filename (e.g.
 `` `size-workflow-table.md` ``) — observed on Issue #476's `event=pr-review-light keyword=workflow`
 AC (re-run #18 for the config-key form, re-run #19 for the bare-filename form). Both share a
-common structural marker distinct from prose: a run of `[A-Za-z0-9_-]` characters, a literal `.`,
-then another run of `[A-Za-z0-9_-]` characters, with no `/` anywhere in the token — the same
-`word.word` shape whether the two segments are a config namespace and key, or a filename stem and
-extension. `opportunistic-search.sh` strips this shape from the context file's content as a third
-`sed -E` clause, in the same cached filtering pass as the two clauses above. **Clause order
-matters**: this clause must run *after* the CLI-flag-like clause, not before it — placing it first
-would let it consume the `<value>` portion of a `--flag=value` token before the CLI-flag clause
-runs, leaving a dangling `--flag=` prefix that the CLI-flag clause's own pattern (which requires
-a value after `=`) no longer matches, reintroducing the Issue #1293 false positive.
+common structural marker distinct from prose: one or more repetitions of a run of
+`[A-Za-z0-9_-]` characters followed by a literal `.`, ending in a final run of
+`[A-Za-z0-9_-]` characters, with no `/` anywhere in the token — the same `word.word` (or
+deeper `word.word.word`) shape whether the segments are a config namespace and key (including
+multi-level namespaces, e.g. `capabilities.review.workflow`) or a filename stem and extension.
+`opportunistic-search.sh` strips this shape from the context file's content as a third `sed -E`
+clause, in the same cached filtering pass as the two clauses above; the clause's repetition group
+consumes chains of arbitrary dot-segment depth in a single pass (a two-segment-only match against
+the first pair, as in an earlier draft of this fix, would leave a trailing `.workflow` unstripped
+on 3+-segment chains and reintroduce the false positive one nesting level deeper — caught during
+`/review`'s Parser/Validator Edge Case Pre-check and fixed before merge). **Clause order matters**:
+this clause must run *after* the CLI-flag-like clause, not before it — placing it first would let
+it consume the `<value>` portion of a `--flag=value` token before the CLI-flag clause runs, leaving
+a dangling `--flag=` prefix that the CLI-flag clause's own pattern (which requires a value after
+`=`) no longer matches, reintroducing the Issue #1293 false positive.
 
 **Accepted limitation — independent word occurrence**: a fourth sub-pattern — the keyword
 appearing as an ordinary standalone word in prose (e.g. "the Workflow path" in a sentence) — has
@@ -252,7 +258,7 @@ Issue, not a currently available option.
 **Matching specification:**
 
 - Extraction: `keyword=<value>` is read from the AC line via `grep -oE 'keyword=[^ >]+'` (stops at the next space or `-->`).
-- Path-like, CLI-flag-like, and config-key-format/bare-filename token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' -e 's#[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+##g' "$CONTEXT_FILE"` before comparison. Clause order matters — see "Config-key-format and bare-filename token exclusion (Issue #1365)" above.
+- Path-like, CLI-flag-like, and config-key-format/bare-filename token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' -e 's#[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+##g' "$CONTEXT_FILE"` before comparison. Clause order matters — see "Config-key-format and bare-filename token exclusion (Issue #1365)" above.
 - Comparison: case-insensitive substring match of `<value>` against the filtered content (`echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"`).
 - Gate disabled (unconditional match) when: no `keyword=` attribute on the AC line, no `--context-file` given, or the given path does not exist.
 - No semantic/LLM judgment is performed here — this is a lightweight pre-filter; the actual acceptance decision still belongs to `/verify`.

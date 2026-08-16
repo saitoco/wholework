@@ -381,6 +381,17 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 512' > /dev/null
 }
 
+@test "context gate: keyword found only inside a nested (3+ segment) config-key-format token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 513}]'
+    export MOCK_ISSUE_BODY_513='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "capabilities.review.workflow" > "$BATS_TEST_TMPDIR/context-nested-config-key.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-nested-config-key.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
 @test "config gate: enabled config key includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 600}]'
     export MOCK_ISSUE_BODY_600='## Post-merge

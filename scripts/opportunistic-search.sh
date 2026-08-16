@@ -270,7 +270,7 @@ resolve_filtered_context() {
         FILTERED_CONTEXT=$(sed -E \
             -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' \
             -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' \
-            -e 's#[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+##g' \
+            -e 's#[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+##g' \
             "$CONTEXT_FILE" 2>/dev/null || true)
     fi
 }
