@@ -303,3 +303,5 @@ Pre-merge 10件は変更なし PASS。Post-merge opportunistic 条件のうち�
 - saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/56#issuecomment-4231499327
 - saito / MEMBER / first-class / ## Opportunistic Verification (during /spec execution) / https://github.com/saitoco/wholework/issues/56#issuecomment-4231571467
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch source=/audit verify-backlog -- / https://github.com/saitoco/wholework/issues/56#issuecomment-5300747616
+- saito / MEMBER / first-class / ## Acceptance Test Results (/verify #56, /audit verify-backlog 再検証) / https://github.com/saitoco/wholework/issues/56#issuecomment-5300753824
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=56 --> / https://github.com/saitoco/wholework/issues/56#issuecomment-5305262550
