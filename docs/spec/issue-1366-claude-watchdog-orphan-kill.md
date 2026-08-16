@@ -53,3 +53,30 @@ cutoff: `phase/spec` 付与直前の最新 `phase/*` ラベル遷移 (2026-08-16
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (Autonomous Auto-Resolve Log) — Background に「`kill "$cmd_pid"` の子孫プロセス到達可否」という代替仮説を追記した経緯の記録。`docs/spec/issue-1142-spawn-detach-experiment.md` を参考情報として言及 — 本 Spec の Root Cause 調査の出発点として採用した / https://github.com/saitoco/wholework/issues/1366#issuecomment-5307187659
 - saito / MEMBER / first-class / `/issue` Step 15 AC 監査: verify command が Pattern 2 (常時 PASS な verify command) の疑いがあるという観測 (単独実行 3/3 PASS、ただし壁時計は約 60 秒) — 再現条件 (並列実行負荷) の特定を `/spec` に推奨 — 本 Spec の Notes「AC の verify command 精度に関する `/issue` Step 15 コメントへの回答」に直接反映した / https://github.com/saitoco/wholework/issues/1366#issuecomment-5307221120
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1・2 とも Spec 記載のとおりに実装した (`set -uo pipefail` → `set -umo pipefail`、`kill "$cmd_pid" 2>/dev/null` → `kill -- "-$cmd_pid" 2>/dev/null` を L80/L100 の 2 箇所、新規 `@test` をファイル末尾に追加)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A — Spec investigation 時点の確認結果 (Notes「Spec investigation 時点での動作確認」) を再現できた。新規テストは修正前スクリプトに対して stash で一時的に差し戻して FAIL を確認し、復元後に PASS することを確認済み (Spec Notes (d) の `/code` 側再確認に相当)。`tests/claude-watchdog.bats` 全 13 件 (既存 12 + 新規 1) が PASS
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps をそのまま実装 (`set -umo pipefail` によるジョブコントロール有効化 + `kill -- "-$cmd_pid"` によるプロセスグループ単位 kill、L80/L100 の 2 箇所)。既存行の in-place 差し替えのみとし、行数を変えない設計制約 (`modules/orchestration-fallbacks.md:400` の行番号参照保護) を維持した
+- 新規 `@test` は Spec 指定どおり「`sleep 60 &` をバックグラウンド起動し PID をマーカーファイルに記録、watchdog kill 後に `kill -0` で生存確認」の形で実装。修正前スクリプトに対して `git stash` で一時的に差し戻し FAIL を確認、復元後に PASS することを手動検証してから commit した
+- Behavioral Change Detection: 変更対象 `scripts/claude-watchdog.sh` を参照する既存テストファイルは `tests/claude-watchdog.bats` (直接対応テスト) のみだったため、narrow scope (直接テストファイルのみ実行) を採用し、full suite 実行は行わなかった
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`): 次回このサンドボックス環境で `/code` の Step 9 Behavioral Change Detection が `tests/` full suite を実行した際に、当該テストが FAIL しないことの確認は post-merge に委ねる (`/verify` の責務)
+
+### Notes for Next Phase
+- Pre-merge AC の verify command (`bats --filter "custom value takes effect" tests/claude-watchdog.bats`) は実行環境依存で元々 PASS しやすい (Spec Notes 記載の Pattern 2 疑い) ため、この AC 単体の PASS は修正の効果を強く保証しない。修正の実質的な検証力は新規 `@test "orphan grandchild: ..."` にある — `/review` ではこの新規テストの内容そのもの (プロセスグループ kill の妥当性) を確認すること
+- `docs/structure.md` L227 の `scripts/claude-watchdog.sh` 説明文 ("watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)") は本修正で変化しないため更新していない
