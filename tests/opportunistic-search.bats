@@ -231,6 +231,48 @@ teardown() {
     echo "$with_dry_run" | jq -e '.[0].number == 702' > /dev/null
 }
 
+@test "html-comment scoped tag match: event mode ignores prose-quoted tag names (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 800},{"number": 801},{"number": 802}]'
+    export MOCK_ISSUE_BODY_800='## Post-merge
+- [ ] AC confirming this line is excluded from the `verify-type: observation event=pr-review-full` dispatch but the real tag is opportunistic <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_801='## Post-merge
+- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_ISSUE_BODY_802='## Post-merge
+- [ ] A line with no verify-type tag at all'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    result="$output"
+    # (a) prose quoting the event tag must not cause a match against a
+    # differently-tagged (opportunistic) line
+    echo "$result" | jq -e '[.[] | select(.number == 800)] | length == 0' > /dev/null
+    # (b) a normal event-tagged line matches as before
+    echo "$result" | jq -e '[.[] | select(.number == 801)] | length == 1' > /dev/null
+    # (c) a line with no verify-type tag at all is not matched
+    echo "$result" | jq -e '[.[] | select(.number == 802)] | length == 0' > /dev/null
+}
+
+@test "html-comment scoped tag match: opportunistic mode ignores prose-quoted tag names (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 810},{"number": 811},{"number": 812}]'
+    export MOCK_ISSUE_BODY_810='## Post-merge
+- [ ] AC confirming this line is excluded from the `verify-type: opportunistic` scan for /issue but the real tag is manual <!-- verify-type: manual -->'
+    export MOCK_ISSUE_BODY_811='## Post-merge
+- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_812='## Post-merge
+- [ ] /issue mentioned with no verify-type tag at all'
+
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    result="$output"
+    # (a) prose quoting the opportunistic tag must not cause a match against a
+    # differently-tagged (manual) line
+    echo "$result" | jq -e '[.[] | select(.number == 810)] | length == 0' > /dev/null
+    # (b) a normal opportunistic-tagged line matches as before
+    echo "$result" | jq -e '[.[] | select(.number == 811)] | length == 1' > /dev/null
+    # (c) a line with no verify-type tag at all is not matched
+    echo "$result" | jq -e '[.[] | select(.number == 812)] | length == 0' > /dev/null
+}
+
 @test "context gate: keyword found in context file includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 500}]'
     export MOCK_ISSUE_BODY_500='## Post-merge
