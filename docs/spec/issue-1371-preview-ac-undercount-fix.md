@@ -77,16 +77,30 @@ Note: the bash safety net (`append-consumed-comments-section.sh`) recomputed cut
 - N/A — no rework occurred; single implementation pass.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Reused `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh` as-is (no new script) for both `/audit` and `/auto`, matching `/verify` Step 5's existing consumer — same script, three consumers, per the Spec's explicit design.
-- Left `modules/l0-surfaces.md` / `docs/structure.md` unchanged, per the Spec Notes' own assessment that the script's documented consumer set ("consumed by `/verify`") does not become false by adding two more callers of the same output for a different purpose.
-- Did not create a follow-up Issue for the `tests/code.bats` stale assertion encountered during Step 9 — it is already tracked as #1377, confirmed via the duplicate-check `gh issue list` scan.
+- Fixed 2 SHOULD findings (fail-open `gh`-failure ambiguity in `resolve-preview-ac-fallback.sh` consumption, in both `skills/audit/SKILL.md:365` and `skills/auto/SKILL.md:1267`) with a documentation-only note rather than a fail-closed rewrite — stays within this Issue's scope (fix unconditional exclusion, not redesign the fallback script's failure contract).
+- Skipped 1 CONSIDER finding (duplicate `resolve-preview-ac-fallback.sh <issue>` invocation in `skills/audit/SKILL.md`'s N-calculation and per-Issue loop) — best-effort stats scan, caching would add disproportionate complexity at this scope.
+- AC5 (`command "bats tests/*.bats"`) resolved to PASS via CI reference fallback: `Run bats tests` job SUCCESS on the latest commit (identity confirmed via run command containment), superseding the Code Retrospective's local-run FAIL observation — Issue #1377's stale assertion did not reproduce in this PR's CI run.
 
 ### Deferred Items
-- AC5 (`command "bats tests/*.bats"`) is unchecked in the Issue body pending Issue #1377's resolution (unrelated pre-existing stale test assertion in `tests/code.bats`, not caused by this change).
+- None — all 5 Pre-merge acceptance conditions are now checked; Issue #1377 (`tests/code.bats` stale assertion) remains open but is confirmed unrelated to this PR's files and does not block merge.
 
 ### Notes for Next Phase
-- PR #1385 verification should note that the single bats FAIL (`tests/code.bats` Step 10 branch-scoped CI AC exclusion test) is pre-existing and tracked separately as #1377 — do not treat it as a regression introduced by this PR.
-- AC1–AC4 were checked off pre-merge based on rubric/section_contains verification during `/code`; AC5 remains open and should resolve once CI confirms the full suite result (or once #1377 is fixed independently).
+- `/merge` can proceed once approval workflow (if any) completes — no MUST issues, no unchecked Pre-merge AC, all CI green.
+- The `resolve-preview-ac-fallback.sh` fail-open recurring pattern (see `## review retrospective` § Recurring issues below) is documented but not fixed at the script level — worth a follow-up Issue if a fourth consumer is added.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the `review-light` agent confirmed the prose changes in both `skills/audit/SKILL.md` and `skills/auto/SKILL.md` match the Spec's Implementation Steps 1–4 verbatim (per-line rule wording, N1 bucket note, `allowed-tools` insertion points, `modules/l0-surfaces.md` reference format), and the new/extended bats tests match Implementation Step 5's structural-test pattern exactly.
+
+### Recurring issues
+
+`resolve-preview-ac-fallback.sh` now has three consumers (`/verify` Step 5, and — as of this PR — `/audit` Manual Waiting Count and `/auto` Pending manual confirmation), but only `/verify` disambiguates a `gh` failure (fail-open: empty output, exit 0) from the legitimate "nothing unresolved" case, via `reconcile-phase-state.sh --check-completion`'s fail-closed handling. The two new consumers inherited the raw fail-open call without replicating that disambiguation — flagged as SHOULD findings in this review and fixed with a documentation note (not a fail-closed rewrite, to stay within this Issue's stated scope of fixing the unconditional-exclusion bug, not redesigning the fallback script's failure contract). If a fourth consumer is added later, this same gap will recur; worth considering a fail-closed default (or a distinct exit code for "gh failed" vs. "nothing unresolved") directly in `resolve-preview-ac-fallback.sh` itself so future consumers get the safe behavior for free instead of each having to remember to add it.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — all 5 Pre-merge conditions verified cleanly in Step 8 (4 rubric/section_contains conditions confirmed directly against the PR branch content; the 5th, `command "bats tests/*.bats"`, resolved via CI reference fallback against the `Run bats tests` job, SUCCESS on the latest commit with identity confirmed via run command containment). No UNCERTAIN results, no verify command syntax issues.
