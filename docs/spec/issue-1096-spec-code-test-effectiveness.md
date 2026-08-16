@@ -91,17 +91,17 @@ Nothing to note — `review-light` の Perspective 1 (Spec Deviation) は乖離�
 Nothing to note — Pre-merge AC 6 件はいずれも UNCERTAIN なく決定的に判定できた (rubric×3、command×2 は CI 参照フォールバックで identity confirmed、file_contains×1)。CI FAILURE は AC テーブル自体ではなく Step 9 の CI ステータス確認で検出されたもので、これはまさにこの仕組みが想定している検出経路である。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issue (CI FAILURE: Language Convention check) を、日本語例文全体を二重バッククォートのインラインコードスパンで囲む形で修正した。プローズの再構成ではなくフォーマット変更のみとしたのは、`file_contains "新規テストケース"` の AC がコードスパン内でも文字列一致で成立し、AC・意味内容に影響を与えないため。
-- SHOULD issue (`git stash` no-op の落とし穴) は、手順自体を変更せず、コミットタイミングに関する注意書きとフォールバックコマンドの追記で解決した。
-- 呼び出し時の `--light` 指定に従い、`review-light` エージェント 1 体による軽量統合レビュー (4 観点) を実行した。
+- 事前マージ AC ゲート (`check-pre-merge-ac.sh`) は unchecked_count=0、review-incomplete-fallback チェックも `matches_expected=true` (organic completion) で、override マーカーなしにゲートを通過した。
+- `gh-pr-merge-status.sh` は `mergeable=true reason=clean ci_status=success review_status=approved` を返したため、コンフリクト解消ステップ (Step 3) は不要だった。
+- Squash merge を `gh pr merge 1373 --squash --delete-branch` で実行し、リモートブランチ `worktree-code+issue-1096` を削除した。
 
 ### Deferred Items
-- `.github/workflows/test.yml` の `Language Convention check` ステップの event 分岐バグ (push イベントで diff スコープが狭まる) は、本 PR の diff が `.github/workflows/` に触れていないためスコープ外とし、修正しなかった。別 Issue でのフォローアップを推奨 (review retrospective の Recurring issues 参照)。
-- Post-merge AC (`verify-type: manual`) は未検証のまま — 将来の Issue が `/spec` → `/code` を通ることの観測が必要。
+- `.github/workflows/test.yml` の `Language Convention check` ステップの event 分岐バグ (push イベントで diff スコープが狭まる) は review フェーズから引き続き未修正 — 別 Issue でのフォローアップを推奨。
+- Post-merge AC (`verify-type: manual`、将来の Issue が `/spec` → `/code` を通ることの観測) は引き続き未検証。
 
 ### Notes for Next Phase
-- 修正コミット (`6b1dfce6` Language Convention check 対応、`99c4e301` git stash 注意書き追加) を含め、CI 全 11 チェックが SUCCESS であることを確認済み。`/merge 1373` に進んで問題ない状態。
-- 本レビューで Pre-merge AC のチェックボックス変更は不要だった (6 件とも `/code` フェーズ時点で `[x]` 済みであり、Step 8 の再検証でも全て PASS を再確認)。
+- `/verify` は Post-merge AC 1 件 (`verify-type: manual`) を確認すること。過去の観測条件そのままで機械検証はできないため、手動判定が必要。
+- Issue #1096 は `closes #N` により squash merge 時に自動クローズされる想定 (base=main)。Step 6 のフォールバック確認で state=CLOSED / phase/verify ラベルが付与されていることを確認済みなら追加対応は不要。
