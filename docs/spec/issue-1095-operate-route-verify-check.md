@@ -52,5 +52,38 @@ PR #1090 は `ALWAYS_PR=true` 下で Size XS/S が pr route に昇格するケ�
 - **Steering Docs sync candidate**: `modules/verify-classifier.md` § "Patch Route CI Verification Note" の scope 記述 ("patch route" のみ) を patch/operate 両対応に更新するかどうかは `/code` が実装時に判断する (Changed Files 参照)。技術的な置換フォームは route に依存しないため、更新は必須ではない。
 - **`modules/size-workflow-table.md` の Diff-less Axis 記述との関係**: 同モジュール § "Diff-less Axis (operate route)" は「evaluated by `/spec` from the Spec it produces, and re-checked by `/code` from the same Spec」と既に記述しており、本 Issue で `/spec` Step 10 が同基準を Step 18 より前倒しで参照するようになっても、この記述と矛盾しない (Step 18 の判定自体は変更されない)。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–4 were followed as written, in order.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Steering Docs sync candidate resolution
+- Updated `modules/verify-classifier.md` § "Patch Route CI Verification Note": generalized the scope description from "patch route" to "patch or operate route" in both the opening sentence and the `always-pr: true` paragraph, and generalized the `/verify` detection sentence. The technical replacement form itself was unchanged, per the Spec's Notes.
+
+### Test verification
+- Confirmed pre-implementation FAIL for 3 new test(s): the 2 new `tests/code.bats` cases FAILed against the pre-implementation `skills/code/SKILL.md`, and the 1 new `tests/spec.bats` case initially PASSed unexpectedly against pre-implementation `skills/spec/SKILL.md` (the bare string `Diff-less Axis (operate route)` already appears in Step 18's unrelated operate-route detection) — narrowed the assertion to a `patch_route_verify_command_check_section` extractor scoped to the "Patch route verify command check" block, which then correctly FAILed pre-implementation.
+- `bats tests/code.bats` and `tests/spec.bats`: PASS (32 tests). Full suite (`bats --jobs 18 tests/`, triggered by Behavioral Change Detection since `operate-route.bats`, `run-code.bats`, `run-code-mergeability.bats`, `reconcile-phase-state.bats`, `check-file-overlap.bats`, `run-spec.bats`, and `verify-executor.bats` all reference the modified files beyond their direct counterpart): PASS (1800 tests, 0 failures).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Extended `skills/code/SKILL.md` Step 10's firing condition from `ROUTE is patch` to `ROUTE is patch or operate`, and extended the adjacent "Patch route branch-scoped CI AC exclusion" note the same way, since the AC-conversion side effect newly reaches operate route.
+- For `skills/spec/SKILL.md`, since `/spec` has not resolved `ROUTE` at Step 10, added the Diff-less Axis's two determination criteria as a direct OR condition rather than referencing a `ROUTE` variable.
+- Resolved the Spec's "Steering Docs sync candidate" question by updating `modules/verify-classifier.md`'s scope description to cover both routes (the technical replacement form was unchanged).
+
+### Deferred Items
+- Post-merge manual AC (operate route + `github_check "gh pr checks"` → auto-fix to `gh run list` confirmation) is left for `/verify` per its `verify-type: manual` tag — not executed in this phase.
+
+### Notes for Next Phase
+- All 3 pre-merge AC are rubric/command-verifiable and were confirmed PASS in Step 10 of this phase; `/review` can cross-check but no known gaps remain.
+- Full bats suite (1800 tests) passed after the change — no regression expected in `/review`'s own test pass.
+
 ## Consumed Comments
 No new comments since last phase.
