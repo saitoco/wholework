@@ -120,3 +120,31 @@ behavioral_change_detection_section() {
     run step9_section "$SKILL_FILE"
     [[ "$output" == *"moved to the background"* ]]
 }
+
+# Extract New Verification-Test Pre-implementation FAIL Check subsection: from its heading
+# to the next heading (any level)
+new_verification_test_fail_check_section() {
+    awk '/^#### New Verification-Test Pre-implementation FAIL Check/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+}
+
+@test "code skill documents New Verification-Test Pre-implementation FAIL Check heading" {
+    grep -q '^#### New Verification-Test Pre-implementation FAIL Check' "$SKILL_FILE"
+}
+
+@test "New Verification-Test Pre-implementation FAIL Check identifies string-matching assert targets" {
+    run new_verification_test_fail_check_section "$SKILL_FILE"
+    [[ "$output" == *"file_contains"* ]]
+    [[ "$output" == *"Target identification"* ]]
+}
+
+@test "New Verification-Test Pre-implementation FAIL Check describes handling of unintended PASS" {
+    run new_verification_test_fail_check_section "$SKILL_FILE"
+    [[ "$output" == *"Handling unintended PASS"* ]]
+    [[ "$output" == *"more specific string"* ]] || [[ "$output" == *"section-level extraction"* ]]
+}
+
+@test "New Verification-Test Pre-implementation FAIL Check records result in Code Retrospective" {
+    run new_verification_test_fail_check_section "$SKILL_FILE"
+    [[ "$output" == *"Code Retrospective"* ]]
+    [[ "$output" == *"pre-implementation FAIL"* ]]
+}

@@ -64,3 +64,44 @@ Steering Docs sync candidate check (grep -rn による横断検索) を実施済
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implemented all 4 Implementation Steps as written, in the order specified.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### New Verification-Test Pre-implementation FAIL Check
+Confirmed pre-implementation FAIL for 7 new test(s): 4 in `tests/code.bats` (`code skill documents New Verification-Test Pre-implementation FAIL Check heading`, `... identifies string-matching assert targets`, `... describes handling of unintended PASS`, `... records result in Code Retrospective`) and 3 in `tests/spec.bats` (`spec skill documents new test case requirement for new branch logic`, `spec skill new test case requirement requests explicit new test case wording`, `spec skill new test case requirement records to Notes section when SPEC_DEPTH=light`). Verified via `git stash push -- <target file>` → `bats --filter <pattern> <test file>` → confirm FAIL → `git stash pop` → confirm PASS, for each of the two target files independently.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — `review-light` の Perspective 1 (Spec Deviation) は乖離なしと判定。実装は Implementation Steps 1〜4 と厳密に一致していた。
+
+### Recurring issues
+本 Issue (#1096) が対象とする欠陥クラス (「検証は存在するが実効性がない」) の実例が、本 PR の CI 設定自体の中に見つかった。`.github/workflows/test.yml` の `Language Convention check` ステップは `if [ "${{ github.event_name }}" = "pull_request" ]` で分岐しており、`pull_request` イベントでは `origin/main...HEAD` の全差分を対象にする一方、`push` イベントでは `HEAD^..HEAD` (直近コミットのみ) にフォールバックする。この分岐により、`push` トリガー側の実行は本 PR が追加した違反 (`skills/spec/SKILL.md` への日本語プレーンテキスト混入) を検出できず見かけ上 SUCCESS となった。`pull_request` トリガー側は正しく FAILURE を検出できたが、これは「チェックは存在するが、トリガー条件によっては実効性を失う」という、本 Issue の動機となった欠陥 (#1061/PR#1090: 対象ファイルに既存の類似文字列があると常時 PASS する assert) と同じ構造的パターンの CI 設定版である。bats テストの assert ではなく CI ワークフローの分岐条件という別の場所で再発している点が新規の観測。別 Issue での修正 (event 種別で diff スコープを絞らず、常に `origin/<base>...HEAD` または merge-base 基準で判定する) を推奨する。Issue 起票の要否は `/verify` の Auto retrospective pipeline order に従い判断する。
+
+### Acceptance criteria verification difficulty
+Nothing to note — Pre-merge AC 6 件はいずれも UNCERTAIN なく決定的に判定できた (rubric×3、command×2 は CI 参照フォールバックで identity confirmed、file_contains×1)。CI FAILURE は AC テーブル自体ではなく Step 9 の CI ステータス確認で検出されたもので、これはまさにこの仕組みが想定している検出経路である。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issue (CI FAILURE: Language Convention check) を、日本語例文全体を二重バッククォートのインラインコードスパンで囲む形で修正した。プローズの再構成ではなくフォーマット変更のみとしたのは、`file_contains "新規テストケース"` の AC がコードスパン内でも文字列一致で成立し、AC・意味内容に影響を与えないため。
+- SHOULD issue (`git stash` no-op の落とし穴) は、手順自体を変更せず、コミットタイミングに関する注意書きとフォールバックコマンドの追記で解決した。
+- 呼び出し時の `--light` 指定に従い、`review-light` エージェント 1 体による軽量統合レビュー (4 観点) を実行した。
+
+### Deferred Items
+- `.github/workflows/test.yml` の `Language Convention check` ステップの event 分岐バグ (push イベントで diff スコープが狭まる) は、本 PR の diff が `.github/workflows/` に触れていないためスコープ外とし、修正しなかった。別 Issue でのフォローアップを推奨 (review retrospective の Recurring issues 参照)。
+- Post-merge AC (`verify-type: manual`) は未検証のまま — 将来の Issue が `/spec` → `/code` を通ることの観測が必要。
+
+### Notes for Next Phase
+- 修正コミット (`6b1dfce6` Language Convention check 対応、`99c4e301` git stash 注意書き追加) を含め、CI 全 11 チェックが SUCCESS であることを確認済み。`/merge 1373` に進んで問題ない状態。
+- 本レビューで Pre-merge AC のチェックボックス変更は不要だった (6 件とも `/code` フェーズ時点で `[x]` 済みであり、Step 8 の再検証でも全て PASS を再確認)。

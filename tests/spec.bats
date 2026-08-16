@@ -35,3 +35,18 @@ setup() {
 @test "spec skill Steering Docs sync candidate check searches modules/ in cross-search" {
     grep -q 'grep -rn "<keyword>" docs/ tests/ scripts/ modules/' "$SKILL_FILE"
 }
+
+# Content-assertion tests for the New test case requirement for new branch logic check
+# (added for #1096). Guards the new Step 10 procedure against accidental removal or drift.
+
+@test "spec skill documents new test case requirement for new branch logic" {
+    grep -q 'New test case requirement for new branch logic' "$SKILL_FILE"
+}
+
+@test "spec skill new test case requirement requests explicit new test case wording" {
+    grep -q '新規テストケース' "$SKILL_FILE"
+}
+
+@test "spec skill new test case requirement records to Notes section when SPEC_DEPTH=light" {
+    grep -q 'SPEC_DEPTH=light`, Step 13 itself is skipped' "$SKILL_FILE"
+}
