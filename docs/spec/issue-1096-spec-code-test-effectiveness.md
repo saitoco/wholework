@@ -64,3 +64,33 @@ Steering Docs sync candidate check (grep -rn による横断検索) を実施済
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implemented all 4 Implementation Steps as written, in the order specified.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### New Verification-Test Pre-implementation FAIL Check
+Confirmed pre-implementation FAIL for 7 new test(s): 4 in `tests/code.bats` (`code skill documents New Verification-Test Pre-implementation FAIL Check heading`, `... identifies string-matching assert targets`, `... describes handling of unintended PASS`, `... records result in Code Retrospective`) and 3 in `tests/spec.bats` (`spec skill documents new test case requirement for new branch logic`, `spec skill new test case requirement requests explicit new test case wording`, `spec skill new test case requirement records to Notes section when SPEC_DEPTH=light`). Verified via `git stash push -- <target file>` → `bats --filter <pattern> <test file>` → confirm FAIL → `git stash pop` → confirm PASS, for each of the two target files independently.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Kept the `/code`-side and `/spec`-side sub-sections as separate, independently-headed blocks (`#### New Verification-Test Pre-implementation FAIL Check` in `skills/code/SKILL.md`; `**New test case requirement for new branch logic (regardless of SPEC_DEPTH):**` in `skills/spec/SKILL.md`) rather than merging, matching the Spec's own guidance that the two address opposite failure classes (assert exists but ineffective vs. assert never added).
+- Embedded the literal Japanese phrase 「新規テストケース」 inside an otherwise-English SKILL.md body (matching an existing precedent of quoted Japanese example text in English SKILL.md prose, e.g. `skills/code/SKILL.md`'s "Spec が見つかりません" output message) to satisfy the Issue's `file_contains` AC without translating the whole section to Japanese.
+- Reused the exact "Differs from adjacent checks" prose pattern already established in `skills/spec/SKILL.md`'s Tag/enum semantic extension consumer sweep sub-section, for both new sub-sections, so the distinction from Stale Test Assertion Check / Tag/enum semantic extension consumer sweep is discoverable in the same structural place a reader would already expect it.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- All 6 pre-merge AC are mechanically verified (2 command, 1 file_contains, 3 rubric self-assessed against the exact rubric text) — no UNCERTAIN items.
+- The Post-merge AC (`verify-type: manual`) requires observing a *future* Issue go through `/spec` → `/code` and exercising both new procedures — this cannot be verified now; `/verify` should treat it as a manual/deferred judgment, not attempt automatic verification.
+- No documentation sync (`README.md`/`docs/workflow.md`/`CLAUDE.md`) was performed — this follows the Spec's own Notes rationale (precedent: prior similar Step 8/Step 10 sub-check additions to these same skills did not touch those docs either).
