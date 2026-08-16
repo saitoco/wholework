@@ -139,6 +139,31 @@ Nothing to note。Pre-merge AC1〜4 は `/code` フェーズの自己検証時�
 - `modules/run-fact-matching.md`: checkbox 書き込み失敗時の `action=auto-check` 表示と caller 向け説明文の精度改善 (任意対応、CONSIDER)。
 - いずれも本 PR ではフォローアップ Issue 化を見送り。頻度・実害が確認された場合に検討。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Nothing to note. Pre-merge AC1〜4 は rubric/grep/command の組み合わせで明確に判定可能だった。
+
+#### design
+- Nothing to note.
+
+#### code
+- Nothing to note. Implementation Steps どおり最小差分で実施された。
+
+#### review
+- 「pinpoint 修正が隣接ケースを取りこぼしやすい」という一般教訓が記録済み (Recurring issues 参照)。review が意図的に MUST 化を見送った判断であり、`/verify` としての追加対応は不要と判断した。
+
+#### merge
+- **`## Phase Handoff` セクションのローテーション不整合を観測**: このファイルには `## Phase Handoff` <!-- phase: code --> ブロック (旧) と `## Phase Handoff` <!-- phase: merge --> ブロック (新) の2つが存在していた。`modules/phase-handoff.md` の Write Procedure は「既存の `## Phase Handoff` ブロックを検索し、見つかった場合は Edit で置換する (ローテーション)」と規定しているが、merge フェーズの書き込みが code フェーズのブロックを置換せず、`## review retrospective` セクションの後に新規追加してしまっていた。実害は軽微 (Spec は disposable、読者は最後のブロックを見れば正しい情報が得られる) だが、"latest 1 phase" 不変条件への違反であり、`phase-handoff.md` の Write Procedure には Consumed Comments のような決定論的 bash fallback が存在しないため、LLM 実行の揺らぎで再発しうる。
+
+#### verify
+- Nothing to note. Pre-merge AC4件はいずれも既にチェック済みで SKIPPED、FAIL/UNCERTAIN なし。
+
+### Improvement Proposals
+- `modules/phase-handoff.md` の Write Procedure (ローテーション時の既存 `## Phase Handoff` ブロック置換) に、`append-consumed-comments-section.sh` 相当の決定論的 bash fallback を追加することを検討する余地がある。現状 LLM 判断のみに依存しており、今回のように既存ブロックの置換に失敗し新規追加されてしまうケースを機械的に検知・修正する手段がない。ただし本件は実害が軽微な1回の観測であり、再発頻度が未確認のため、Issue化は見送り Tier 判定に委ねる。
+
 ### Notes for Next Phase
 - Post-merge AC は「なし」のため `/verify` は実質作業なしの想定。
 - Issue #1363 は `closes #1372` により自動クローズ、`phase/verify` ラベルへの遷移を Step 5 で実施予定。
