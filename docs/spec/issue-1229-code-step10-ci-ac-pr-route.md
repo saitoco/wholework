@@ -41,3 +41,48 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: ## Issue Retrospective — 直前の Triage AC audit で指摘された `section_contains "gh pr checks"` 常時 PASS 欠陥を修正し、該当 AC を Issue body から削除済みであることを記録 / URL: https://github.com/saitoco/wholework/issues/1229#issuecomment-5305140739
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: Triage AC audit — AC2 の rubric 文言が pr route に限定されておらず常時 PASS しうると指摘し、pr route に限定する修復案を提示。`/spec` 実行時にそのまま採用し Issue body に反映 (対応: Notes 参照) / URL: https://github.com/saitoco/wholework/issues/1229#issuecomment-5305152550
+- code phase (2026-08-16): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-08-16T01:44:38Z).
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implemented per plan: rewrote the heading from "Patch route branch-scoped CI AC exclusion" to "CI verification AC exclusion (route-agnostic)", listed both the patch route (`github_check "gh run list"`) and pr route (`github_check "gh pr checks" "<job>"`) exclusion forms with their respective reasons, and updated the 2 cross-references at Step 8 (spec-approval-needed paragraph) and Step 10 (checkbox-flip loop exclusion clause). All 3 occurrences confirmed via grep before and after the edit.
+
+### Design Gaps/Ambiguities
+- None encountered during implementation.
+
+### Rework
+- None.
+
+### Concurrent-edit risk with #1095 (noted in Spec, did not materialize)
+- The Spec flagged a risk that Issue #1095 (`docs/spec/issue-1095-operate-route-verify-check.md`) targets the same paragraph to add operate-route coverage. At the time this `/code` run started, #1095 was still `phase/ready` (not yet implemented), so no conflict occurred — this PR is the first to land on the paragraph. A future `/code` run on #1095 will need to read the actual post-merge content (the new "CI verification AC exclusion (route-agnostic)" heading with its `- patch route` / `- pr route` bullet list) and add an `- operate route` bullet in the same list, consistent with the Spec's own forward-looking guidance.
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Posted the Pull Request Review as `COMMENT` (not `REQUEST_CHANGES`) — no MUST issues were found across Step 8 (all 3 Pre-merge AC PASS), Step 9 (all 11 CI jobs SUCCESS), or Step 10's `review-light` pass (0 findings across all 4 perspectives).
+- Checked off AC3 (`github_check "gh pr checks" "Run bats tests"`) in the Issue body — the `Run bats tests` job reported SUCCESS, resolving the one AC this PR's own `/code` phase had deliberately left unverified under the exclusion rule it introduces.
+
+### Deferred Items
+- None. All 3 Pre-merge AC are now `[x]`; only the Post-merge observation AC remains, which is out of `/review`'s scope by design (observed at the next pr-route `/code` run).
+
+### Notes for Next Phase
+- `/merge 1376` can proceed directly — no fix commits were needed, so no additional re-check cycle is pending.
+- The Post-merge observation AC (`event=auto-run session=next`) will resolve organically the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`, per the code-phase Phase Handoff.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- None. Implementation matched the Spec's Implementation Step 1 plan exactly (heading rename to "CI verification AC exclusion (route-agnostic)" + patch/pr route bullet list + the 2 cross-reference updates at Step 8 and Step 10), confirmed by the `review-light` agent's Perspective 1 (Spec Deviation) check.
+
+### Recurring Issues
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+- None. All 3 Pre-merge conditions (2 `rubric` + 1 `github_check`) resolved cleanly to PASS with no UNCERTAIN. AC1/AC2 were already verified and checked off during the code phase (`rubric` is safe-mode compatible). AC3 (`github_check "gh pr checks" "Run bats tests"`) — the one AC this PR's own `/code` phase correctly left unchecked under the exclusion rule the PR itself introduces — was confirmed PASS here once the PR's CI checks existed, exactly as the code-phase Phase Handoff's Notes for Next Phase anticipated.
+
+No improvement proposals from this review.
