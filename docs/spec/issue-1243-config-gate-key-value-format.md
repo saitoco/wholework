@@ -80,19 +80,19 @@ No new comments since last phase (cutoff: 2026-08-16T02:57:29Z, `phase/ready` la
 - #1377 — `tests/code.bats` の stale assertion 修正 (本 Issue のスコープ外、フルスイート実行時に検出)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 7 (External Review Integration) は Copilot/Claude Code Review/CodeRabbit いずれも `.wholework.yml` 未設定のため全体スキップと判定した。
-- Base Branch Conflict Pre-check (`git merge-tree`) はコンフリクトなし。Parser/Validator Edge Case Pre-check は `scripts/opportunistic-search.sh` の `config=<key>:<value>` format-detection/sanitization 分岐が発火条件に該当したため、実コード実行によるエッジケース検証 (空値・複数コロン・glob/shellメタ文字・コマンドインジェクション形状・2階層以上ネストキー・末尾ダッシュのみ・大小文字混在) を行い、全軸で fail-closed 設計どおりの正しい挙動を確認した。
-- review-light エージェント (4観点統合) と実行検証の両方で issue が0件だったため、Step 12 (Issue Resolution) は実施せず、Step 13 (AC Consistency Check) も実装変更なしのためスキップした。
+- Pre-merge AC gate: `check-pre-merge-ac.sh` で unchecked_count=0、review-incomplete-fallback チェックも該当なしのためゲート通過。
+- PR #1378 は `mergeable=true, reason=clean` (CI success, review approved) だったため、Step 3 (Resolve Conflicts) はスキップし直接 Squash Merge を実行した。
+- `--non-interactive` モードで実行 (自律実行フロー)。
 
 ### Deferred Items
 - Post-merge AC (`verify-type: manual`) — #783 を `config=auto-stop-at:merge` 相当で再型付けできるかの判断は post-merge (`/verify`) に委ねる。
 
 ### Notes for Next Phase
-- MUST issue 0件、CI 全11ジョブ SUCCESS のため `event=COMMENT` でレビュー投稿済み。`/merge 1378` に進んで問題ない。
-- フルテストスイートで検出した `tests/code.bats` の pre-existing 不整合はフォローアップ #1377 として起票済み、本 PR のスコープ外 (このレビューでも再確認・再指摘はしていない)。
+- `/verify 1243` で post-merge AC (#783 再型付け判断) を実施すること。
+- フォローアップ #1377 (`tests/code.bats` の pre-existing 不整合) は本 Issue のスコープ外のまま。
 
 ## review retrospective
 
