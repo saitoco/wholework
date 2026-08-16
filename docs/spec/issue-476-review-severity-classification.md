@@ -297,3 +297,15 @@
 ### Improvement Proposals
 - 18 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。**re-run #17 までの「#1220 が対応済みだから重複起票しない」という判断根拠が誤りだったことが判明した** — #1220 は既に CLOSE 済みで、その fix (path-like/CLI-flag-like トークン除去) は本 Issue が実際に踏んでいる第三のサブパターン (config key `capabilities.workflow` / 独立単語 "workflow" への意味非依存の部分一致) を対象としていない。#1220 close 後だけで8件 (#11〜#18) の再現があり、re-run #7 で採用した「3回連続再現で起票水準」の閾値をこのサブパターン単体でも上回っている。Step 16 (retro-proposals) では本知見 (「#1220 は解決済みだが対象外のサブパターンが残っている」) を根拠に、新規 follow-up Issue の起票または #1220 の re-open を検討する
 
+## Verify Retrospective (2026-08-16 re-run #19)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1375、Issue #1095) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1375 の diff (`skills/code/SKILL.md`, `skills/spec/SKILL.md`, `skills/verify/SKILL.md`, `modules/verify-classifier.md`, `tests/code.bats`, `tests/spec.bats`, `docs/spec/issue-1095-*.md` — Patch route verify command check の発火条件を operate route にも拡張) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。19件目の誤発火/無関係発火パターンとして再現
+- **新規観測 (第四のサブパターン)**: 発火元となった `docs/spec/issue-1095-*.md` を実測したところ、`` `modules/size-workflow-table.md` `` (ディレクトリ付きパス) への言及は #1220 の path-like ストリップ規則 (`sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g'`、`/` を1つ以上含むトークンを要求) により正しく除去されることを直接確認した。しかし同じ Spec の Implementation Step 4 に、ディレクトリ接頭辞のない**ベアファイル名参照** `` `size-workflow-table.md` `` (先頭に `modules/` を伴わない単独の表記) が存在し、こちらは `/` を含まないため path-like ストリップの対象外となり素通りしていた。これは既存の3サブパターン (①ファイルパス断片・#1220 対応済み、②CLI フラグ断片・#1293 対応済み、③config-key/独立単語・#1365 で追跡中) のいずれとも技術的に区別されるが、Issue #1365 の Purpose 記述 (「ファイルパス断片・CLI フラグ断片ではない意味的に無関係な同名語への一致」) が指す対象範囲には包含される具体例と判断した。`gh issue list` で確認したところ #1365 は re-run #18 の Step 16 で既に起票され OPEN のまま追跡中であり、本知見は #1365 のスコープ内の追加の実測エビデンスとして扱い、重複 Issue の新規起票は行わない
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14/#15/#16/#17/#18 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- 19 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。根本原因を追跡する Issue #1365 (config-key/独立単語形式トークン誤検知の解消) が既に OPEN で存在するため、本 re-run では新規起票を行わず、上記の第四サブパターン (ベアファイル名参照) を #1365 の実装時の参考情報としてコメント追記する
+
