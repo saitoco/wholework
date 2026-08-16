@@ -176,9 +176,11 @@ SPEC
     run bash "$SCRIPT" 701 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     # (a) prose quoting a different tag name must not be extracted as manual
-    [[ "$output" != *"AC confirming this line is excluded from the"* ]]
+    # (bash 3.2's `set -e` does not propagate a bare `[[ ]]` failure unless it
+    # is the function's last command, so gate explicitly with `|| return 1`)
+    [[ "$output" != *"AC confirming this line is excluded from the"* ]] || return 1
     # (b) a normal manual-tagged line is extracted as before
-    [[ "$output" == *"A normal manual AC baseline text"* ]]
+    [[ "$output" == *"A normal manual AC baseline text"* ]] || return 1
     # (c) a line whose prose quotes "ac-tier: preview" but carries no ac-tier tag
     # of its own is not excluded by the preview-tier filter
     [[ "$output" == *"AC confirming this line is not excluded by the"* ]]
