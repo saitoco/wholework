@@ -105,3 +105,28 @@ Nothing to note — Pre-merge AC 6 件はいずれも UNCERTAIN なく決定的�
 ### Notes for Next Phase
 - `/verify` は Post-merge AC 1 件 (`verify-type: manual`) を確認すること。過去の観測条件そのままで機械検証はできないため、手動判定が必要。
 - Issue #1096 は `closes #N` により squash merge 時に自動クローズされる想定 (base=main)。Step 6 のフォールバック確認で state=CLOSED / phase/verify ラベルが付与されていることを確認済みなら追加対応は不要。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 6 件 (rubric×4、command×2) はいずれも UNCERTAIN なく決定的に判定可能な設計になっており、Issue Retrospective で言及されていた懸念 (Simplicity Rule 上限超過) は実害なく完了した。
+
+#### design
+- Implementation Steps 4 件は `/code` 側 2 件・`/spec` 側 2 件の対称構成で、Changed Files も Steps と 1:1 対応しており設計と実装の乖離はなかった (review retrospective で確認済み)。
+
+#### code
+- 新規追加した検証系テスト 7 件すべてについて、`git stash push` → `bats --filter` → FAIL 確認 → `git stash pop` → PASS 確認、の手順で実装前 FAIL を実行確認済み。Issue が要求した規律 (常時 PASS のテストを merge しない) を Code Retrospective に記録する形で自己適用できている。
+
+#### review
+- review-light の Spec Deviation perspective は乖離なしと判定。一方、`.github/workflows/test.yml` の `Language Convention check` ステップが `push` イベントで `HEAD^..HEAD` (直近コミットのみ) にフォールバックし、`pull_request` イベントでの `origin/main...HEAD` 全差分チェックより検出範囲が狭いという構造的欠陥を検出した。これは本 Issue が対象とする欠陥クラス (「検証は存在するが実効性がない」) の CI ワークフロー版であり、新規の観測。
+
+#### merge
+- 事前マージ AC ゲート・PR マージ可否判定ともに `matches_expected=true` で、コンフリクト解消や override は不要だった。
+
+#### verify
+- Pre-merge AC 6 件は再実行時点ですべて既チェック済みのため SKIPPED (規定の already-checked skip rule)。Post-merge の manual AC 1 件は「将来の Issue が `/spec` → `/code` を通る」ことの観測が前提のため、マージ直後の本ラン時点では Claude 実行不可 (executable=false, reason=other) と判定し、`phase/verify` を維持した。
+
+### Improvement Proposals
+- `.github/workflows/test.yml` の `Language Convention check` ステップの event 分岐 (push vs pull_request で diff スコープが異なる) を統一し、常に `origin/<base>...HEAD` または merge-base 基準で判定するよう修正する。(review retrospective より; Deferred Items にも記録済み)
