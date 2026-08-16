@@ -132,4 +132,27 @@ respawn 時刻が **16 秒以内**に並ぶ。3 プロセスは 07:07 頃に同�
 
 - **#1146 の 2026-08-16 結論を訂正する** — バースト分布に平均率を当てはめた誤りを report に Update として記録し、H-a を最有力として再提示する。3 件の Icebox Issue の再評価トリガー発火も併せて記録する。(対応: #1146 を reopen して実施。新規起票は不要)
 - **external kill の recovery 記録率を機械的に担保する** — 今回 3 件中 1 件 (#1273) が未記録だった。親セッションが kill 通知を受けた時点で `--write-manual-recovery` の呼び出しを促す仕組み (respawn 実行と記録をセットにする、または events.jsonl の `phase_start` 重複から未記録 kill を検出する監査) が要る。負の結果 (0 kill) の信頼性が記録率に依存している以上、これは計測基盤の欠陥である。
-- **notification 文言 discriminator の判定基準を明確化する** — #1153 で導入した「`status: killed` / "was stopped" なら harness 由来」の基準が、同一バーストに対し実行者ごとに `harness-task-stop` と `indeterminate` に割れた。判定不能な場合の既定値と、判定材料が揃わない場合の記録方法を定める必要がある。
+- ~~**notification 文言 discriminator の判定基準を明確化する**~~ — **本提案は誤りだったため取り下げる (freshness check で判明)。** #1153 は `--notification CLASS` フラグ (`harness-stop` / `external-signal` / `indeterminate` / `unobserved`、省略時 `unspecified`) として既に実装済みであり、判定基準は曖昧ではない。#1365 のセッションは `--notification indeterminate` を正しく使用していた。割れて見えたのは、**本セッションがフラグの存在を確認せず、`--cause` に `harness-task-stop` という独自 slug を混ぜ込んだ**ためである。正しくは `--cause external-kill --notification harness-stop` と分けて渡すべきだった。教訓は「基準が曖昧」ではなく「既存フラグの確認を怠った」— 記録手順を実行する前に `modules/orchestration-fallbacks.md#manual-recovery-spec-write` の引数仕様を確認すること。
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | patch | SUCCESS | 11m32s |
+| spec | patch | SUCCESS | 16m42s |
+| code | patch | SUCCESS (respawn 後) | 1 回目が external kill、respawn で完走 |
+| verify | — | SUCCESS | 全 AC PASS/SKIPPED |
+
+### Orchestration Anomalies
+
+- **code フェーズ (`run-code.sh 1381 --patch`) が external kill された。** 06:46:11Z 開始、約 22 分後に process group ごと消滅。`Exit code:` トレーラ・`wrapper_exit` イベントとも欠落 (F1/F2 署名)、`detect-external-kill.sh` は `external-kill` を返却。watchdog kill ではない (1260s 時点で silent 報告継続、code 閾値は 7200s)。
+- 同一引数で respawn し exit 0 で完走。1 回目は Implementation Step 5 (#1070/#1081/#1093 の Issue 本文更新) まで進んでおり、respawn 側がその状態を検出して Step 1〜4 を完了させ整合させた。
+- 記録: `docs/reports/orchestration-recoveries.md` (2026-08-16 07:43 UTC、`cause: harness-task-stop`、commit `1ead7fea`)。**ただし `--notification harness-stop` を渡し損ねており `notification_class=unspecified` で記録されている** (上記 Improvement Proposals の取り下げ理由を参照)。
+- **本 kill は単独事象ではなく、3 セッション同時のバーストの一部だった** (#1273 review / #1365 code-pr / #1381 code-patch、respawn 時刻が 16 秒以内)。詳細と #1146 への影響は `## Verify Retrospective` に記載。
+
+### Improvement Proposals
+
+- 起票済み #1387 — `recoveries: 未記録の external kill を events.jsonl から検出し記録率を担保` (バースト 3 件中 1 件が recoveries.md に未記録だった)
+- #1146 の 2026-08-16 結論の訂正は #1146 を reopen して対応 (新規起票不要)
