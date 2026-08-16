@@ -31,7 +31,15 @@
 # included if that flat kebab-case key resolves to "true" (case-insensitive)
 # in the current repository's .wholework.yml (via get-config-value.sh). ACs
 # without `config=` match unconditionally (backward compatible). No new CLI
-# argument is needed — .wholework.yml is read directly from CWD. See
+# argument is needed — .wholework.yml is read directly from CWD.
+#
+# `config=<key>:<value>` (attribute value contains a `:`) gates on an
+# enum-valued key instead: <key> is split from <value> at the first `:` (same
+# convention as when=<axis>:<value>), both sides are sanitized to
+# [A-Za-z0-9._-] (fail-closed — excluded on violation, same charset
+# get-config-value.sh enforces on <key>), and the Issue is only included if
+# <key>'s resolved value case-insensitively equals <value>. The boolean-only
+# config=<key> form (no `:`) above is unchanged. See
 # modules/observation-trigger.md § Condition Check Gate (config=).
 #
 # `when=<axis>:<value>` gates event-mode matches on /auto run context (route /
@@ -396,14 +404,47 @@ for N in $ISSUE_NUMBERS; do
         fi
 
         # Config check gate: skip lines whose config= attribute names a
-        # .wholework.yml key that is not "true" in this repository. No
-        # config= attribute means unconditional match (backward compatible).
-        CONFIG_KEY=$(echo "$line" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
-        if [ -n "$CONFIG_KEY" ]; then
-            CONFIG_VALUE=$("${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false" | tr '[:upper:]' '[:lower:]')
-            if [ "$CONFIG_VALUE" != "true" ]; then
-                continue
-            fi
+        # .wholework.yml key that is not "true" in this repository, or (for
+        # the config=<key>:<value> form, Issue #1243) whose resolved value
+        # doesn't case-insensitively equal <value>. No config= attribute
+        # means unconditional match (backward compatible).
+        CONFIG_ATTR=$(echo "$line" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
+        if [ -n "$CONFIG_ATTR" ]; then
+            case "$CONFIG_ATTR" in
+                *:*)
+                    # config=<key>:<value> form: split on the first ':' — same
+                    # convention as when=<axis>:<value> above. Both sides are
+                    # sanitized to [A-Za-z0-9._-] (same charset
+                    # get-config-value.sh enforces on <key>); a violation on
+                    # either side, or an empty side, excludes the line
+                    # (fail-closed).
+                    CONFIG_KEY="${CONFIG_ATTR%%:*}"
+                    CONFIG_TARGET_VALUE="${CONFIG_ATTR#*:}"
+                    case "$CONFIG_KEY" in
+                        ""|*[!A-Za-z0-9._-]*)
+                            continue
+                            ;;
+                    esac
+                    case "$CONFIG_TARGET_VALUE" in
+                        ""|*[!A-Za-z0-9._-]*)
+                            continue
+                            ;;
+                    esac
+                    CONFIG_VALUE=$("${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false" | tr '[:upper:]' '[:lower:]')
+                    CONFIG_TARGET_VALUE_LOWER=$(echo "$CONFIG_TARGET_VALUE" | tr '[:upper:]' '[:lower:]')
+                    if [ "$CONFIG_VALUE" != "$CONFIG_TARGET_VALUE_LOWER" ]; then
+                        continue
+                    fi
+                    ;;
+                *)
+                    # config=<key> form (no ':'): unchanged boolean-only semantics.
+                    CONFIG_KEY="$CONFIG_ATTR"
+                    CONFIG_VALUE=$("${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false" | tr '[:upper:]' '[:lower:]')
+                    if [ "$CONFIG_VALUE" != "true" ]; then
+                        continue
+                    fi
+                    ;;
+            esac
         fi
 
         # when= condition check gate: skip lines whose when=<axis>:<value>[,<axis>:<value>...]

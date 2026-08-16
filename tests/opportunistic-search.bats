@@ -386,6 +386,46 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 602' > /dev/null
 }
 
+@test "config gate: config=<key>:<value> form matches when resolved value equals value" {
+    export MOCK_ISSUE_LIST='[{"number": 603}]'
+    export MOCK_ISSUE_BODY_603='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=auto-stop-at:verify -->'
+    echo "auto-stop-at: verify" > "$BATS_TEST_TMPDIR/config-enum-match.yml"
+    export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/config-enum-match.yml"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 603' > /dev/null
+}
+
+@test "config gate: config=<key>:<value> form excludes when resolved value differs" {
+    export MOCK_ISSUE_LIST='[{"number": 604}]'
+    export MOCK_ISSUE_BODY_604='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=auto-stop-at:verify -->'
+    echo "auto-stop-at: merge" > "$BATS_TEST_TMPDIR/config-enum-mismatch.yml"
+    export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/config-enum-mismatch.yml"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "config gate: config=<key>:<value> form excludes on sanitization-unsafe value (fail-closed)" {
+    export MOCK_ISSUE_LIST='[{"number": 605}]'
+    export MOCK_ISSUE_BODY_605='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=auto-stop-at:foo/bar -->'
+    echo "auto-stop-at: verify" > "$BATS_TEST_TMPDIR/config-enum-unsafe.yml"
+    export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/config-enum-unsafe.yml"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
 @test "when gate: run facts route matches includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 700}]'
     export MOCK_ISSUE_BODY_700='## Post-merge

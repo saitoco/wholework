@@ -254,13 +254,28 @@ the existing behavior is preserved. Unlike `keyword=`, this gate needs no `--con
 argument: `.wholework.yml` is read directly from the working directory, so no new CLI argument is
 added to either script.
 
+**`config=<key>:<value>` form (enum-valued keys, Issue #1243):** when the `config=` attribute
+value contains a `:`, it is interpreted as `<key>:<value>` instead of the boolean-only `<key>`
+form above — enabling gates on enum-valued settings such as `auto-stop-at`:
+
+```
+<!-- verify-type: observation event=auto-run config=auto-stop-at:verify -->
+```
+
+`<key>` is resolved the same way as the boolean form; the Issue is only included if the resolved
+value equals `<value>` (case-insensitive string comparison). The boolean `config=<key>` (no `:`)
+form is completely unchanged — a `config=` attribute value with no `:` always follows the
+"resolved value must equal `true`" semantics above, regardless of how many enum-valued keys exist
+in `.wholework.yml`.
+
 **Matching specification:**
 
-- Extraction: `config=<key>` is read from the AC line via `grep -oE 'config=[^ >]+'` (stops at the next space or `-->`).
-- Resolution: `<key>`'s value is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then lowercased.
-- Comparison: the resolved value must equal `"true"` exactly; any other value (including the `"false"` fallback) excludes the Issue from match results.
+- Extraction: `config=<key>` (or `config=<key>:<value>`) is read from the AC line via `grep -oE 'config=[^ >]+'` (stops at the next space or `-->`).
+- Form dispatch: split on the presence of `:` in the extracted attribute value.
+  - **No `:` (boolean form)**: `<key>`'s value is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then lowercased. The resolved value must equal `"true"` exactly; any other value (including the `"false"` fallback) excludes the Issue from match results. This form's behavior is unchanged from before Issue #1243.
+  - **Contains `:` (`config=<key>:<value>` form)**: split on the **first** `:` — the substring before it is `<key>`, the substring after it is `<value>` (the same first-colon-split convention `when=<axis>:<value>` above already uses). Both `<key>` and `<value>` are validated against the character set `[A-Za-z0-9._-]` (the same set `get-config-value.sh` itself enforces on `<key>`, via the same glob-match implementation style — a `case` pattern, not a regex). If either side is empty or contains a character outside that set, the AC line is excluded (fail-closed) — this covers both a sanitization failure and a notation error (e.g. a stray leading/trailing `:`). When both sides validate, `<key>` is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then both the resolved value and `<value>` are lowercased and compared for exact string equality; the Issue is included only on a match.
 - Gate disabled (unconditional match) when: no `config=` attribute is present on the AC line.
-- Scope: `<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g. `capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and keys with two or more dots are not supported. The comparison is boolean-only (`true`/`false`); enum-valued keys (e.g. `auto-stop-at`) are out of scope. Both are candidates for a `config=key:value` extension if a future Issue needs them.
+- Scope: `<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g. `capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and keys with two or more dots are not supported. Comparison is boolean-only (`true`/`false` equality) for the `config=<key>` form, and case-insensitive string equality against `<value>` for the `config=<key>:<value>` form — enum-valued keys (e.g. `auto-stop-at`) are supported via the latter.
 
 ## Condition Check Gate (`when=`)
 

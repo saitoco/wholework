@@ -66,8 +66,17 @@ Gate (`config=`) for the resolution mechanics.
 
 `<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g.
 `capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and
-keys with two or more dots are not supported, and the comparison is boolean-only (`true`/`false`);
-enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
+keys with two or more dots are not supported. The plain `config=<key>` form (no `:`) compares
+boolean-only (`true`/`false`). For enum-valued keys (e.g. `auto-stop-at`), use the
+`config=<key>:<value>` form instead:
+
+```
+<!-- verify-type: observation event=auto-run config=auto-stop-at:verify -->
+```
+
+which matches when `<key>`'s resolved value case-insensitively equals `<value>` — see
+`modules/observation-trigger.md` § Condition Check Gate (`config=`) for the split, sanitization,
+and fail-closed rules.
 
 **`when=<axis>:<value>` for context-dependent observation conditions**: when the observation
 condition's text depends on the `/auto` run context that fires the event (route / mode / recovery
