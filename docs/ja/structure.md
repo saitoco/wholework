@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（87 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（88 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -166,6 +166,7 @@ wholework/
 - `scripts/phase-banner.sh` — run-*.sh スクリプトで `print_start_banner` / `print_end_banner` 関数を提供する source 可能なヘルパー
 - `scripts/emit-event.sh` — `.tmp/auto-events.jsonl` への構造化 JSONL イベント emission を提供する source 可能なヘルパー。non-wrapper emitter 向けにポインタファイルから `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` を復元する `restore_auto_session_pointer()`、および in-band `--session-id` 引き渡しが依拠する issue スコープのポインタファイルを書き込み・削除する `persist_auto_session_pointer()` も提供 (#1075); run-*.sh、claude-watchdog.sh、wait-ci-checks.sh が使用
 - `scripts/append-consumed-comments-section.sh` — フェーズ自身の作業ブランチ上で Spec へ `## Consumed Comments` を追記; 呼び出し元・`--no-push` の有無・フェーズごとの secondary layer 対応範囲の網羅的な一覧は [`modules/l0-surfaces.md`](../../modules/l0-surfaces.md) § "Bash wrapper fallback" (SSoT) を参照
+- `scripts/dedupe-phase-handoff-section.sh` — `## Phase Handoff` セクションのローテーションに対する決定論的な secondary layer フォールバック: Spec ファイルに `## Phase Handoff` 見出しが2つ以上ある場合、最後 (最新) の1つだけを残して収束させる; 呼び出し元一覧 (`code`/`review`/`merge`) は [`modules/phase-handoff.md`](../../modules/phase-handoff.md) § "Deterministic rotation fallback" を参照
 - `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: worktree session 中に parent-repo absolute path を file_path とする Edit/Write 呼び出しを block する (`modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions` の structural enforcement)
 
 **GitHub API ユーティリティ:**

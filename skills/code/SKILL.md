@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`. Does not update CLAUDE.md, run session retrospectives, or manage memory.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, gh pr checks:*, gh run view:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, gh pr checks:*, gh run view:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -704,7 +704,12 @@ If there are items under "Deviations from Design" (reordering of implementation 
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
    The handoff is staged with the Spec in the same `git add` and committed together.
-6. Commit (push is done in Step 14 Worktree Exit for patch/operate route; pr route pushes explicitly in item 8 below):
+6. **Phase Handoff dedupe fallback** (deterministic rotation safety net, see `modules/phase-handoff.md` § "Deterministic rotation fallback"): run
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh $NUMBER
+   ```
+   Any rewrite this makes is unstaged at this point and gets picked up by the `git add` in the next item's commit.
+7. Commit (push is done in Step 14 Worktree Exit for patch/operate route; pr route pushes explicitly in item 9 below):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
@@ -714,7 +719,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
-7. **Consumed Comments safety net (mandatory, after the retrospective commit above)**: run
+8. **Consumed Comments safety net (mandatory, after the retrospective commit above)**: run
    ```bash
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push
    ```
@@ -724,10 +729,10 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    fires whenever the Spec has an unstaged diff) sweeping the not-yet-committed retrospective
    and Phase Handoff edits into a commit titled "Add consumed comments fallback ..."; when it
    does fire here, it lands as its own separate commit instead. `--no-push` is required — the pr
-   route pushes in item 8 below, and base propagation for patch/operate route happens via Step
+   route pushes in item 9 below, and base propagation for patch/operate route happens via Step
    14's `worktree-merge-push.sh`. The bash wrapper fallback (`scripts/run-code.sh`) no longer
    runs for pr route, so this call is the only safety net on that path.
-8. **For pr route**: also push from within the worktree (emit a progress line first so the watchdog resets its silence counter):
+9. **For pr route**: also push from within the worktree (emit a progress line first so the watchdog resets its silence counter):
    ```bash
    echo "progress: Pushing branch to origin for issue #$NUMBER..."
    git push origin HEAD

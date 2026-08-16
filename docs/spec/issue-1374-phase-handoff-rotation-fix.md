@@ -79,3 +79,50 @@ Write Procedure の Step 3 (既存ブロック検出・置換) は、LLM が Edi
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 判断根拠および Auto-Resolve Log の記録 (AC 2→3件、Post-mergeセクション新設) / https://github.com/saitoco/wholework/issues/1374#issuecomment-5306815790
+
+### /code (cutoff: phase/ready assigned 2026-08-16T10:04:39Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- `tests/code.bats` も変更対象に追加した (Spec の Changed Files には未記載) — 理由: Step 9 でフルスイート実行を行った際、本 Issue とは無関係の既存バグ (`tests/code.bats` の Step 10 CI AC exclusion アサーションが、#1375 適用後の実際の `skills/code/SKILL.md` 文言 "Step 10 runs before the commit or PR that would produce a CI run" と食い違っており、常に FAIL していた) を検出した。本 Issue の Pre-merge AC (`command "bats tests/*.bats"` が全 PASS すること) を満たすために、アサーション文字列を実際の SKILL.md 文言に合わせて 1 行修正した。スコープ外の修正だが、影響範囲は該当テストの期待文字列 1 行のみで、独立 Issue を起票するほどの規模ではないと判断し、本 PR に含めた。
+
+### Design Gaps/Ambiguities
+- なし。Spec の Implementation Steps 1-5 は記述どおりに実装できた。
+
+### Rework
+- なし。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。実装 (dedupe スクリプト、3 SKILL.md への配線、`modules/phase-handoff.md` の説明追加、回帰テスト) は Spec の Implementation Steps と一致していた。Code Retrospective に記録済みのスコープ外修正 (`tests/code.bats` 1行) も理由付きで妥当と判断。
+
+### Recurring issues
+
+なし。今回検出した 2 件 (MUST/SHOULD) は、決定論的パーサースクリプトを新規追加する PR 全般に共通する「構造解析コードは実行ベースの edge case pre-check で検証すべき」というレビュー観点そのものが機能した結果であり、過去 PR で繰り返し観測されたパターンの再発ではない。
+
+### Acceptance criteria verification difficulty
+
+なし。3件の Pre-merge AC (rubric ×2、command ×1) はすべて機械的に判定可能だった。command 条件は safe mode の CI reference fallback (`Run bats tests` ジョブの run command containment 確認) で PASS 判定でき、フル実行を要さなかった。
+
+### Improvement Proposals
+
+- **新規の決定論的パーサー/バリデータースクリプトを追加する PR では、`/review` の Parser/Validator Edge Case Pre-check が実行ベースの edge case 実行で 2 件 (MUST 1, SHOULD 1) の未検出バグを実際に発見した** — 本 PR (#1388) 自身が「二重化を防ぐ決定論的フォールバック」を追加する PR でありながら、そのフォールバック自身の境界検出ロジック (`grep`/`awk` による見出し検出) がフェンスコードブロックを考慮していないという盲点を持っていた。Pre-check の効果が実証されたケースとして記録 (Issue 起票は不要 — 既に fix 済みで /verify 側の集約対象として次フェーズに委ねる)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- レビュー指摘 (MUST: フェンスコード内の見出し誤認、SHOULD: level-1 見出しの境界未対応) は両方とも本 PR 内で修正した — MUST はスクリプトの `grep`/`awk` をフェンス認識に変更、SHOULD は挙動変更ではなくドキュメント補足 (`modules/phase-handoff.md` の Rotation boundary detection) を選択し、スコープ外の挙動変更リスクを避けた。
+- 修正に対する回帰テストを `tests/phase-handoff.bats` に追加し (フェンスコードブロックのケース)、フルスイート (`bats --jobs 18 tests/` 1815/1815) と `validate-skill-syntax.py` (0 error/0 warning) で再検証した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `/merge` は本 PR のマージ前に、追加コミット (`085489cf` — fence-aware 化 + doc 補足 + 回帰テスト) が CI green であることを確認すること。
+- Post-merge AC はなし (Issue #1374 本文の `### Post-merge` セクションに記載どおり)。

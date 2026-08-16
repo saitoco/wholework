@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (87 files)
+├── scripts/             # Utility scripts used by skills and agents (88 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -173,6 +173,7 @@ Key modules:
 - `scripts/phase-banner.sh` — sourceable helper providing `print_start_banner` / `print_end_banner` functions for run-*.sh scripts
 - `scripts/emit-event.sh` — sourceable helper providing `emit_event()` for structured JSONL event emission to `.tmp/auto-events.jsonl`, plus `restore_auto_session_pointer()` for restoring `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` from pointer files in non-wrapper emitters and `persist_auto_session_pointer()` for writing/deleting the issue-scoped pointer file that in-band `--session-id` hand-off relies on (#1075); used by run-*.sh, claude-watchdog.sh, wait-ci-checks.sh, and `skills/verify/SKILL.md` (explicit bash call, no wrapper)
 - `scripts/append-consumed-comments-section.sh` — appends `## Consumed Comments` to Spec on the phase's own working branch; see [`modules/l0-surfaces.md`](../modules/l0-surfaces.md) § "Bash wrapper fallback" (the SSoT) for the exhaustive list of callers, `--no-push` usage, and secondary-layer coverage per phase
+- `scripts/dedupe-phase-handoff-section.sh` — deterministic Secondary-layer rotation fallback for the `## Phase Handoff` section: collapses a Spec file with 2+ `## Phase Handoff` headings down to the last (most recent) one; see [`modules/phase-handoff.md`](../modules/phase-handoff.md) § "Deterministic rotation fallback" for the caller list (`code`/`review`/`merge`)
 - `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: blocks Edit/Write calls with parent-repo absolute file_path while inside a worktree session (structural enforcement of `modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions`)
 
 **GitHub API utilities:**
