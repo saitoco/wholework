@@ -41,3 +41,36 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: ## Issue Retrospective — 直前の Triage AC audit で指摘された `section_contains "gh pr checks"` 常時 PASS 欠陥を修正し、該当 AC を Issue body から削除済みであることを記録 / URL: https://github.com/saitoco/wholework/issues/1229#issuecomment-5305140739
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: Triage AC audit — AC2 の rubric 文言が pr route に限定されておらず常時 PASS しうると指摘し、pr route に限定する修復案を提示。`/spec` 実行時にそのまま採用し Issue body に反映 (対応: Notes 参照) / URL: https://github.com/saitoco/wholework/issues/1229#issuecomment-5305152550
+- code phase (2026-08-16): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-08-16T01:44:38Z).
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implemented per plan: rewrote the heading from "Patch route branch-scoped CI AC exclusion" to "CI verification AC exclusion (route-agnostic)", listed both the patch route (`github_check "gh run list"`) and pr route (`github_check "gh pr checks" "<job>"`) exclusion forms with their respective reasons, and updated the 2 cross-references at Step 8 (spec-approval-needed paragraph) and Step 10 (checkbox-flip loop exclusion clause). All 3 occurrences confirmed via grep before and after the edit.
+
+### Design Gaps/Ambiguities
+- None encountered during implementation.
+
+### Rework
+- None.
+
+### Concurrent-edit risk with #1095 (noted in Spec, did not materialize)
+- The Spec flagged a risk that Issue #1095 (`docs/spec/issue-1095-operate-route-verify-check.md`) targets the same paragraph to add operate-route coverage. At the time this `/code` run started, #1095 was still `phase/ready` (not yet implemented), so no conflict occurred — this PR is the first to land on the paragraph. A future `/code` run on #1095 will need to read the actual post-merge content (the new "CI verification AC exclusion (route-agnostic)" heading with its `- patch route` / `- pr route` bullet list) and add an `- operate route` bullet in the same list, consistent with the Spec's own forward-looking guidance.
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Generalized the heading to "CI verification AC exclusion (route-agnostic)" (Spec's recommended 方針 1) rather than adding a separate pr-route paragraph, keeping the shared root cause (Step 10 runs before Step 11 creates the commit/PR) as a single source of truth.
+- Left AC3 (`github_check "gh pr checks" "Run bats tests"`) unchecked in the Issue per the newly-written exclusion rule itself — this PR's own AC3 is a live instance of the pr-route case the rule describes, so Step 10 correctly excludes it from its own verify-executor pass.
+
+### Deferred Items
+- AC3 (CI passes on this PR) — left `- [ ]`, to be confirmed by `/review` once the PR's checks exist, per the exclusion rule this PR itself introduces.
+- Post-merge observation AC — will be judged the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`.
+
+### Notes for Next Phase
+- `/review` should verify AC3 (`gh pr checks "Run bats tests"`) directly against this PR's CI once checks are available, then check it off.
+- #1095 (`docs/spec/issue-1095-operate-route-verify-check.md`) still targets the same Step 10 paragraph to add operate-route coverage; its `/code` run should integrate an `- operate route` bullet into the list this PR introduced rather than reintroducing a separate paragraph.
