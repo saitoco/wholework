@@ -102,7 +102,11 @@ N/A
 - `section_contains "## Template Definitions" "type: steering"` の PASS は、code フェーズのfixup（prose文追加）によって達成されたもの。verify command 設計時点でのテーブル値と検索文字列の整合性チェックが今後の改善点。
 
 ### Improvement Proposals
-- **verify command 設計ガイドライン**: `section_contains` でテーブルのカラム値を検索する場合、テーブルセルに含まれる値（例: `steering`）と、"key: value" 形式の複合文字列（例: `type: steering`）は同一視できない。Spec 策定時に verify command の検索文字列がファイル内に実際に出現するかを確認する習慣、または `/issue` スキルに「verify command 文字列の出現確認ステップ」を追加することが有効。
+- **verify command 設計ガイドライン**: `section_contains` でテーブルのカラム値を検索する場合、テーブルセルに含まれる値（例: `steering`）と、"key: value" 形式の複合文字列（例: `type: steering`）は同一視できない。Spec 策定時に verify command の検索文字列がファイル内に実際に出現するかを確認する習慣、または `/issue` スキルに「verify command 文字列の出現確認ステップ」を追加することが有効。Tier 2 (convention) 相当と判断し、Issue 起票は見送り、memory candidate として記録に留める。
+
+### 2026-08-16 初回 /verify 実行 (/audit verify-backlog セッションから)
+
+Post-merge manual 条件4件のうち3件 (`/doc` status display 除外確認、`/doc translate` 自動除外確認、Issue #58 翻訳判定ロジック継続動作確認) は、`skills/doc/SKILL.md` の Document Traversal common procedure と完全に同一の grep パターン (`type: project\|type: steering`) を `skills/doc/*-template.md` に対して直接実行することで安全に静的検証でき、いずれもマッチなし (frontmatter 除去済みのため正しく除外) を確認し PASS とした。残り1件 (`/doc product`/`tech`/`structure` 実行時の frontmatter 再現確認) は steering docs への実書き込みを伴うため、本 routine sweep では実行を見送り manual のまま維持。
 
 ## Notes
 
