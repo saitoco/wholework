@@ -309,3 +309,16 @@
 ### Improvement Proposals
 - 19 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。根本原因を追跡する Issue #1365 (config-key/独立単語形式トークン誤検知の解消) が既に OPEN で存在するため、本 re-run では新規起票を行わず、上記の第四サブパターン (ベアファイル名参照) を #1365 の実装時の参考情報としてコメント追記する
 
+## Verify Retrospective (2026-08-16 re-run #20)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1379、Issue #1302) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカー計22件) した上で **初めて PASS 判定に到達した** — 20 回目の re-run で初の実地確認成立
+- **決定的な新規観測**: 発火元 PR #1379 のレビュー (`/review --light`) 実行中、review-light エージェントが `skills/spec/SKILL.md:228` の新規追加行に混入した CJK プローズ (`実査`/`監査`/`分類`) による CI job `Language Convention check` の FAILURE を検出し、`modules/review-output-format.md` § Severity Classification Criteria の "MUST — Deterministic failure in the target execution environment" を明示的に引用して MUST に分類した。`git diff main -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py` で独立に再現確認済みであり、CI 上の診断とも一致する。Background の実例カテゴリ (root-owned path への非 sudo 書き込み等) には含まれない新規の欠陥カテゴリ (lint スクリプトによる決定的失敗) だが、判定基準そのものが「対象環境で常に再現するか」という一般原則であるため、カテゴリ非依存に正しく機能することが実地で確認できた
+- 皮肉な点として、本 re-run 自体を dispatch した `keyword=workflow` ゲートの発火根拠は PR #1379 の Spec 内バレファイル名参照 `` `workflow-guidance.md` `` (ディレクトリ接頭辞なし) であり、re-run #19 で確認した第四サブパターン (Issue #1365 が追跡中) と同型の無関係発火だった。つまり **ゲート自体は今回も誤発火していたが、発火先の PR がたまたま Issue #476 の対象シナリオを独立に含んでいた**という偶然の一致で PASS に到達した。evidence collection は fired 事実と診断内容の整合性のみを見るため、ゲートの発火根拠が無関係であっても収集した証拠自体が有効であれば判定に影響しないと判断した
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14〜#19 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- PASS 到達によりこの observation AC の re-run ループは終了し、`phase/done` へ遷移する。re-run #15〜#19 が繰り返し指摘した「observation ベースの AC 設計が長期間 PASS/FAIL に到達しにくい構造的問題」という懸念自体は、本 Issue に関する限り実害なく解消した (20 回で収束) ため、当該懸念に基づく新規 follow-up 起票は不要と判断する。`keyword=workflow` ゲートの誤発火自体 (第四サブパターン) は既存の Issue #1365 が引き続き追跡するため、本 re-run でも新規起票は行わない
+
