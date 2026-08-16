@@ -259,28 +259,44 @@ Implementation Steps 2-7 はいずれも既存スクリプトへの分岐ロジ�
 
 Implementation Steps 2-6 はいずれも既存スクリプトへの分岐ロジック変更を含むため、受入条件 1-5 は「既存スイートが PASS すること」に加え、新規ロジックを検証する新規テストケースの追加を要求する: `tests/scan-pending-ac.bats` の `html-comment scoped tag extraction` / `tests/post_merge_check.bats` の `html-comment scoped manual extraction` / `tests/opportunistic-search.bats` の `html-comment scoped tag match` / `tests/check-skill-change-observation-ac.bats` の `html-comment scoped tag regression` / `tests/audit-auto-session.bats` の `html-comment scoped residual tally`。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — all Implementation Steps (1-8) were executed as designed, using the exact canonical patterns specified in the Spec.
+
+### Design Gaps/Ambiguities
+
+- N/A — the Spec's pattern choices (awk `[ \t]*` vs. `grep -E` `[[:space:]]*`, `index()` for `EVENT_NAME`, etc.) were unambiguous and required no further judgment during implementation.
+
+### Rework
+
+- **bash 3.2's `set -e` does not abort a bats `@test` function on a bare `[[ ... ]]` compound-command failure unless it is the function's last statement.** Two of the five new bats test cases (`tests/post_merge_check.bats`, `tests/check-skill-change-observation-ac.bats`) initially wrote 2-3 sequential `[[ "$output" == *"..."* ]]` / `[[ "$output" != *"..."* ]]` assertions where only the last one happened to be gated correctly — the pre-implementation FAIL check for the *last* assertion passed, but re-verification against pre-fix scripts showed the non-final assertions silently passed even when they should have failed. Confirmed the root cause with an isolated `bash -c 'set -e; [[ "abc" != *"abc"* ]]; echo REACHED'` (prints REACHED, exit 0) vs. the single-bracket equivalent `[ "abc" != "abc" ]` (aborts, exit 1) — `[ ]` (a regular builtin) propagates under `set -e`, `[[ ]]` (a compound command) does not, except as the function's final command. Fixed by appending `|| return 1` to every non-final `[[ ]]` assertion in both files. The other three new tests (`tests/scan-pending-ac.bats` used single-bracket `[ ]`; `tests/opportunistic-search.bats` used `echo | jq -e ... > /dev/null` pipelines, which do propagate under `set -e` in bash 3.2) were unaffected and needed no rework.
+- Confirmed pre-implementation FAIL for 5 new test(s) (one per consumer script), each re-confirmed against the corrected assertion gating.
+
+### Smoke Test
+
+- N/A — the Spec has no `## Smoke Test` section.
+
+### Full Suite Run
+
+- `bats --jobs 18 tests/` (1809 tests): 1 pre-existing unrelated failure — `tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" (`skills/code/SKILL.md` does not currently contain the string `tests/code.bats` expects). Confirmed this failure reproduces identically on the unmodified `main` branch (outside this worktree, before any of this Issue's commits), so it is not a regression introduced here. Not filed as a follow-up Issue in this session — left for a future `/code` or `/audit drift` run to pick up, since it is orthogonal to this Issue's scope (post_merge_check.bats's own known parallel-only flake, documented in `docs/tech.md` § CI bats Parallel/Serial Split, did not reproduce in this run).
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- タグ抽出は共通ヘルパー化せず各スクリプトへインライン展開し、正準ルールは `modules/verify-classifier.md` の新設セクションに SSoT として置く (新規スクリプトによる `allowed-tools` 波及と worktree の `source` 制約を回避)
-- Issue 本文の影響箇所表 2 行を実測で訂正し、`check-skill-change-observation-ac.sh` を「回帰テストのみ」から「抽出の修正 + テスト」へ、`get-auto-session-report.sh` を「潜在」からスコープ内へ変更した (受入条件 4 / 5)
-- Pre-merge AC の verify command は `/triage` 監査が提案した `bats --count --filter` 形ではなく `file_contains` + `command` の 2 コマンド形を採用 (safe mode での UNCERTAIN 化を回避しつつ Pattern 2 を解消)
-- `skills/audit/SKILL.md` の Waiting Count 定義変更に伴う過去レポート非互換は (a) 追記注記方式で確定 (過去レポートの再出力・並行出力は行わない)
-- `opportunistic-search.sh` の `event=` はコメント内スコープ、スキル名は行スコープのまま (スキル名は条件文の散文に正当に現れるため)
+- Implemented all 5 consumer scripts + `modules/verify-classifier.md` + `skills/audit/SKILL.md` exactly per the Spec's Implementation Steps 1-8, with no deviation from the designed canonical patterns.
+- Each of the 5 new bats test cases was verified to FAIL against the pre-fix version of its target script before being committed (confirmed via `git show <pre-fix-commit>:<path>`, since the target file's own fix was already committed in an earlier step of this same run — see `docs/tech.md`'s Stale Test Assertion Check convention, applied here in its "new assertion" direction).
+- Discovered and fixed a bash 3.2 `set -e` gap in 2 of the 5 new tests (`tests/post_merge_check.bats`, `tests/check-skill-change-observation-ac.bats`): non-final bare `[[ ]]` assertions do not abort the test on failure, only single-bracket `[ ]` or pipeline failures do. Fixed with explicit `|| return 1` on every non-final `[[ ]]` assertion.
 
 ### Deferred Items
 
 - Post-merge 受入条件 1 件: `collect-verify-retention-stats.sh --window 2026-05-07` と `scan-pending-ac.sh` の manual 分類結果の突き合わせ (現状 19 対 18)。`/auto` 実行後の observation として次セッションで確認する
-- `scripts/collect-verify-retention-stats.sh` / `scripts/rank-verify-backlog.sh` / `skills/auto/SKILL.md` / `skills/verify/SKILL.md` は既に正しい形のため変更しない (grep で確認済み。`/code` で「念のため」修正しないこと)
-- `docs/structure.md` / `docs/ja/structure.md` は抽出方式に言及しないため変更不要 (確認済み)
+- `tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" is a pre-existing FAIL, confirmed to reproduce identically on unmodified `main` — out of this Issue's scope, not filed as a follow-up in this session.
 
 ### Notes for Next Phase
 
-- `EVENT_NAME` は無検証の外部入力。`opportunistic-search.sh` の event モードでは ERE へ内挿せず awk `index()` の literal 照合を使うこと
-- grep 経路は `[[:space:]]*`、awk 経路は `[ \t]*` を使い分ける (grep ERE のブラケット内 `\t` の解釈が実装依存のため)
-- `scan-pending-ac.sh` / `get-auto-session-report.sh` の「タグ無し行は manual」既定と、`scan-pending-ac.sh` の fail-open (`gh` 失敗時 `[]` + exit 0) は**変更しない**。本 Issue は分類精度のみを扱う
-- `get-auto-session-report.sh` の新規テストは `tests/get-auto-session-report.bats` ではなく `tests/audit-auto-session.bats` へ置く (verify-type breakdown の既存テストが後者の `:141` にあるため)
-- `tests/post_merge_check.bats` は並列実行時のみ FAIL する既知フレークがある (`docs/tech.md` § CI bats Parallel/Serial Split)。全件実行で FAIL した場合は単独再実行で切り分けること
-- 実装で書く Spec / テストフィクスチャに完全形のタグを書くと、修正対象スクリプト自身の走査対象になる。フィクスチャは意図的にそう書く箇所 (bats のヒアドキュメント内) に限定すること
+- `/verify` should re-run `bats tests/` and treat the `tests/code.bats` pre-existing failure noted above as unrelated to this Issue's change (do not attribute it to this PR).
+- When adding new bats assertions that must gate on a **non-final** statement in a `@test` body, prefer single-bracket `[ ]`, a pipeline (`... | jq -e ... > /dev/null`), or an explicit `|| return 1` after a `[[ ]]` — bash 3.2's `set -e` does not abort on a bare non-final `[[ ]]` failure (see Code Retrospective § Rework for the isolated repro).
