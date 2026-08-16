@@ -162,6 +162,28 @@ SPEC
     [[ "$output" == *"No manual ACs found"* ]]
 }
 
+@test "html-comment scoped manual extraction: prose quoting a tag name does not cause misclassification (issue #1273)" {
+    cat > "$BATS_TEST_TMPDIR/docs/spec/issue-701-test.md" <<'SPEC'
+## Post-merge
+
+- AC confirming this line is excluded from the `verify-type: manual` tally but the real tag is observation <!-- verify-type: observation -->
+- A normal manual AC baseline text <!-- verify-type: manual -->
+- AC confirming this line is not excluded by the `ac-tier: preview` filter and has no ac-tier tag of its own <!-- verify-type: manual -->
+SPEC
+
+    printf "s\ns\n" > "$BATS_TEST_TMPDIR/input.txt"
+    cd "$BATS_TEST_TMPDIR"
+    run bash "$SCRIPT" 701 < "$BATS_TEST_TMPDIR/input.txt"
+    [ "$status" -eq 0 ]
+    # (a) prose quoting a different tag name must not be extracted as manual
+    [[ "$output" != *"AC confirming this line is excluded from the"* ]]
+    # (b) a normal manual-tagged line is extracted as before
+    [[ "$output" == *"A normal manual AC baseline text"* ]]
+    # (c) a line whose prose quotes "ac-tier: preview" but carries no ac-tier tag
+    # of its own is not excluded by the preview-tier filter
+    [[ "$output" == *"AC confirming this line is not excluded by the"* ]]
+}
+
 @test "multiple issues: processed sequentially" {
     cat > "$BATS_TEST_TMPDIR/docs/spec/issue-601-test.md" <<'SPEC'
 ## Post-merge
