@@ -61,18 +61,18 @@
 - N/A — Spec has no `## Smoke Test` section.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Posted the Pull Request Review as `COMMENT` (not `REQUEST_CHANGES`) — no MUST issues were found across Step 8 (all 3 Pre-merge AC PASS), Step 9 (all 11 CI jobs SUCCESS), or Step 10's `review-light` pass (0 findings across all 4 perspectives).
-- Checked off AC3 (`github_check "gh pr checks" "Run bats tests"`) in the Issue body — the `Run bats tests` job reported SUCCESS, resolving the one AC this PR's own `/code` phase had deliberately left unverified under the exclusion rule it introduces.
+- Squash-merged PR #1376 with no conflicts and no fix commits — mergeable=true, CI success, review approved, and all 3 Pre-merge AC were already `[x]` before merge started.
+- Pre-merge AC gate and review-incomplete-fallback check both passed cleanly with `unchecked_count=0` and no fallback marker, so no override marker was needed.
 
 ### Deferred Items
-- None. All 3 Pre-merge AC are now `[x]`; only the Post-merge observation AC remains, which is out of `/review`'s scope by design (observed at the next pr-route `/code` run).
+- None. Only the Post-merge observation AC remains, which resolves organically at the next pr-route `/code` run per the code-phase Phase Handoff.
 
 ### Notes for Next Phase
-- `/merge 1376` can proceed directly — no fix commits were needed, so no additional re-check cycle is pending.
-- The Post-merge observation AC (`event=auto-run session=next`) will resolve organically the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`, per the code-phase Phase Handoff.
+- `/verify 1229` should confirm the Issue reached `state=CLOSED` with `phase/verify` label (auto-close via `closes #1229` expected since base branch is `main`).
+- The Post-merge observation AC (`event=auto-run session=next`) is the only remaining item — it will be observed the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`.
 
 ## review retrospective
 
