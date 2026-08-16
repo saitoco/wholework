@@ -76,6 +76,11 @@ Issue 本文の検討候補 (案 A: emit 直前に `run-code.sh` 自身が記録
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1320#issuecomment-5248505435
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1320#issuecomment-5249505430
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1320#issuecomment-5296392825
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1320#issuecomment-5304278211
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1320 --> / https://github.com/saitoco/wholework/issues/1320#issuecomment-5306128983
 ## Code Retrospective
 
 ### Deviations from Design
