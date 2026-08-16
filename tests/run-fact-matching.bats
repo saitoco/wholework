@@ -330,6 +330,22 @@ EOF
     [ "$number" = "100" ]
 }
 
+@test "collect-run-facts: issue field serialized as the string null is excluded from issues[]" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-16T00:00:00Z","issue":"null","event":"phase_start","session_id":"sess1","phase":"code-pr"}
+{"ts":"2026-08-16T00:01:00Z","issue":100,"event":"phase_start","session_id":"sess1","phase":"code-pr"}
+{"ts":"2026-08-16T00:02:00Z","issue":100,"event":"phase_complete","session_id":"sess1","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq '.issues | length')
+    [ "$count" = "1" ]
+    number=$(echo "$output" | jq -r '.issues[0].number')
+    [ "$number" = "100" ]
+}
+
 # ---------------------------------------------------------------------------
 # scan-pending-ac.sh
 # ---------------------------------------------------------------------------
@@ -525,6 +541,29 @@ MOCK
     [ "$count" = "1" ]
 }
 
+@test "scan-pending-ac: --facts with empty fact_tokens set returns empty array" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 800, "body": "### Post-merge\n\n- [ ] some condition\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    FACTS_FILE="$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[]}' > "$FACTS_FILE"
+
+    run bash "$SCAN_SCRIPT" --facts "$FACTS_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"contains no fact tokens"* ]]
+    json_line=$(echo "$output" | grep '^\[')
+    [ "$json_line" = "[]" ]
+}
+
 # ---------------------------------------------------------------------------
 # apply-run-fact-match.sh — AC5's 3 paths: detect / negative / ambiguous fallback
 # ---------------------------------------------------------------------------
@@ -614,4 +653,26 @@ MOCK
     AUTONOMY_TIER=L3 run bash "$APPLY_SCRIPT" --issue 42 --ac 3 --verdict satisfied --dry-run
     [ "$status" -eq 0 ]
     [ ! -f "$BATS_TEST_TMPDIR/edit-calls.log" ]
+}
+
+@test "apply-run-fact-match: checkbox write failure prevents audit-trail comment" {
+    cat > "$MOCK_DIR/gh-issue-edit.sh" <<MOCK
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh-issue-edit.sh"
+
+    cat > "$MOCK_DIR/gh-issue-comment.sh" <<MOCK
+#!/bin/bash
+echo "called" >> "$BATS_TEST_TMPDIR/comment-calls.log"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh-issue-comment.sh"
+
+    AUTONOMY_TIER=L3 run bash "$APPLY_SCRIPT" --issue 42 --ac 3 --verdict satisfied --evidence "PR #1151 merged"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"action=auto-check"* ]]
+    [[ "$output" == *"Warning: failed to check AC #3 on issue #42; skipping audit-trail comment"* ]]
+
+    [ ! -f "$BATS_TEST_TMPDIR/comment-calls.log" ]
 }

@@ -234,6 +234,7 @@ ISSUES_JSON="[]"
 for N in $ISSUE_NUMBERS; do
   [ -z "$N" ] && continue
   [ "$N" = "0" ] && continue # issue=0 is the sentinel for non-issue-scoped events
+  [ "$N" = "null" ] && continue # an event missing the .issue key surfaces as the string "null"
 
   ISSUE_EVENTS=$(printf '%s\n' "$SESSION_EVENTS" | jq -c --argjson n "$N" 'select(.issue == $n)') || {
     echo "Error: failed to filter events for issue #${N}" >&2
