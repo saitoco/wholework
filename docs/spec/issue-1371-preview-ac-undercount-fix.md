@@ -103,3 +103,28 @@ Nothing to note — the `review-light` agent confirmed the prose changes in both
 ### Acceptance criteria verification difficulty
 
 Nothing to note — all 5 Pre-merge conditions verified cleanly in Step 8 (4 rubric/section_contains conditions confirmed directly against the PR branch content; the 5th, `command "bats tests/*.bats"`, resolved via CI reference fallback against the `Run bats tests` job, SUCCESS on the latest commit with identity confirmed via run command containment). No UNCERTAIN results, no verify command syntax issues.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。
+
+#### design
+- 特記事項なし。
+
+#### code
+- 特記事項なし。
+
+#### review
+- Recurring issues (review retrospective 記載): `resolve-preview-ac-fallback.sh` の消費先が 3 箇所 (`/verify`, `/audit`, `/auto`) に増えたが、`gh` 失敗時の fail-open (空出力 exit 0) を fail-closed に判別しているのは `/verify` のみ。今回はドキュメント注記のみで対応し、スクリプト自体の fail-closed 化はスコープ外とした。4番目の消費先が追加されれば同じギャップが再発する。
+
+#### merge
+- 特記事項なし。
+
+#### verify
+- Pre-merge AC 5件はすべて `/review` 時点で既に checked 済みのため SKIPPED (再検証なし)。Post-merge セクションなし、pass-through で完了。
+
+### Improvement Proposals
+- `resolve-preview-ac-fallback.sh` に fail-closed なデフォルト (または "gh 失敗" と "未解決なし" を区別する専用 exit code) を実装し、消費先スキルごとに個別実装させない設計へ変更することを検討 (根拠: review retrospective の Recurring issues。現時点では消費先 3 箇所・実害未確認のため Tier 2 相当と判断し、Issue 化は見送る)
