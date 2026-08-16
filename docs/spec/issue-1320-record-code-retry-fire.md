@@ -107,3 +107,14 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `bats --jobs 18 tests/` (full suite, 1740 tests) passed with zero regressions; the two new `run-code.bats` tests are tagged `code_retry_fire` for quick re-filtering.
 - If a future `/audit recoveries` frequency-analysis change starts treating `Outcome` as a strict enum (currently descriptive only, confirmed via `scripts/collect-recovery-candidates.sh`), it will need to special-case the new `retry fired (iteration <N>/<M>)` value.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify (2026-08-16, `/audit verify-backlog` セッションから)
+
+Post-merge の session=next observation AC を `docs/reports/orchestration-recoveries.md` への直接 grep で裏取りした。fix 着地 (`3b6aa0ac`, 2026-08-11T02:56 UTC) 後の実際の `code_retry_fire` 発火 (Issue #1355, 2026-08-14T21:57 UTC) が `## 2026-08-14 21:57 UTC: code-retry-fire` エントリとして正しく記録されていることを確認し PASS 判定、`phase/done` に遷移した。fix 前の4件 (#1278/#1280/#1266/#1289) が記録漏れだったのと対照的な結果。
+
+### Improvement Proposals
+- N/A
