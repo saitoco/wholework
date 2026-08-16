@@ -48,4 +48,8 @@
 - **Spec investigation 時点での動作確認 (`/code` での再実装後の確認は別途必要)**: 候補修正 (`set -umo pipefail` + 両 kill 呼び出しの `kill -- "-$cmd_pid"` 化) を `.tmp/` 上のコピーに適用し、(a) 孫プロセスが残存しないこと、(b) exit code semantics (`143`) が変化しないこと、(c) 既存 12 テストが無改修のまま全て PASS すること、(d) Implementation Steps 2 で追加する新規テストケースが未修正版で FAIL・修正版で PASS することを確認した。macOS の `/bin/bash` (3.2 系相当) で確認しており、Linux CI 環境での再確認は `/code` の通常のテスト実行に委ねる
 
 ## Consumed Comments
-No new comments since last phase.
+
+cutoff: `phase/spec` 付与直前の最新 `phase/*` ラベル遷移 (2026-08-16T11:18:48Z)。以下 2 件は同 cutoff 以降・本 `/spec` 実行より前に投稿された first-class コメントとして Step 2 で消化し、本文の記述に反映した (safety net スクリプトは本 Spec 自身が Step 3 で付与した `phase/spec` ラベルを新たな cutoff として再計算したため "No new comments" と誤検出した — 手動で修正)。
+
+- saito / MEMBER / first-class / `/issue` の Issue Retrospective (Autonomous Auto-Resolve Log) — Background に「`kill "$cmd_pid"` の子孫プロセス到達可否」という代替仮説を追記した経緯の記録。`docs/spec/issue-1142-spawn-detach-experiment.md` を参考情報として言及 — 本 Spec の Root Cause 調査の出発点として採用した / https://github.com/saitoco/wholework/issues/1366#issuecomment-5307187659
+- saito / MEMBER / first-class / `/issue` Step 15 AC 監査: verify command が Pattern 2 (常時 PASS な verify command) の疑いがあるという観測 (単独実行 3/3 PASS、ただし壁時計は約 60 秒) — 再現条件 (並列実行負荷) の特定を `/spec` に推奨 — 本 Spec の Notes「AC の verify command 精度に関する `/issue` Step 15 コメントへの回答」に直接反映した / https://github.com/saitoco/wholework/issues/1366#issuecomment-5307221120
