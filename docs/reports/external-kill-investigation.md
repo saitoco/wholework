@@ -575,4 +575,73 @@ jq -r 'select(.ts >= "2026-08-10T04:49:03Z" and .event == "phase_start") | .ts' 
 
 Run it at the 2026-08-16 observation and record the banding alongside the kill verdict.
 
+## 2026-08-16 Update (the decisive observation — H-b' falsified, and the baseline rate was an n=1 artifact)
+
+The no-reboot window held. The host reached **145.28h uptime** without a reboot (`kern.boottime` = 1786337345; the 2-second drift from the previously recorded 1786337343 is NTP correction, not a restart — `up 6 days, 1:17` matches the 2026-08-10 13:49 JST boot). Uptime passed the baseline's 131.6h at 2026-08-15 16:25Z, and dispatching continued past it.
+
+### Result: 0 external kills across 289 dispatches
+
+| Window | Dispatches | External kills |
+|---|---|---|
+| Since boot (uptime 0.25h → 145h) | **289** | **0** |
+| Past the baseline uptime (131.6h+) | **85** | **0** |
+| Same uptime band as the baseline kill (day 5, 120–144h) | **111** | **0** |
+
+`manual_intervention` events since boot: **0**. `manual-recovery-respawn` entries since boot: **0** — the most recent remains 2026-08-10 03:51Z, the baseline itself. Dispatches by uptime band:
+
+| Band | Dispatches |
+|---|---|
+| day 0 (0–24h) | 122 |
+| day 1 (24–48h) | 19 |
+| day 4 (96–120h) | 31 |
+| **day 5 (120–144h)** | **111** |
+| day 6 (144–168h) | 6 |
+
+Days 2–3 have no dispatches (no sessions run).
+
+### H-b' (host uptime / PID reuse) is falsified
+
+The kill reproduced at 131.6h. **111 dispatches have since run inside that same uptime band with zero kills**, and 85 of them past the exact threshold. Uptime does not predict the kill.
+
+| Hypothesis | Verdict after this observation |
+|---|---|
+| H-b' — host uptime / PID reuse | **否定 (falsified).** 111 dispatches in the 120–144h band, 0 kills |
+| Concurrency as the driver | **否定.** Already weak (peak 8 at 0 kills on 08-05〜07); this arm adds 289 more dispatches |
+| Batch route as the driver | **否定.** Confirmed in both directions on 2026-08-10/11 |
+| H-a — harness background-task lifecycle, episodic | **最有力.** The only hypothesis still consistent with everything |
+
+### The more important correction: 3.6% was an n=1 artifact
+
+The 2026-08-10 Update derived a 3.6%/dispatch rate from 1 kill in 28 dispatches and used it to size this arm. That estimate does not survive contact with more data:
+
+- **Assuming upstream #76974's 1.45%/dispatch, the probability of seeing ≥1 kill in a 28-dispatch window is 33.6%.** A single kill in that window is an entirely ordinary draw from a low base rate — it never evidenced an elevated rate.
+- Across 289 dispatches with 0 kills, the **rule of three** puts the 95% upper bound on the current rate at **1.04%/dispatch** — below upstream's measured 1.45%.
+
+Significance of the null result at each scope, against both candidate rates:
+
+| Scope | n | P(0 kills \| 3.6%) | P(0 kills \| 1.45%) |
+|---|---|---|---|
+| Past 131.6h | 85 | 4.5% | 28.9% |
+| day 5 band | 111 | 1.8% | 19.8% |
+| Since boot | 289 | **≈0.003%** | **1.5%** |
+
+At 289 dispatches the null result is significant **even against the upstream rate**. This is the first point in the investigation where the local data can say something about the phenomenon rather than only about local conditions.
+
+### Confounder: the harness moved 12 versions
+
+The host now runs **2.1.233**; the 2026-08-05 upstream cross-reference was written against **2.1.221** (the version #83814 was filed against). Any of the intervening releases could have changed the background task-supervision path. This is unfalsifiable from local data alone and is recorded as an alternative explanation to "episodic silence", not as a finding.
+
+### Limitation: concurrency during the decisive window was lower
+
+Sessions dispatching past 131.6h ran at **1–2 concurrent**, against the baseline's 4. The 85-dispatch sub-window therefore is not a strict reproduction of the baseline's shape — high uptime was reproduced, high concurrency was not. What defends the conclusion anyway is that concurrency has already been independently cleared: 2026-08-05〜07 reached peak 8 concurrent at 0 kills, and 2026-08-10's own baseline ran at 4. No cell of the concurrency axis now predicts kills.
+
+### Consequences
+
+1. **The investigation's local-variable program is exhausted.** Uptime, concurrency, and route have each been tested and none predicts the kill. H-a (episodic harness-side supervision state) is the only surviving hypothesis, and it is not testable from this side — it requires either an upstream response on #76974/#76942/#83814 or the task-notification wording discriminator (#1153).
+2. **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) should be closed as 未検証 — 再現条件消失.** With the rate bounded under ~1%, a detach arm would need hundreds of dispatches to show anything, and would be testing a mitigation for a phenomenon that is not currently occurring. The flag stays implemented and documented for the next burst.
+3. **Periodic reboot is not needed either.** It was the leading workaround on the strength of H-b'; with H-b' falsified there is no reason to pay its cost. 145h of uptime produced no kills.
+4. **The respawn compensation layer can now be evaluated for slimming** (#1070/#1081/#1093/#1119), with #598 re-evaluated as input — this is what #1146's expiry criterion was meant to trigger, now reached by evidence rather than by clock. The layer itself has never failed (12/12), so the question is cost, not reliability.
+
+The operational answer to the question that started this investigation — "can `/auto` be run concurrently again?" — is **yes, unreservedly**. 289 dispatches across 6 days, single and batch routes, up to 8 concurrent in the preceding window, zero external kills, and a compensation layer that has recovered every occurrence it ever saw.
+
 **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) stays on standby, and deliberately so.** Running it now would test detachment under conditions where nothing is being killed — the same design flaw that made Arm 1 unable to reproduce. It becomes informative only against a live reproduction, i.e. after uptime returns to the kill-producing range. If periodic reboot is adopted as the workaround before then, Arm 3 loses its test conditions permanently and should be recorded as "not tested — workaround adopted instead" rather than left open.
