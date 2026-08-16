@@ -78,3 +78,36 @@ Triage AC audit コメント (Consumed Comments 参照、MEMBER・first-class) �
 ## Consumed Comments
 
 - saito (MEMBER, first-class, 2026-08-15T12:21:30Z): Triage AC audit — (1) Pre-merge AC4 の verify command (`command "bats tests/run-fact-matching.bats"`) が新規テスト追加なしでも常時 PASS するリスクを指摘、`bats --filter` への絞り込みを提案。(2) AC1 の rubric が要求する fact_tokens 改善のうち「バレの phase 名除外」部分は #1238 で既に main に反映済みであり、Notes 添付の diff は現状の実装と乖離しているため、実装時は現状のソースを実測すべきと助言。両指摘とも本 Spec に反映済み (前者は #1279/#1334 の precedent パターンへ発展させて採用、後者は `## Root Cause` および `## Notes` に反映)。https://github.com/saitoco/wholework/issues/1363#issuecomment-5302197700
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 をそのまま実施した。Spec の `## Notes` が指摘した通り、Issue 本文添付の参考 diff のうち「バレの phase 名除外」部分 (#1238 で反映済み) は適用せず、`.issue` 文字列 `"null"` 除外ガードのみを `collect-run-facts.sh` に追加した。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Root Cause / Notes が現状ソースとの乖離点を明記していたため、実装中に新たな曖昧点は発生しなかった。
+
+### Rework
+
+N/A
+
+### Smoke Test
+
+Spec に `## Smoke Test` セクションなし — スキップ (no-op)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Root Cause/Notes の指示通り、Issue 本文添付の参考 diff のうち #1238 で main に反映済みの「バレの phase 名除外」部分は適用せず、`.issue` 文字列 `"null"` 除外ガードのみを追加した。
+- 3スクリプトの修正は Spec Changed Files の記述通りの最小差分で実施 (`collect-run-facts.sh` は1行、`scan-pending-ac.sh` は5行、`apply-run-fact-match.sh` は auto-check ブロックの構造変更 + fail-open フォールバック1行)。
+- `scripts/scan-pending-ac.sh` が Spec に記載のない `tests/scan-pending-ac.bats` からも参照されていることを Step 9 の behavioral change detection で検出したため、全 bats スイート (1790件) を並列実行して回帰がないことを確認した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Pre-merge AC1〜4 は全て verify-executor 相当の手動実行で PASS 済み、Issue チェックボックスも更新済み。`/review` では追加の rubric/grep 再実行で同じ結果になるはず。
+- Post-merge AC は「なし」。`/verify` は実質何もすることがない想定。
