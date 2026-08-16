@@ -347,6 +347,51 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 509' > /dev/null
 }
 
+@test "context gate: keyword found only inside a config-key-format token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 510}]'
+    export MOCK_ISSUE_BODY_510='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "capabilities.workflow" > "$BATS_TEST_TMPDIR/context-config-key-only.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-config-key-only.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "context gate: keyword found only inside a bare filename token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 511}]'
+    export MOCK_ISSUE_BODY_511='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo '`size-workflow-table.md`' > "$BATS_TEST_TMPDIR/context-bare-filename-only.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-bare-filename-only.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "context gate: keyword found as an independent word in prose still includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 512}]'
+    export MOCK_ISSUE_BODY_512='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "Please check the Workflow path before merging." > "$BATS_TEST_TMPDIR/context-independent-word.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-independent-word.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 512' > /dev/null
+}
+
+@test "context gate: keyword found only inside a nested (3+ segment) config-key-format token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 513}]'
+    export MOCK_ISSUE_BODY_513='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "capabilities.review.workflow" > "$BATS_TEST_TMPDIR/context-nested-config-key.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-nested-config-key.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
 @test "config gate: enabled config key includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 600}]'
     export MOCK_ISSUE_BODY_600='## Post-merge
