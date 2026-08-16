@@ -44,3 +44,33 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / [comment](https://github.com/saitoco/wholework/issues/1381#issuecomment-5306102807)
   - 内容: `/issue` フェーズの Issue Retrospective (曖昧性の自動解決ログ)。「Icebox 起票規約」の解釈 (#1070/#1081/#1093 の凍結理由・再評価トリガー形式を規約の実体として採用) と「#596 の scope 内外」(Purpose の #1070/#1081/#1093 限定に合わせ AC 対象外とした) の 2 点の Auto-Resolve 根拠を記録している。いずれも Issue 本文の「Auto-Resolved Ambiguity Points」節に既に反映済みの内容で、本 Spec に追加で取り込むべき新規情報はなし。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜4 (`docs/reports/external-kill-investigation.md` への Update セクション追記) をこのセッションで実施した順序・内容は Spec の記載通り。
+
+### Design Gaps/Ambiguities
+
+- `/code` 実行開始時点で Issue のラベルは既に `phase/ready` ではなく `phase/code` になっており、`reconcile-phase-state.sh code-patch --check-precondition` も同じ不一致を警告した。一方で Implementation Step 5 が対象とする #1070 / #1081 / #1093 の Issue 本文 (「再評価トリガー」節) は、この Issue が求める最終的な内容 (kill 率上限 < 1.04%/dispatch・補償層実績 12/12・episodic 仮説未解決を踏まえた条件文、いずれも「維持」判断) まで既に更新済みだった。これは前回セッションが Implementation Step 5 (Step 4 の Update セクション追記より後に実行すべき手順) を Step 1〜4 より先に実行した状態で中断し、`docs/reports/external-kill-investigation.md` へのコミットと Spec retrospective が未完了のまま終了したものと判断した。Spec の実装順序を変更する必要はなく、Step 1〜4 (Update セクション追記とコミット) を完了させることで整合させた。非対話モードのため AskUserQuestion は使わず、既存の Issue 本文更新内容 (3 件とも「維持」) をそのまま採用する auto-resolve とした。
+- 3 件それぞれの「維持 / 縮退 / クローズ」判断は、各 Issue 自身の再評価トリガーが未発火であること、実装コスト、kill 頻度から独立した正しさ上の懸念かどうかの 3 軸で個別に再検討した上で、結果として全て「維持」で確定した (既に Issue 本文へ反映済みの内容と一致)。AC3 (縮退時の要素別扱い) は該当なし (N/A) として明記した。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- #1070 / #1081 / #1093 の全 3 件を「維持 (Icebox 継続)」と判断した。根拠は kill 率上限 < 1.04%/dispatch、補償層実績 12/12、H-a (harness episodic) が唯一未解決の仮説である旨の 3 点。判断は `docs/reports/external-kill-investigation.md` の新規 Update セクションに記録した。
+- 3 件とも「維持」だったため AC3 (縮退時の要素別の残す/落とす判断) は該当なし (N/A) として明記した。
+- #596 (kill 率ベースの adaptive throttling) は本 Issue の AC 対象外だが、確定した kill 率上限 (<1.04%/dispatch) が #596 の設計前提を弱めている可能性を Update セクションに一言記録するに留めた。
+
+### Deferred Items
+- Post-merge AC (`verify-type: manual`): #1070 / #1081 / #1093 の Issue 本文「再評価トリガー」節が本判断を踏まえた条件文になっているかの確認。3 件とも既に更新済み (前回セッションで先行実施) であることを Code Retrospective に記録済みなので、`/verify` は現在の本文をそのまま確認すればよい。
+
+### Notes for Next Phase
+- テスト実行時に `tests/code.bats` の "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" が FAIL したが、`skills/code/SKILL.md` を変更していない本 Issue の diff とは無関係で、origin/main 上で既に FAIL する pre-existing の問題 (追跡済み: #1377)。本 Issue のスコープでは対応不要。
+- 全 bats スイート実行時、同時に他の worktree セッション (issue #1365, PR #1383) が並行して bats を走らせており、リソース競合で単一の集計コマンドが 10 分の Bash ceiling を超えてバックグラウンドに移行した。最終結果 (1802/1803 PASS、失敗は #1377 の 1 件のみ) は非同期の完了通知から確認した。
