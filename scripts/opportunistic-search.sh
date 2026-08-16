@@ -347,11 +347,23 @@ for N in $ISSUE_NUMBERS; do
     SCOPED_BODY=$(printf '%s\n' "$BODY" | awk "$POST_MERGE_AWK")
 
     if [ -n "$EVENT_NAME" ]; then
-        # Event mode: match verify-type: observation with the specified event name
-        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: observation" | grep "event=${EVENT_NAME}" || true)
+        # Event mode: match verify-type: observation with the specified event name.
+        # Tag and event= attribute are both read only from inside the same HTML
+        # comment (per modules/verify-classifier.md § Tag Extraction Rule) — condition
+        # prose that quotes "verify-type: observation" (Issue #1273) must not match.
+        # EVENT_NAME is unvalidated external input, so it is compared with index()
+        # (literal substring) rather than interpolated into the ERE.
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | awk -v evt="$EVENT_NAME" '
+            match($0, /<!--[ \t]*verify-type:[ \t]*observation[^>]*/) {
+                tag = substr($0, RSTART, RLENGTH)
+                if (index(tag, "event=" evt) > 0) print
+            }
+        ' || true)
     else
-        # Opportunistic mode: match verify-type: opportunistic with skill name
-        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: opportunistic" | grep -F "$SKILL_NAME" || true)
+        # Opportunistic mode: match verify-type: opportunistic (HTML-comment scoped)
+        # with skill name. SKILL_NAME is kept as a line-scope match — it legitimately
+        # appears in condition prose (modules/verify-classifier.md:161).
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep -E '<!--[[:space:]]*verify-type:[[:space:]]*opportunistic' | grep -F "$SKILL_NAME" || true)
     fi
 
     if [ -z "$MATCHED" ]; then

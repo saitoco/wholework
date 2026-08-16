@@ -6,7 +6,11 @@
 # change) triggers the scan. This is a deliberate best-effort proxy: at /issue
 # time no Spec exists, so there is no ## Changed Files section to scope against.
 # False positives are acceptable because the caller treats the result as a
-# warning, not a gate.
+# warning, not a gate. Tag extraction is scoped to the verify-type HTML comment
+# itself (per modules/verify-classifier.md § Tag Extraction Rule), so a preceding
+# HTML comment on the same line (e.g. a `verify: rubric "..."` comment quoting
+# "verify-type: observation" in its own text) cannot be mistaken for the real tag
+# (Issue #1273).
 #
 # Usage: check-skill-change-observation-ac.sh <issue-body-md-path>
 #
@@ -36,7 +40,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     "- [ ]"*) ;;
     *) continue ;;
   esac
-  tag=$(printf '%s\n' "$line" | grep -oE '<!--.*-->' || true)
+  tag=$(printf '%s\n' "$line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*[a-zA-Z_]+[^>]*' || true)
   case "$tag" in
     *"verify-type: observation"*) ;;
     *) continue ;;
