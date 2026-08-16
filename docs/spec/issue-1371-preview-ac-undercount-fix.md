@@ -63,3 +63,30 @@ Issue 本文に Post-merge セクションはなく、すべて Pre-merge auto-v
 - saito / MEMBER / first-class / ⚠️ Triage AC audit: verify command に問題があります / https://github.com/saitoco/wholework/issues/1371#issuecomment-5306568916
 
 Note: the bash safety net (`append-consumed-comments-section.sh`) recomputed cutoff to the `phase/spec` label assignment (set by this run's own Step 3, after the two comments above were fetched and consumed at Step 2 against the then-current `phase/issue` cutoff), so it saw zero comments after that later cutoff and wrote "No new comments since last phase." This entry replaces that placeholder with the comments actually consumed in-session; both were classified first-class (MEMBER) and acted on — see the Notes section entry on the `section_contains` heading-argument fix sourced from the second comment.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's Implementation Steps 1–5 exactly (per-line rule wording for `skills/audit/SKILL.md` N calculation and index enumeration, N1 bucket note, `allowed-tools` additions to both SKILL.md files, and the two new/extended bats test files).
+
+### Design Gaps/Ambiguities
+- The full `bats --jobs 18 tests/` run surfaced 1 unrelated pre-existing FAIL: `tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route", a stale assertion in a test file that asserts against `skills/code/SKILL.md` (untouched by this Issue — confirmed via `git diff 0158eaed HEAD -- skills/code/SKILL.md` showing no diff). Already tracked as Issue #1377; no duplicate filed. AC5 (`command "bats tests/*.bats"`) left unchecked in the Issue body for this reason, consistent with the pr-route Test FAIL handling policy (continue; CI detects it; report in completion message).
+- Confirmed pre-implementation FAIL for 2 new tests in `tests/audit-manual-waiting-count.bats` (both `preview-ac-unverified`-matching asserts) and 1 new test in `tests/auto-completion-report.bats`, via `git show 0158eaed:<path>` + the same section-extraction awk against the pre-implementation content. The `audit-manual-waiting-count.bats` invariant-check test (`N1 + N2 + N3 + N4 = N`) intentionally PASSes against pre-implementation content too — it guards pre-existing text this change did not remove, not new content, so the pre-implementation-FAIL requirement does not apply to it.
+
+### Rework
+- N/A — no rework occurred; single implementation pass.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Reused `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh` as-is (no new script) for both `/audit` and `/auto`, matching `/verify` Step 5's existing consumer — same script, three consumers, per the Spec's explicit design.
+- Left `modules/l0-surfaces.md` / `docs/structure.md` unchanged, per the Spec Notes' own assessment that the script's documented consumer set ("consumed by `/verify`") does not become false by adding two more callers of the same output for a different purpose.
+- Did not create a follow-up Issue for the `tests/code.bats` stale assertion encountered during Step 9 — it is already tracked as #1377, confirmed via the duplicate-check `gh issue list` scan.
+
+### Deferred Items
+- AC5 (`command "bats tests/*.bats"`) is unchecked in the Issue body pending Issue #1377's resolution (unrelated pre-existing stale test assertion in `tests/code.bats`, not caused by this change).
+
+### Notes for Next Phase
+- PR #1385 verification should note that the single bats FAIL (`tests/code.bats` Step 10 branch-scoped CI AC exclusion test) is pre-existing and tracked separately as #1377 — do not treat it as a regression introduced by this PR.
+- AC1–AC4 were checked off pre-merge based on rubric/section_contains verification during `/code`; AC5 remains open and should resolve once CI confirms the full suite result (or once #1377 is fixed independently).
