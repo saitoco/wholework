@@ -587,7 +587,7 @@ After creating `## Verification > Pre-merge`, compare Spec items against Issue b
 
 **Target identification**: for each item in `## Implementation Steps`, determine whether it adds new branching logic (a new conditional branch, a new case, a new event type, etc.) to an existing script, module, or skill.
 
-**New test case requirement**: for each Implementation Step identified above, the corresponding command-type AC / Verification item (e.g., `command "bats tests/xxx.bats"`) must require not only that the existing suite passes, but that a new test case verifying the new logic has been added and the suite passes — state this in the Implementation Steps or the AC, e.g.: 「既存スイートが PASS すること」だけでなく「新規ロジックを検証する新規テストケース (`tests/xxx.bats` に `<new-case-name>`) を追加したうえでスイートが PASS すること」。
+**New test case requirement**: for each Implementation Step identified above, the corresponding command-type AC / Verification item (e.g., `command "bats tests/xxx.bats"`) must require not only that the existing suite passes, but that a new test case verifying the new logic has been added and the suite passes — state this in the Implementation Steps or the AC, e.g.: ``既存スイートが PASS することだけでなく、新規ロジックを検証する新規テストケース (`tests/xxx.bats` に `<new-case-name>`) を追加したうえでスイートが PASS すること``。
 
 **Recording the result**: when `SPEC_DEPTH=full`, record a summary of the required new test case(s) in Step 13's `## spec retrospective`. When `SPEC_DEPTH=light`, Step 13 itself is skipped — record the same summary in the Spec's `## Notes` section instead.
 
