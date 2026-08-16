@@ -86,6 +86,31 @@ PR #1090 は `ALWAYS_PR=true` 下で Size XS/S が pr route に昇格するケ�
 - Squash-merged as commit `fa8aed4e` on `main`; remote branch `worktree-code+issue-1095` deleted.
 - No policy change; the conflict resolution combined two independently-generalized versions of the same Step 10 exclusion block without altering either side's intent.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Nothing to note. Pre-merge AC1〜3 は rubric/command で明確に判定可能だった。
+
+#### design
+- Nothing to note.
+
+#### code
+- Nothing to note. Implementation Steps どおり実施された。
+
+#### review
+- 「no-PR route 条件の拡張時に、同一条件を別ファイルで再実装している箇所を取りこぼしやすい」という一般教訓が Recurring issues に記録済み (`skills/spec/SKILL.md` のガード順序ギャップ、`skills/verify/SKILL.md` の cross-file terminology drift の2件)。/code の Steering Docs sync candidate check が `modules/*.md`/`docs/*.md` のみを対象とし、`skills/*/SKILL.md` 同士の drift を検知しないことが根本原因として指摘されている。
+
+#### merge
+- PR branch と main の独立した並行一般化 (patch/operate 両対応化) が衝突し、両方の意図を保持する形でマージされた。conflict resolution 時に bats test 22 の期待文言が一時的に欠落したが、post-resolution の bats 再実行で検出・修正された (正常なセーフティネット動作)。
+
+#### verify
+- Nothing to note。Pre-merge AC1〜3 は SKIPPED、Post-merge AC4 は静的コード検証で PASS。FAIL/UNCERTAIN なし。
+
+### Improvement Proposals
+- **Memory proposal (Tier 2)**: `/code` の Steering Docs sync candidate check は現状 `modules/*.md`/`docs/*.md` のみを sync 候補として提示し、`skills/*/SKILL.md` 同士が同一条件を独立に再実装しているケースの drift (今回発見された `skills/verify/SKILL.md` の terminology drift 等) を検知できない。route 条件の拡張のような "同じ条件を複数箇所で再実装する" パターンの変更時に、sibling `skills/*/SKILL.md` ファイルでの同一語句 (例: 拡張前の narrower term) の残存を機械的にスイープするステップの追加を検討する余地がある。Tier 1 の multi-file ripple / recurrence / SSoT 条件のいずれも強い証拠がないため Tier 2 (memory) 判定とし、Issue化は見送る。
+
 ## Consumed Comments
 No new comments since last phase.
 
