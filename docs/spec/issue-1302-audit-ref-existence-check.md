@@ -110,15 +110,26 @@ N/A — Spec に `## Smoke Test` セクションなし。
 `bats --jobs 18 tests/`: 1802/1803 PASS。1件の FAIL (`tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route") は、本PRの変更 (`skills/spec/SKILL.md` / `agents/review-spec.md`) を `git stash` で除去した状態でも再現することを確認済みの既存の不整合であり、本 Issue の実装とは無関係。Follow-up Issue #1377 として既に追跡されている (重複作成はスキップ)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1・2 の文言をそのまま `skills/spec/SKILL.md` Step 6 (Step 7 見出し直前) と `agents/review-spec.md` Perspective 1 (2.5 直後・3 直前) に反映した。挿入位置・文言ともに Spec の指示通りで、追加の判断は不要だった。
-- Pre-merge AC 3 (rubric) は grader が Spec ファイルを読まないため、Spec の Notes に書いた #1274/#1276 の実在確認ウォークスルーとは別に、`skills/spec/SKILL.md` の Example パラグラフ自体に両ケースの具体的な誤参照を明記する形で満たした。
+- Pre-merge AC 3 件はいずれも `rubric` タイプで、PR diff (Example パラグラフの #1274/#1276 明記、判定基準の (a)(b) 記述) から明確に PASS 判定した。UNCERTAIN・FAIL は発生しなかった。
+- CI `Language Convention check` の FAILURE (1 件、MUST) を検出し、`skills/spec/SKILL.md:228` の CJK トリガー語彙 (`実査`/`監査`/`分類`) をインラインコードスパンで囲む修正で解消した。修正後 CI 11/11 SUCCESS を確認済み。
 
 ### Deferred Items
 - `tests/code.bats` の既存 FAIL (Step 10 の期待文字列と `skills/code/SKILL.md` の実際の文言の乖離) は本 Issue のスコープ外・既存の不整合として特定し、重複起票を避けて既存の Follow-up Issue #1377 に委ねた。本 PR では対処しない。
 
 ### Notes for Next Phase
-- `/review` は本 PR で新設した `agents/review-spec.md` の "2.6. Cited reference existence check" 自身が正しく機能するかも間接的に検証対象になる (review-spec 自身のロジック変更のため、通常の Spec Deviation Check の一部として評価される)。
 - Post-merge AC (observation, `event=auto-run session=next`) は次に監査・実査系 Issue が実行されたときに評価される。`/verify` 初回実行時点ではまだ発火していない可能性が高い (SKIPPED 想定)。
+- `/merge` 実行前に CI が全て SUCCESS であることは本フェーズで確認済み (11/11)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — Implementation Steps 1・2 は Spec の記述内容を挿入位置・文言ともにそのまま反映しており、review-light (Perspective 1: Spec Deviation) でも構造的な乖離は検出されなかった。
+
+### Recurring issues
+1 件の MUST を検出・修正した: `skills/spec/SKILL.md` の新規追加行 (Step 6 の Signals 説明文) に生の CJK プローズ (`実査`/`監査`/`分類`) が混入し、CI の `Language Convention check` が FAILURE になっていた。Design Decisions (本 Spec 冒頭) は「判定基準・チェック文言は英語で記述する方針」と明記していたにもかかわらず、実装時にトリガーとなる日本語語彙自体を地の文で書いてしまった。件数は今回 1 件のみで「recurring」と呼べる規模ではないが、`scripts/check-language-convention.py` が用意している「インラインコードスパン/二重引用符で囲めば除外対象になる」という回避策が、本 Issue のように「英語文書中で日本語のトリガー語彙をデータとして列挙する」ケースに直結する典型例だった。単発の記録に留め、次回以降も同型が出るようなら別 Issue 化を検討する。
+
+### Acceptance criteria verification difficulty
+Nothing to note — Pre-merge の 3 件はいずれも `rubric` で、Issue 本文・PR diff の記述から明確に PASS 判定でき、UNCERTAIN は発生しなかった。
