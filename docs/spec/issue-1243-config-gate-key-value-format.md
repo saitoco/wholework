@@ -80,16 +80,27 @@ No new comments since last phase (cutoff: 2026-08-16T02:57:29Z, `phase/ready` la
 - #1377 — `tests/code.bats` の stale assertion 修正 (本 Issue のスコープ外、フルスイート実行時に検出)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `config=<key>:<value>` の分割方法・サニタイズ文字集合・フェイルモードは Spec の Auto-Resolved Ambiguity Points をそのまま採用 (最初の `:` で分割、`[A-Za-z0-9._-]`、fail-closed)。
-- `scripts/opportunistic-search.sh` の CONFIG_ATTR 抽出後の分岐は既存の `when=<axis>:<value>` ゲートと同じ `case "$VAR" in *:*) ... ;; *) ... ;; esac` パターンを踏襲し、実装スタイルの一貫性を優先した。
-- ドキュメント同期は `modules/observation-trigger.md` (SSoT) と `modules/verify-classifier.md` の2箇所のみ更新し、`docs/guide/customization.md` は Spec Notes の事前確認どおり変更不要と判断した。
+- Step 7 (External Review Integration) は Copilot/Claude Code Review/CodeRabbit いずれも `.wholework.yml` 未設定のため全体スキップと判定した。
+- Base Branch Conflict Pre-check (`git merge-tree`) はコンフリクトなし。Parser/Validator Edge Case Pre-check は `scripts/opportunistic-search.sh` の `config=<key>:<value>` format-detection/sanitization 分岐が発火条件に該当したため、実コード実行によるエッジケース検証 (空値・複数コロン・glob/shellメタ文字・コマンドインジェクション形状・2階層以上ネストキー・末尾ダッシュのみ・大小文字混在) を行い、全軸で fail-closed 設計どおりの正しい挙動を確認した。
+- review-light エージェント (4観点統合) と実行検証の両方で issue が0件だったため、Step 12 (Issue Resolution) は実施せず、Step 13 (AC Consistency Check) も実装変更なしのためスキップした。
 
 ### Deferred Items
-- Post-merge AC (`verify-type: manual`) — #783 を `config=auto-stop-at:merge` 相当で再型付けできるかの判断は post-merge に委ねる。
+- Post-merge AC (`verify-type: manual`) — #783 を `config=auto-stop-at:merge` 相当で再型付けできるかの判断は post-merge (`/verify`) に委ねる。
 
 ### Notes for Next Phase
-- フルテストスイートで検出した `tests/code.bats` の pre-existing 不整合はフォローアップ #1377 として起票済み、本 PR のスコープ外。
-- Pre-merge AC 8件すべて確認済みで Issue 側チェックボックスも更新済み (config=/observation-trigger.md 系のみで docs/guide/ 側は変更不要のため対象外)。
+- MUST issue 0件、CI 全11ジョブ SUCCESS のため `event=COMMENT` でレビュー投稿済み。`/merge 1378` に進んで問題ない。
+- フルテストスイートで検出した `tests/code.bats` の pre-existing 不整合はフォローアップ #1377 として起票済み、本 PR のスコープ外 (このレビューでも再確認・再指摘はしていない)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+N/A — Spec の Implementation Steps 1-4 と PR diff (`modules/observation-trigger.md`・`scripts/opportunistic-search.sh`・`tests/opportunistic-search.bats`・`modules/verify-classifier.md`) の間に構造的な乖離は見られなかった。分割方法 (最初の `:`)・サニタイズ文字集合 (`[A-Za-z0-9._-]`)・フェイルモード (fail-closed) はいずれも Spec の Auto-Resolved Ambiguity Points どおりに実装されている。
+
+### Recurring issues
+N/A — Copilot/Claude Code Review/CodeRabbit いずれも未設定 (`.wholework.yml` に対応キーなし) のため Step 7 は全体スキップ。review-light の4観点および Parser/Validator Edge Case Pre-check (実コード実行によるエッジケース検証) のいずれからも指摘は無く、再発パターンと呼べる論点はなかった。
+
+### Acceptance criteria verification difficulty
+Pre-merge AC 8件中、`grep` 系3件は機械的に確定 (`command` および `grep` verify command が的確)。`rubric` 系4件 (config= 処理のkey/value分割・後方互換・サニタイズ・fail-closed) はコード上の実装確認で全てPASSと判定できたが、いずれも「コード上確認できる」という記述に留まり、実行時の振る舞いまでは rubric 自体は保証しない。本レビューでは Parser/Validator Edge Case Pre-check により実際にコードを実行して補完検証したため UNCERTAIN は発生しなかったが、rubric verify command の設計として実行検証を必須化しない限り、将来同種の PR では静的読解のみで PASS 判定されるリスクが残る点は留意事項として記録する。
