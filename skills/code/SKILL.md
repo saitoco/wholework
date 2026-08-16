@@ -282,6 +282,20 @@ If the script exits non-zero, fix the allowed-tools mismatch before committing.
 
 If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/stale-test-check.md` and follow the "Processing Steps" section.
 
+#### New Verification-Test Pre-implementation FAIL Check
+
+If `scripts/validate-skill-syntax.py` exists, run the following check after implementation and before committing.
+
+**Differs from Stale Test Assertion Check above**: Stale Test Assertion Check confirms that a *removed* literal string does not linger in `tests/` (delete case). This check confirms that a newly *added* verification-style test assert actually FAILs against the pre-implementation state (add case). The two target opposite situations (deletion vs. new addition) — do not conflate them; apply both independently when applicable.
+
+**Target identification**: among the tests newly added in this implementation, target only asserts that verify a target file's content via string matching (`grep` / `grep -q` / `file_contains`-equivalent). Asserts that verify process output or exit codes are out of scope.
+
+**Pre-implementation FAIL confirmation**: for each targeted assert, temporarily revert the implementation target file(s) to their pre-implementation state (e.g., `git stash push -- <implementation target file>`), run the new test, and confirm it FAILs. Restore afterward with `git stash pop`.
+
+**Handling unintended PASS**: if the test unexpectedly PASSes against the pre-implementation state, the assert's pattern is non-specific — an existing similar string in the target file satisfies it even without the new content. Fix by narrowing the pattern to a more specific string, or by scoping the assert to a section-level extraction (reusing an existing section-extraction pattern, such as `tests/code.bats`'s `step0_section`). Re-confirm FAIL after the fix.
+
+**Recording the result**: record in `## Code Retrospective` (Step 12) using the form "Confirmed pre-implementation FAIL for N new test(s)."
+
 #### SSoT Module Cross-Check
 
 If the implementation creates or modifies a file under `modules/` that declares itself as an SSoT module (contains "SSoT" or "authoritative reference" in its header or `ssot_for` frontmatter field), run the following cross-check before committing:
