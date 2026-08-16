@@ -6,6 +6,12 @@ No new comments since last phase.
 
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1315#issuecomment-5235657327
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1315#issuecomment-5235677184
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1315#issuecomment-5241984272
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1315#issuecomment-5246567598
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1315#issuecomment-5255763931
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1315#issuecomment-5296392569
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1315#issuecomment-5304278099
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1315 --> / https://github.com/saitoco/wholework/issues/1315#issuecomment-5306139433
 ## Overview
 
 `skills/triage/skill-dev-verify-audit.md` の Pattern 2 (常時 PASS な verify command) に、AC が複数の量 (分母・分子など) を同時に要求しながら、それらが同一実行単位で同時に取得できないため定義自体が構造的に充足不能になるケースを検出する新規サブパターンを追加する。現行 Pattern 2 は「実装前から真になる」常時 PASS 系のサブパターン (基本形 + `command`/`section_contains`/`github_check`/`rubric` 型の 5 派生) を検出するが、「実装をどう進めても充足できない」定義矛盾は被覆していない。#1270 の Pre-merge AC 1 (observation dispatch の SKIPPED 率、分母 85・分子上限 5) が実例で、`/verify 1270` は UNCERTAIN と判定した。
