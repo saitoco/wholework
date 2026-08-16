@@ -95,17 +95,34 @@ No new comments since last phase.
 ### Rework
 - なし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。実装 (dedupe スクリプト、3 SKILL.md への配線、`modules/phase-handoff.md` の説明追加、回帰テスト) は Spec の Implementation Steps と一致していた。Code Retrospective に記録済みのスコープ外修正 (`tests/code.bats` 1行) も理由付きで妥当と判断。
+
+### Recurring issues
+
+なし。今回検出した 2 件 (MUST/SHOULD) は、決定論的パーサースクリプトを新規追加する PR 全般に共通する「構造解析コードは実行ベースの edge case pre-check で検証すべき」というレビュー観点そのものが機能した結果であり、過去 PR で繰り返し観測されたパターンの再発ではない。
+
+### Acceptance criteria verification difficulty
+
+なし。3件の Pre-merge AC (rubric ×2、command ×1) はすべて機械的に判定可能だった。command 条件は safe mode の CI reference fallback (`Run bats tests` ジョブの run command containment 確認) で PASS 判定でき、フル実行を要さなかった。
+
+### Improvement Proposals
+
+- **新規の決定論的パーサー/バリデータースクリプトを追加する PR では、`/review` の Parser/Validator Edge Case Pre-check が実行ベースの edge case 実行で 2 件 (MUST 1, SHOULD 1) の未検出バグを実際に発見した** — 本 PR (#1388) 自身が「二重化を防ぐ決定論的フォールバック」を追加する PR でありながら、そのフォールバック自身の境界検出ロジック (`grep`/`awk` による見出し検出) がフェンスコードブロックを考慮していないという盲点を持っていた。Pre-check の効果が実証されたケースとして記録 (Issue 起票は不要 — 既に fix 済みで /verify 側の集約対象として次フェーズに委ねる)。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の指示どおり決定論的 bash fallback (`scripts/dedupe-phase-handoff-section.sh`) を採用し、LLM 手順明確化のみでは対応しなかった — `append-consumed-comments-section.sh` と同じ Primary/Secondary 二層構成の前例に倣うことでリスクを抑えた。
-- `code`/`review`/`merge` の3スキルのみに配線し、`spec`/`verify` は配線しない — `spec` は常に最初の書き手で既存ブロックに遭遇し得ず、`verify` は Write=No のため。
-- dedupe スクリプト自身に commit/push ロジックは持たせない — 常に各フェーズの既存 commit ステップの直前に挿入されるため、その commit の `git add` に自動的に含まれる設計とした。
+- レビュー指摘 (MUST: フェンスコード内の見出し誤認、SHOULD: level-1 見出しの境界未対応) は両方とも本 PR 内で修正した — MUST はスクリプトの `grep`/`awk` をフェンス認識に変更、SHOULD は挙動変更ではなくドキュメント補足 (`modules/phase-handoff.md` の Rotation boundary detection) を選択し、スコープ外の挙動変更リスクを避けた。
+- 修正に対する回帰テストを `tests/phase-handoff.bats` に追加し (フェンスコードブロックのケース)、フルスイート (`bats --jobs 18 tests/` 1815/1815) と `validate-skill-syntax.py` (0 error/0 warning) で再検証した。
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- `/review` は本 PR の diff (`scripts/dedupe-phase-handoff-section.sh`, `modules/phase-handoff.md`, 3つの SKILL.md, `tests/phase-handoff.bats`, `tests/code.bats`, `docs/structure.md`, `docs/ja/structure.md`) を確認すること。`tests/code.bats` の 1 行修正は本 Issue のスコープ外だが Pre-merge AC (bats 全 PASS) を満たすために含めた既存バグ修正であり、Code Retrospective の Deviations from Design に理由を記録済み。
-- `docs/structure.md` のファイル数コメント (`(88 files)`) は `find scripts -maxdepth 1 -type f` で実測確認済み。
+- `/merge` は本 PR のマージ前に、追加コミット (`085489cf` — fence-aware 化 + doc 補足 + 回帰テスト) が CI green であることを確認すること。
+- Post-merge AC はなし (Issue #1374 本文の `### Post-merge` セクションに記載どおり)。
