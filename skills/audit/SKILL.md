@@ -354,15 +354,15 @@ Compute the following aggregates across all Issues currently in `phase/verify`:
 
 #### Observation Waiting Count
 
-Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: observation`. Count the number of such Issues.
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines whose `verify-type` tag is `observation` — the tag must be read only from **inside an HTML comment** (`<!-- verify-type: observation ... -->`), not from a substring match anywhere on the line, since condition prose may legitimately quote a tag name without that occurrence being the real tag (see `modules/verify-classifier.md` § Tag Extraction Rule). Count the number of such Issues.
 
 #### Opportunistic Remaining Count
 
-Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: opportunistic`. Count the number of such Issues.
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines whose `verify-type` tag, read the same HTML-comment-scoped way, is `opportunistic`. Count the number of such Issues.
 
 #### Manual Waiting Count
 
-Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: manual`, excluding lines that also carry `ac-tier: preview` — those are pre-merge preview-tier AC already confirmed by `/review` before merge, not part of the post-merge human-confirmation queue this count measures (see `modules/verify-classifier.md` § Purpose). Count the number of such Issues (`N`).
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines whose `verify-type` tag, read the same HTML-comment-scoped way, is `manual`, excluding lines whose `ac-tier` tag (read the same way) is `preview` — those are pre-merge preview-tier AC already confirmed by `/review` before merge, not part of the post-merge human-confirmation queue this count measures (see `modules/verify-classifier.md` § Purpose). Count the number of such Issues (`N`).
 
 `N` alone does not distinguish "Claude could resolve this at the next `/verify`" from "a human is genuinely required" — most of `N` turns out to be the former (see `/verify` Step 8b's per-run executability judgment, recorded via `type=verify-executability` markers per `modules/l0-surfaces.md` § Machine-Readable Event Marker). Break `N` down into 4 mutually exclusive reason-based buckets so the WARNING threshold can apply to the genuine human queue only, not to the raw Issue count.
 
@@ -512,6 +512,8 @@ Manual waiting: N total
 ```
 
 The `> 5` WARNING threshold applies to N4 (human queue) only — the total (`N`) row has no threshold, since it mixes buckets whose urgency differs by an order of magnitude. Do not let N1 (unevaluated) inflate N4: an unevaluated AC has no confirmed judgment either way. Do not let N0 (undetermined) inflate N1 either: a `gh` failure is a measurement gap, not a confirmed absence of judgment — report it as its own line so a spike in `N0` reads as an API/rate-limit problem to investigate, not as a shift in the human queue.
+
+**Measurement method change note (#1273):** the Observation/Opportunistic/Manual Waiting Count definitions above were changed from a plain substring match to an HTML-comment-scoped tag match — see `modules/verify-classifier.md` § Tag Extraction Rule. Reports generated under the old (substring) definition — including the `docs/stats/2026-08-05.md` baseline of 79 — are **not directly comparable** to reports generated under this definition. Every `docs/stats/YYYY-MM-DD.md` report generated after this change must include a "measurement method change" note under its Waiting Count section (same treatment as `docs/stats/2026-08-05.md` § 11, corrections 1/2), instead of re-outputting or re-computing prior reports under the new definition.
 
 List 30-day threshold violation Issues (if any) with Issue number, title, and dwell days.
 
