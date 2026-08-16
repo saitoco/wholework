@@ -71,19 +71,34 @@ PR #1090 は `ALWAYS_PR=true` 下で Size XS/S が pr route に昇格するケ�
 - `bats tests/code.bats` and `tests/spec.bats`: PASS (32 tests). Full suite (`bats --jobs 18 tests/`, triggered by Behavioral Change Detection since `operate-route.bats`, `run-code.bats`, `run-code-mergeability.bats`, `reconcile-phase-state.bats`, `check-file-overlap.bats`, `run-spec.bats`, and `verify-executor.bats` all reference the modified files beyond their direct counterpart): PASS (1800 tests, 0 failures).
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Extended `skills/code/SKILL.md` Step 10's firing condition from `ROUTE is patch` to `ROUTE is patch or operate`, and extended the adjacent "Patch route branch-scoped CI AC exclusion" note the same way, since the AC-conversion side effect newly reaches operate route.
-- For `skills/spec/SKILL.md`, since `/spec` has not resolved `ROUTE` at Step 10, added the Diff-less Axis's two determination criteria as a direct OR condition rather than referencing a `ROUTE` variable.
-- Resolved the Spec's "Steering Docs sync candidate" question by updating `modules/verify-classifier.md`'s scope description to cover both routes (the technical replacement form was unchanged).
+- Ran review as lightweight integrated review (`REVIEW_DEPTH=light`, per `--light` flag and Size=M) — 2 independent full passes of the review-light agent, cross-checked against the actual diff/code before acting.
+- Fixed both SHOULD findings pre-merge rather than deferring: (1) `skills/spec/SKILL.md` Step 10's `ALWAYS_PR=true` guard now evaluates the Diff-less Axis (operate route) criteria before skipping, so operate-route Specs under `always-pr: true` are no longer missed by `/spec`'s own pre-check; (2) `skills/verify/SKILL.md`'s "Patch route detection" prose was updated to "patch or operate route" terminology to match the SSoT note this PR generalized in `modules/verify-classifier.md`.
+- Posted the `skills/verify/SKILL.md` finding as a PR comment rather than an inline review comment — that file was not part of the PR's original diff, so GitHub's review-comment API could not attach a line comment to it.
 
 ### Deferred Items
-- Post-merge manual AC (operate route + `github_check "gh pr checks"` → auto-fix to `gh run list` confirmation) is left for `/verify` per its `verify-type: manual` tag — not executed in this phase.
+- Post-merge manual AC (operate route + `github_check "gh pr checks"` → auto-fix to `gh run list` confirmation) remains for `/verify` per its `verify-type: manual` tag — unaffected by this phase's fixes.
 
 ### Notes for Next Phase
-- All 3 pre-merge AC are rubric/command-verifiable and were confirmed PASS in Step 10 of this phase; `/review` can cross-check but no known gaps remain.
-- Full bats suite (1800 tests) passed after the change — no regression expected in `/review`'s own test pass.
+- All 3 pre-merge AC confirmed PASS (2 rubric, 1 command via CI reference fallback); CI all green (11/11 checks).
+- No policy change detected in Step 13 — the 2 review fixes are implementation refinements consistent with the Issue's stated intent, not scope or behavior changes; no Issue body/verify command update was needed.
+- Full targeted suite (`bats tests/spec.bats tests/code.bats tests/verify.bats`, 58 tests) and `validate-skill-syntax.py` both pass after the fixes; `/merge` can proceed directly.
 
 ## Consumed Comments
 No new comments since last phase.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+None. The implementation matched the Spec's 4 Implementation Steps exactly; review found no structural divergence between Spec and PR diff.
+
+### Recurring issues
+When a "no-PR route" conditional is extended to cover a second route (`patch` → `patch`/`operate`), it is easy to touch every call site that shares the *same underlying condition* while missing one that implements the condition differently. Two instances surfaced in this review, in different failure shapes:
+- `skills/spec/SKILL.md` Step 10's `ALWAYS_PR=true` skip guard was extended with the Diff-less Axis OR-condition, but the guard's own unconditional early-skip (evaluated before the OR-condition) was left unordered relative to it — a same-file, same-check ordering gap, not a missing file.
+- `skills/verify/SKILL.md`'s "Patch route detection" section implements the identical `PR_NUMBER`-empty condition that `modules/verify-classifier.md`'s SSoT note (updated by this PR) now describes as covering both routes, but the file itself was never touched — a cross-file terminology drift, functionally harmless here only because the underlying condition happened to already be route-label-agnostic.
+Both gaps trace to the same root pattern: extending a route condition at its point of *origin* (the SSoT note, or the primary firing condition) does not guarantee every *consumer* of that condition — same-file guards evaluated earlier in sequence, or other skill files re-implementing the same logic — was re-derived from the updated origin. A pre-merge sweep for other prose occurrences of the narrower term (`"patch route"` alone, without `"or operate"`) across `skills/*/SKILL.md` would have caught the `skills/verify/SKILL.md` gap before merge; no such sweep step exists yet in `/code`'s Steering Docs sync candidate check, which currently only prompts for `modules/*.md`/`docs/*.md`, not sibling `skills/*/SKILL.md` files implementing the same condition.
+
+### Acceptance criteria verification difficulty
+None. All 3 Pre-merge AC (2 `rubric`, 1 `command`) resolved cleanly via CI reference fallback and diff inspection — no UNCERTAIN, no missing or inaccurate verify commands.
