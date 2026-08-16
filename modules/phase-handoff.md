@@ -56,7 +56,7 @@ Calling phases: `spec` (write only), `code` (read then write), `review` (read th
 
 ### Rotation boundary detection
 
-When replacing an existing `## Phase Handoff` section, the section ends at the line immediately before the next `## ` (level-2) heading, or at end of file if no subsequent heading exists. Replace from `## Phase Handoff` through that boundary (exclusive of the next `## ` heading line).
+When replacing an existing `## Phase Handoff` section, the section ends at the line immediately before the next `## ` (level-2) heading, or at end of file if no subsequent heading exists. Replace from `## Phase Handoff` through that boundary (exclusive of the next `## ` heading line). A level-1 (`# `) heading is **not** a boundary — Spec files use `## ` for all top-level sections, so a `# ` line (if one ever appears) is treated as part of the preceding block, not as a section break. `scripts/dedupe-phase-handoff-section.sh` follows the same `## `-only boundary rule (Issue #1388 review finding).
 
 ## Read Procedure
 

@@ -47,17 +47,26 @@ if [[ -z "$SPEC_FILE" ]]; then
   exit 0
 fi
 
-# grep -c always prints a numeric count to stdout even on 0 matches (exit
-# status 1 in that case, which we intentionally ignore here).
-MATCH_COUNT=$(grep -c "^## Phase Handoff" "$SPEC_FILE" 2>/dev/null)
-MATCH_COUNT="${MATCH_COUNT:-0}"
+# Fence-aware heading scan: a "## Phase Handoff" line inside a fenced code
+# block (e.g. a documentation example quoting the format) is body content,
+# not a real heading, and must not be counted or picked as the latest block.
+HEADING_LINES=$(awk '
+  /^```/ { in_fence = !in_fence; next }
+  !in_fence && /^## Phase Handoff/ { print NR }
+' "$SPEC_FILE" 2>/dev/null)
+
+if [[ -z "$HEADING_LINES" ]]; then
+  MATCH_COUNT=0
+else
+  MATCH_COUNT=$(echo "$HEADING_LINES" | wc -l | tr -d ' ')
+fi
 
 if [[ "$MATCH_COUNT" -le 1 ]]; then
   # 0 or 1 heading: nothing to rotate away.
   exit 0
 fi
 
-LAST_LINE=$(grep -n "^## Phase Handoff" "$SPEC_FILE" 2>/dev/null | tail -1 | cut -d: -f1)
+LAST_LINE=$(echo "$HEADING_LINES" | tail -1)
 
 if [[ -z "$LAST_LINE" ]]; then
   echo "dedupe-phase-handoff-section.sh: WARNING — could not determine latest block, leaving spec file unchanged" >&2
@@ -71,8 +80,22 @@ TMP_FILE="${SPEC_FILE}.dedupe.tmp"
 # (level-2) heading — the same boundary-detection idea used by
 # append-consumed-comments-section.sh's own awk pass. Content between old
 # blocks (e.g. an intervening "## review retrospective" section) is preserved.
+# Fence-aware: lines inside a fenced code block are never treated as a
+# heading or a boundary, and are printed/skipped based on the current
+# in_old state like any other body line (Issue #1388 review finding).
 if ! awk -v last="$LAST_LINE" '
-  BEGIN { in_old = 0 }
+  BEGIN { in_old = 0; in_fence = 0 }
+  /^```/ {
+    in_fence = !in_fence
+    if (in_old) next
+    print
+    next
+  }
+  in_fence {
+    if (in_old) next
+    print
+    next
+  }
   /^## Phase Handoff/ {
     if (NR == last) {
       in_old = 0

@@ -152,3 +152,62 @@ EOF
     ! grep -q "<!-- phase: code -->" "$SPEC_FILE"
     ! grep -q "old decision from code phase" "$SPEC_FILE"
 }
+
+@test "dedupe-phase-handoff-section: a fenced code block quoting the heading text is not mistaken for the latest block (Issue #1388 review finding)" {
+    SPEC_FILE="$REPO_ROOT/docs/spec/issue-42-some-title.md"
+    cat > "$SPEC_FILE" <<'EOF'
+# Issue #42: some title
+
+## Overview
+Some content.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- old decision from code phase
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- old note
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- new decision from merge phase
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- new note
+
+## Format Reference
+Example of the section format:
+
+```
+## Phase Handoff
+<!-- phase: example -->
+```
+EOF
+
+    run "$DEDUPE_SCRIPT" 42
+
+    [ "$status" -eq 0 ]
+
+    # Real headings (2) collapse to 1; the fenced example line does not count
+    # as a third heading and is not mistaken for the latest real block.
+    PH_COUNT=$(grep -c "^## Phase Handoff" "$SPEC_FILE")
+    [ "$PH_COUNT" -eq 2 ]
+
+    grep -q "<!-- phase: merge -->" "$SPEC_FILE"
+    grep -q "new decision from merge phase" "$SPEC_FILE"
+    grep -q "## Format Reference" "$SPEC_FILE"
+    grep -q '```' "$SPEC_FILE"
+
+    ! grep -q "<!-- phase: code -->" "$SPEC_FILE"
+    ! grep -q "old decision from code phase" "$SPEC_FILE"
+}
