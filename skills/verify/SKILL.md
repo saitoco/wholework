@@ -228,7 +228,7 @@ Any Pre-merge condition already at `- [x]` is excluded from verification and rec
 
 If PR_NUMBER (from Step 2) is empty and any acceptance condition contains `github_check "gh pr checks"`, treat those conditions as UNCERTAIN with the following guidance:
 
-> PR does not exist (patch route). Use `github_check "gh run list"` form instead. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md`.
+> PR does not exist (patch or operate route). Use `github_check "gh run list"` form instead. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md`.
 
 Example replacement:
 ```
@@ -241,7 +241,7 @@ github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json con
 
 **Note:** the `expected_value` must change from the job name to `"success"`. `gh run list` outputs run-level rows with no job name column — keeping the job name causes false FAIL even when CI is green. `gh pr checks` outputs a job-level table (job name + conclusion) so job names work there; `gh run list` outputs a run-level table (conclusion only) so `"success"` is the correct `expected_value`.
 
-Do not attempt to run `github_check "gh pr checks"` conditions in patch route Issues — mark as UNCERTAIN immediately and skip execution.
+Do not attempt to run `github_check "gh pr checks"` conditions in patch-route or operate-route Issues — mark as UNCERTAIN immediately and skip execution.
 
 Verification priority:
 

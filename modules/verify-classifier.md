@@ -189,9 +189,9 @@ When a keyword cannot be identified, fall back to `grep` with a broader pattern:
 
 ### Patch Route CI Verification Note
 
-For Issues implemented via the patch route (direct commit to main, no PR), `github_check "gh pr checks"` **cannot be used** — no PR exists in the patch route.
+For Issues implemented via the patch route (direct commit to main, no PR) or the operate route (diff-less, external-tool operations only — see `modules/size-workflow-table.md` § "Diff-less Axis (operate route)"), `github_check "gh pr checks"` **cannot be used** — neither route produces a PR.
 
-This note applies only when the Issue actually takes the patch route. When `.wholework.yml` sets `always-pr: true`, Size XS/S is promoted to pr route (see `modules/size-workflow-table.md` § "ALWAYS_PR Override"), a PR does exist, and `github_check "gh pr checks"` is the correct form. Derive the route from `ALWAYS_PR` first, not from Size alone.
+This note applies only when the Issue actually takes the patch or operate route. When `.wholework.yml` sets `always-pr: true`, Size XS/S is promoted to pr route (see `modules/size-workflow-table.md` § "ALWAYS_PR Override"), a PR does exist, and `github_check "gh pr checks"` is the correct form. Derive the route from `ALWAYS_PR` first, not from Size alone. The `always-pr: true` override does not apply to operate route — a Spec that meets the Diff-less Axis determination criteria resolves to operate route regardless of `always-pr`.
 
 Use the `github_check "gh run list"` form instead:
 
@@ -199,7 +199,7 @@ Use the `github_check "gh run list"` form instead:
 github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
 ```
 
-When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
+When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route or operate-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
 
 **Note:** When converting from `github_check "gh pr checks" "JOB_NAME"`, also replace the `expected_value` from the job name to `"success"`. `gh run list` outputs a run-level table (STATUS / conclusion / TITLE / WORKFLOW / ...) and does not include job names — specifying a job name as `expected_value` will never match and will always FAIL even when CI is green.
 

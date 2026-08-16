@@ -148,3 +148,18 @@ new_verification_test_fail_check_section() {
     [[ "$output" == *"Code Retrospective"* ]]
     [[ "$output" == *"pre-implementation FAIL"* ]]
 }
+
+# Extract Step 10 section: from "### Step 10:" to the next "### " heading
+step10_section() {
+    awk '/^### Step 10:/{found=1} found && /^### / && !/^### Step 10:/{exit} found{print}' "$1"
+}
+
+@test "Step 10 Patch route verify command check fires for both patch and operate route" {
+    run step10_section "$SKILL_FILE"
+    [[ "$output" == *'If ROUTE is `patch` or `operate`'* ]]
+}
+
+@test "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" {
+    run step10_section "$SKILL_FILE"
+    [[ "$output" == *"For patch or operate route, Step 10 runs before"* ]]
+}
