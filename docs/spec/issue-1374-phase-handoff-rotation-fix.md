@@ -79,3 +79,33 @@ Write Procedure の Step 3 (既存ブロック検出・置換) は、LLM が Edi
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 判断根拠および Auto-Resolve Log の記録 (AC 2→3件、Post-mergeセクション新設) / https://github.com/saitoco/wholework/issues/1374#issuecomment-5306815790
+
+### /code (cutoff: phase/ready assigned 2026-08-16T10:04:39Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- `tests/code.bats` も変更対象に追加した (Spec の Changed Files には未記載) — 理由: Step 9 でフルスイート実行を行った際、本 Issue とは無関係の既存バグ (`tests/code.bats` の Step 10 CI AC exclusion アサーションが、#1375 適用後の実際の `skills/code/SKILL.md` 文言 "Step 10 runs before the commit or PR that would produce a CI run" と食い違っており、常に FAIL していた) を検出した。本 Issue の Pre-merge AC (`command "bats tests/*.bats"` が全 PASS すること) を満たすために、アサーション文字列を実際の SKILL.md 文言に合わせて 1 行修正した。スコープ外の修正だが、影響範囲は該当テストの期待文字列 1 行のみで、独立 Issue を起票するほどの規模ではないと判断し、本 PR に含めた。
+
+### Design Gaps/Ambiguities
+- なし。Spec の Implementation Steps 1-5 は記述どおりに実装できた。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の指示どおり決定論的 bash fallback (`scripts/dedupe-phase-handoff-section.sh`) を採用し、LLM 手順明確化のみでは対応しなかった — `append-consumed-comments-section.sh` と同じ Primary/Secondary 二層構成の前例に倣うことでリスクを抑えた。
+- `code`/`review`/`merge` の3スキルのみに配線し、`spec`/`verify` は配線しない — `spec` は常に最初の書き手で既存ブロックに遭遇し得ず、`verify` は Write=No のため。
+- dedupe スクリプト自身に commit/push ロジックは持たせない — 常に各フェーズの既存 commit ステップの直前に挿入されるため、その commit の `git add` に自動的に含まれる設計とした。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `/review` は本 PR の diff (`scripts/dedupe-phase-handoff-section.sh`, `modules/phase-handoff.md`, 3つの SKILL.md, `tests/phase-handoff.bats`, `tests/code.bats`, `docs/structure.md`, `docs/ja/structure.md`) を確認すること。`tests/code.bats` の 1 行修正は本 Issue のスコープ外だが Pre-merge AC (bats 全 PASS) を満たすために含めた既存バグ修正であり、Code Retrospective の Deviations from Design に理由を記録済み。
+- `docs/structure.md` のファイル数コメント (`(88 files)`) は `find scripts -maxdepth 1 -type f` で実測確認済み。
