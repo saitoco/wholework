@@ -136,6 +136,11 @@ Reason: Blocked by classifier.
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1351#issuecomment-5295522222
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5296393889
+- saito / MEMBER / first-class / ## Post-merge 条件の再確認 (`/audit verify-backlog` セッションから) / https://github.com/saitoco/wholework/issues/1351#issuecomment-5302103419
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5304278828
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1351 --> / https://github.com/saitoco/wholework/issues/1351#issuecomment-5306050519
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
