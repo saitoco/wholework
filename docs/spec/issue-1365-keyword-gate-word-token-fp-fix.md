@@ -3,6 +3,7 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズ自身の Issue Retrospective。`/verify 476` re-run #19 で観測した第四のサブパターン (ベアファイル名参照) を Background に参考情報として追記した旨を記録。Purpose/AC 文言は変更なし / https://github.com/saitoco/wholework/issues/1365#issuecomment-5306089283
+- (code phase) No new comments since last phase.
 
 ## Overview
 
@@ -74,3 +75,39 @@ Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-
 **New test case requirement 要約 (Step 13 は SPEC_DEPTH=light のため skip — ここに要約を記録)**: Implementation Step 1 (`resolve_filtered_context()` への `-e` 節追加) は新規分岐ロジックであるため、Implementation Step 3 で `tests/opportunistic-search.bats` に新規 `@test` を 3 件追加する: (a) config-key 形式トークンのみでの一致は除外される、(b) ベアファイル名トークンのみでの一致は除外される、(c) 独立単語としての出現は引き続き一致に含まれる (設計上の受容の回帰ロック)。
 
 両サブパターンが共有する「`/` を含まない `word.word` 形状」という構造的類似性に気づいたことで、2 つの具体例 (config-key・ベアファイル名) を単一の sed 節で一括対応できた — 個別に対応する場合よりシンプルな実装になった。
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (`phase/ready` label check)**: `phase/ready` ラベルが不在だったが、`gh api .../timeline` で確認したところ `phase/ready` → `phase/code` への遷移は既に完了しており (2026-08-16T06:47:08Z)、Spec ファイルも既に存在していた。これは前回の `/code` 実行がラベル遷移まで到達したものの、PR 作成前に (worktree・remote branch とも残存なし) 中断されたことを示唆する。non-interactive mode の auto-resolve ポリシーに従い、既存 Spec を使って続行した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Step 1〜3 を Spec の記述順どおりに実装した。節順序 (CLI フラグ節の後に config-key/ベアファイル名節を配置) や sed パターンも Spec の Root Cause / Implementation Step 1 の指示をそのまま採用した。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes (ハイブリッド採用の根拠、`keyword=` 実値調査結果、fail-safe 確認) が実装判断に必要な材料を既に揃えていたため、新規の曖昧さ解消は発生しなかった。
+
+### Rework
+- N/A
+
+### Pre-implementation FAIL Check
+- 新規追加した 3 `@test` のうち、string-matching assert を持つ 2 件 (config-key 形式トークン除外、ベアファイル名トークン除外) について、実装対象ファイル (`scripts/opportunistic-search.sh`) を `git stash` で実装前状態に戻して実行し、FAIL することを確認した。独立単語出現の回帰ロックテストは実装前後で PASS のまま (既存動作を変えない設計上の受容のため、当然の結果)。
+
+### Behavioral Change Detection
+- `tests/check-known-events-firing.bats` が `scripts/opportunistic-search.sh` を参照していたため behavioral change と判定し、フルスイート (`bats --jobs 18 tests/`, 1806 件) を実行した。1 件 pre-existing FAIL (`tests/code.bats`: "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" — `skills/code/SKILL.md` の記述と test 期待文字列の不一致) を検出したが、本 Issue が変更した3ファイルとは無関係で、既存の重複 Issue #1377 で追跡済みのため follow-up Issue の新規起票はスキップした。pr route の Step 9 FAIL handling に従い、CI が同じ FAIL を検出する前提でこのまま続行した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps をそのまま実装 (3 ファイル: `scripts/opportunistic-search.sh` に第 3 の sed 節、`modules/observation-trigger.md` に 2 段落追加、`tests/opportunistic-search.bats` に 3 テスト追加)。設計判断 (ハイブリッド方針、節順序) は Spec 側で確定済みだったため実装時の新規判断は発生していない。
+- Pre-merge AC 3 件すべて PASS と判定し、Issue body のチェックボックスを `/code` 内でチェック済みにした (Step 10 の verify-executor full mode 相当を rubric grader として自己実行)。
+
+### Deferred Items
+- Post-merge AC (`event=pr-review-light keyword=workflow` の観測) は Spec Notes に記載の通り、対象の Issue #476 が既に `phase/done` へ遷移済みのため文字通りには観測不能な可能性が高い。`/verify` はこの前提を踏まえて判定する必要がある。
+- 本 Issue とは無関係な pre-existing test FAIL (`tests/code.bats` の Step 10 branch-scoped CI AC exclusion アサーション) を検出したが、既存の重複 Issue #1377 で追跡済みのため本 PR では対応していない。`/review`/`/merge` はこの FAIL が CI 上にも同様に現れる可能性を考慮すること (本 Issue の変更に起因するものではない)。
+
+### Notes for Next Phase
+- rubric AC 2 件の判定根拠: AC1 は `modules/observation-trigger.md` に追加した「Config-key-format and bare-filename token exclusion (Issue #1365)」「Accepted limitation — independent word occurrence」の 2 段落で充足。AC2 は `scripts/opportunistic-search.sh` の第 3 sed 節 (根本修正) と同モジュールの keyword= 推奨運用ガイドライン (設計上の受容) で充足。
+- bats テストは 64/64 green (`tests/opportunistic-search.bats` 単独実行)。フルスイートは 1805/1806 green (無関係な pre-existing FAIL 1 件、Issue #1377 参照)。
