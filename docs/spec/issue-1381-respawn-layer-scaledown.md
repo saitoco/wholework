@@ -74,3 +74,62 @@
 ### Notes for Next Phase
 - テスト実行時に `tests/code.bats` の "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" が FAIL したが、`skills/code/SKILL.md` を変更していない本 Issue の diff とは無関係で、origin/main 上で既に FAIL する pre-existing の問題 (追跡済み: #1377)。本 Issue のスコープでは対応不要。
 - 全 bats スイート実行時、同時に他の worktree セッション (issue #1365, PR #1383) が並行して bats を走らせており、リソース競合で単一の集計コマンドが 10 分の Bash ceiling を超えてバックグラウンドに移行した。最終結果 (1802/1803 PASS、失敗は #1377 の 1 件のみ) は非同期の完了通知から確認した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC の Pre-merge / Post-merge 分割と `rubric` / `grep` の verify command 付与は適切だった。Post-merge AC が `verify-type: manual` に分類されたのも妥当 (評価対象が GitHub Issue 本文であり git diff の外にある)。
+- 曖昧性 2 件 (「Icebox 起票規約」の実体、#596 の scope 内外) の自動解決は、いずれも既存 3 件の Icebox Issue の実形式と Purpose の限定文から根拠を引いており、判断の追跡が可能だった。
+
+#### spec
+- Implementation Steps の判断軸 3 点 ((a) 各 Issue 自身の再評価トリガーの発火有無、(b) 実装コストと発生率のバランス、(c) kill 率から独立した正しさ・安全性の懸念かどうか) への分解が、Issue 本文の「論点は信頼性ではなく維持コスト」を実際に判定可能な形にできていた。
+- diff-less 判定は正しく回避された (`## Changed Files` に `docs/reports/external-kill-investigation.md` があるため operate route に落ちず patch route を維持)。
+
+#### code
+- 前回セッションが Implementation Step 5 (Issue 本文更新) のみ先行実行して中断した状態を検出し、Step 1〜4 を完了させて整合させた判断は妥当。
+- **code フェーズが external kill を受け、respawn で復旧した** (下記 verify 節に詳述)。補償層は機能した。
+
+#### review / merge
+- patch route のため該当なし。
+
+#### verify
+- Pre-merge 5 件は `/code` で PASS 判定済みのため already-checked skip rule により SKIPPED、Post-merge 1 件は Claude Execute 承認のもと PASS。判定自体に問題はなかった。
+- **本セッションの検証中に、#1146 の 2026-08-16 結論を覆すバースト kill を観測した。** 以下は本 Issue の AC 判定には影響しないが、判断の前提そのものが変わったため記録する。
+
+### 観測: 2026-08-16 07:09Z 前後の 3 セッション同時 kill
+
+| Issue | phase | start | respawn | 経過 | 親セッション (開始) |
+|---|---|---|---|---|---|
+| #1273 | review | 06:30:47Z | 07:09:24Z | 38m37s | `58212-1786837134` (batch, 08-15 23:38Z) |
+| #1365 | code-pr | 06:45:34Z | 07:09:32Z | 23m58s | `78405-1786860922` (batch, 08-16 06:15Z) |
+| #1381 | code-patch | 06:46:11Z | 07:09:40Z | 23m29s | `11685-1786860974` (single, 08-16 06:16Z) |
+
+respawn 時刻が **16 秒以内**に並ぶ。3 プロセスは 07:07 頃に同時に落ちており、開始時刻・経過時間・親セッション年齢 (7.5h / 53m / 53m)・claude CLI プロセス年齢 (6 日〜1 時間) のいずれも共通しない。共通するのは「その瞬間に走っていた」ことだけである。
+
+**これは上流 [#76974](https://github.com/anthropics/claude-code/issues/76974) の "BURSTY — several within a few minutes, then days of silence — suggesting an episodic supervision state rather than per-job decisions" の署名そのものであり、H-a を決定的に支持する。**
+
+#### #1146 の 2026-08-16 結論の誤り
+
+`docs/reports/external-kill-investigation.md` § 2026-08-16 Update は「289 dispatch / 0 kill」から rule of three で kill 率上限 < 1.04%/dispatch を導き、H-b' を否定して調査を決着させた。**この推定は誤りである。**
+
+- 同 report は #76974 の bursty 記述を自ら引用しておきながら、**沈黙期間のサンプルに平均率を当てはめた**。バースト分布では、沈黙区間から率の上限を推定すること自体が不適切である
+- 289 dispatch / 0 kill は「率が下がった」ではなく「バースト間の沈黙区間だった」と読むのが正しい
+- H-b' 否定の根拠 (120–144h 帯で 111 dispatch / 0 kill) 自体は事実として残るが、バーストという別軸の分布を考慮していないため結論の強度は落ちる
+
+本 Issue が #1070 / #1081 / #1093 を「維持」と判断した根拠のうち「kill 率上限 < 1.04%/dispatch」は撤回対象である。ただし **判断結果 (3 件とも維持) は変わらない** — 発生率が上振れするなら補償層はより必要になるため、維持の結論はむしろ補強される。3 件の再評価トリガーが共通して定める「kill 率の上限が本判断時点の基準を上回る新たな観測が得られた時」は、本観測により**発火済み**として扱う必要がある。
+
+#### 記録漏れ
+
+`docs/reports/orchestration-recoveries.md` の 8/16 エントリは 2 件のみ (07:43 = #1381、08:22 = #1365)。**#1273 の kill は未記録**で、`events.jsonl` の `phase_start` 重複からしか復元できない。#1146 が結論文に付した限定「negative result の根拠が `manual-recovery-respawn` の不在である場合、それは『親セッションが認識・記録した kill』の不在を意味するにすぎない」が、実際に効いた事例である。記録率は 2/3。
+
+#### notification 文言判定の不一致
+
+同一バーストに対し、本セッションは `cause: harness-task-stop` (notification が `status: killed` / "was stopped" のため上流 #82586 の discriminator で harness 由来と判定)、#1365 のセッションは `cause: background-task-killed-mid-code-phase` / `notification: indeterminate` と記録した。#1153 (CLOSED) が導入した discriminator は、同じ事象に対して実行者ごとに異なる結論を出しており、判定基準が運用上機能していない。
+
+### Improvement Proposals
+
+- **#1146 の 2026-08-16 結論を訂正する** — バースト分布に平均率を当てはめた誤りを report に Update として記録し、H-a を最有力として再提示する。3 件の Icebox Issue の再評価トリガー発火も併せて記録する。(対応: #1146 を reopen して実施。新規起票は不要)
+- **external kill の recovery 記録率を機械的に担保する** — 今回 3 件中 1 件 (#1273) が未記録だった。親セッションが kill 通知を受けた時点で `--write-manual-recovery` の呼び出しを促す仕組み (respawn 実行と記録をセットにする、または events.jsonl の `phase_start` 重複から未記録 kill を検出する監査) が要る。負の結果 (0 kill) の信頼性が記録率に依存している以上、これは計測基盤の欠陥である。
+- **notification 文言 discriminator の判定基準を明確化する** — #1153 で導入した「`status: killed` / "was stopped" なら harness 由来」の基準が、同一バーストに対し実行者ごとに `harness-task-stop` と `indeterminate` に割れた。判定不能な場合の既定値と、判定材料が揃わない場合の記録方法を定める必要がある。
