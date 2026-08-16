@@ -111,3 +111,34 @@ Spec に `## Smoke Test` セクションなし — スキップ (no-op)。
 ### Notes for Next Phase
 - Pre-merge AC1〜4 は全て verify-executor 相当の手動実行で PASS 済み、Issue チェックボックスも更新済み。`/review` では追加の rubric/grep 再実行で同じ結果になるはず。
 - Post-merge AC は「なし」。`/verify` は実質何もすることがない想定。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-spec (light mode Perspective 1) は Implementation Steps 1〜5 と実装差分が完全に一致していることを確認し、Steering Document 違反や deprecated 用語の混入もなかった。
+
+### Recurring issues
+
+Parser/Validator Edge Case Pre-check (実行確認ベース) で、`scripts/collect-run-facts.sh` と `scripts/scan-pending-ac.sh` の双方から SHOULD 相当の指摘が出た。両者は同一パターン: 新規に追加したガード条件 (`"null"` sentinel 文字列チェック、`fact_tokens` 空集合チェック) が Issue の Root Cause で明示的にスコープされた具体的なバグクラスのみを閉じ、同根の隣接ケース (JSON リテラル文字列全般、`fact_tokens` のネスト/非文字列要素混入) を未対応のまま残していた。いずれも Spec が意図的にスコープを絞った結果であり MUST 化はしなかったが、「pinpoint 修正 (特定の観測値のみをガードする) は类似の未観測ケースを取りこぼしやすい」という一般教訓として記録。今後同種のバグ修正 Issue では、Root Cause 記述時に「同じ根本原因を持つ隣接ケースを意図的にスコープ外とするか」を明示すると、レビュー側の判断 (MUST/SHOULD 分岐) がしやすくなる。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge AC1〜4 は `/code` フェーズの自己検証時点で既に PASS・チェック済みであり、`/review` Step 8 では rubric/grep/command の再実行で同じ結果を再確認しただけだった。UNCERTAIN や verify command の不備は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 10 (light mode) の review-light 出力と、Parser/Validator Edge Case Pre-check の実行確認済み findings を統合し、SHOULD 2件 + CONSIDER 1件をインラインコメントとして投稿した。MUST 相当の指摘はなかったため `event=COMMENT` で投稿。
+- SHOULD/CONSIDER 3件はいずれも Spec の Root Cause が明示的にスコープした範囲外 (隣接エッジケース) と判断し、本 PR での追加修正は行わずスキップした。
+
+### Deferred Items
+- `scripts/collect-run-facts.sh`: `.issue` が `"null"` 以外の JSON リテラル文字列 (`"true"`/`"false"` 等) の場合に `issues[]` へ不正エントリが混入する残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636271)。
+- `scripts/scan-pending-ac.sh`: `fact_tokens` のネスト/非文字列要素混入時に過小/過大マッチが発生する残存ギャップ (review comment: https://github.com/saitoco/wholework/pull/1372#discussion_r3790636274)。
+- `modules/run-fact-matching.md`: checkbox 書き込み失敗時の `action=auto-check` 表示と caller 向け説明文の精度改善 (任意対応、CONSIDER)。
+
+### Notes for Next Phase
+- `/merge` 実行前提: CI 全11件 SUCCESS、Pre-merge AC1〜4 全て PASS 済み、MUST issue なし。
+- Post-merge AC は「なし」のため `/verify` は実質作業なしの想定 (Spec の既存 Notes for Next Phase を踏襲)。
+- 上記 Deferred Items 3件は、頻度や実害が確認された場合にフォローアップ Issue 化を検討 (本セッションでは Issue 起票は見送り、Retrospective 記録のみ)。
