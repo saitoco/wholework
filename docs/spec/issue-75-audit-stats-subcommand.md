@@ -105,8 +105,16 @@
 - Post-merge 8条件はすべて `verify-type` タグのみ（`<!-- verify: ... -->` ヒントなし）→ ユーザー検証ガイドとして提示。opportunistic 条件は実際に `/audit stats` を実行して確認が必要。
 
 ### Improvement Proposals
-- 新規出力ディレクトリ（`docs/stats/` 等）を生成する Skill を Spec に記載する際は、`docs/structure.md` の更新も Changed Files に含めるチェックリストを `/spec` SKILL.md に追加する。
-- Skill が新規 `gh` コマンドを使用する場合、Spec の Changed Files に `allowed-tools` の更新を必須記載項目として明示する。
+- 新規出力ディレクトリ（`docs/stats/` 等）を生成する Skill を Spec に記載する際は、`docs/structure.md` の更新も Changed Files に含めるチェックリストを `/spec` SKILL.md に追加する。→ 既に Issue #135 で解消済み (CLOSED)
+- Skill が新規 `gh` コマンドを使用する場合、Spec の Changed Files に `allowed-tools` の更新を必須記載項目として明示する。→ 既に Issue #136 で解消済み (CLOSED)
+
+### 2026-08-16 再検証 (/audit verify-backlog セッションから)
+
+Post-merge 8条件すべてについて、`/audit stats` の既存実行履歴 (`docs/stats/2026-04-13.md` 〜 `2026-08-05.md` の5件) と `skills/audit/SKILL.md` の該当ロジックの静的確認により実地検証を代替した:
+- `docs/stats/YYYY-MM-DD.md` の自動保存、6セクション構成、Size別/segment別の意味のある実数値、Highlights の自動検出、companion Issue (`retro/verify` ラベル分離) の反映— いずれも既存レポートで直接確認できた
+- `--no-save` オプションは `skills/audit/SKILL.md` L653 の条件分岐を直接確認
+
+全17条件が checked となり `phase/done` に遷移した。改善提案は両方とも既存 Issue (#135, #136) で解消済みを再確認、新規提案なし。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results (/verify #75) / https://github.com/saitoco/wholework/issues/75#issuecomment-4231317099
