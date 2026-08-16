@@ -58,4 +58,8 @@ Issue 本文に Post-merge セクションはなく、すべて Pre-merge auto-v
 - **Tag/enum semantic extension consumer sweep 相当の確認**: `grep -rn "ac-tier: preview" skills/ modules/ scripts/` および `grep -rn "verify-type: manual" skills/ modules/ scripts/` で既存 consumer を確認し、`skills/audit/SKILL.md` (Manual Waiting Count) と `skills/auto/SKILL.md` (Pending manual confirmation) 以外に `ac-tier: preview` の無条件除外ロジックを持つ箇所がないことを確認した (`skills/verify/SKILL.md` は既に `resolve-preview-ac-fallback.sh` ベースで対応済み、`modules/verify-classifier.md` は分類基準のみで集計ロジックを持たない)。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1371#issuecomment-5306555646
+- saito / MEMBER / first-class / ⚠️ Triage AC audit: verify command に問題があります / https://github.com/saitoco/wholework/issues/1371#issuecomment-5306568916
+
+Note: the bash safety net (`append-consumed-comments-section.sh`) recomputed cutoff to the `phase/spec` label assignment (set by this run's own Step 3, after the two comments above were fetched and consumed at Step 2 against the then-current `phase/issue` cutoff), so it saw zero comments after that later cutoff and wrote "No new comments since last phase." This entry replaces that placeholder with the comments actually consumed in-session; both were classified first-class (MEMBER) and acted on — see the Notes section entry on the `section_contains` heading-argument fix sourced from the second comment.
