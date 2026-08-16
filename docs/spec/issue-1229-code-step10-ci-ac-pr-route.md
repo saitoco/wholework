@@ -61,16 +61,28 @@
 - N/A — Spec has no `## Smoke Test` section.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Generalized the heading to "CI verification AC exclusion (route-agnostic)" (Spec's recommended 方針 1) rather than adding a separate pr-route paragraph, keeping the shared root cause (Step 10 runs before Step 11 creates the commit/PR) as a single source of truth.
-- Left AC3 (`github_check "gh pr checks" "Run bats tests"`) unchecked in the Issue per the newly-written exclusion rule itself — this PR's own AC3 is a live instance of the pr-route case the rule describes, so Step 10 correctly excludes it from its own verify-executor pass.
+- Posted the Pull Request Review as `COMMENT` (not `REQUEST_CHANGES`) — no MUST issues were found across Step 8 (all 3 Pre-merge AC PASS), Step 9 (all 11 CI jobs SUCCESS), or Step 10's `review-light` pass (0 findings across all 4 perspectives).
+- Checked off AC3 (`github_check "gh pr checks" "Run bats tests"`) in the Issue body — the `Run bats tests` job reported SUCCESS, resolving the one AC this PR's own `/code` phase had deliberately left unverified under the exclusion rule it introduces.
 
 ### Deferred Items
-- AC3 (CI passes on this PR) — left `- [ ]`, to be confirmed by `/review` once the PR's checks exist, per the exclusion rule this PR itself introduces.
-- Post-merge observation AC — will be judged the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`.
+- None. All 3 Pre-merge AC are now `[x]`; only the Post-merge observation AC remains, which is out of `/review`'s scope by design (observed at the next pr-route `/code` run).
 
 ### Notes for Next Phase
-- `/review` should verify AC3 (`gh pr checks "Run bats tests"`) directly against this PR's CI once checks are available, then check it off.
-- #1095 (`docs/spec/issue-1095-operate-route-verify-check.md`) still targets the same Step 10 paragraph to add operate-route coverage; its `/code` run should integrate an `- operate route` bullet into the list this PR introduced rather than reintroducing a separate paragraph.
+- `/merge 1376` can proceed directly — no fix commits were needed, so no additional re-check cycle is pending.
+- The Post-merge observation AC (`event=auto-run session=next`) will resolve organically the next time a pr-route Issue with a `gh pr checks`-form CI AC runs `/code`, per the code-phase Phase Handoff.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- None. Implementation matched the Spec's Implementation Step 1 plan exactly (heading rename to "CI verification AC exclusion (route-agnostic)" + patch/pr route bullet list + the 2 cross-reference updates at Step 8 and Step 10), confirmed by the `review-light` agent's Perspective 1 (Spec Deviation) check.
+
+### Recurring Issues
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+- None. All 3 Pre-merge conditions (2 `rubric` + 1 `github_check`) resolved cleanly to PASS with no UNCERTAIN. AC1/AC2 were already verified and checked off during the code phase (`rubric` is safe-mode compatible). AC3 (`github_check "gh pr checks" "Run bats tests"`) — the one AC this PR's own `/code` phase correctly left unchecked under the exclusion rule the PR itself introduces — was confirmed PASS here once the PR's CI checks existed, exactly as the code-phase Phase Handoff's Notes for Next Phase anticipated.
+
+No improvement proposals from this review.
