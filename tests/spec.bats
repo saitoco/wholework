@@ -50,3 +50,16 @@ setup() {
 @test "spec skill new test case requirement records to Notes section when SPEC_DEPTH=light" {
     grep -q 'SPEC_DEPTH=light`, Step 13 itself is skipped' "$SKILL_FILE"
 }
+
+# Content-assertion test for the Patch route verify command check operate-route coverage
+# (added for #1095). Guards against the check regressing to a Size-XS/S-only condition that
+# misses Specs resolving to operate route (Diff-less Axis, orthogonal to Size).
+
+patch_route_verify_command_check_section() {
+    awk '/^\*\*Patch route verify command check:\*\*/{found=1} found && /^\*\*/ && !/^\*\*Patch route verify command check:\*\*/{exit} found{print}' "$1"
+}
+
+@test "spec skill Patch route verify command check references Diff-less Axis criteria" {
+    run patch_route_verify_command_check_section "$SKILL_FILE"
+    [[ "$output" == *"Diff-less Axis (operate route)"* ]]
+}
