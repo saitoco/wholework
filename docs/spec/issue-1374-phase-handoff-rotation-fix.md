@@ -114,15 +114,14 @@ No new comments since last phase.
 - **新規の決定論的パーサー/バリデータースクリプトを追加する PR では、`/review` の Parser/Validator Edge Case Pre-check が実行ベースの edge case 実行で 2 件 (MUST 1, SHOULD 1) の未検出バグを実際に発見した** — 本 PR (#1388) 自身が「二重化を防ぐ決定論的フォールバック」を追加する PR でありながら、そのフォールバック自身の境界検出ロジック (`grep`/`awk` による見出し検出) がフェンスコードブロックを考慮していないという盲点を持っていた。Pre-check の効果が実証されたケースとして記録 (Issue 起票は不要 — 既に fix 済みで /verify 側の集約対象として次フェーズに委ねる)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビュー指摘 (MUST: フェンスコード内の見出し誤認、SHOULD: level-1 見出しの境界未対応) は両方とも本 PR 内で修正した — MUST はスクリプトの `grep`/`awk` をフェンス認識に変更、SHOULD は挙動変更ではなくドキュメント補足 (`modules/phase-handoff.md` の Rotation boundary detection) を選択し、スコープ外の挙動変更リスクを避けた。
-- 修正に対する回帰テストを `tests/phase-handoff.bats` に追加し (フェンスコードブロックのケース)、フルスイート (`bats --jobs 18 tests/` 1815/1815) と `validate-skill-syntax.py` (0 error/0 warning) で再検証した。
+- Squash merge (PR #1388) を pre-merge AC 3件全チェック済み・review-incomplete-fallback なし・mergeable=clean の状態で実行した。追加コミット (`085489cf`) を含め CI green を確認済みだった。
+- `main` への squash merge 後、worktree を `origin/main` に fast-forward してから Phase Handoff の書き込みを行った (squash merge で PR ブランチが削除されるため、書き込みは post-squash に行う設計)。
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- `/merge` は本 PR のマージ前に、追加コミット (`085489cf` — fence-aware 化 + doc 補足 + 回帰テスト) が CI green であることを確認すること。
-- Post-merge AC はなし (Issue #1374 本文の `### Post-merge` セクションに記載どおり)。
+- Post-merge AC はなし (Issue #1374 本文の `### Post-merge` セクションに記載どおり) — `/verify` は特段の検証作業なしで Issue クローズ状態を確認するのみでよい。
