@@ -74,19 +74,18 @@
 - N/A — no rework occurred; single implementation pass. Confirmed pre-implementation FAIL (via `git stash` on the two SKILL.md files) for both new `tests/audit-manual-waiting-count.bats` and `tests/auto-completion-report.bats` assertions before committing. Behavioral change detection (both SKILL.md files are referenced by multiple test files beyond a single direct counterpart) triggered a full `bats --jobs 18 tests/` run — 1828/1828 green, no pre-existing unrelated failures encountered this time (unlike the #1377 stale assertion noted in Issue #1371's retrospective, already fixed by then).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed both SHOULD findings in-session rather than deferring: the `N0` fold ambiguity in `skills/audit/SKILL.md` (line 365) and the stale fail-open prose in `skills/verify/SKILL.md` (line 210), since both were low-risk documentation clarifications with no behavioral/script change involved.
-- For the `N0` ambiguity, resolved it by counting an exit-2 `ac-tier: preview` line into `N` (not just `N0`) so the existing `N0 ⊆ N` assumption holds regardless of which script produced the exit-2 signal, and made step 1 skip an Issue already folded into `N0` during the `N` calculation to avoid double-processing.
+- Merged PR #1392 via clean squash merge — `gh-pr-merge-status.sh` reported `mergeable=true reason=clean ci_status=success review_status=approved`, so Step 2 (Worktree Entry) and Step 3 (Resolve Conflicts) were both skipped per the skill's `mergeable=true` branch.
+- Pre-merge AC gate (`check-pre-merge-ac.sh 1386`) confirmed all 7 pre-merge Acceptance Criteria already checked (`unchecked_count=0`); review-incomplete-fallback check (`reconcile-phase-state.sh review 1386 --pr 1392 --check-completion`) found an organic Step 14 review completion (not fallback-origin), so no override marker was needed.
 
 ### Deferred Items
-- `skills/verify/SKILL.md` Step 5's actual disambiguation logic remains out of scope (already fail-closed via `reconcile-phase-state.sh --check-completion`); only the stale descriptive prose about `resolve-preview-ac-fallback.sh`'s old fail-open behavior was corrected.
-- Consolidating all 3 consumers onto a single disambiguation signal (currently `resolve-preview-ac-fallback.sh` exit code + `reconcile-phase-state.sh` for `/verify`) remains a future optional cleanup per the Issue, not addressed here.
+- Carried forward unchanged from the review phase: `skills/verify/SKILL.md` Step 5's disambiguation logic and full 3-consumer signal consolidation remain out of scope/future cleanup — not addressed in merge.
 
 ### Notes for Next Phase
-- No MUST issues; review posted as `COMMENT` (not `REQUEST_CHANGES`). Both SHOULD findings were fixed and re-verified (`validate-skill-syntax.py`, forbidden-expressions check, language-convention check, and the 3 directly affected bats files all green — 18/18).
-- `/merge 1392` should find nothing outstanding beyond the standard merge flow.
+- `/verify 1386` should find nothing outstanding beyond the standard post-merge acceptance check (Post-merge Verification section is empty — "なし").
+- Issue #1386 auto-closes on this merge (`closes #1386`, base branch is `main`); Step 6 (Verify Issue State fallback) should confirm `state=CLOSED` and `phase/verify` label are both applied.
 
 ## review retrospective
 
