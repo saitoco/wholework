@@ -17,13 +17,16 @@ Per-Issue Durations and session coverage metrics.
 
 Emitted at the beginning of a phase, before invoking `claude -p`.
 
+`spawn_detach` (values `0`/`1`): reflects the emitting process's `_WHOLEWORK_DETACHED` value at emit time — `1` only when `run-auto-sub.sh`'s spawn detachment shim (`WHOLEWORK_SPAWN_DETACH=1` opt-in, see `docs/tech.md`'s `WHOLEWORK_SPAWN_DETACH` environment variable entry) actually re-exec'd this wrapper process as a detached session/process-group leader, not merely that the flag was requested. This lets post-hoc burst analysis determine each killed wrapper's detach state at spawn time (Issue #1387).
+
 ```json
 {
   "ts": "2026-06-28T00:00:00Z",
   "issue": 123,
   "event": "phase_start",
   "session_id": "abc123",
-  "phase": "code-pr"
+  "phase": "code-pr",
+  "spawn_detach": "0"
 }
 ```
 
