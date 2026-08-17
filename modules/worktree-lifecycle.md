@@ -112,6 +112,48 @@ a dry-run report, with a separate `--apply-remote` flag (independent from `--app
 actual `git push origin --delete`. See `docs/spec/issue-1355-reclaim-remote-branches.md` for the
 full design.
 
+### Manual recovery worktree reuse: fetch and check divergence before continuing
+
+When a human or a parent `/auto` session manually recovers from an external kill or watchdog
+kill by reusing a residual worktree left behind by an interrupted phase (e.g. `run-merge.sh`'s
+`merge+pr-N` worktree, reused by hand to resolve a merge conflict — see Issue #1389), the
+worktree's branch may have fallen behind `origin/<branch>` in the interval: a concurrent process
+(a later push from the same PR's review phase, or a separate session) can advance `origin` after
+the worktree was left in place. Building and pushing a new commit on top of a stale local tip
+risks silently discarding that later work.
+
+Before continuing any commit-producing work in a reused residual worktree, fetch and compare:
+
+```bash
+git -C ".claude/worktrees/$WORKTREE_NAME" fetch origin "$WORKTREE_BRANCH"
+git -C ".claude/worktrees/$WORKTREE_NAME" log "$WORKTREE_BRANCH..origin/$WORKTREE_BRANCH" --oneline
+```
+
+- **No divergence** (empty output): proceed as normal.
+- **Divergence detected**: before discarding or rebasing anything, first check whether the local
+  branch holds unpushed work that origin does not have:
+  ```bash
+  git -C ".claude/worktrees/$WORKTREE_NAME" log "origin/$WORKTREE_BRANCH..$WORKTREE_BRANCH" --oneline
+  ```
+  If this second command's output is empty, the local branch is a strict subset of origin — it is
+  safe to fast-forward onto origin's tip (`git reset --hard origin/$WORKTREE_BRANCH`) and continue
+  from there. If it is non-empty, those commits exist only locally; do not discard them without
+  reviewing whether they are still needed — they may already be superseded by origin's newer tip,
+  or they may be the very manual-recovery work in progress. Reconcile deliberately (e.g. rebase
+  onto `origin/$WORKTREE_BRANCH`, or cherry-pick the needed commits) rather than defaulting to
+  `git reset --hard`.
+
+This complements the Entry section's own stale-worktree reuse check above (step 2), which governs
+a *phase's own* re-entry into a worktree matching its `WORKTREE_NAME`. This note instead covers
+the case where a *different* actor — a human, or a parent `/auto` session per
+`skills/auto/SKILL.md`'s Manual recovery hand-off — picks up a worktree left behind by an
+interrupted phase to finish the work by hand. See Issue #1389 for the incident this note
+generalizes from: a manual merge-conflict resolution (Issue #1273, session
+`58212-1786837134`) built its first commit on a stale worktree tip, discovered the divergence
+only after push via a `git log origin/<branch>..HEAD` comparison, and recovered by discarding the
+stale-based commit with `git reset --hard origin/<branch>` before retrying against origin's actual
+tip.
+
 ### Editing `.claude/` files inside worktrees
 
 Files under `.claude/` are treated as **sensitive files** by Claude Code — Edit and Write tools are automatically rejected for these paths. When implementation requires editing `.claude/` files (e.g., `settings.json.template`, hook scripts), use Bash commands instead:
