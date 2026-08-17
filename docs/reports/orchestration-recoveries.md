@@ -74,6 +74,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-17 00:29 UTC: manual-recovery-conflict-resolve
+
+### Context
+- Issue #1273, phase: merge
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 143
+
+### Diagnosis
+- cause: concurrent-batch-merge-conflict
+- watchdog killed merge phase after 600s silent window; PR #1383 was CONFLICTING with main due to concurrent batch issues (#1096/#1229/#1243/#1302) landing overlapping edits in the same files; parent session manually merged origin/main, resolved 3 conflicting files by combining both independent features, ran full bats suite (1826 tests green), pushed, and squash-merged
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-17 00:29 UTC: manual-recovery-respawn
 
 ### Context
