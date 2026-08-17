@@ -138,3 +138,21 @@ Code Retrospective が明示的に記録していた `--window` 共用設計の�
 ### Acceptance criteria verification difficulty
 
 Verify command (rubric/grep/github_check の混在) は全 9 件が過不足なく機械判定でき、UNCERTAIN は発生しなかった。唯一の律速要因は CI (`github_check "gh pr checks" "Run bats tests"`) 自体ではなく、**このブランチと無関係な `Forbidden Expressions check` ジョブの FAILURE** だった。根本原因は Issue #1386 の `/merge` Phase Handoff コミット (`main` への直接 push) が禁止表現を導入したこと — この書き込み経路は本リポジトリの forbidden-expressions CI ジョブでゲートされていない。**改善提案 (Issue 起票は見送り、/verify で集約判断)**: `/merge` の Phase Handoff 書き込みが `main` へ直接 push される経路 (`modules/worktree-lifecycle.md` の propagation path 表を参照) は、CI による禁止表現チェックの対象外であるため、そこで導入された違反が後続の全 PR の CI を無関係にブロックし続ける構造的ギャップがある。`/merge` の Phase Handoff コミット前に `check-forbidden-expressions.sh` をローカルで実行するステップを追加するか、`main` push 用の軽量 pre-push フックを検討する価値がある。
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | pr | SUCCESS | |
+| code | pr | SUCCESS | PR #1393 created |
+| review | pr | SUCCESS (Tier 3 recovery) | 1st attempt killed by harness mid-phase (no exit code observed); Tier 3 recovery sub-agent judged retry appropriate (cause: harness-task-stop); 2nd attempt (manual retry) self-aborted (exit 1) on a false-positive concurrent-session detection caused by a stale locked `review+pr-1393` worktree left by the killed 1st attempt; after unlocking/removing that worktree, 3rd attempt succeeded — see `docs/reports/orchestration-recoveries.md` § `review-tier3-recovery` (2026-08-17 07:02 UTC) for full diagnosis |
+| merge | pr | SUCCESS | manual invocation (`run-merge.sh` run directly by the parent session after Tier 3 recovery, since `run-auto-sub.sh`'s own orchestration had already been killed) |
+| verify | - | (this run) | |
+
+### Orchestration Anomalies
+- `run-auto-sub.sh`'s background task was killed by the harness during the review phase (Issue #1387 itself concerns detecting exactly this class of event — see Overview). Recovered via Tier 3 (recovery-sub-agent, action=retry) plus one round of manual stale-worktree cleanup after the retry's own self-abort. Full context recorded in `docs/reports/orchestration-recoveries.md`.
+
+### Improvement Proposals
+- Stale-worktree concurrent-session detection produced a false positive: the retried `/review`'s Worktree Entry step saw a `locked` leftover worktree from its own killed predecessor plus a `ListAgents` entry describing the parent session's own batch (`auto batch #1389,1386,1387,1377`) and concluded a live peer session held the worktree, when in fact the owning process (the killed `run-auto-sub.sh`) had already been confirmed dead by the harness. `modules/worktree-lifecycle.md`'s stale-worktree check currently instructs treating an existing worktree as "a live conflict — not stale — unless there is positive evidence the owning process has actually ended," but does not give guidance on distinguishing a genuinely live peer session from a `ListAgents` entry that is actually the *current* session's own ancestor/batch description. A future Issue could add that distinction (e.g., cross-check the `ListAgents` session id/name against the current session's own `AUTO_SESSION_ID` or process ancestry before treating it as evidence of a peer).

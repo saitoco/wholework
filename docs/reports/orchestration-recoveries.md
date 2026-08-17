@@ -74,6 +74,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-17 07:02 UTC: review-tier3-recovery
+
+### Context
+- Issue #1387, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh (via run-auto-sub.sh), exit code: unknown
+- Log tail: "[#1387] --- review phase (full): PR #1393 ---"
+
+### Diagnosis
+- cause: harness-task-stop
+- `run-auto-sub.sh`'s background task was reported `killed`/`was stopped` by the harness immediately after the review phase started (no watchdog/timeout keyword, no numeric exit code, no persistent error). `scripts/detect-external-kill.sh` returned `no-match` and the Tier 2 anomaly detector matched no known pattern. The Tier 3 sub-agent found PR #1393 had zero comments/reviews and both worktree checkouts clean with nothing uncommitted — no partial state to recover, consistent with a harness-level stop rather than a genuine external signal or unrecoverable failure. A manual `bash scripts/run-review.sh 1393 --full` retry then hit a second, unrelated snag: a stale `review+pr-1393` worktree left locked by the killed attempt caused the retried `/review` to self-abort (exit 1, silent no-op) on a false-positive concurrent-session detection (it misread its own killed predecessor's leftover lock + a `ListAgents` entry for this very parent session as evidence of a live peer session). Unlocking and removing the stale worktree, then retrying `run-review.sh` a third time, succeeded cleanly.
+
+### Recovery Applied
+- action=retry (Tier 3 plan) + manual stale-worktree cleanup (`git worktree unlock` / `git worktree remove --force` / `git branch -D`) before the retry that actually succeeded
+- steps: 0 (Tier 3 plan itself had no explicit steps; the worktree cleanup was performed by the parent session after the plan's first retry attempt hit the unrelated stale-worktree self-abort)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-17 00:29 UTC: manual-recovery-conflict-resolve
 
 ### Context
