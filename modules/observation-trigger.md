@@ -257,10 +257,14 @@ Issue, not a currently available option.
 
 **Matching specification:**
 
-- Extraction: `keyword=<value>` is read from the AC line via `grep -oE 'keyword=[^ >]+'` (stops at the next space or `-->`).
+- Extraction: `keyword=<value>` is read only from inside the same `verify-type:` HTML comment as
+  the tag it modifies (`TAG_COMMENT`, per `modules/verify-classifier.md` § Tag Extraction Rule),
+  via `grep -oE 'keyword=[^ >]+'` applied to that comment span (stops at the next space or `-->`).
+  A `keyword=` occurrence outside that comment — e.g. in condition prose after `-->` — is not a
+  real attribute and does not gate the AC (Issue #1273).
 - Path-like, CLI-flag-like, and config-key-format/bare-filename token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' -e 's#[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)+##g' "$CONTEXT_FILE"` before comparison. Clause order matters — see "Config-key-format and bare-filename token exclusion (Issue #1365)" above.
 - Comparison: case-insensitive substring match of `<value>` against the filtered content (`echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"`).
-- Gate disabled (unconditional match) when: no `keyword=` attribute on the AC line, no `--context-file` given, or the given path does not exist.
+- Gate disabled (unconditional match) when: no `keyword=` attribute inside the tag's own comment, no `--context-file` given, or the given path does not exist.
 - No semantic/LLM judgment is performed here — this is a lightweight pre-filter; the actual acceptance decision still belongs to `/verify`.
 
 This is a lighter-weight alternative to adding a new fine-grained event name for every condition
@@ -306,7 +310,11 @@ in `.wholework.yml`.
 
 **Matching specification:**
 
-- Extraction: `config=<key>` (or `config=<key>:<value>`) is read from the AC line via `grep -oE 'config=[^ >]+'` (stops at the next space or `-->`).
+- Extraction: `config=<key>` (or `config=<key>:<value>`) is read only from inside the same
+  `verify-type:` HTML comment as the tag it modifies (`TAG_COMMENT`, per
+  `modules/verify-classifier.md` § Tag Extraction Rule), via `grep -oE 'config=[^ >]+'` applied to
+  that comment span (stops at the next space or `-->`). A `config=` occurrence outside that
+  comment does not gate the AC (Issue #1273).
 - Form dispatch: split on the presence of `:` in the extracted attribute value.
   - **No `:` (boolean form)**: `<key>`'s value is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then lowercased. The resolved value must equal `"true"` exactly; any other value (including the `"false"` fallback) excludes the Issue from match results. This form's behavior is unchanged from before Issue #1243.
   - **Contains `:` (`config=<key>:<value>` form)**: split on the **first** `:` — the substring before it is `<key>`, the substring after it is `<value>` (the same first-colon-split convention `when=<axis>:<value>` above already uses). Both `<key>` and `<value>` are validated against the character set `[A-Za-z0-9._-]` (the same set `get-config-value.sh` itself enforces on `<key>`, via the same glob-match implementation style — a `case` pattern, not a regex). If either side is empty or contains a character outside that set, the AC line is excluded (fail-closed) — this covers both a sanitization failure and a notation error (e.g. a stray leading/trailing `:`). When both sides validate, `<key>` is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then both the resolved value and `<value>` are lowercased and compared for exact string equality; the Issue is included only on a match.
@@ -359,10 +367,14 @@ so it is resolved directly from the `--execution-context` argument the firing sk
 
 **Matching specification:**
 
-- Extraction: `when=<clauses>` is read from the AC line via `grep -oE 'when=[^ >]+'` (stops at the next space or `-->`), trailing dashes stripped — the same extraction pattern as `keyword=` and `config=`.
+- Extraction: `when=<clauses>` is read only from inside the same `verify-type:` HTML comment as the
+  tag it modifies (`TAG_COMMENT`, per `modules/verify-classifier.md` § Tag Extraction Rule), via
+  `grep -oE 'when=[^ >]+'` applied to that comment span (stops at the next space or `-->`), trailing
+  dashes stripped — the same comment-scoped extraction as `keyword=` and `config=` above. A `when=`
+  occurrence outside that comment does not gate the AC (Issue #1273).
 - Clauses are split on `,` and every clause must resolve true for the gate to pass (AND, not OR).
 - Each clause is `<axis>:<value>`. Per axis: `route:<v>` checks `any(.issues[]?; .route == $v)`, `mode:<v>` checks `.mode == $v`, `recovery-tier:<v>` checks `any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)` against the resolved run facts JSON; `execution-context:<v>` checks `<v>` against the `--execution-context` argument value via a direct string comparison (no facts JSON).
-- Gate disabled (unconditional match) when: no `when=` attribute on the AC line.
+- Gate disabled (unconditional match) when: no `when=` attribute inside the tag's own comment.
 - Fail-open (unconditional match for that single clause, with a stderr warning) when: for `route`/`mode`/`recovery-tier` clauses, run facts cannot be resolved (`collect-run-facts.sh` fails or the `--facts-file` path is unreadable), the facts JSON is not valid JSON, or the facts JSON carries no run context (`(.issues | length) == 0 and .mode == "unknown"`); for an `execution-context` clause, `--execution-context` was not given. Other clauses in the same comma-separated `when=` attribute are still evaluated — this fail-open is per-clause, not per-AC. **Note**: the stderr warning is only observable when `opportunistic-search.sh` is invoked directly. The `/review` dispatch path added by Issue #1233 (`skills/review/SKILL.md` → `observation-trigger.sh` → `opportunistic-search.sh`) discards the child process's stderr (`2>/dev/null` in `observation-trigger.sh`), so a fail-open on that path produces no visible diagnostic.
 - A malformed clause (no `:`, or an empty value) or an unknown axis is ignored (fail-open for that clause only, with a stderr warning) rather than excluding the AC — an unrecognized clause never counts as a failed AND term.
 - `when=` presumes `event=auto-run` for the `route`/`mode`/`recovery-tier` axes only — the run facts JSON describes an `/auto` execution, so declaring one of those three axes on an AC tagged with a different `event=` value has no meaningful facts to match against (the gate still evaluates mechanically, but the result is not a meaningful signal). `execution-context` does not presume `event=auto-run`: it has meaning for any event whose firing skill can run in either main or fork context, e.g. `pr-review-full`/`pr-review-light`.

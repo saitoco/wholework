@@ -58,6 +58,10 @@ cutoff: `2026-08-16T05:12:40Z` (直近の `phase/*` ラベル付与)
 
 2 件目の指摘は採用した (Pattern 2 は実在する問題)。ただし修復手段は `--count --filter` 形ではなく `file_contains` + `command` の 2 コマンド形を採る — 理由は Notes「Triage AC 監査の修復案からの逸脱」参照。
 
+### review phase (cutoff: `2026-08-16T06:33:35Z`)
+
+No new comments since last phase.
+
 ## Changed Files
 
 - `modules/verify-classifier.md`: `### Tag Extraction Rule (consumers)` セクションを新設 — タグは HTML コメント内からのみ読むという正準ルール、awk 形 (`[ \t]*`) と `grep -E` 形 (`[[:space:]]*`) の両方の canonical pattern、および consumer 一覧を記載 (SSoT)
@@ -185,7 +189,7 @@ Size L のため検出上限は 5 点 (`modules/ambiguity-detector.md` Size Rout
 `scripts/scan-pending-ac.sh` は「`gh` 失敗時に `[]` を返して exit 0」と明記された fail-open 設計 (criterion (c))、`scripts/opportunistic-search.sh` は `|| true` を含む (同じく (c))、`scripts/check-skill-change-observation-ac.sh` は入力検証で exit 2 を返す validator (criterion (b)) — いずれも fail-safe critical。期待挙動:
 
 - **空入力 / 該当行 0 件**: 従来どおり `[]` / 空出力 / exit 0。本修正はマッチ条件を狭めるだけなので、空入力の経路は不変
-- **`>` を含む条件文**: canonical pattern の `[^>]*` は `<!--` の位置から開始するため、コメントより前の散文に `>` があってもマッチ開始位置に影響しない。コメント内では `-->` の `>` で確実に停止する
+- **`>` を含む条件文**: canonical pattern の `[^>]*` は `<!--` の位置から開始するため、コメントより前の散文に `>` があってもマッチ開始位置に影響しない。ただし当初の想定 (`[^>]*` はコメント内の `-->` で確実に停止する) は誤りだった — `[^>]*` は `-->` ではなく、コメント本体中の**最初の**リテラル `>` (例: `note="a>b"` のような属性値) で停止してしまい、`event=` 等の後続属性を取りこぼす。実装では `[^>]*` の代わりに `([^-]|-[^-]|--[^>])*-->` を使い、コメントの実際の終端 `-->` まで到達させることでこれを解消した (`scripts/opportunistic-search.sh:391`、`scripts/check-skill-change-observation-ac.sh:43`、`scripts/get-auto-session-report.sh:613`、新設 bats テストの `note="a>b"` / `count>10` ケースで固定)
 - **`"` を含む条件文**: `awk index()` / `grep -F` は literal 照合のためクォートの影響を受けない。ERE へ外部入力を内挿しないこと (Step 4 の `EVENT_NAME`) で注入面も作らない
 - **CRLF**: 末尾 `\r` は `[a-zA-Z_]+` の文字クラス外なのでタグ名に混入しない (既存の trailing `[ \t\r]+` 除去も維持)
 - **マルチバイト**: awk / grep のバイト単位マッチで、日本語の条件文はパターンに影響しない
@@ -259,28 +263,99 @@ Implementation Steps 2-7 はいずれも既存スクリプトへの分岐ロジ�
 
 Implementation Steps 2-6 はいずれも既存スクリプトへの分岐ロジック変更を含むため、受入条件 1-5 は「既存スイートが PASS すること」に加え、新規ロジックを検証する新規テストケースの追加を要求する: `tests/scan-pending-ac.bats` の `html-comment scoped tag extraction` / `tests/post_merge_check.bats` の `html-comment scoped manual extraction` / `tests/opportunistic-search.bats` の `html-comment scoped tag match` / `tests/check-skill-change-observation-ac.bats` の `html-comment scoped tag regression` / `tests/audit-auto-session.bats` の `html-comment scoped residual tally`。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **Span-termination pattern strengthened past the Spec's own `[^>]*`** (found and fixed during `/review`, PR #1383): Implementation Step 4 specified `match($0, /<!--[ \t]*verify-type:[ \t]*observation[^>]*/)` for the event-mode extraction span. `[^>]*` stops at the *first* literal `>` inside the comment body (e.g. `note="a>b"`), not at the comment's own closing `-->` — the Spec's own "fail-safe critical" Notes bullet claiming reliable `-->` termination was itself wrong (see Notes § fail-safe critical, corrected below). The actual implementation uses `([^-]|-[^-]|--[^>])*-->` instead, in `scripts/opportunistic-search.sh` (`TAG_COMMENT`, and — after a `/review` fix — `WHEN_ATTR`), `scripts/check-skill-change-observation-ac.sh`, and `scripts/get-auto-session-report.sh`. New bats cases (`note="a>b"`, `count>10`) lock in the fix.
+- **`TAG_COMMENT`-scoped `keyword=`/`config=`/`when=` extraction added beyond Step 4's stated scope**: Step 4 only specified fixing the two match paths (event-mode `observation` match, opportunistic-mode match); it did not mention comment-scoping the sibling `keyword=`/`config=`/`when=` attribute reads in `scripts/opportunistic-search.sh`. These were nonetheless comment-scoped (via the new `TAG_COMMENT` variable) — `keyword=`/`config=` during initial implementation, and `when=`/`AC_TAG` during a `/review` (PR #1383) fix cycle after `/review` found it was the one gate left on the old line-scoped pattern.
+
+### Design Gaps/Ambiguities
+
+- N/A — the Spec's pattern choices (awk `[ \t]*` vs. `grep -E` `[[:space:]]*`, `index()` for `EVENT_NAME`, etc.) were unambiguous and required no further judgment during implementation.
+
+### Rework
+
+- **bash 3.2's `set -e` does not abort a bats `@test` function on a bare `[[ ... ]]` compound-command failure unless it is the function's last statement.** Two of the five new bats test cases (`tests/post_merge_check.bats`, `tests/check-skill-change-observation-ac.bats`) initially wrote 2-3 sequential `[[ "$output" == *"..."* ]]` / `[[ "$output" != *"..."* ]]` assertions where only the last one happened to be gated correctly — the pre-implementation FAIL check for the *last* assertion passed, but re-verification against pre-fix scripts showed the non-final assertions silently passed even when they should have failed. Confirmed the root cause with an isolated `bash -c 'set -e; [[ "abc" != *"abc"* ]]; echo REACHED'` (prints REACHED, exit 0) vs. the single-bracket equivalent `[ "abc" != "abc" ]` (aborts, exit 1) — `[ ]` (a regular builtin) propagates under `set -e`, `[[ ]]` (a compound command) does not, except as the function's final command. Fixed by appending `|| return 1` to every non-final `[[ ]]` assertion in both files. The other three new tests (`tests/scan-pending-ac.bats` used single-bracket `[ ]`; `tests/opportunistic-search.bats` used `echo | jq -e ... > /dev/null` pipelines, which do propagate under `set -e` in bash 3.2) were unaffected and needed no rework.
+- Confirmed pre-implementation FAIL for 5 new test(s) (one per consumer script), each re-confirmed against the corrected assertion gating.
+
+### Smoke Test
+
+- N/A — the Spec has no `## Smoke Test` section.
+
+### Full Suite Run
+
+- `bats --jobs 18 tests/` (1809 tests): 1 pre-existing unrelated failure — `tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" (`skills/code/SKILL.md` does not currently contain the string `tests/code.bats` expects). Confirmed this failure reproduces identically on the unmodified `main` branch (outside this worktree, before any of this Issue's commits), so it is not a regression introduced here. Not filed as a follow-up Issue in this session — left for a future `/code` or `/audit drift` run to pick up, since it is orthogonal to this Issue's scope (post_merge_check.bats's own known parallel-only flake, documented in `docs/tech.md` § CI bats Parallel/Serial Split, did not reproduce in this run).
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The Spec's Implementation Step 4 specified an exact regex pattern (`[^>]*` span termination) that
+turned out to be wrong (it stops at the first literal `>` inside a comment body, not at the
+comment's own `-->`) — the implementation silently improved on it (`([^-]|-[^-]|--[^>])*-->`)
+without recording the deviation, and the Spec's own Notes bullet kept asserting the disproven
+premise until this review corrected it. Takeaway: when a Spec's Implementation Step embeds a
+literal regex/pattern (not just a description of intended behavior), that pattern is itself a
+design artifact that can be wrong — the Parser/Validator Edge Case Pre-check that caught this
+(real execution against adversarial fixtures) is valuable earlier in the pipeline than `/review`,
+since by the time it ran here the pattern had already propagated to 3 consumer scripts and 2 SSoT
+documents (`modules/verify-classifier.md`, `docs/spec/...:192`) before being caught.
+
+### Recurring issues
+
+The exact bug class this Issue exists to eliminate (unscoped/line-wide attribute extraction letting
+condition prose masquerade as a real tag) reappeared **twice more within this same PR**, after the
+Issue's own stated Purpose was to eliminate it comprehensively in `scripts/opportunistic-search.sh`:
+once for `keyword=`/`config=` (found and fixed before this review started, evidenced by the earlier
+review's General Comments at https://github.com/saitoco/wholework/pull/1383#pullrequestreview-4945635101
+— an interrupted `/review` run this session picked up mid-flight) and once for `when=`/`AC_TAG`
+(found and fixed in this review). Both times, the file's
+own Root Cause table enumerated specific line numbers rather than "every `grep -oE`/`match()` call
+in this file that reads `$line` directly," so an occurrence outside the initially-listed lines was
+missed. Improvement proposal: when a fix's stated purpose is "eliminate pattern X across file Y,"
+grep the target file directly for all extraction call sites reading the raw line (not just the ones
+named in the Root Cause table) as a completeness check before considering the fix done.
+
+### Acceptance criteria verification difficulty
+
+AC 7 (`modules/verify-classifier.md` にタグ抽出の正準ルールが SSoT として記載されている) used only
+`file_contains "modules/verify-classifier.md" "Tag Extraction Rule"` — a literal-string existence
+check that passed even though the section it confirmed the existence of had a real correctness gap
+(missing the attribute-inclusive canonical pattern). A `rubric` verify command asserting the
+section's *content* is complete and internally consistent (not just present) would likely have
+caught this at `/review` Step 8 rather than requiring the Parser/Validator Edge Case Pre-check +
+manual reading to surface it.
+
+Separately (not an AC verification issue, but discovered during this review's own execution):
+`modules/l0-surfaces.md`'s Comment Consumption Procedure scans Issue/PR *comments*
+(`gh issue view`/`gh pr view --json comments`) but not PR *reviews*
+(`gh api .../pulls/{n}/reviews`) — an earlier, interrupted `/review` run on this same PR had already
+posted a full review (with its own findings) before this session started, and it went completely
+undetected by this session's Step 2 Comment Consumption check. This session only discovered it
+opportunistically while fetching inline-comment URLs for Step 12 `Refs:` traceability. Improvement
+proposal: extend the Comment Consumption Procedure (or add a dedicated pre-Step-10 check specific
+to `/review`) to also scan `gh api repos/{owner}/{repo}/pulls/{n}/reviews` for prior review bodies
+posted after the cutoff, so a resumed `/review` session is aware of — and can build on rather than
+duplicate — a prior interrupted run's findings.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- タグ抽出は共通ヘルパー化せず各スクリプトへインライン展開し、正準ルールは `modules/verify-classifier.md` の新設セクションに SSoT として置く (新規スクリプトによる `allowed-tools` 波及と worktree の `source` 制約を回避)
-- Issue 本文の影響箇所表 2 行を実測で訂正し、`check-skill-change-observation-ac.sh` を「回帰テストのみ」から「抽出の修正 + テスト」へ、`get-auto-session-report.sh` を「潜在」からスコープ内へ変更した (受入条件 4 / 5)
-- Pre-merge AC の verify command は `/triage` 監査が提案した `bats --count --filter` 形ではなく `file_contains` + `command` の 2 コマンド形を採用 (safe mode での UNCERTAIN 化を回避しつつ Pattern 2 を解消)
-- `skills/audit/SKILL.md` の Waiting Count 定義変更に伴う過去レポート非互換は (a) 追記注記方式で確定 (過去レポートの再出力・並行出力は行わない)
-- `opportunistic-search.sh` の `event=` はコメント内スコープ、スキル名は行スコープのまま (スキル名は条件文の散文に正当に現れるため)
+- Skipped the Workflow tool path (`capabilities.workflow: true` is set) because `--non-interactive` in ARGUMENTS puts this session in fork context with no re-invocation guarantee, per `skills/review/workflow-guidance.md`'s Pre-flight section — used the static Task fan-out (Steps 10.1–10.3) with foreground (`run_in_background: false`) Agent calls instead.
+- Found and completed a prior interrupted `/review` (or `/code` Step-12-fix-cycle) session's uncommitted work-in-progress on entering the worktree (the `([^-]|-[^-]|--[^>])*-->` span-termination fix, already applied to disk but never committed) — committed it first, then proceeded with a full fresh review on top of that baseline.
+- Fixed both MUST findings before posting the Step 14 summary: `scripts/opportunistic-search.sh`'s `when=` gate (still line-scoped, silently excluding legitimate ACs) and `modules/verify-classifier.md`'s canonical-pattern SSoT gap (missing the attribute-inclusive span form). Also fixed 2 unresolved SHOULD findings from the earlier interrupted review (stale Spec Notes premise, `skills/audit/SKILL.md` bucket-enumeration wording) discovered while gathering `Refs:` URLs.
 
 ### Deferred Items
 
-- Post-merge 受入条件 1 件: `collect-verify-retention-stats.sh --window 2026-05-07` と `scan-pending-ac.sh` の manual 分類結果の突き合わせ (現状 19 対 18)。`/auto` 実行後の observation として次セッションで確認する
-- `scripts/collect-verify-retention-stats.sh` / `scripts/rank-verify-backlog.sh` / `skills/auto/SKILL.md` / `skills/verify/SKILL.md` は既に正しい形のため変更しない (grep で確認済み。`/code` で「念のため」修正しないこと)
-- `docs/structure.md` / `docs/ja/structure.md` は抽出方式に言及しないため変更不要 (確認済み)
+- Post-merge 受入条件 1 件 (unchanged from code phase): `collect-verify-retention-stats.sh --window 2026-05-07` と `scan-pending-ac.sh` の manual 分類結果の突き合わせ (現状 19 対 18)。`/auto` 実行後の observation として次セッションで確認する
+- `tests/code.bats` "Step 10 Patch route branch-scoped CI AC exclusion covers both patch and operate route" is a pre-existing FAIL, confirmed to reproduce identically on unmodified `main` — still not filed as a follow-up Issue. Flagged again in this review (Pre-merge AC 8 SHOULD finding) as needing either a follow-up Issue or an AC wording fix.
+- 5 CONSIDER/SHOULD-level findings intentionally left unfixed (see the Step 14 response summary PR comment for the full list): `opportunistic-search.sh` `TAG_COMMENT` single-match guard, pre-existing `keyword=` unescaped-regex behavior, pre-existing `scan-pending-ac.sh` tag-value truncation, `opportunistic-search.sh:370` comment-closing asymmetry, `get-auto-session-report.sh` single-match guard, `post_merge_check.sh` combined-comment theoretical gap, `check-skill-change-observation-ac.sh` extraction/comparison whitespace mismatch, `skills/audit/SKILL.md:516` note cross-reference.
 
 ### Notes for Next Phase
 
-- `EVENT_NAME` は無検証の外部入力。`opportunistic-search.sh` の event モードでは ERE へ内挿せず awk `index()` の literal 照合を使うこと
-- grep 経路は `[[:space:]]*`、awk 経路は `[ \t]*` を使い分ける (grep ERE のブラケット内 `\t` の解釈が実装依存のため)
-- `scan-pending-ac.sh` / `get-auto-session-report.sh` の「タグ無し行は manual」既定と、`scan-pending-ac.sh` の fail-open (`gh` 失敗時 `[]` + exit 0) は**変更しない**。本 Issue は分類精度のみを扱う
-- `get-auto-session-report.sh` の新規テストは `tests/get-auto-session-report.bats` ではなく `tests/audit-auto-session.bats` へ置く (verify-type breakdown の既存テストが後者の `:141` にあるため)
-- `tests/post_merge_check.bats` は並列実行時のみ FAIL する既知フレークがある (`docs/tech.md` § CI bats Parallel/Serial Split)。全件実行で FAIL した場合は単独再実行で切り分けること
-- 実装で書く Spec / テストフィクスチャに完全形のタグを書くと、修正対象スクリプト自身の走査対象になる。フィクスチャは意図的にそう書く箇所 (bats のヒアドキュメント内) に限定すること
+- `/merge` should proceed normally — all MUST issues are resolved, CI is green (5/5 SUCCESS after the fix push), and no policy changes occurred that would require Issue AC updates (Step 13 found none).
+- `/verify` should re-run `bats tests/` and continue treating the `tests/code.bats` pre-existing failure as unrelated to this Issue's change.
+- When adding new bats assertions that must gate on a **non-final** statement in a `@test` body, prefer single-bracket `[ ]`, a pipeline (`... | jq -e ... > /dev/null`), or an explicit `|| return 1` after a `[[ ]]` — bash 3.2's `set -e` does not abort on a bare non-final `[[ ]]` failure (see Code Retrospective § Rework for the isolated repro).

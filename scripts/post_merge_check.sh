@@ -39,11 +39,13 @@ trap 'rm -rf "$RUN_TMP_DIR"' EXIT
 # Print lines from <file> that contain verify-type: manual, excluding lines that also
 # carry ac-tier: preview (pre-merge preview-tier AC already confirmed by /review before
 # merge — see modules/verify-classifier.md § Purpose), stripped of checkbox and HTML
-# comment markup.
+# comment markup. Both tags are matched only inside their HTML comment (per
+# modules/verify-classifier.md § Tag Extraction Rule) — condition prose that quotes a
+# tag name (Issue #1273) must not be mistaken for the real tag.
 extract_manual_acs() {
     local src_file="$1"
-    grep "verify-type: manual" "$src_file" \
-        | grep -v "ac-tier: preview" \
+    grep -E '<!--[[:space:]]*verify-type:[[:space:]]*manual' "$src_file" \
+        | grep -vE '<!--[[:space:]]*ac-tier:[[:space:]]*preview' \
         | sed 's/^[[:space:]]*-[[:space:]]*//' \
         | sed 's/^\[[[:space:]xX]*\][[:space:]]*//' \
         | sed 's/[[:space:]]*<!--.*$//' \

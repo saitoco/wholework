@@ -362,11 +362,28 @@ for N in $ISSUE_NUMBERS; do
     SCOPED_BODY=$(printf '%s\n' "$BODY" | awk "$POST_MERGE_AWK")
 
     if [ -n "$EVENT_NAME" ]; then
-        # Event mode: match verify-type: observation with the specified event name
-        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: observation" | grep "event=${EVENT_NAME}" || true)
+        # Event mode: match verify-type: observation with the specified event name.
+        # Tag and event= attribute are both read only from inside the same HTML
+        # comment (per modules/verify-classifier.md § Tag Extraction Rule) — condition
+        # prose that quotes "verify-type: observation" (Issue #1273) must not match.
+        # The span is matched through the comment's own closing --> (not a bare
+        # [^>]* run, which would stop at any literal > inside the comment body,
+        # e.g. a note="a>b" attribute placed before event=) so that event= is
+        # never truncated out of the extracted span.
+        # EVENT_NAME is enum-validated above (KNOWN_EVENTS) before reaching this
+        # point; index() is used for literal substring matching so the value is
+        # never interpreted as an ERE.
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | awk -v evt="$EVENT_NAME" '
+            match($0, /<!--[ \t]*verify-type:[ \t]*observation([^-]|-[^-]|--[^>])*-->/) {
+                tag = substr($0, RSTART, RLENGTH)
+                if (index(tag, "event=" evt) > 0) print
+            }
+        ' || true)
     else
-        # Opportunistic mode: match verify-type: opportunistic with skill name
-        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: opportunistic" | grep -F "$SKILL_NAME" || true)
+        # Opportunistic mode: match verify-type: opportunistic (HTML-comment scoped)
+        # with skill name. SKILL_NAME is kept as a line-scope match — it legitimately
+        # appears in condition prose (modules/verify-classifier.md:161).
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep -E '<!--[[:space:]]*verify-type:[[:space:]]*opportunistic' | grep -F "$SKILL_NAME" || true)
     fi
 
     if [ -z "$MATCHED" ]; then
@@ -379,6 +396,14 @@ for N in $ISSUE_NUMBERS; do
         CONDITION=$(echo "$line" \
             | sed 's/^- \[ \] //' \
             | sed 's/ *<!--.*-->//g')
+
+        # HTML comment span carrying this line's verify-type tag (observation or
+        # opportunistic) — keyword=/config= attributes below are read only from
+        # within this span (per modules/verify-classifier.md § Tag Extraction
+        # Rule), so condition prose that happens to contain the literal text
+        # "keyword=..." or "config=..." outside the comment is never mistaken
+        # for a real attribute (Issue #1273).
+        TAG_COMMENT=$(echo "$line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*(observation|opportunistic)([^-]|-[^-]|--[^>])*-->' || true)
 
         # Fact-token relevance tag (opportunistic mode only, --event unset): a line whose
         # lowercased CONDITION contains at least one --facts token as a substring is tagged
@@ -415,8 +440,10 @@ for N in $ISSUE_NUMBERS; do
         # (Issue #1365). An independent-word occurrence (e.g. "Workflow path" in
         # prose) has no structural marker to strip and is an accepted design
         # limitation, not a bug -- see the same module section for recommended
-        # keyword= usage.
-        KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
+        # keyword= usage. Extracted from TAG_COMMENT (not the raw line) so
+        # condition prose that quotes "keyword=..." outside the HTML comment is
+        # never mistaken for a real attribute (Issue #1273).
+        KEYWORD=$(echo "$TAG_COMMENT" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
         if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
             resolve_filtered_context
             if ! echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"; then
@@ -429,7 +456,7 @@ for N in $ISSUE_NUMBERS; do
         # the config=<key>:<value> form, Issue #1243) whose resolved value
         # doesn't case-insensitively equal <value>. No config= attribute
         # means unconditional match (backward compatible).
-        CONFIG_ATTR=$(echo "$line" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
+        CONFIG_ATTR=$(echo "$TAG_COMMENT" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
         if [ -n "$CONFIG_ATTR" ]; then
             case "$CONFIG_ATTR" in
                 *:*)
@@ -476,12 +503,16 @@ for N in $ISSUE_NUMBERS; do
         # (resolve_run_facts fail-open), a missing --execution-context, unknown axes, and
         # malformed clauses are all per-clause fail-open (that single clause is ignored
         # rather than excluding the line).
-        # Extraction is scoped to the HTML comment tag (not the whole line) and takes only the
-        # last match: the AC's human-readable prose may itself quote "when=..." syntax (e.g. to
-        # describe the attribute), and matching against the whole line would corrupt WHEN_ATTR
-        # with an embedded newline from grep -o's one-match-per-line output.
-        AC_TAG=$(echo "$line" | grep -oE '<!--.*-->' || true)
-        WHEN_ATTR=$(echo "$AC_TAG" | grep -oE 'when=[^ >]+' | tail -n 1 | sed -e 's/^when=//' -e 's/-*$//' || true)
+        # Extraction is scoped to the verify-type HTML comment (TAG_COMMENT, same span
+        # already computed above for keyword=/config=) and takes only the last match: the
+        # AC's human-readable prose, or an unrelated adjacent HTML comment, may itself
+        # quote "when=..." syntax (e.g. to describe the attribute), and matching against
+        # the whole line would corrupt WHEN_ATTR with an embedded newline from grep -o's
+        # one-match-per-line output, or pick up an unrelated comment's when=-like text
+        # (Issue #1273 — this line previously used a greedy <!--.*--> span reaching the
+        # line's last -->, the same "Route B" problem this Issue's fix closes for
+        # keyword=/config= above).
+        WHEN_ATTR=$(echo "$TAG_COMMENT" | grep -oE 'when=[^ >]+' | tail -n 1 | sed -e 's/^when=//' -e 's/-*$//' || true)
         if [ -n "$WHEN_ATTR" ]; then
             WHEN_MATCH=true
             # IFS=',' read -a splits on commas without word-splitting/globbing the result,

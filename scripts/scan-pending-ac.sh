@@ -44,7 +44,10 @@
 # Pre-merge section, mirrored for Post-merge).
 #
 # verify_type: parsed from a `verify-type: <t>` HTML-comment attribute on the
-# line. A line with no verify-type tag is classified "manual" (matches
+# line. The tag is read only from inside an HTML comment (`<!-- verify-type:
+# <t> -->`), never from condition prose — a condition that quotes a tag name
+# in its own text (Issue #1273) must not be mistaken for the real tag.
+# A line with no verify-type tag is classified "manual" (matches
 # skills/verify/SKILL.md Step 8b's existing convention: a condition with
 # neither a verify command nor a verify-type tag is treated as manual).
 # manual / observation / opportunistic / auto are all included as candidates —
@@ -171,8 +174,10 @@ AWK_PROGRAM='
       if (!checked) {
         line = $0
         vtype = "manual"
-        if (match(line, /verify-type: [a-zA-Z_]+/)) {
-          vtype = substr(line, RSTART + 13, RLENGTH - 13)
+        if (match(line, /<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/)) {
+          tag = substr(line, RSTART, RLENGTH)
+          sub(/^<!--[ \t]*verify-type:[ \t]*/, "", tag)
+          vtype = tag
         }
         text = line
         sub(/^- \[ \][ \t]*/, "", text)

@@ -592,6 +592,9 @@ if [[ -n "$VERIFY_RESIDUALS" ]]; then
       _body=$(echo "$_gh_json" | jq -r '.body // ""')
       _title=$(echo "$_gh_json" | jq -r '.title // ""')
     fi
+    # Tags below are read only from inside the HTML comment (per
+    # modules/verify-classifier.md § Tag Extraction Rule) — condition prose that
+    # quotes a tag name (Issue #1273) must not be mistaken for the real tag.
     _obs_count=0
     _opp_count=0
     _manual_count=0
@@ -607,15 +610,16 @@ if [[ -n "$VERIFY_RESIDUALS" ]]; then
         continue
       fi
       if [[ "$_in_post_merge" == "true" ]] && echo "$_line" | grep -qE "^- \[ \]"; then
-        if echo "$_line" | grep -qE "verify-type: observation event="; then
-          _evt=$(echo "$_line" | grep -oE "verify-type: observation event=[^ >]+" | sed 's/verify-type: observation event=//')
+        _comment=$(echo "$_line" | grep -oE '<!--[[:space:]]*verify-type:[[:space:]]*observation([^-]|-[^-]|--[^>])*-->' || true)
+        if [[ -n "$_comment" && "$_comment" == *event=* ]]; then
+          _evt=$(echo "$_comment" | grep -oE "event=[^ >]+" | sed 's/^event=//')
           _obs_count=$(( _obs_count + 1 ))
           if [[ -z "$_obs_events" ]]; then
             _obs_events="$_evt"
           else
             _obs_events="${_obs_events},${_evt}"
           fi
-        elif echo "$_line" | grep -qE "verify-type: opportunistic"; then
+        elif echo "$_line" | grep -qE '<!--[[:space:]]*verify-type:[[:space:]]*opportunistic'; then
           _opp_count=$(( _opp_count + 1 ))
         else
           _manual_count=$(( _manual_count + 1 ))

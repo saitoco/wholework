@@ -231,6 +231,75 @@ teardown() {
     echo "$with_dry_run" | jq -e '.[0].number == 702' > /dev/null
 }
 
+@test "html-comment scoped tag match: event mode ignores prose-quoted tag names (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 800},{"number": 801},{"number": 802}]'
+    export MOCK_ISSUE_BODY_800='## Post-merge
+- [ ] AC confirming this line is excluded from the `verify-type: observation event=pr-review-full` dispatch but the real tag is opportunistic <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_801='## Post-merge
+- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_ISSUE_BODY_802='## Post-merge
+- [ ] A line with no verify-type tag at all'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    result="$output"
+    # (a) prose quoting the event tag must not cause a match against a
+    # differently-tagged (opportunistic) line
+    echo "$result" | jq -e '[.[] | select(.number == 800)] | length == 0' > /dev/null
+    # (b) a normal event-tagged line matches as before
+    echo "$result" | jq -e '[.[] | select(.number == 801)] | length == 1' > /dev/null
+    # (c) a line with no verify-type tag at all is not matched
+    echo "$result" | jq -e '[.[] | select(.number == 802)] | length == 0' > /dev/null
+}
+
+@test "html-comment scoped tag match: opportunistic mode ignores prose-quoted tag names (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 810},{"number": 811},{"number": 812}]'
+    export MOCK_ISSUE_BODY_810='## Post-merge
+- [ ] AC confirming this line is excluded from the `verify-type: opportunistic` scan for /issue but the real tag is manual <!-- verify-type: manual -->'
+    export MOCK_ISSUE_BODY_811='## Post-merge
+- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_812='## Post-merge
+- [ ] /issue mentioned with no verify-type tag at all'
+
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    result="$output"
+    # (a) prose quoting the opportunistic tag must not cause a match against a
+    # differently-tagged (manual) line
+    echo "$result" | jq -e '[.[] | select(.number == 810)] | length == 0' > /dev/null
+    # (b) a normal opportunistic-tagged line matches as before
+    echo "$result" | jq -e '[.[] | select(.number == 811)] | length == 1' > /dev/null
+    # (c) a line with no verify-type tag at all is not matched
+    echo "$result" | jq -e '[.[] | select(.number == 812)] | length == 0' > /dev/null
+}
+
+@test "html-comment scoped tag match: event mode still matches when the comment body contains a literal > before event= (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 820}]'
+    export MOCK_ISSUE_BODY_820='## Post-merge
+- [ ] a legitimate observation AC whose comment contains a literal > before event= <!-- verify-type: observation note="count>10" event=pr-review-full -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 820' > /dev/null
+}
+
+@test "context gate: keyword= in a separate comment from verify-type is not applied as a gate (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 821}]'
+    export MOCK_ISSUE_BODY_821='## Post-merge
+- [ ] /issue AC whose keyword= sits in condition prose, not inside the verify-type comment <!-- verify-type: opportunistic --> keyword=unrelated-prose-token'
+    echo "This context file does not mention the prose token at all." > "$BATS_TEST_TMPDIR/context-no-match.md"
+
+    run bash "$SCRIPT" /issue --context-file "$BATS_TEST_TMPDIR/context-no-match.md"
+    [ "$status" -eq 0 ]
+    # keyword= is only read from inside the same HTML comment as the verify-type
+    # tag it modifies (modules/verify-classifier.md § Tag Extraction Rule). Since
+    # keyword= here sits outside that comment (in condition prose after -->), no
+    # keyword gate applies and the AC matches unconditionally.
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 821' > /dev/null
+}
+
 @test "context gate: keyword found in context file includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 500}]'
     export MOCK_ISSUE_BODY_500='## Post-merge
@@ -621,6 +690,25 @@ teardown() {
     if grep -q -- "--session\|--facts-file" "$MOCK_DIR/collect-run-facts-args.txt"; then false; fi
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 712' > /dev/null
+}
+
+@test "when gate: when= inside an unrelated adjacent HTML comment does not gate a tag with no when= of its own (issue #1273)" {
+    export MOCK_ISSUE_LIST='[{"number": 913}]'
+    export MOCK_ISSUE_BODY_913='## Post-merge
+- [ ] AC condition text A <!-- note: legacy config used when=route:operate here --> <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":913,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event pr-review-full
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    # WHEN_ATTR must be read only from inside the real verify-type comment
+    # (TAG_COMMENT), not from an unrelated adjacent comment. The real tag here
+    # carries no when= attribute at all, so the AC must match unconditionally —
+    # not be excluded because a different, unrelated comment's text happens to
+    # contain "when=route:operate" (which mismatches facts route "pr").
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 913' > /dev/null
 }
 
 @test "when gate: when= appearing in AC prose text (outside the tag) does not corrupt gate matching" {

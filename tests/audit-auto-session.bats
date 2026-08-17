@@ -195,3 +195,90 @@ MOCK_EOF
     echo "$output" | grep -q "#471"
     echo "$output" | grep -q "auto-run"
 }
+
+@test "html-comment scoped residual tally: prose quoting a tag name does not cause misclassification (issue #1273)" {
+    # Issue 900 carries the live phase/verify label (mocked below).
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-15T10:00:00Z","issue":900,"event":"sub_start","session_id":"abc-vtag","size":"M"}
+FIXTURE_EOF
+
+    mkdir -p "$BATS_TEST_TMPDIR/issue-bodies"
+    cat > "$BATS_TEST_TMPDIR/issue-bodies/900.md" << 'BODY_EOF'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] AC confirming this line is excluded from the `verify-type: observation event=auto-run` tally but the real tag is manual <!-- verify-type: manual -->
+- [ ] a normal observation line <!-- verify-type: observation event=auto-run -->
+- [ ] a line with no verify-type tag at all
+BODY_EOF
+
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    echo "phase/verify"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    export WHOLEWORK_ISSUE_BODY_DIR="$BATS_TEST_TMPDIR/issue-bodies"
+    run bash "$SCRIPT" "abc-vtag" --metrics-only
+    [ "$status" -eq 0 ]
+
+    # (a) prose quoting "verify-type: observation event=auto-run" must not
+    # inflate the observation tally — the real tag is manual, and (c) a line
+    # with no tag also falls to manual, so manual is counted twice.
+    # (b) the normal observation line is still counted once with its event.
+    echo "$output" | grep -qE '\| #900 \| .* \| 1 \(event=auto-run\) \| 0 \| 2 \|'
+}
+
+@test "html-comment scoped residual tally: a literal > inside the comment body before event= does not truncate the match (issue #1273)" {
+    # Issue 901 carries the live phase/verify label (mocked below).
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-15T10:00:00Z","issue":901,"event":"sub_start","session_id":"gt-vtag","size":"M"}
+FIXTURE_EOF
+
+    mkdir -p "$BATS_TEST_TMPDIR/issue-bodies"
+    cat > "$BATS_TEST_TMPDIR/issue-bodies/901.md" << 'BODY_EOF'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] a legitimate observation AC whose comment carries a literal > before event= <!-- verify-type: observation note="a>b" event=auto-run -->
+BODY_EOF
+
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    echo "phase/verify"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    export WHOLEWORK_ISSUE_BODY_DIR="$BATS_TEST_TMPDIR/issue-bodies"
+    run bash "$SCRIPT" "gt-vtag" --metrics-only
+    [ "$status" -eq 0 ]
+
+    # The line must be counted as observation (event=auto-run), not misclassified
+    # as manual by a `[^>]*` span that stops at the first literal `>` before
+    # reaching `event=`.
+    echo "$output" | grep -qE '\| #901 \| .* \| 1 \(event=auto-run\) \| 0 \| 0 \|'
+}
