@@ -74,16 +74,29 @@
 - N/A — no rework occurred; single implementation pass. Confirmed pre-implementation FAIL (via `git stash` on the two SKILL.md files) for both new `tests/audit-manual-waiting-count.bats` and `tests/auto-completion-report.bats` assertions before committing. Behavioral change detection (both SKILL.md files are referenced by multiple test files beyond a single direct counterpart) triggered a full `bats --jobs 18 tests/` run — 1828/1828 green, no pre-existing unrelated failures encountered this time (unlike the #1377 stale assertion noted in Issue #1371's retrospective, already fixed by then).
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Mirrored `verify-executability-marker.sh`'s `cmd_resolve()` exit-code-2 pattern verbatim (`if ! var="$(...)"; then echo "Error: ..." >&2; exit 2; fi`) rather than inventing a new signal, per the Spec's explicit preference for consistency with the existing pattern.
-- For `skills/auto/SKILL.md`, chose to exclude an exit-2 Issue's `MANUAL_N` from `TOTAL_MANUAL` and report it in a separate `UNDETERMINED_LIST` line, keeping `OBS_N`/`OPP_N` accumulation for that Issue unaffected (those two counts do not depend on `resolve-preview-ac-fallback.sh`) — this matches the Spec's "existing flat count structure retained" instruction while still surfacing the undetermined state.
+- Fixed both SHOULD findings in-session rather than deferring: the `N0` fold ambiguity in `skills/audit/SKILL.md` (line 365) and the stale fail-open prose in `skills/verify/SKILL.md` (line 210), since both were low-risk documentation clarifications with no behavioral/script change involved.
+- For the `N0` ambiguity, resolved it by counting an exit-2 `ac-tier: preview` line into `N` (not just `N0`) so the existing `N0 ⊆ N` assumption holds regardless of which script produced the exit-2 signal, and made step 1 skip an Issue already folded into `N0` during the `N` calculation to avoid double-processing.
 
 ### Deferred Items
-- `skills/verify/SKILL.md` Step 5 is out of scope per the Issue body (already fail-closed via `reconcile-phase-state.sh --check-completion`); no change made there.
-- Consolidating all 3 consumers onto a single disambiguation signal (currently `resolve-preview-ac-fallback.sh` exit code + `reconcile-phase-state.sh` for `/verify`) is noted in the Issue as a future optional cleanup, not addressed here.
+- `skills/verify/SKILL.md` Step 5's actual disambiguation logic remains out of scope (already fail-closed via `reconcile-phase-state.sh --check-completion`); only the stale descriptive prose about `resolve-preview-ac-fallback.sh`'s old fail-open behavior was corrected.
+- Consolidating all 3 consumers onto a single disambiguation signal (currently `resolve-preview-ac-fallback.sh` exit code + `reconcile-phase-state.sh` for `/verify`) remains a future optional cleanup per the Issue, not addressed here.
 
 ### Notes for Next Phase
-- All 7 Pre-merge AC were verified locally and checked off before PR creation (verify-executor full mode, all PASS) — `/review` should find nothing outstanding to re-verify beyond CI.
-- Full `bats --jobs 18 tests/` run (1828 tests) is green; no known pre-existing failures to account for at review time.
+- No MUST issues; review posted as `COMMENT` (not `REQUEST_CHANGES`). Both SHOULD findings were fixed and re-verified (`validate-skill-syntax.py`, forbidden-expressions check, language-convention check, and the 3 directly affected bats files all green — 18/18).
+- `/merge 1392` should find nothing outstanding beyond the standard merge flow.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+No divergence found. All 7 Pre-merge AC verified PASS on first pass (1 rubric + 1 CI-backed `command` + 5 further rubric/section checks), no verify command inaccuracies or UNCERTAIN results.
+
+### Recurring issues
+Both SHOULD findings from this review share a root cause: when a shared script's failure-signaling contract changes (here, `resolve-preview-ac-fallback.sh` moving from fail-open to exit-code-2 on `gh` failure), documentation that describes or extends the *consuming* side of that contract needs a second consistency pass beyond the Issue's explicit AC list:
+- `skills/audit/SKILL.md`'s Manual Waiting Count section extended an existing `N0` "undetermined" bucket (previously sourced only from `verify-executability-marker.sh` failures) with a second source (`resolve-preview-ac-fallback.sh` failures) without re-verifying that the bucket's stated invariant (`N0 ⊆ N`) still held for the new source — an easy trap when reusing an existing enumeration/bucket name for a second, structurally different signal.
+- `skills/verify/SKILL.md` Step 5 (out of scope per the Issue body, since it was already fail-closed via a separate mechanism) still contained prose asserting the *pre-PR* fail-open behavior of `resolve-preview-ac-fallback.sh` as the reason that mechanism was needed. "Out of scope for behavior change" does not imply "out of scope for a documentation accuracy sweep" — a future Issue that changes a script's documented contract should grep the whole tree for prose describing that script's old behavior, not just the Issue's explicit consumer list.
+
+### Acceptance criteria verification difficulty
+None. All 7 AC (1 rubric, 1 `command` backed by a green CI job, 3 further rubric checks, 2 `section_not_contains` checks confirming stale text removal) were unambiguous and required no AI judgment calls beyond straightforward rubric evaluation.
