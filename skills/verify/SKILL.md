@@ -949,7 +949,7 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold "$RECOVERIES_AUTO_FIRE_THRESHOLD" --issues-json .tmp/open-issues-$NUMBER.json
    ```
 
-3. If the output is empty: skip the rest of this step. For each `group-key<TAB>count` line in the output (`group-key` is either a bare symptom-short, e.g. `manual-recovery-review-rerun`, or `symptom-short/cause-slug`, e.g. `manual-recovery-review-rerun/dirty-guard`, when `collect-recovery-candidates.sh` found a `- cause:` line in the source entries — see Issue #1123):
+3. If the output is empty: skip the remainder of item 3 (its `a`–`f` sub-steps below) and continue with item `3b`. **This skip applies only to item 3's own sub-steps — items `3b` and `4` (Cleanup) always run regardless of whether this output is empty.** For each `group-key<TAB>count` line in the output (`group-key` is either a bare symptom-short, e.g. `manual-recovery-review-rerun`, or `symptom-short/cause-slug`, e.g. `manual-recovery-review-rerun/dirty-guard`, when `collect-recovery-candidates.sh` found a `- cause:` line in the source entries — see Issue #1123):
    - If `AUTONOMY_TIER=L1` OR `RECOVERIES_AUTO_FIRE_ENABLED=false`:
      Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" (count: {count})`
    - If `AUTONOMY_TIER=L2` or `L3` AND `RECOVERIES_AUTO_FIRE_ENABLED=true`:
@@ -1003,9 +1003,10 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
 
    Guard: if `.tmp/auto-events.jsonl` does not exist, skip this sub-block entirely.
 
-   Otherwise, run:
+   Otherwise, run (`--since 86400` scopes output to the last 24h so routine runs surface only
+   recent findings instead of the full historical backlog):
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh .tmp/auto-events.jsonl docs/reports/orchestration-recoveries.md
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh .tmp/auto-events.jsonl docs/reports/orchestration-recoveries.md --since 86400
    ```
 
    If the command produces stdout output, display it as-is to the terminal under the heading
