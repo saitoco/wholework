@@ -359,3 +359,28 @@ duplicate — a prior interrupted run's findings.
 - `/merge` should proceed normally — all MUST issues are resolved, CI is green (5/5 SUCCESS after the fix push), and no policy changes occurred that would require Issue AC updates (Step 13 found none).
 - `/verify` should re-run `bats tests/` and continue treating the `tests/code.bats` pre-existing failure as unrelated to this Issue's change.
 - When adding new bats assertions that must gate on a **non-final** statement in a `@test` body, prefer single-bracket `[ ]`, a pipeline (`... | jq -e ... > /dev/null`), or an explicit `|| return 1` after a `[[ ]]` — bash 3.2's `set -e` does not abort on a bare non-final `[[ ]]` failure (see Code Retrospective § Rework for the isolated repro).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- The Auto-Resolved Ambiguity Points (5, at the Size L cap) held up through implementation without requiring re-litigation — the (a) additive-note incompatibility handling and the inline-per-file canonical-rule placement both proved correct in practice.
+
+#### design
+- `scripts/collect-verify-retention-stats.sh` was correctly identified up front as the reference implementation; no design deviation occurred.
+
+#### code
+- No deviations from design; the 4-file Implementation Steps mapped 1:1 onto the actual diff.
+
+#### review
+- The same bug class this Issue exists to eliminate (unscoped/line-wide attribute extraction) reappeared twice more within the same PR after the stated fix, in call sites not named in the original Root Cause table (`keyword=`/`config=`, then `when=`/`AC_TAG`). Both were caught and fixed by `/review`, not by the initial implementation's own completeness check. See Improvement Proposals below.
+
+#### merge
+- The PR branch diverged from `main` while long-running (Size L, full review) during a concurrent `/auto --batch` session in which 4 sibling Issues (#1096/#1229/#1243/#1302) merged overlapping edits to the same 3 files (`skills/audit/SKILL.md`, `modules/observation-trigger.md`, `scripts/opportunistic-search.sh`). The automated merge phase's `claude` subprocess went silent for 600s (likely while encountering the conflict) and was correctly killed by the internal watchdog; Tier 3 recovery correctly assessed the conflict as unsafe to auto-resolve and aborted. The parent `/auto` session manually merged `origin/main`, combined both independent features in each of the 3 conflicting files, ran the full `bats tests/` suite (1826 green) before pushing, and completed the squash merge. Recorded as two manual-recovery entries in `docs/reports/orchestration-recoveries.md` (respawn for an earlier external-kill during the review phase, and conflict-resolve for this merge-phase conflict).
+
+#### verify
+- No FAIL; all Pre-merge AC were already checked from the code/review phases. The single Post-merge observation AC (retention-stats vs. scan-pending-ac cross-check) has not yet fired.
+
+### Improvement Proposals
+- When a fix's stated purpose is "eliminate pattern X across file Y," grep the target file directly for **all** extraction call sites reading the raw line (`$line`/`$0`) — not just the ones named in the fix's own Root Cause table — as a completeness check before considering the fix done. This Issue's own fix for unscoped tag extraction in `scripts/opportunistic-search.sh` missed 2 additional call sites (`keyword=`/`config=`, then `when=`/`AC_TAG`), both caught only by `/review` rather than by the implementation's own completeness pass. (Source: review retrospective § Recurring issues)
