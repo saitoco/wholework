@@ -756,3 +756,50 @@ This forces three constraints on the design:
 Constraint 3 is the actionable part: **the arm is not runnable until spawn-time detach state is captured in `.tmp/auto-events.jsonl`.** Until then, enabling the flag would consume a burst — a scarce, unschedulable event — without being able to read the result. Tracked alongside the burst-observation protocol work (#1387), since both are the same gap: the burst arrives faster than the instrumentation to characterise it.
 
 The operational recommendation is therefore unchanged in the short term (leave the flag off, rely on the compensation layer at 15/15), but for a different reason than before: not "there is nothing to test", but "testing it now would waste the test".
+
+## 2026-08-17 Update — a second burst, of a different shape
+
+A second burst arrived ~23 hours after the first, and it does not look like the first one. It landed on PR #1393 — **the pull request implementing #1387, the burst-observation instrumentation itself**.
+
+### The occurrence
+
+Session `87941-1786934209`, `review` phase of PR #1393, from `.tmp/auto-events.jsonl`:
+
+| | `phase_start` | Kind | Elapsed since previous |
+|---|---|---|---|
+| 1st | 05:30:29Z | initial | — |
+| 2nd | **05:49:44Z** | respawn (kill 1) | 19.2 min |
+| 3rd | **05:52:33Z** | respawn (kill 2) | **2.8 min** |
+
+Both gaps are `phase_start` duplications with no intervening `wrapper_exit` / `phase_complete` / `manual_intervention` — the same respawn signature used throughout this report. Host uptime at the two kills: **169.0h / 169.1h** (no reboot since 2026-08-10 04:49Z). Compensation layer now 17/17.
+
+### Bursts have more than one shape
+
+| | 2026-08-16 | 2026-08-17 |
+|---|---|---|
+| Shape | **3 sessions simultaneously** | **2 consecutive kills, same session, same phase** |
+| Respawn spacing | within 16 s | **169 s** |
+| Time-to-kill | 22–38 min | 19.2 min / **2.8 min** |
+| Uptime | 146.3h | 169.0h |
+
+The first burst was read as "host-wide simultaneous kill of unrelated process trees." That reading still holds for 08-16, but it is **not the general shape**: this one hit a single session repeatedly, sparing everything else (no other session was dispatching at the time). Upstream [#76974](https://github.com/anthropics/claude-code/issues/76974)'s phrasing — "several within **a few minutes**" — covers both; this report's earlier gloss of "16 seconds" was the low end of one sample, not a characteristic scale.
+
+The 2.8-minute time-to-kill also widens the observed range downward, and is consistent with #76974's own spread ("kills at 28–136 s, one at 317 s, one at 3600.4 s").
+
+### Immediate consequence for #1387
+
+`scripts/detect-unrecorded-kills.sh` (PR #1393) groups respawn signals with a greedy adjacent-gap rule bounded by `--window`, default **120 s**, whose stated justification is "observed bursts cluster within 16s". **This occurrence's 169 s spacing exceeds that default**, so the instrumentation would split this burst into two single-kill bursts.
+
+The Spec's `### Deferred Items` had already flagged that the burst-grouping window and the recorded-cross-reference window are different scales sharing one parameter. This occurrence updates the input to that concern: the burst-grouping side's observed value moved from 16 s to 169 s. Reported on PR #1393 while its review was still running.
+
+### What this does *not* establish
+
+Three bursts are now on record at increasing uptime — 131.6h (1 kill), 146.3h (3 kills), 169.0h (2 kills) — and it is tempting to read a rising frequency, or a relationship to uptime. **This report does not draw that inference, and future readers should not either.** Three points, with counts of 1/3/2 and no denominator held constant across them, cannot distinguish a trend from arrival-time noise in an episodic process. Reading a pattern out of a handful of samples is precisely the error corrected in § 2026-08-16 Update (2); doing it again with a different statistic would repeat it.
+
+What the occurrence does establish is narrower and factual: bursts recur at intervals that are not days-long (23 h here, against 6 days between the previous two), they take at least two structural shapes, and time-to-kill spans at least 2.8–38 minutes.
+
+### Recording gap, again
+
+At the time of writing, neither kill appears in `docs/reports/orchestration-recoveries.md` (its only 2026-08-17 entries are from 00:29 UTC, unrelated). The session was still in flight, so the record may yet be written — but this is the second consecutive burst where the parent session's recording lags the event, reinforcing why #1387 exists.
+
+**A useful side effect**: once that session completes, running `detect-unrecorded-kills.sh` against this real data exercises both of its functions — unrecorded-kill detection and burst grouping — on an occurrence it did not have when it was written.
