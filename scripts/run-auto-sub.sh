@@ -650,7 +650,7 @@ run_phase_with_recovery() {
 
   local PHASE_START
   PHASE_START=$(date +%s)
-  emit_event "phase_start" "phase=${phase}"
+  emit_event "phase_start" "phase=${phase}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
   emit_event "wrapper_alive" "checkpoint=pre_subprocess" "phase=${phase}"
 
   set +e
