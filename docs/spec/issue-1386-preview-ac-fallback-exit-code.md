@@ -99,3 +99,28 @@ Both SHOULD findings from this review share a root cause: when a shared script's
 
 ### Acceptance criteria verification difficulty
 None. All 7 AC (1 rubric, 1 `command` backed by a green CI job, 3 further rubric checks, 2 `section_not_contains` checks confirming stale text removal) were unambiguous and required no AI judgment calls beyond straightforward rubric evaluation.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- No ambiguities. Comment Consumption picked up a Triage AC audit finding (2 heading-argument bugs + 1 always-PASS bats AC) and reflected it into the Issue body before design started, so the Spec's Pre-merge Verification list was already sound at write time.
+
+#### design
+- No deviations. Implementation followed the 4 Implementation Steps exactly.
+
+#### code
+- No rework. Single implementation pass; pre-implementation FAIL was confirmed for both new bats assertions before committing (regression-detection discipline).
+
+#### review
+- Review found 0 MUST issues but 2 SHOULD findings sharing one root cause: when a shared script's failure-signaling contract changes, documentation describing the *consuming* side of that contract needs its own consistency sweep beyond the Issue's explicit AC list — both `skills/audit/SKILL.md`'s reused `N0` bucket invariant and `skills/verify/SKILL.md` Step 5's stale pre-PR-behavior prose were near-misses this Issue's own scope did not originally cover.
+
+#### merge
+- Clean squash merge; no conflicts, no CI failures.
+
+#### verify
+- No FAIL/UNCERTAIN. All 7 pre-merge AC were already checked at merge time (verified during `/review`), so this run's own auto-verification pass was a SKIPPED (already-checked) confirmation only.
+
+### Improvement Proposals
+- When a shared script's documented failure-signaling contract changes (e.g. fail-open → exit-code-2), grep the whole tree for prose describing the script's *old* behavior — not just the Issue's explicit named consumers — before considering the documentation sweep complete. This Issue's own review caught 2 such near-misses only through manual re-reading, not a systematic sweep. (Source: `## review retrospective` § Recurring issues, this Spec.)
