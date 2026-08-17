@@ -112,21 +112,18 @@ N/A — Spec に `## Smoke Test` セクションが存在しないため実行�
 Confirmed pre-implementation FAIL for 2 new test(s) (`tests/run-auto-sub.bats` の `spawn_detach` フィールド検証 2 件) against the pre-#1387 `scripts/run-auto-sub.sh` (`git checkout <pre-implementation-commit> -- scripts/run-auto-sub.sh` を用いて確認後、実装版に復元)。`tests/detect-unrecorded-kills.bats` の新規テストはプロセス出力/終了コードを検証するアサートであり、本チェックの対象外 (`skills/code/stale-test-check.md` 系のスコープ定義に従う)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 15 サブブロック `3b` の到達不能バグは、直前の item 3 の「出力が空ならこのステップの残りをスキップ」という記述の対象範囲を、item 3 自身の a〜f サブステップのみに明示的に限定する書き換えで解消した (3b/Cleanup を新設のトップレベル Step に分離する代替案もあったが、既存の Step 15 の構造を保つ最小差分を優先した)。
-- `--window` の共用設計問題 (Code Retrospective で既に懸念として記録済み) は、実データでの実測 (`recorded=yes` 判定率が実質 0%) を踏まえ、`--recorded-window` (デフォルト 86400 秒) を新設して分離した。あわせて、実測で判明した第 2 の原因 (recoveries.md の phase 表記ゆれ `code` vs `code-pr`/`code-patch`) に対してハイフン prefix マッチングを追加した。
-- `detect-unrecorded-kills.sh` の `--window` 系オプションが値なしで渡された場合に無限ループするバグ (`shift 2` が `set -u` 下で silently no-op) は、同一リポジトリの `run-auto-sub.sh` に既存の引数個数ガード規約を適用して修正した。
-- `spawn_detach` フィールドは `run-auto-sub.sh` にしか実装されていなかったため、`/auto`/`/code` から直接起動される 5 つの sibling wrapper (`run-code.sh`/`run-review.sh`/`run-merge.sh`/`run-spec.sh`/`run-issue.sh`) にも同一パターンで拡張した。
+- Squash merge (`gh pr merge --squash --delete-branch`) を実行し、`closes #1387` により Issue を自動 close する経路をそのまま使用した。base branch は `main` のため fallback 分岐は不要と判断。
+- Pre-merge AC ゲートは 9 件全て checked、review-incomplete-fallback も未検出だったため、override マーカーは発行せず素通しで merge した。
 
 ### Deferred Items
-- CONSIDER 級の指摘 3 件 (同一秒 terminal event の edge case、`docs/workflow.md` へのナラティブ追記、`docs/reports/external-kill-investigation.md` の stale 記述更新) は本フェーズでは対応せず据え置いた。理由は PR コメントに記載済み — いずれも低優先度、または #1146 側での対応が既に想定されている。
-- `/merge` の Phase Handoff コミットが `main` へ直接 push され、forbidden-expressions CI ジョブでゲートされていない構造的ギャップを本フェーズで発見・応急修正した (docs/spec/issue-1386-preview-ac-fallback-exit-code.md の該当箇所を修正)。恒久対応 (pre-push フック等) は本 Issue のスコープ外であり、review retrospective に改善提案として記録した — `/verify` での集約判断を待つ。
+- review retrospective に記録された 2 件の改善提案 (bash オプションパーサのガード規約横展開チェック、`/merge` Phase Handoff コミットの forbidden-expressions ローカルチェック) は本フェーズでは起票せず据え置いた — `/verify` での集約判断を待つ。
 
 ### Notes for Next Phase
-- `scripts/detect-unrecorded-kills.sh` は今回のフェーズで CLI インターフェースが変わった (`--recorded-window`/`--since` の追加)。`skills/verify/SKILL.md` の呼び出し箇所は `--since 86400` を渡すよう更新済み。将来この呼び出し箇所を変更する際は、`--window`/`--recorded-window` の意味の違い (バースト束ね vs recoveries.md 突合の許容誤差) を混同しないこと。
-- 実データでの `recorded=yes` 判定は、`--recorded-window` を分離してもなお `docs/reports/orchestration-recoveries.md` のエントリの書式ゆれ (phase 表記など) に依存する。post-merge の opportunistic 観察 AC で実際のバーストが再度発生した際に、`recorded` 判定が意図通り機能しているか注視すること。
+- post-merge の opportunistic 観察 AC 2 件 (未記録 kill の検出報告、複数セッション kill の単一バースト束ね) は次回の external kill / バースト発生時に確認すること。
+- `detect-unrecorded-kills.sh` の `recorded=yes` 判定は `docs/reports/orchestration-recoveries.md` の phase 表記ゆれに依存し続けるため、実データでの動作を注視すること。
 
 ## review retrospective
 
