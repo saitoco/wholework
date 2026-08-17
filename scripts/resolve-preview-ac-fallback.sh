@@ -6,7 +6,9 @@
 # Output: comma-separated 1-based AC indices needing fallback, or empty when
 #   there is no marker, the marker's ac= is empty, or ac=none.
 # Exit codes: 0 on success (including "no fallback needed" empty output),
-#   1 on invalid argument. Fails open on gh errors (empty output, exit 0).
+#   1 on invalid argument, 2 when `gh` itself fails (network/auth/rate-limit) —
+#   distinct from "no marker", so callers can tell "unresolved" apart from
+#   "could not be determined this run".
 
 set -euo pipefail
 
@@ -22,9 +24,12 @@ if ! echo "$ISSUE_NUMBER" | grep -qE '^[0-9]+$'; then
   exit 1
 fi
 
-latest_marker_body="$(gh issue view "$ISSUE_NUMBER" --json comments \
+if ! latest_marker_body="$(gh issue view "$ISSUE_NUMBER" --json comments \
   --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=preview-ac-unverified"))] | sort_by(.createdAt) | .[-1].body // empty' \
-  2>/dev/null || true)"
+  2>/dev/null)"; then
+  echo "Error: gh issue view failed for issue $ISSUE_NUMBER (network/auth/rate-limit) — result is unknown, not \"no marker\"" >&2
+  exit 2
+fi
 
 marker_line="$(echo "$latest_marker_body" | grep -F '<!-- wholework-event: type=preview-ac-unverified' | head -1 || true)"
 

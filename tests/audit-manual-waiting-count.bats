@@ -19,3 +19,7 @@ manual_waiting_count_section() {
 @test "Manual Waiting Count: N1+N2+N3+N4=N invariant present" {
     manual_waiting_count_section | grep -q "N1 + N2 + N3 + N4 = N"
 }
+
+@test "Manual Waiting Count: resolve-preview-ac-fallback.sh gh failure treated as exit code 2 undetermined" {
+    manual_waiting_count_section | grep -q "exit code 2"
+}

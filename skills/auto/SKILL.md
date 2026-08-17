@@ -1264,20 +1264,22 @@ After all Issues are processed, report results (success/skip/failure) for each I
 1. For each issue in BATCH_LIST, run `gh issue view $NUMBER --json labels -q '.labels[].name'` and check whether the output contains `phase/verify`. Collect matching issues into `PENDING_LIST`.
 2. If `PENDING_LIST` is empty: output "No issues pending manual confirmation." and continue to the next step.
 3. For each issue in `PENDING_LIST`, run `gh issue view $NUMBER --json body -q '.body'` and count:
-   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: manual`, applying this per-line rule: a line without `<!-- ac-tier: preview` is always counted. A line that also contains `<!-- ac-tier: preview` is a pre-merge preview-tier AC, normally already confirmed by `/review` before merge (see `modules/verify-classifier.md` § Purpose) — count it only when its own 1-based index in the Issue body's full AC enumeration (same convention as `gh-issue-edit.sh --checkbox`) appears in `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh $NUMBER`'s output (comma-separated 1-based indices `/review` left `UNCERTAIN` and never verified; see `modules/l0-surfaces.md` § Machine-Readable Event Marker, `type=preview-ac-unverified`) → `MANUAL_N`. This stays a flat count with no bucket breakdown — best-effort aggregation, unchanged from before. Note: `resolve-preview-ac-fallback.sh` fails open on a `gh` failure (empty output, exit 0, indistinguishable from "nothing unresolved") — a known best-effort limitation of this scan.
+   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: manual`, applying this per-line rule: a line without `<!-- ac-tier: preview` is always counted. A line that also contains `<!-- ac-tier: preview` is a pre-merge preview-tier AC, normally already confirmed by `/review` before merge (see `modules/verify-classifier.md` § Purpose) — count it only when its own 1-based index in the Issue body's full AC enumeration (same convention as `gh-issue-edit.sh --checkbox`) appears in `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh $NUMBER`'s output (comma-separated 1-based indices `/review` left `UNCERTAIN` and never verified; see `modules/l0-surfaces.md` § Machine-Readable Event Marker, `type=preview-ac-unverified`) → `MANUAL_N`. Check the script's exit code before interpreting the output: **exit 0** (comma-separated list, or empty) is a determined result, used as above; **exit code 2** means `gh` itself failed (network/auth/rate-limit) and the result is undetermined this run — distinct from "nothing unresolved" — so exclude this Issue's `MANUAL_N` from `TOTAL_MANUAL` and add the Issue to `UNDETERMINED_LIST` instead (its `OBS_N`/`OPP_N` below are unaffected, since they do not depend on this script). This stays a flat count with no bucket breakdown for the determined case — best-effort aggregation, unchanged from before.
    - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: observation` → `OBS_N`
    - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: opportunistic` → `OPP_N`
-4. Accumulate `TOTAL_MANUAL`, `TOTAL_OBS`, `TOTAL_OPP` across all issues in `PENDING_LIST`.
+4. Accumulate `TOTAL_MANUAL`, `TOTAL_OBS`, `TOTAL_OPP` across all issues in `PENDING_LIST` — per the exclusion above, an Issue added to `UNDETERMINED_LIST` still contributes its `OBS_N`/`OPP_N` to `TOTAL_OBS`/`TOTAL_OPP`, but not its `MANUAL_N` to `TOTAL_MANUAL`.
 5. Output the aggregation in the following format:
    ```
    Pending manual confirmation (N issues in phase/verify):
    - #NUMBER: MANUAL_N manual AC, OBS_N observation AC, OPP_N opportunistic AC
    ...
    verify-type breakdown: manual=TOTAL_MANUAL, observation=TOTAL_OBS, opportunistic=TOTAL_OPP
+   Undetermined (gh error this run; manual AC excluded from total above): #NUMBER, #NUMBER, ...  (omit this line when UNDETERMINED_LIST is empty)
    Recommended next action:
    - For observation/opportunistic: wait for event fire (auto-checked next /verify run)
    - For manual: review and confirm or run /verify $NUMBER
    ```
+   For an Issue in `UNDETERMINED_LIST`, print its `MANUAL_N` in the per-issue line as `(undetermined)` rather than a count, since exit code 2 means it could not be measured this run.
 
 If any `gh issue view` call fails, skip that issue and continue (best-effort — do not block the batch report).
 

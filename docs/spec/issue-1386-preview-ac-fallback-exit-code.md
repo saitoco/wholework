@@ -61,3 +61,42 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「`/issue` Existing Issue Refinement の Issue Retrospective — Auto-Resolve Log (専用 exit code 方式の採用理由、AC 範囲を script から audit/auto の SKILL.md 更新まで拡大した理由、Size S→M 変更の記録)」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311390587
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「Triage AC audit — Pre-merge AC 3件の verify command 不備を指摘 (`section_not_contains` の heading 引数に `#### `/`### ` を含めて常時 UNCERTAIN になるバグ2件、bats AC が新規カバレッジを主張せず常時 PASS になりうる問題1件)。本 Spec 作成時に Issue 本文へ反映済み」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311413741
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's Implementation Steps 1–4 exactly (`resolve-preview-ac-fallback.sh` exit-code-2 pattern mirrored from `verify-executability-marker.sh`'s `cmd_resolve()`, the two SKILL.md consumer updates, and the corresponding bats test changes).
+
+### Design Gaps/Ambiguities
+- N/A — no ambiguities encountered; the existing `cmd_resolve()` pattern and the Spec's per-file guidance were sufficient to implement all 4 steps without further interpretation.
+
+### Rework
+- N/A — no rework occurred; single implementation pass. Confirmed pre-implementation FAIL (via `git stash` on the two SKILL.md files) for both new `tests/audit-manual-waiting-count.bats` and `tests/auto-completion-report.bats` assertions before committing. Behavioral change detection (both SKILL.md files are referenced by multiple test files beyond a single direct counterpart) triggered a full `bats --jobs 18 tests/` run — 1828/1828 green, no pre-existing unrelated failures encountered this time (unlike the #1377 stale assertion noted in Issue #1371's retrospective, already fixed by then).
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed both SHOULD findings in-session rather than deferring: the `N0` fold ambiguity in `skills/audit/SKILL.md` (line 365) and the stale fail-open prose in `skills/verify/SKILL.md` (line 210), since both were low-risk documentation clarifications with no behavioral/script change involved.
+- For the `N0` ambiguity, resolved it by counting an exit-2 `ac-tier: preview` line into `N` (not just `N0`) so the existing `N0 ⊆ N` assumption holds regardless of which script produced the exit-2 signal, and made step 1 skip an Issue already folded into `N0` during the `N` calculation to avoid double-processing.
+
+### Deferred Items
+- `skills/verify/SKILL.md` Step 5's actual disambiguation logic remains out of scope (already fail-closed via `reconcile-phase-state.sh --check-completion`); only the stale descriptive prose about `resolve-preview-ac-fallback.sh`'s old fail-open behavior was corrected.
+- Consolidating all 3 consumers onto a single disambiguation signal (currently `resolve-preview-ac-fallback.sh` exit code + `reconcile-phase-state.sh` for `/verify`) remains a future optional cleanup per the Issue, not addressed here.
+
+### Notes for Next Phase
+- No MUST issues; review posted as `COMMENT` (not `REQUEST_CHANGES`). Both SHOULD findings were fixed and re-verified (`validate-skill-syntax.py`, forbidden-expressions check, language-convention check, and the 3 directly affected bats files all green — 18/18).
+- `/merge 1392` should find nothing outstanding beyond the standard merge flow.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+No divergence found. All 7 Pre-merge AC verified PASS on first pass (1 rubric + 1 CI-backed `command` + 5 further rubric/section checks), no verify command inaccuracies or UNCERTAIN results.
+
+### Recurring issues
+Both SHOULD findings from this review share a root cause: when a shared script's failure-signaling contract changes (here, `resolve-preview-ac-fallback.sh` moving from fail-open to exit-code-2 on `gh` failure), documentation that describes or extends the *consuming* side of that contract needs a second consistency pass beyond the Issue's explicit AC list:
+- `skills/audit/SKILL.md`'s Manual Waiting Count section extended an existing `N0` "undetermined" bucket (previously sourced only from `verify-executability-marker.sh` failures) with a second source (`resolve-preview-ac-fallback.sh` failures) without re-verifying that the bucket's stated invariant (`N0 ⊆ N`) still held for the new source — an easy trap when reusing an existing enumeration/bucket name for a second, structurally different signal.
+- `skills/verify/SKILL.md` Step 5 (out of scope per the Issue body, since it was already fail-closed via a separate mechanism) still contained prose asserting the *pre-PR* fail-open behavior of `resolve-preview-ac-fallback.sh` as the reason that mechanism was needed. "Out of scope for behavior change" does not imply "out of scope for a documentation accuracy sweep" — a future Issue that changes a script's documented contract should grep the whole tree for prose describing that script's old behavior, not just the Issue's explicit consumer list.
+
+### Acceptance criteria verification difficulty
+None. All 7 AC (1 rubric, 1 `command` backed by a green CI job, 3 further rubric checks, 2 `section_not_contains` checks confirming stale text removal) were unambiguous and required no AI judgment calls beyond straightforward rubric evaluation.

@@ -31,3 +31,7 @@ batch_completion_section() {
 @test "Batch Completion Report: preview-ac-unverified marker resolution present" {
     batch_completion_section | grep -q "preview-ac-unverified"
 }
+
+@test "Batch Completion Report: resolve-preview-ac-fallback.sh gh failure treated as exit code 2 undetermined" {
+    batch_completion_section | grep -q "exit code 2"
+}

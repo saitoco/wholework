@@ -75,7 +75,7 @@ MOCK_EOF
     [ "$output" = "" ]
 }
 
-@test "gh failure: fails open with empty output, exit 0" {
+@test "gh failure: exits 2, distinct from no-marker" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 exit 1
@@ -83,8 +83,7 @@ MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
 
     run "$SCRIPT" 42
-    [ "$status" -eq 0 ]
-    [ "$output" = "" ]
+    [ "$status" -eq 2 ]
 }
 
 @test "multi-line body: marker line is picked over surrounding human-readable text" {
