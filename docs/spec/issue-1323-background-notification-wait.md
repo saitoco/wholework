@@ -54,6 +54,11 @@
 
 No new comments since last phase. (直近の `phase/spec` ラベル付与後に投稿された Issue コメント 2 件は `/issue` フェーズ自身が Step 13 で残した Issue Retrospective であり、上記「行番号ドリフト」の指摘はその内容を踏まえて本 Spec の Notes に反映済み。)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1323#issuecomment-5249462422
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1323#issuecomment-5249505809
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1323#issuecomment-5296393325
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1323#issuecomment-5304278450
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1323 --> / https://github.com/saitoco/wholework/issues/1323#issuecomment-5306107966
 ## Code Retrospective
 
 ### Deviations from Design

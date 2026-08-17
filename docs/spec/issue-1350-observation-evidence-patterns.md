@@ -37,6 +37,11 @@
 
 前フェーズ以降の新規コメントなし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1350#issuecomment-5295300406
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1350#issuecomment-5296393600
+- saito / MEMBER / first-class / ## Post-merge 条件の再確認 (`/audit verify-backlog` セッションから) / https://github.com/saitoco/wholework/issues/1350#issuecomment-5302102781
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1350#issuecomment-5304278734
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1350 --> / https://github.com/saitoco/wholework/issues/1350#issuecomment-5306062749
 ## Code Retrospective
 
 ### Deviations from Design
@@ -76,5 +81,11 @@
 
 実装 (`skills/verify/SKILL.md` commit `65785ee3` → `modules/verify-classifier.md` § Evidence Collection Patterns 参照) が正しく着地していることを確認。ただし Post-merge AC (`session=next`) は「追加された evidence source が実際に参照され、UNCERTAIN/SKIPPED 率が改善することを観察する」ことを求めており、今回の `/audit verify-backlog` セッション内の observation AC 処理では新手法 (git blame + session.md 横断検索等) を明示的に適用していないため、premise 未成立で UNCERTAIN のまま維持。
 
+### 2026-08-16 再検証 (/audit verify-backlog セッションから)
+
+本条件が `session=next` 型であることを利用し、Pattern 1 (`git blame` + post-fix `session.md` 横断検索) を実際に適用して裏取りを行った。fix 着地後 (2026-08-15 00:42) に生成された `docs/sessions/63449-*-2026-08-15/session.md` と `docs/sessions/24095-*-2026-08-16/session.md` を検索し、6件の observation AC (#476, #478, #562, #589, #590, #724) が実際に処理された記録を確認。うち #562 では「初回 PASS 誤判定 → 過去7セッション分の precedent 発見により UNCERTAIN に訂正」という evidence collection の質的改善の具体事例を確認できた。
+
+一方、UNCERTAIN/SKIPPED 率そのものは改善しておらず (#589 は8回連続、#590 は17回連続で SKIPPED)、これらは元々「比較基準が構造的に測定不能な premise」を持つ AC であり、evidence collection パターンの追加は誤判定の是正には有効だが premise 不成立自体は解消しないことが判明した。AC の「evidence source が参照される」は成立、「UNCERTAIN/SKIPPED 率が改善する」は不成立という部分的結果のため、引き続き UNCERTAIN を維持。
+
 ### Improvement Proposals
-- N/A
+- N/A (今回判明した知見は AC 自体の限界であり、実装の不備ではないため改善提案には該当しない)

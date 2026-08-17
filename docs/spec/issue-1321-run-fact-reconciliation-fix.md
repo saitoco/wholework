@@ -100,6 +100,11 @@
 - `/code` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:35:39Z`) 以降の新規コメントなし。
 - `/review` フェーズ (本コミット時点): cutoff (最新 `phase/*` ラベル付与時刻 `2026-08-11T03:41:58Z`) 以降の新規コメントなし (Issue/PR とも)。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1321#issuecomment-5249093394
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5249505615
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5296393097
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1321#issuecomment-5304278319
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1321 --> / https://github.com/saitoco/wholework/issues/1321#issuecomment-5306116846
 ## Code Retrospective
 
 ### Deviations from Design
@@ -145,3 +150,14 @@
 
 ### Notes for Next Phase
 - スクワッシュマージ済みコミット (`c3fbbb2e`) が `main` に反映されている。`/verify` は post-merge AC (session=next observation) の確認を担当する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify (2026-08-16, `/audit verify-backlog` セッションから)
+
+Post-merge の session=next observation AC を `git blame` + post-fix `session.md` 横断検索で裏取りした。fix 着地 (PR #1347, 2026-08-11T04:40 UTC merge) 後に生成された `docs/sessions/24095-*-2026-08-16/session.md` の Findings に、fix 後初の reconciliation 実行結果が記録されていた: 12 候補中 6 件が `not_satisfied` (Size L/XL absent, `manual_intervention=0` の正しい認識)、6 件が `ambiguous` — fix 前の直近5session連続 147件全件 ambiguous (100%) から、ambiguous 率が 50% へ実測で低下していることを確認し PASS 判定、`phase/done` に遷移した。
+
+### Improvement Proposals
+- N/A

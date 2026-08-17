@@ -74,6 +74,47 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-16 08:22 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1365, phase: code
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: background-task-killed-mid-code-phase
+- notification: indeterminate
+- background wrapper stopped (status: killed) shortly after code phase started; no numeric exit code observed
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+## 2026-08-16 07:43 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1381, phase: code-patch
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: harness-task-stop
+- detect-external-kill.sh returned external-kill (no Exit code trailer, no wrapper_exit event, process group gone at ~22min elapsed) but the parent-observed task notification read status=killed / was stopped, which per upstream #82586 is the harness own kill path rather than an external signal; parent session had run 6d2h and this was its 3rd phase (issue 11m OK, spec 16m OK, code killed), matching upstream #76942 long-session pattern; respawn completed cleanly
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-14 21:57 UTC: code-retry-fire
 
 ### Context

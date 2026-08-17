@@ -4,6 +4,9 @@
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1325#issuecomment-5302643468
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5304278546
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1325 --> / https://github.com/saitoco/wholework/issues/1325#issuecomment-5306099030
 ## Overview
 
 `/verify 1130` の実測で、AC が「新規テストが追加されている」ことを正しく確認して PASS したにもかかわらず、追加されたテスト自体に検出力がなく回帰を捕まえられないケースが確認された。既存の `skills/triage/skill-dev-verify-audit.md` Pattern 2 のサブパターンはいずれもこれを被覆していない。

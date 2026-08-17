@@ -74,6 +74,9 @@ Issue 本文 Background の `run-code.sh` 行番号記載 (`:302`) は現行コ�
 
 - saito (MEMBER、first-class): Issue Retrospective — #1130 spec-phase 事例の Background 記載事実 (grep 行番号) を再検証し一致を確認、AC1/AC2 の rubric 根拠ファイル明示という自動解決あいまいポイントを記録。https://github.com/saitoco/wholework/issues/1329#issuecomment-5303444795
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1329#issuecomment-5303665840
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1329#issuecomment-5304278631
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1329 --> / https://github.com/saitoco/wholework/issues/1329#issuecomment-5306077989
 ## Code Retrospective
 
 ### Deviations from Design

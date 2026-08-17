@@ -575,4 +575,163 @@ jq -r 'select(.ts >= "2026-08-10T04:49:03Z" and .event == "phase_start") | .ts' 
 
 Run it at the 2026-08-16 observation and record the banding alongside the kill verdict.
 
+## 2026-08-16 Update (the decisive observation — H-b' falsified, and the baseline rate was an n=1 artifact)
+
+The no-reboot window held. The host reached **145.28h uptime** without a reboot (`kern.boottime` = 1786337345; the 2-second drift from the previously recorded 1786337343 is NTP correction, not a restart — `up 6 days, 1:17` matches the 2026-08-10 13:49 JST boot). Uptime passed the baseline's 131.6h at 2026-08-15 16:25Z, and dispatching continued past it.
+
+### Result: 0 external kills across 289 dispatches
+
+| Window | Dispatches | External kills |
+|---|---|---|
+| Since boot (uptime 0.25h → 145h) | **289** | **0** |
+| Past the baseline uptime (131.6h+) | **85** | **0** |
+| Same uptime band as the baseline kill (day 5, 120–144h) | **111** | **0** |
+
+`manual_intervention` events since boot: **0**. `manual-recovery-respawn` entries since boot: **0** — the most recent remains 2026-08-10 03:51Z, the baseline itself. Dispatches by uptime band:
+
+| Band | Dispatches |
+|---|---|
+| day 0 (0–24h) | 122 |
+| day 1 (24–48h) | 19 |
+| day 4 (96–120h) | 31 |
+| **day 5 (120–144h)** | **111** |
+| day 6 (144–168h) | 6 |
+
+Days 2–3 have no dispatches (no sessions run).
+
+### H-b' (host uptime / PID reuse) is falsified
+
+The kill reproduced at 131.6h. **111 dispatches have since run inside that same uptime band with zero kills**, and 85 of them past the exact threshold. Uptime does not predict the kill.
+
+| Hypothesis | Verdict after this observation |
+|---|---|
+| H-b' — host uptime / PID reuse | **否定 (falsified).** 111 dispatches in the 120–144h band, 0 kills |
+| Concurrency as the driver | **否定.** Already weak (peak 8 at 0 kills on 08-05〜07); this arm adds 289 more dispatches |
+| Batch route as the driver | **否定.** Confirmed in both directions on 2026-08-10/11 |
+| H-a — harness background-task lifecycle, episodic | **最有力.** The only hypothesis still consistent with everything |
+
+### The more important correction: 3.6% was an n=1 artifact
+
+The 2026-08-10 Update derived a 3.6%/dispatch rate from 1 kill in 28 dispatches and used it to size this arm. That estimate does not survive contact with more data:
+
+- **Assuming upstream #76974's 1.45%/dispatch, the probability of seeing ≥1 kill in a 28-dispatch window is 33.6%.** A single kill in that window is an entirely ordinary draw from a low base rate — it never evidenced an elevated rate.
+- Across 289 dispatches with 0 kills, the **rule of three** puts the 95% upper bound on the current rate at **1.04%/dispatch** — below upstream's measured 1.45%.
+
+Significance of the null result at each scope, against both candidate rates:
+
+| Scope | n | P(0 kills \| 3.6%) | P(0 kills \| 1.45%) |
+|---|---|---|---|
+| Past 131.6h | 85 | 4.5% | 28.9% |
+| day 5 band | 111 | 1.8% | 19.8% |
+| Since boot | 289 | **≈0.003%** | **1.5%** |
+
+At 289 dispatches the null result is significant **even against the upstream rate**. This is the first point in the investigation where the local data can say something about the phenomenon rather than only about local conditions.
+
+### Confounder: the harness moved 12 versions
+
+The host now runs **2.1.233**; the 2026-08-05 upstream cross-reference was written against **2.1.221** (the version #83814 was filed against). Any of the intervening releases could have changed the background task-supervision path. This is unfalsifiable from local data alone and is recorded as an alternative explanation to "episodic silence", not as a finding.
+
+### Limitation: concurrency during the decisive window was lower
+
+Sessions dispatching past 131.6h ran at **1–2 concurrent**, against the baseline's 4. The 85-dispatch sub-window therefore is not a strict reproduction of the baseline's shape — high uptime was reproduced, high concurrency was not. What defends the conclusion anyway is that concurrency has already been independently cleared: 2026-08-05〜07 reached peak 8 concurrent at 0 kills, and 2026-08-10's own baseline ran at 4. No cell of the concurrency axis now predicts kills.
+
+### Consequences
+
+1. **The investigation's local-variable program is exhausted.** Uptime, concurrency, and route have each been tested and none predicts the kill. H-a (episodic harness-side supervision state) is the only surviving hypothesis, and it is not testable from this side — it requires either an upstream response on #76974/#76942/#83814 or the task-notification wording discriminator (#1153).
+2. **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) should be closed as 未検証 — 再現条件消失.** With the rate bounded under ~1%, a detach arm would need hundreds of dispatches to show anything, and would be testing a mitigation for a phenomenon that is not currently occurring. The flag stays implemented and documented for the next burst.
+3. **Periodic reboot is not needed either.** It was the leading workaround on the strength of H-b'; with H-b' falsified there is no reason to pay its cost. 145h of uptime produced no kills.
+4. **The respawn compensation layer can now be evaluated for slimming** (#1070/#1081/#1093/#1119), with #598 re-evaluated as input — this is what #1146's expiry criterion was meant to trigger, now reached by evidence rather than by clock. The layer itself has never failed (12/12), so the question is cost, not reliability.
+
+The operational answer to the question that started this investigation — "can `/auto` be run concurrently again?" — is **yes, unreservedly**. 289 dispatches across 6 days, single and batch routes, up to 8 concurrent in the preceding window, zero external kills, and a compensation layer that has recovered every occurrence it ever saw.
+
 **Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`) stays on standby, and deliberately so.** Running it now would test detachment under conditions where nothing is being killed — the same design flaw that made Arm 1 unable to reproduce. It becomes informative only against a live reproduction, i.e. after uptime returns to the kill-producing range. If periodic reboot is adopted as the workaround before then, Arm 3 loses its test conditions permanently and should be recorded as "not tested — workaround adopted instead" rather than left open.
+
+## 2026-08-16 Update (respawn compensation layer scale-down decision for #1070 / #1081 / #1093, Issue #1381)
+
+The 2026-08-16 decisive observation above (H-b' falsified, 0 external kills across 289 dispatches, rule-of-three upper bound **< 1.04%/dispatch**) is the input this Issue (**#1381**) uses to decide whether the three remaining Icebox proposals for the respawn compensation layer — **#1070**, **#1081**, **#1093** (**#1119** already landed and closed) — should be kept (維持), scaled down (縮退), or closed (クローズ). Per #1381's Purpose, the question is **maintenance cost, not reliability**: the compensation layer (parent-session respawn) has never failed across all 12 recorded occurrences to date.
+
+**Grounding facts common to all three judgments** (all three are required inputs per #1381 AC2):
+
+- Current kill rate upper bound: **< 1.04%/dispatch** (rule of three, 289 dispatch / 0 kill — see the 2026-08-16 decisive observation above)
+- Compensation layer track record: **12/12** — parent-session respawn has recovered every recorded external-kill occurrence to date, with zero failures
+- The sole remaining hypothesis, **H-a** (harness-side episodic background-task supervision), is **unresolved and not verifiable from local data alone** — it requires either an upstream response on `anthropics/claude-code` #76974/#76942/#83814, or the task-notification-wording discriminator tracked in #1153
+
+### #1070 — 維持 (keep, Icebox)
+
+#1070 (明文化: ensure the Step 4 completion check runs before `skills/auto/SKILL.md` Step 6's Tier recovery, so a completed non-idempotent phase — e.g. `merge` — is not respawned unnecessarily) targets a **correctness gap that is independent of kill frequency**: a single occurrence of the described mis-sequencing (respawning an already-merged PR) would be harmful regardless of how rare kills are, since it was already observed once (source Issue #1062). Its own re-evaluation trigger — "a duplicate execution or missed completion caused by completion-check ordering is observed" — has **not fired again** since that original detection. Implementation cost is low (a prose clarification to `skills/auto/SKILL.md` Step 6 plus a `--check-completion` cross-reference, per its own Proposal), which is the cheapest of the three, but low cost does not by itself override the compensation-layer moratorium's structural-judgment-first framing (`docs/reports/ja/project-structural-review-2026-07-31.md:61` Phase 0 item 2) that all three Icebox items share. With the kill rate now bounded at <1.04%/dispatch and no recurrence of the triggering incident, there is no new evidence compelling immediate implementation. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (kill rate <1.04%/dispatch, compensation layer 12/12, H-a unresolved).
+
+### #1081 — 維持 (keep, Icebox)
+
+#1081 (preserve an already-committed, not-yet-pushed patch-route worktree commit from being discarded by a naive respawn) addresses the **highest-consequence** failure mode of the three (data loss of completed implementation work), but it is also the **narrowest edge case**: it requires the intersection of (a) patch route, (b) an external kill landing in the brief window after the implementation commit but before push, and (c) the existing `code-completed-no-pr` catalog entry not applying (it is pr-route-only). No occurrence of actual commit loss has been recorded — the one real incident that motivated this Issue (#1074, 2026-07-29) was caught and manually recovered (`manual-recovery-push-only`) precisely because the parent session anticipated the gap, and every other one of the 12 recorded respawns succeeded without hitting this narrow window. Implementation cost is moderate: a new `modules/orchestration-fallbacks.md` catalog entry (`code-patch-unpushed-commit`) plus `tests/orchestration-fallbacks.bats` coverage. Given the current kill rate bound (<1.04%/dispatch) and zero observed data-loss incidents against 12/12 successful recoveries, there is no urgency signal. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (fires on an actual lost-commit occurrence, or on the shared kill-rate/moratorium triggers).
+
+### #1093 — 維持 (keep, Icebox)
+
+#1093 (scope `detect-external-kill.sh`'s trailer/`wrapper_exit` detection to the `--phase` in question, rather than the whole concatenated `run-auto-sub.sh` log, so a completed earlier phase's success trailer does not mask a later phase's kill) is, by its own freeze reason, **detection-precision polish**: the one recorded false negative (#1066, 2026-07-29) still recovered successfully via the Tier 1→2→3 diagnostic fallback — the pre-check's early-exit fast path was skipped, costing extra diagnosis steps, but recovery was not compromised. This is structurally the same shape as #1070/#1081 in one respect (the false negative recurs deterministically whenever a kill lands on phase 2+ of a concatenated log) but the impact is bounded to diagnostic overhead, not correctness or data loss. Implementation cost is moderate (log-scoping logic change plus a new concatenated-log test case). With the kill rate now bounded at <1.04%/dispatch and no incident where the false negative caused an actual recovery failure, this remains the lowest-priority of the three. **Verdict: 維持** — kept in Icebox, re-evaluation trigger updated to the new baseline (fires on an actual mis-detection incident, or on the shared kill-rate/moratorium triggers).
+
+### 縮退時の要素別扱い (AC3) — 該当なし (N/A)
+
+#1070 / #1081 / #1093 のいずれも「維持」と判断され、「縮退」と判断された Issue はない。したがって、`detect-external-kill.sh` / `--write-manual-recovery` / `retry-on-kill.sh` / 親セッション respawn 手順の各要素を残すか落とすかの判断は **該当なし (N/A)** — 4 要素とも現状の実装のまま維持する。
+
+### #596 との整合 (scope 外、参考メモ)
+
+#596 (XL 並列度の adaptive throttling、kill 率ベース) は本 Issue の Acceptance Criteria の対象外だが、判断の過程で扱いを揃えるべきと分かった点を一言記録する: 本 Issue が確定させた kill 率上限 (<1.04%/dispatch) は #596 が想定する「throttling が必要になるほど高い kill 率」の閾値を大きく下回っており、#596 の設計前提 (kill 率ベースの動的スロットリング) 自体の必要性が薄れている可能性がある。#596 自体の Icebox 扱い見直しは別途判断されたい。
+
+### まとめ
+
+3 件とも **維持**。判断根拠 (kill 率上限 <1.04%/dispatch・補償層実績 12/12・H-a 未解決) は上記の通り。Icebox 本文側 (#1070 / #1081 / #1093) の「再評価トリガー」節は、この判断結果に合わせて既に新しい基準値で更新済み。本 Update セクションは **Issue #1381** の補償層縮退可否判断を記録するものである。
+
+> **[2026-08-16 追記] 本節が根拠とする「kill 率上限 <1.04%/dispatch」は同日中に撤回された。** 下記 § 2026-08-16 Update (2) を参照。維持という結論自体は変わらない (発生率が上振れするなら補償層はより必要になるため)。
+
+## 2026-08-16 Update (2) — a 3-session burst invalidates the same day's rate estimate
+
+The conclusion recorded above and in § 2026-08-16 Update — that the kill rate is bounded under ~1%/dispatch and the local-variable investigation had concluded — **is wrong, and was falsified within hours of being written.**
+
+### The observation
+
+On 2026-08-16 at ~07:07Z, three concurrent sessions were killed at the same moment:
+
+| Issue | Phase | Phase start | Respawn | Elapsed | Parent session (started) |
+|---|---|---|---|---|---|
+| #1273 | review | 06:30:47Z | **07:09:24Z** | 38m37s | `58212-1786837134` (batch, 08-15 23:38Z) |
+| #1365 | code-pr | 06:45:34Z | **07:09:32Z** | 23m58s | `78405-1786860922` (batch, 08-16 06:15Z) |
+| #1381 | code-patch | 06:46:11Z | **07:09:40Z** | 23m29s | `11685-1786860974` (single, 08-16 06:16Z) |
+
+**The three respawns fall within 16 seconds of each other.** Each is an independent parent session reacting to its own kill notification, so the kills themselves were simultaneous. Nothing else is shared: phase start times differ by 15 minutes, elapsed-before-kill differs by 15 minutes, parent session ages differ by 7 hours, and the underlying `claude` CLI process ages ranged from ~1 hour to 6 days. The only common factor is *being in flight at that instant*.
+
+All three recovered on respawn (compensation layer now 15/15).
+
+### Why the rate estimate was wrong
+
+§ 2026-08-16 Update derived `< 1.04%/dispatch` from 289 dispatches with 0 kills via the rule of three, and used it to declare the investigation concluded. **The arithmetic is fine; the model it assumes is not.**
+
+That same section quotes upstream [#76974](https://github.com/anthropics/claude-code/issues/76974) describing the phenomenon as "**BURSTY** — several within a few minutes, then days of silence — suggesting an episodic supervision state rather than per-job decisions." A rule-of-three bound assumes independent, identically-distributed trials. Under an episodic process, a long run of zeros is not evidence of a low per-dispatch rate — **it is the silent interval between bursts, which is exactly what the upstream report says the normal shape looks like**. This report quoted that finding and then modelled the phenomenon as if it had not.
+
+The correct reading of 289 dispatches / 0 kills is "289 dispatches fell inside a silent interval," not "the rate is below 1%."
+
+### Hypothesis status, corrected
+
+| Hypothesis | Status after this burst |
+|---|---|
+| **H-a** — harness background task-supervision, episodic | **最有力、大幅に強化.** Simultaneous kill of three unrelated process trees, uncorrelated with per-process attributes, is the defining signature of an episodic supervision state acting host-wide. This is the closest local match to #76974 obtained so far |
+| **H-b'** — host uptime / PID reuse | **未決に戻す.** § 2026-08-16 Update declared it falsified on 111 dispatches in the 120–144h band with 0 kills. That measurement stands as fact, but its interpretation assumed the i.i.d. model corrected above — a silent interval inside a band proves nothing about the band. Note this burst occurred at **146.3h uptime**, and the prior reproduction at 131.6h; both remain in the long-uptime region |
+| Concurrency as driver | **否定のまま.** Unchanged — peak 8 concurrent at 0 kills still stands, and this burst hit sessions at differing concurrency |
+| Batch route as driver | **否定のまま.** This burst hit two batch sessions and one single-route session indifferently |
+| **Parent session age** | **否定.** Raised and discarded within the same session: ages of 7.5h / 53m / 53m were killed together |
+
+### Recording gap: 2 of 3
+
+`docs/reports/orchestration-recoveries.md` has only two entries for this burst (07:43 UTC for #1381, 08:22 UTC for #1365). **#1273's kill is unrecorded** — recoverable only from the duplicate `phase_start` in `.tmp/auto-events.jsonl`.
+
+This is the limitation § 2026-08-16 Update itself stated ("negative result の根拠が `manual-recovery-respawn` エントリの不在である場合、それが「親セッションが認識・記録した kill」の不在を意味する") firing in practice. Any negative result in this report inherits the parent sessions' recording discipline as a hidden dependency. Tracked as **#1387**.
+
+### Classification inconsistency was our own error, not an ambiguous criterion
+
+The two recorded entries classified the same burst differently — #1365 as `notification: indeterminate`, #1381 as `cause: harness-task-stop`. On inspection this is **not** a discriminator problem: #1153 shipped `--notification CLASS` with a fixed 4-value vocabulary (`harness-stop` / `external-signal` / `indeterminate` / `unobserved`), #1365's session used it correctly, and #1381's session invented a `--cause` slug without checking the argument spec. The correct call was `--cause external-kill --notification harness-stop`. Recorded here because the resulting entry is now inconsistent with the vocabulary and would otherwise look like evidence of an unreliable criterion.
+
+### Consequences
+
+1. **The investigation is not concluded.** § 2026-08-16 Update's closure is withdrawn. H-a remains untestable from this side, so the practical position is unchanged — but it must be stated as "unresolved and untestable locally," not as "concluded, rate bounded."
+2. **Do not compute a per-dispatch rate bound from a quiet window.** Any future rate statement in this report must either model the burst structure explicitly or be stated as "no kills observed across N dispatches in the window from X to Y," with no extrapolation. This is the single most reusable lesson from the 2026-08-16 sequence.
+3. **#1070 / #1081 / #1093 remain 維持**, and their re-evaluation triggers ("kill 率の上限が本判断時点の基準を上回る新たな観測が得られた時") are **fired** by this burst. Their trigger text should be rewritten to drop the `< 1.04%/dispatch` baseline, which no longer means anything.
+4. **#596** (kill-rate-based adaptive throttling): the note above suggesting its premise had weakened is likewise withdrawn — a bursty process is precisely the shape adaptive throttling would target.
+5. The compensation layer absorbed all three kills without loss. Its value is reaffirmed, independent of rate.

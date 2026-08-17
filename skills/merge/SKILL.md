@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -261,7 +261,7 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    ```bash
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh "$ISSUE_NUMBER" merge --no-push
    ```
-   `--no-push` is correct here — substep 4 below pushes to `main`, and this Consumed Comments commit rides along with it in the same push. This depends on substep 4 pushing even when the Phase Handoff write itself has nothing new to commit (see substep 4's guard, updated to check for unpushed commits rather than only staged changes).
+   `--no-push` is correct here — substep 5 below pushes to `main`, and this Consumed Comments commit rides along with it in the same push. This depends on substep 5 pushing even when the Phase Handoff write itself has nothing new to commit (see substep 5's guard, updated to check for unpushed commits rather than only staged changes).
 
    **Why this call sits here, post-squash, rather than at the start of the skill (Step 1-2) like the other phases:** `gh pr merge --squash --delete-branch` above already ran at the top of this Step, deleting the PR branch — any commit made before that point on the now-deleted branch would be lost. Pushing early (before the squash merge) is also unsafe: it would re-trigger CI and could invalidate the mergeability state Step 1 already confirmed. Running post-squash, direct to `main`, avoids both risks while still landing before Step 5's `phase/verify` transition — the same "before this phase's own label transition" ordering the other phases follow. At the point this call runs, the most recent `phase/*` label on the Issue is still `phase/review` (`/merge`'s own `phase/verify` transition happens in Step 5, not yet reached).
 2. Glob `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` to locate the Spec (now on main):
@@ -269,7 +269,12 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    - If not found: output `[phase-handoff] No Spec found — skipping handoff write.` and continue
 3. If Spec found: Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the `Write Procedure` section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER`, `PHASE_NAME=merge`.
-4. Commit and push to main:
+4. **Phase Handoff dedupe fallback** (deterministic rotation safety net, see `modules/phase-handoff.md` § "Deterministic rotation fallback"): run
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh "$ISSUE_NUMBER"
+   ```
+   Any rewrite this makes is unstaged at this point and gets picked up by the `git add` in the next item's commit.
+5. Commit and push to main:
    ```bash
    git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
    ```
