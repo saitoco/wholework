@@ -88,3 +88,40 @@ Implementation Step 1 (`run-auto-sub.sh` の `phase_start` 新規フィールド
 ### Arm 3 との関係
 
 本 Issue は Arm 3 (`WHOLEWORK_SPAWN_DETACH=1` の対照実験) 実行そのものを含まない (Issue 本文 Out of Scope)。Implementation Step 1 は Arm 3 の前提条件 (spawn 時点の detach 状態記録) を満たすのみで、flag を有効化する判断は `docs/reports/external-kill-investigation.md` 側 (#1146) に残る。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を Spec の記述どおりに実装した。
+
+### Design Gaps/Ambiguities
+
+- **`--window` が recorded 判定とバースト束ねの両方に共用される設計の実効性への懸念**: Implementation Step 3 は `docs/reports/orchestration-recoveries.md` エントリの見出し日時が respawn 時刻 (`start_{i+1}.ts`) から `--window` 秒以内にある場合のみ `recorded=yes` と判定する仕様で、これを Spec の記述どおりに実装した。しかし実際の `orchestration-recoveries.md` エントリ (例: #1365 の `manual-recovery-respawn` は 08:22 UTC 見出しで記録されているのに対し、実際の respawn 時刻は 07:09:32Z — 約 71 分の乖離) は、パーソン(親セッション)が kill を認知・診断・記録するまでの遅延を反映しており、デフォルト `--window 120` (2 分) を大きく超えるケースがある。バースト束ねに使う window (respawn 同士の近接性、観測値は 16 秒以内) と、recorded 判定に使う window (記録行動の遅延、観測値は分〜時間オーダー) は本質的に異なるスケールの量であり、同一パラメータを共用する現在の設計では、実データに対して `recorded=yes` になるべきエントリが `recorded=no` と誤判定される可能性がある。本 Issue の Spec で明示的にこの設計が指定されていたため、そのまま忠実に実装した (テストフィクスチャは recorded=yes を検証できるよう見出し時刻を respawn 時刻の近傍に置いて構成している)。実データでの誤判定が実際に問題になる場合は、recorded 判定用に独立した window パラメータ (例: `--recorded-window`、デフォルトをより長く) を導入する追随 Issue を検討する余地がある。
+
+### Rework
+
+N/A — 手戻りは発生しなかった。
+
+### Smoke Test
+
+N/A — Spec に `## Smoke Test` セクションが存在しないため実行していない。
+
+### Pre-implementation FAIL Confirmation
+
+Confirmed pre-implementation FAIL for 2 new test(s) (`tests/run-auto-sub.bats` の `spawn_detach` フィールド検証 2 件) against the pre-#1387 `scripts/run-auto-sub.sh` (`git checkout <pre-implementation-commit> -- scripts/run-auto-sub.sh` を用いて確認後、実装版に復元)。`tests/detect-unrecorded-kills.bats` の新規テストはプロセス出力/終了コードを検証するアサートであり、本チェックの対象外 (`skills/code/stale-test-check.md` 系のスコープ定義に従う)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `detect-unrecorded-kills.sh` のコアロジック (グルーピング・respawn 判定・バースト束ね・recoveries.md 突合) を bash ラッパー + 埋め込み python3 (heredoc) で実装した。日時演算・JSON 解析を扱う既存スクリプト (`run-auto-sub.sh` の detach shim、`collect-recovery-candidates.sh` の issues-json 解析) が同じパターンを踏襲しており、bash 3.2 純正実装より堅牢で読みやすいと判断した。
+- `manual_intervention` イベントの phase 相当フィールドは `phase` ではなく `recovery_target` であることを `scripts/emit-event.sh` のドキュメントコメントから確認し、`detect-unrecorded-kills.sh` の終了イベント判定でこれを個別に扱った (見落としやすい差異)。
+- Issue AC の verify command は全て Spec 記載どおりで rewrite 不要だった (Step 10 の consistency check で確認済み)。
+
+### Deferred Items
+- CI (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前のため Step 10 で未評価 (route-agnostic 除外ルールに従う)。`/review` フェーズで評価される。
+
+### Notes for Next Phase
+- Design Gaps/Ambiguities に記載した `--window` の recorded 判定への適用範囲 (respawn 近接性 window とは異なるスケールの記録遅延を同じパラメータで扱っている) は、実データでの `recorded=no` 誤判定リスクとして認識しておくこと。`/review` でこの設計選択の妥当性について追加のレビュー観点として検討してよい。
+- `scripts/detect-unrecorded-kills.sh` は新規スクリプトのため、既存の `collect-recovery-candidates.sh` と同様のバグ・エッジケース (jq/python3 環境依存など) がないか、CI 通過後の実データでの動作を注視する価値がある。
