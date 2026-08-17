@@ -1179,6 +1179,56 @@ MOCK
     grep -q "wrapper_alive checkpoint=pre_subprocess phase=code-patch" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "phase_start: spawn_detach=1 when _WHOLEWORK_DETACHED is exported" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+    export _WHOLEWORK_DETACHED=1
+
+    # Override emit-event.sh mock to record calls
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "phase_start phase=code-patch spawn_detach=1" "$BATS_TEST_TMPDIR/emit.log"
+}
+
+@test "phase_start: spawn_detach=0 when _WHOLEWORK_DETACHED is not exported" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+    unset _WHOLEWORK_DETACHED
+
+    # Override emit-event.sh mock to record calls
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "phase_start phase=code-patch spawn_detach=0" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "compute: modelUsage jq expression selects single key directly" {
     local input='{"model":null,"modelUsage":{"claude-sonnet-5":{"inputTokens":100,"outputTokens":50}}}'
     local result
