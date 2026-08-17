@@ -156,3 +156,29 @@ Verify command (rubric/grep/github_check の混在) は全 9 件が過不足な�
 
 ### Improvement Proposals
 - Stale-worktree concurrent-session detection produced a false positive: the retried `/review`'s Worktree Entry step saw a `locked` leftover worktree from its own killed predecessor plus a `ListAgents` entry describing the parent session's own batch (`auto batch #1389,1386,1387,1377`) and concluded a live peer session held the worktree, when in fact the owning process (the killed `run-auto-sub.sh`) had already been confirmed dead by the harness. `modules/worktree-lifecycle.md`'s stale-worktree check currently instructs treating an existing worktree as "a live conflict — not stale — unless there is positive evidence the owning process has actually ended," but does not give guidance on distinguishing a genuinely live peer session from a `ListAgents` entry that is actually the *current* session's own ancestor/batch description. A future Issue could add that distinction (e.g., cross-check the `ListAgents` session id/name against the current session's own `AUTO_SESSION_ID` or process ancestry before treating it as evidence of a peer).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- No ambiguities. 9 pre-merge AC (rubric/grep/github_check mix) were unambiguous throughout.
+
+#### design
+- No deviations from the merged design; scope-integration decision (bundling 3 instrumentation gaps into one Issue) documented in Overview held up through implementation.
+
+#### code
+- Code Retrospective already flagged a `--window` shared-design concern that review found more severe than expected in practice (0% effective recorded-kill match rate under real data) — captured in full in `## review retrospective` § Spec vs. implementation divergence patterns; not repeated here.
+
+#### review
+- 0 MUST, 0 SHOULD from the structured review-response pass, but the retrospective's own free-text "Recurring issues" and "Acceptance criteria verification difficulty" sections surfaced 2 improvement proposals explicitly deferred to this aggregation step (see `### Improvement Proposals` below) plus a genuine spec/implementation divergence (documented above) and 1 real implementation bug (new script's unguarded `shift 2` option parser) caught and fixed within the review phase itself.
+
+#### merge
+- Clean squash merge; the only note is that this issue's own CI green state depended on a fix (forbidden-expressions violation) that originated in a *different* Issue's (#1386) direct-to-main Phase Handoff push — see review retrospective and Improvement Proposals below.
+
+#### verify
+- No FAIL/UNCERTAIN. All 9 pre-merge AC were SKIPPED (already checked at review time). The orchestration anomaly (harness kill of the review phase, Tier 3 recovery) is fully recorded in `## Auto Retrospective` above and `docs/reports/orchestration-recoveries.md` § `review-tier3-recovery` — not duplicated here.
+
+### Improvement Proposals
+- New bash scripts using a `while [ $# -gt 0 ]` option parser with `shift 2`-consuming value options should be required to guard argument count before the shift (e.g. `[[ $# -ge 2 ]] || { echo "Error: ... requires a value" >&2; exit 1; }`), mirroring the existing convention already established in `scripts/run-auto-sub.sh` (and covered by `tests/run-auto-sub.bats`). This Issue's new `scripts/detect-unrecorded-kills.sh` initially omitted the guard and would have infinite-looped on a value-less flag, despite the established convention living in the same repository — caught by `/review`'s edge-case execution sub-agent, not by a systematic check. Consider a lightweight static check (grep-based: flag a `shift 2` not immediately preceded by an argument-count guard) added to `scripts/check-forbidden-expressions.sh` or an equivalent pre-commit-style scan. (Source: `## review retrospective` § Recurring issues, this Spec.)
+- `/merge`'s Phase Handoff commit writes directly to `main` (per `modules/worktree-lifecycle.md`'s propagation path table) via a path not gated by the `check-forbidden-expressions` CI job. A forbidden-expression violation introduced there (as happened in Issue #1386) silently blocks CI on every subsequent unrelated PR until someone diagnoses and fixes it — this Issue's own CI wait time was extended by exactly that. Consider running `check-forbidden-expressions.sh` locally before the Phase Handoff commit in `/merge`, or a lightweight pre-push hook scoped to direct-to-main writes. (Source: `## review retrospective` § Acceptance criteria verification difficulty, this Spec.)
