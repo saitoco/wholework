@@ -84,7 +84,7 @@
 - Carried forward unchanged from the review phase: `skills/verify/SKILL.md` Step 5's disambiguation logic and full 3-consumer signal consolidation remain out of scope/future cleanup — not addressed in merge.
 
 ### Notes for Next Phase
-- `/verify 1386` should find nothing outstanding beyond the standard post-merge acceptance check (Post-merge Verification section is empty — "なし").
+- `/verify 1386` should find nothing outstanding beyond the standard post-merge verification pass (Post-merge Verification section is empty — "なし").
 - Issue #1386 auto-closes on this merge (`closes #1386`, base branch is `main`); Step 6 (Verify Issue State fallback) should confirm `state=CLOSED` and `phase/verify` label are both applied.
 
 ## review retrospective

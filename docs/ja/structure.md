@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（88 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（89 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（123 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（125 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -225,6 +225,7 @@ wholework/
 - `scripts/reclaim-stale-worktrees.sh` — 完了済み (CLOSED/MERGED) の Issue/PR に対応する stale worktree と孤児ブランチを棚卸し・回収する。既定は dry-run、`--apply` でローカルの削除を実行。並行セッション除外 (locked かつ HEAD が main と一致)、未コミット変更の保護、squash merge されたブランチの安全な削除 (`git branch -d` が拒否された場合、MERGED PR の `headRefOid` とブランチ tip が一致するときのみ `-D` にフォールバック — `kind=pr` はその PR 自身、`kind=issue` は `closes #<N>` を検索し一致を検証した MERGED PR。`/code` pr route も `<phase>+issue-N` ブランチを自身の PR で squash merge するため) を備える。`origin` 上に残留した孤児 `worktree-*` ブランチも回収対象: 常に列挙され (dry-run レポート)、`--apply-remote` (`--apply` から独立) を指定した場合のみ実際に `git push origin --delete` を実行する。安全策はローカルと同水準 — ローカルにチェックアウト中のブランチは除外 (ローカル回収パスに委譲)、`kind=pr` は MERGED PR の `headRefOid` と完全一致することを確認、`kind=issue` は同様の closes-PR `headRefOid` 一致が見つかればそれを使い、見つからなければ `origin/<default-branch>` の祖先であることを確認するフォールバックに切り替える
 - `scripts/detect-wrapper-anomaly.sh` — shell wrapper 出力の既知失敗パターンを検出し、Auto Retrospective の markdown 断片を生成
 - `scripts/detect-external-kill.sh` — `external-kill-parent-respawn` シグネチャ（exit code 137 単独、または exit code 143/unknown かつ wrapper ログの `Exit code: ` トレーラーと `auto-events.jsonl` の `wrapper_exit` イベントの両方が issue/phase について欠如）を機械的に判定する。exit 0 = match、exit 1 = no-match（`modules/orchestration-fallbacks.md#external-kill-parent-respawn` 参照）。`wrapper_exit` 不在条件は `spec` / `issue` を含む全 phase で判別力を持つ — `run-spec.sh`/`run-issue.sh` は post-claude の emit ブロックに到達する終了 (= wrapper が phase を所有する場合、`_EMIT_PHASE_OWNED`) では毎回 `wrapper_exit` を emit するため (#1228)、これらの phase での不在は phase 全体の偽陽性ではなく external kill のシグナルとなる
+- `scripts/detect-unrecorded-kills.sh` — `.tmp/auto-events.jsonl` の `phase_start` 重複 (respawn シグナル — 連続するペアの間に `wrapper_exit`/`phase_complete`/`manual_intervention` が存在しない) を `docs/reports/orchestration-recoveries.md` のエントリと `--window` 秒 (既定 120 秒) の許容差で突合し、未記録の external kill をバースト単位で検出する。`/verify` Step 15 から呼ばれる (Issue #1387)
 - `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（ハンドラ: dco-signoff-missing-autofix、code-patch-silent-no-op、json-mode-silent-hang）。ハンドラが失敗した場合は exit 2（anchor 不一致の exit 1 と区別）を返す。成功時は自前の `write_recovery_entry()` で `docs/reports/orchestration-recoveries.md` にエントリを記録する（`spawn-recovery-subagent.sh` の Tier 3 writer と同型）

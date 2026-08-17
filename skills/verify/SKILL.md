@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -949,7 +949,7 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold "$RECOVERIES_AUTO_FIRE_THRESHOLD" --issues-json .tmp/open-issues-$NUMBER.json
    ```
 
-3. If the output is empty: skip the rest of this step. For each `group-key<TAB>count` line in the output (`group-key` is either a bare symptom-short, e.g. `manual-recovery-review-rerun`, or `symptom-short/cause-slug`, e.g. `manual-recovery-review-rerun/dirty-guard`, when `collect-recovery-candidates.sh` found a `- cause:` line in the source entries — see Issue #1123):
+3. If the output is empty: skip the remainder of item 3 (its `a`–`f` sub-steps below) and continue with item `3b`. **This skip applies only to item 3's own sub-steps — items `3b` and `4` (Cleanup) always run regardless of whether this output is empty.** For each `group-key<TAB>count` line in the output (`group-key` is either a bare symptom-short, e.g. `manual-recovery-review-rerun`, or `symptom-short/cause-slug`, e.g. `manual-recovery-review-rerun/dirty-guard`, when `collect-recovery-candidates.sh` found a `- cause:` line in the source entries — see Issue #1123):
    - If `AUTONOMY_TIER=L1` OR `RECOVERIES_AUTO_FIRE_ENABLED=false`:
      Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" (count: {count})`
    - If `AUTONOMY_TIER=L2` or `L3` AND `RECOVERIES_AUTO_FIRE_ENABLED=true`:
@@ -996,6 +996,23 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
         source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
         EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={group-key}" "count={count}" "issue_number={new_issue_number}"
         ```
+
+3b. **Unrecorded external kill / burst detection** (Issue #1387): this step runs after Step 13
+   Worktree Exit, so it operates in the main repository context and can access
+   `.tmp/auto-events.jsonl` directly (gitignored, not present inside a worktree checkout).
+
+   Guard: if `.tmp/auto-events.jsonl` does not exist, skip this sub-block entirely.
+
+   Otherwise, run (`--since 86400` scopes output to the last 24h so routine runs surface only
+   recent findings instead of the full historical backlog):
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh .tmp/auto-events.jsonl docs/reports/orchestration-recoveries.md --since 86400
+   ```
+
+   If the command produces stdout output, display it as-is to the terminal under the heading
+   `Warning: unrecorded external kill(s) / burst(s) detected:`. If it produces no output, skip
+   silently. There is no autonomy tier gating here — this is a read-only diagnostic printed to
+   the terminal, never a write to GitHub, unlike `recoveries-auto-fire` above.
 
 4. Cleanup:
    ```bash

@@ -88,3 +88,56 @@ Implementation Step 1 (`run-auto-sub.sh` の `phase_start` 新規フィールド
 ### Arm 3 との関係
 
 本 Issue は Arm 3 (`WHOLEWORK_SPAWN_DETACH=1` の対照実験) 実行そのものを含まない (Issue 本文 Out of Scope)。Implementation Step 1 は Arm 3 の前提条件 (spawn 時点の detach 状態記録) を満たすのみで、flag を有効化する判断は `docs/reports/external-kill-investigation.md` 側 (#1146) に残る。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を Spec の記述どおりに実装した。
+
+### Design Gaps/Ambiguities
+
+- **`--window` が recorded 判定とバースト束ねの両方に共用される設計の実効性への懸念**: Implementation Step 3 は `docs/reports/orchestration-recoveries.md` エントリの見出し日時が respawn 時刻 (`start_{i+1}.ts`) から `--window` 秒以内にある場合のみ `recorded=yes` と判定する仕様で、これを Spec の記述どおりに実装した。しかし実際の `orchestration-recoveries.md` エントリ (例: #1365 の `manual-recovery-respawn` は 08:22 UTC 見出しで記録されているのに対し、実際の respawn 時刻は 07:09:32Z — 約 71 分の乖離) は、パーソン(親セッション)が kill を認知・診断・記録するまでの遅延を反映しており、デフォルト `--window 120` (2 分) を大きく超えるケースがある。バースト束ねに使う window (respawn 同士の近接性、観測値は 16 秒以内) と、recorded 判定に使う window (記録行動の遅延、観測値は分〜時間オーダー) は本質的に異なるスケールの量であり、同一パラメータを共用する現在の設計では、実データに対して `recorded=yes` になるべきエントリが `recorded=no` と誤判定される可能性がある。本 Issue の Spec で明示的にこの設計が指定されていたため、そのまま忠実に実装した (テストフィクスチャは recorded=yes を検証できるよう見出し時刻を respawn 時刻の近傍に置いて構成している)。実データでの誤判定が実際に問題になる場合は、recorded 判定用に独立した window パラメータ (例: `--recorded-window`、デフォルトをより長く) を導入する追随 Issue を検討する余地がある。
+
+### Rework
+
+N/A — 手戻りは発生しなかった。
+
+### Smoke Test
+
+N/A — Spec に `## Smoke Test` セクションが存在しないため実行していない。
+
+### Pre-implementation FAIL Confirmation
+
+Confirmed pre-implementation FAIL for 2 new test(s) (`tests/run-auto-sub.bats` の `spawn_detach` フィールド検証 2 件) against the pre-#1387 `scripts/run-auto-sub.sh` (`git checkout <pre-implementation-commit> -- scripts/run-auto-sub.sh` を用いて確認後、実装版に復元)。`tests/detect-unrecorded-kills.bats` の新規テストはプロセス出力/終了コードを検証するアサートであり、本チェックの対象外 (`skills/code/stale-test-check.md` 系のスコープ定義に従う)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 15 サブブロック `3b` の到達不能バグは、直前の item 3 の「出力が空ならこのステップの残りをスキップ」という記述の対象範囲を、item 3 自身の a〜f サブステップのみに明示的に限定する書き換えで解消した (3b/Cleanup を新設のトップレベル Step に分離する代替案もあったが、既存の Step 15 の構造を保つ最小差分を優先した)。
+- `--window` の共用設計問題 (Code Retrospective で既に懸念として記録済み) は、実データでの実測 (`recorded=yes` 判定率が実質 0%) を踏まえ、`--recorded-window` (デフォルト 86400 秒) を新設して分離した。あわせて、実測で判明した第 2 の原因 (recoveries.md の phase 表記ゆれ `code` vs `code-pr`/`code-patch`) に対してハイフン prefix マッチングを追加した。
+- `detect-unrecorded-kills.sh` の `--window` 系オプションが値なしで渡された場合に無限ループするバグ (`shift 2` が `set -u` 下で silently no-op) は、同一リポジトリの `run-auto-sub.sh` に既存の引数個数ガード規約を適用して修正した。
+- `spawn_detach` フィールドは `run-auto-sub.sh` にしか実装されていなかったため、`/auto`/`/code` から直接起動される 5 つの sibling wrapper (`run-code.sh`/`run-review.sh`/`run-merge.sh`/`run-spec.sh`/`run-issue.sh`) にも同一パターンで拡張した。
+
+### Deferred Items
+- CONSIDER 級の指摘 3 件 (同一秒 terminal event の edge case、`docs/workflow.md` へのナラティブ追記、`docs/reports/external-kill-investigation.md` の stale 記述更新) は本フェーズでは対応せず据え置いた。理由は PR コメントに記載済み — いずれも低優先度、または #1146 側での対応が既に想定されている。
+- `/merge` の Phase Handoff コミットが `main` へ直接 push され、forbidden-expressions CI ジョブでゲートされていない構造的ギャップを本フェーズで発見・応急修正した (docs/spec/issue-1386-preview-ac-fallback-exit-code.md の該当箇所を修正)。恒久対応 (pre-push フック等) は本 Issue のスコープ外であり、review retrospective に改善提案として記録した — `/verify` での集約判断を待つ。
+
+### Notes for Next Phase
+- `scripts/detect-unrecorded-kills.sh` は今回のフェーズで CLI インターフェースが変わった (`--recorded-window`/`--since` の追加)。`skills/verify/SKILL.md` の呼び出し箇所は `--since 86400` を渡すよう更新済み。将来この呼び出し箇所を変更する際は、`--window`/`--recorded-window` の意味の違い (バースト束ね vs recoveries.md 突合の許容誤差) を混同しないこと。
+- 実データでの `recorded=yes` 判定は、`--recorded-window` を分離してもなお `docs/reports/orchestration-recoveries.md` のエントリの書式ゆれ (phase 表記など) に依存する。post-merge の opportunistic 観察 AC で実際のバーストが再度発生した際に、`recorded` 判定が意図通り機能しているか注視すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Code Retrospective が明示的に記録していた `--window` 共用設計の懸念 (Design Gaps/Ambiguities) は、実データ (`.tmp/auto-events.jsonl` + `docs/reports/orchestration-recoveries.md` の実エントリ) に対する実測で、想定より深刻であることが判明した — 記録済み kill の `recorded=yes` 判定率は実質 0% だった。原因は 2 つ複合していた: (1) window スケールの不一致 (Code Retrospective が既に記録済み)、(2) `orchestration-recoveries.md` の phase 表記ゆれ (`code` vs `code-pr`/`code-patch`、Code Retrospective 未記録の第 2 の原因)。加えて `skills/verify/SKILL.md` Step 15 への新規サブブロック `3b` の挿入が、既存の「出力が空ならこのステップの残りをスキップ」という記述の対象範囲を意図せず広げてしまい、新機能が到達不能になる制御フローバグを生んでいた — これは実装が Spec の記述に忠実だったにもかかわらず、Spec 自体が想定していなかった既存プロセス文書 (SKILL.md) との相互作用から生じた divergence である。いずれも `/review` の 3 段階検証 (review-spec + review-bug×2 + adversarial verify) と実データに対する実行確認 (edge case execution サブエージェント) で捕捉され、この phase 内で修正済み。
+
+### Recurring issues
+
+新規スクリプト `detect-unrecorded-kills.sh` のオプション引数パーサ (`while [ $# -gt 0 ]; case ... --window) ... shift 2 ;;`) が、値なしで渡された場合に無限ループするバグを含んでいた。同一リポジトリの `scripts/run-auto-sub.sh` には既に同種のハザードに対する確立済みガード規約 (`[[ $# -ge 2 ]] || { echo "Error: ... requires a value" >&2; exit 1; }`、`tests/run-auto-sub.bats` に "with no value (with diagnostic message, not a bare shift failure)" という命名規則のテストが複数存在) があったにもかかわらず、新規スクリプトはこれを踏襲していなかった。既存規約が同一リポジトリ内に存在していても、新規スクリプト作成時に横展開されない、という同種のパターンが今回も再発したと言える。**改善提案 (Issue 起票は見送り、/verify で集約判断)**: 新規 bash スクリプトが `while [ $# -gt 0 ]` 形式のオプションパーサを持つ場合、`shift 2` を伴う値取得オプションには引数個数ガードを必須とするチェックリスト項目、または `scripts/check-forbidden-expressions.sh` 相当の軽量な静的チェック (grep ベースで `shift 2` の直前に `$# -ge 2` 等のガードがあるか検出) を追加する余地がある。
+
+### Acceptance criteria verification difficulty
+
+Verify command (rubric/grep/github_check の混在) は全 9 件が過不足なく機械判定でき、UNCERTAIN は発生しなかった。唯一の律速要因は CI (`github_check "gh pr checks" "Run bats tests"`) 自体ではなく、**このブランチと無関係な `Forbidden Expressions check` ジョブの FAILURE** だった。根本原因は Issue #1386 の `/merge` Phase Handoff コミット (`main` への直接 push) が禁止表現を導入したこと — この書き込み経路は本リポジトリの forbidden-expressions CI ジョブでゲートされていない。**改善提案 (Issue 起票は見送り、/verify で集約判断)**: `/merge` の Phase Handoff 書き込みが `main` へ直接 push される経路 (`modules/worktree-lifecycle.md` の propagation path 表を参照) は、CI による禁止表現チェックの対象外であるため、そこで導入された違反が後続の全 PR の CI を無関係にブロックし続ける構造的ギャップがある。`/merge` の Phase Handoff コミット前に `check-forbidden-expressions.sh` をローカルで実行するステップを追加するか、`main` push 用の軽量 pre-push フックを検討する価値がある。
