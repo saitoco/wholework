@@ -115,7 +115,7 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   else
     export EMIT_PHASE_NAME="code"
   fi
-  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
+  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
 PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)

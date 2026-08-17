@@ -76,7 +76,7 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   export EMIT_ISSUE_NUMBER="${_MERGE_ISSUE:-$PR_NUMBER}"
   export EMIT_PR_NUMBER="$PR_NUMBER"
   export EMIT_PHASE_NAME="merge"
-  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
+  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
 PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)

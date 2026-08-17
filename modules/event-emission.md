@@ -17,7 +17,7 @@ Per-Issue Durations and session coverage metrics.
 
 Emitted at the beginning of a phase, before invoking `claude -p`.
 
-`spawn_detach` (values `0`/`1`): reflects the emitting process's `_WHOLEWORK_DETACHED` value at emit time — `1` only when `run-auto-sub.sh`'s spawn detachment shim (`WHOLEWORK_SPAWN_DETACH=1` opt-in, see `docs/tech.md`'s `WHOLEWORK_SPAWN_DETACH` environment variable entry) actually re-exec'd this wrapper process as a detached session/process-group leader, not merely that the flag was requested. This lets post-hoc burst analysis determine each killed wrapper's detach state at spawn time (Issue #1387).
+`spawn_detach` (values `0`/`1`): reflects the emitting process's `_WHOLEWORK_DETACHED` value at emit time — `1` only when `run-auto-sub.sh`'s spawn detachment shim (`WHOLEWORK_SPAWN_DETACH=1` opt-in, see `docs/tech.md`'s `WHOLEWORK_SPAWN_DETACH` environment variable entry) actually re-exec'd this wrapper process as a detached session/process-group leader, not merely that the flag was requested. This lets post-hoc burst analysis determine each killed wrapper's detach state at spawn time (Issue #1387). Emitted by every `run-*.sh` wrapper's own `phase_start` (the `_EMIT_PHASE_OWNED` pattern below), including `run-code.sh`/`run-review.sh`/`run-merge.sh`/`run-spec.sh`/`run-issue.sh` when invoked directly (not through `run-auto-sub.sh`) — the detach shim exists only in `run-auto-sub.sh`, so these always report `0`. The one exception is `/verify`'s non-wrapper inline `phase_start` emit (see "Non-Wrapper Emitters" below), which has no wrapper process to reflect and omits the field entirely; consumers should treat its absence as unknown, not `0`.
 
 ```json
 {
@@ -143,7 +143,7 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   _EMIT_PHASE_OWNED=1
   export EMIT_ISSUE_NUMBER="$ISSUE_NUMBER"
   export EMIT_PHASE_NAME="<phase>"
-  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
+  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
 # ... run claude ...
