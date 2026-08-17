@@ -735,3 +735,24 @@ The two recorded entries classified the same burst differently — #1365 as `not
 3. **#1070 / #1081 / #1093 remain 維持**, and their re-evaluation triggers ("kill 率の上限が本判断時点の基準を上回る新たな観測が得られた時") are **fired** by this burst. Their trigger text should be rewritten to drop the `< 1.04%/dispatch` baseline, which no longer means anything.
 4. **#596** (kill-rate-based adaptive throttling): the note above suggesting its premise had weakened is likewise withdrawn — a bursty process is precisely the shape adaptive throttling would target.
 5. The compensation layer absorbed all three kills without loss. Its value is reaffirmed, independent of rate.
+
+### Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`), repositioned
+
+§ 2026-08-16 Update retired Arm 3 as "未検証 — 再現条件消失" on the reasoning that, with the rate bounded under ~1%, a detach arm would need hundreds of dispatches to show anything. **That retirement is withdrawn along with the rate bound it rested on.** The phenomenon reproduces; the flag remains implemented and untested.
+
+**But the arm cannot be designed the way the earlier arms were, and the reason is the central lesson of this report.** If detachment is enabled and no kills follow, that observation is indistinguishable from a silent interval — exactly the inference this report already got wrong once. A dispatch count, however large, cannot rescue it: under an episodic process, N dispatches with zero kills is evidence about *when they ran*, not about the treatment.
+
+The only observation that discriminates is **behaviour during a burst**:
+
+- A burst arrives, and detached children survive while non-detached wrappers in the same burst die → detachment works
+- A burst arrives and takes both → detachment does not address this failure mode
+
+This forces three constraints on the design:
+
+1. **A control group must remain.** Enabling the flag everywhere destroys the comparison — a burst would then show only "everything survived" or "everything died", the first of which is again indistinguishable from silence. Some sessions must keep running undetached.
+2. **The trigger is passive and unschedulable.** Bursts cannot be induced; 2026-07-13〜31 and 2026-08-10/16 are the only ones on record. The arm is armed and then waits, possibly for weeks.
+3. **Per-wrapper detach state must be recorded at spawn time**, not reconstructed afterwards. A burst is identified after the fact by correlating respawns across sessions (this is how 2026-08-16 was found at all), so the flag state of each killed wrapper has to already be in the log when that correlation happens — otherwise the arm produces a burst with no attributable treatment/control split. Nothing records this today.
+
+Constraint 3 is the actionable part: **the arm is not runnable until spawn-time detach state is captured in `.tmp/auto-events.jsonl`.** Until then, enabling the flag would consume a burst — a scarce, unschedulable event — without being able to read the result. Tracked alongside the burst-observation protocol work (#1387), since both are the same gap: the burst arrives faster than the instrumentation to characterise it.
+
+The operational recommendation is therefore unchanged in the short term (leave the flag off, rely on the compensation layer at 15/15), but for a different reason than before: not "there is nothing to test", but "testing it now would waste the test".
