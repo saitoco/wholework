@@ -112,16 +112,32 @@ N/A — Spec に `## Smoke Test` セクションが存在しないため実行�
 Confirmed pre-implementation FAIL for 2 new test(s) (`tests/run-auto-sub.bats` の `spawn_detach` フィールド検証 2 件) against the pre-#1387 `scripts/run-auto-sub.sh` (`git checkout <pre-implementation-commit> -- scripts/run-auto-sub.sh` を用いて確認後、実装版に復元)。`tests/detect-unrecorded-kills.bats` の新規テストはプロセス出力/終了コードを検証するアサートであり、本チェックの対象外 (`skills/code/stale-test-check.md` 系のスコープ定義に従う)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `detect-unrecorded-kills.sh` のコアロジック (グルーピング・respawn 判定・バースト束ね・recoveries.md 突合) を bash ラッパー + 埋め込み python3 (heredoc) で実装した。日時演算・JSON 解析を扱う既存スクリプト (`run-auto-sub.sh` の detach shim、`collect-recovery-candidates.sh` の issues-json 解析) が同じパターンを踏襲しており、bash 3.2 純正実装より堅牢で読みやすいと判断した。
-- `manual_intervention` イベントの phase 相当フィールドは `phase` ではなく `recovery_target` であることを `scripts/emit-event.sh` のドキュメントコメントから確認し、`detect-unrecorded-kills.sh` の終了イベント判定でこれを個別に扱った (見落としやすい差異)。
-- Issue AC の verify command は全て Spec 記載どおりで rewrite 不要だった (Step 10 の consistency check で確認済み)。
+- Step 15 サブブロック `3b` の到達不能バグは、直前の item 3 の「出力が空ならこのステップの残りをスキップ」という記述の対象範囲を、item 3 自身の a〜f サブステップのみに明示的に限定する書き換えで解消した (3b/Cleanup を新設のトップレベル Step に分離する代替案もあったが、既存の Step 15 の構造を保つ最小差分を優先した)。
+- `--window` の共用設計問題 (Code Retrospective で既に懸念として記録済み) は、実データでの実測 (`recorded=yes` 判定率が実質 0%) を踏まえ、`--recorded-window` (デフォルト 86400 秒) を新設して分離した。あわせて、実測で判明した第 2 の原因 (recoveries.md の phase 表記ゆれ `code` vs `code-pr`/`code-patch`) に対してハイフン prefix マッチングを追加した。
+- `detect-unrecorded-kills.sh` の `--window` 系オプションが値なしで渡された場合に無限ループするバグ (`shift 2` が `set -u` 下で silently no-op) は、同一リポジトリの `run-auto-sub.sh` に既存の引数個数ガード規約を適用して修正した。
+- `spawn_detach` フィールドは `run-auto-sub.sh` にしか実装されていなかったため、`/auto`/`/code` から直接起動される 5 つの sibling wrapper (`run-code.sh`/`run-review.sh`/`run-merge.sh`/`run-spec.sh`/`run-issue.sh`) にも同一パターンで拡張した。
 
 ### Deferred Items
-- CI (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前のため Step 10 で未評価 (route-agnostic 除外ルールに従う)。`/review` フェーズで評価される。
+- CONSIDER 級の指摘 3 件 (同一秒 terminal event の edge case、`docs/workflow.md` へのナラティブ追記、`docs/reports/external-kill-investigation.md` の stale 記述更新) は本フェーズでは対応せず据え置いた。理由は PR コメントに記載済み — いずれも低優先度、または #1146 側での対応が既に想定されている。
+- `/merge` の Phase Handoff コミットが `main` へ直接 push され、forbidden-expressions CI ジョブでゲートされていない構造的ギャップを本フェーズで発見・応急修正した (docs/spec/issue-1386-preview-ac-fallback-exit-code.md の該当箇所を修正)。恒久対応 (pre-push フック等) は本 Issue のスコープ外であり、review retrospective に改善提案として記録した — `/verify` での集約判断を待つ。
 
 ### Notes for Next Phase
-- Design Gaps/Ambiguities に記載した `--window` の recorded 判定への適用範囲 (respawn 近接性 window とは異なるスケールの記録遅延を同じパラメータで扱っている) は、実データでの `recorded=no` 誤判定リスクとして認識しておくこと。`/review` でこの設計選択の妥当性について追加のレビュー観点として検討してよい。
-- `scripts/detect-unrecorded-kills.sh` は新規スクリプトのため、既存の `collect-recovery-candidates.sh` と同様のバグ・エッジケース (jq/python3 環境依存など) がないか、CI 通過後の実データでの動作を注視する価値がある。
+- `scripts/detect-unrecorded-kills.sh` は今回のフェーズで CLI インターフェースが変わった (`--recorded-window`/`--since` の追加)。`skills/verify/SKILL.md` の呼び出し箇所は `--since 86400` を渡すよう更新済み。将来この呼び出し箇所を変更する際は、`--window`/`--recorded-window` の意味の違い (バースト束ね vs recoveries.md 突合の許容誤差) を混同しないこと。
+- 実データでの `recorded=yes` 判定は、`--recorded-window` を分離してもなお `docs/reports/orchestration-recoveries.md` のエントリの書式ゆれ (phase 表記など) に依存する。post-merge の opportunistic 観察 AC で実際のバーストが再度発生した際に、`recorded` 判定が意図通り機能しているか注視すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Code Retrospective が明示的に記録していた `--window` 共用設計の懸念 (Design Gaps/Ambiguities) は、実データ (`.tmp/auto-events.jsonl` + `docs/reports/orchestration-recoveries.md` の実エントリ) に対する実測で、想定より深刻であることが判明した — 記録済み kill の `recorded=yes` 判定率は実質 0% だった。原因は 2 つ複合していた: (1) window スケールの不一致 (Code Retrospective が既に記録済み)、(2) `orchestration-recoveries.md` の phase 表記ゆれ (`code` vs `code-pr`/`code-patch`、Code Retrospective 未記録の第 2 の原因)。加えて `skills/verify/SKILL.md` Step 15 への新規サブブロック `3b` の挿入が、既存の「出力が空ならこのステップの残りをスキップ」という記述の対象範囲を意図せず広げてしまい、新機能が到達不能になる制御フローバグを生んでいた — これは実装が Spec の記述に忠実だったにもかかわらず、Spec 自体が想定していなかった既存プロセス文書 (SKILL.md) との相互作用から生じた divergence である。いずれも `/review` の 3 段階検証 (review-spec + review-bug×2 + adversarial verify) と実データに対する実行確認 (edge case execution サブエージェント) で捕捉され、この phase 内で修正済み。
+
+### Recurring issues
+
+新規スクリプト `detect-unrecorded-kills.sh` のオプション引数パーサ (`while [ $# -gt 0 ]; case ... --window) ... shift 2 ;;`) が、値なしで渡された場合に無限ループするバグを含んでいた。同一リポジトリの `scripts/run-auto-sub.sh` には既に同種のハザードに対する確立済みガード規約 (`[[ $# -ge 2 ]] || { echo "Error: ... requires a value" >&2; exit 1; }`、`tests/run-auto-sub.bats` に "with no value (with diagnostic message, not a bare shift failure)" という命名規則のテストが複数存在) があったにもかかわらず、新規スクリプトはこれを踏襲していなかった。既存規約が同一リポジトリ内に存在していても、新規スクリプト作成時に横展開されない、という同種のパターンが今回も再発したと言える。**改善提案 (Issue 起票は見送り、/verify で集約判断)**: 新規 bash スクリプトが `while [ $# -gt 0 ]` 形式のオプションパーサを持つ場合、`shift 2` を伴う値取得オプションには引数個数ガードを必須とするチェックリスト項目、または `scripts/check-forbidden-expressions.sh` 相当の軽量な静的チェック (grep ベースで `shift 2` の直前に `$# -ge 2` 等のガードがあるか検出) を追加する余地がある。
+
+### Acceptance criteria verification difficulty
+
+Verify command (rubric/grep/github_check の混在) は全 9 件が過不足なく機械判定でき、UNCERTAIN は発生しなかった。唯一の律速要因は CI (`github_check "gh pr checks" "Run bats tests"`) 自体ではなく、**このブランチと無関係な `Forbidden Expressions check` ジョブの FAILURE** だった。根本原因は Issue #1386 の `/merge` Phase Handoff コミット (`main` への直接 push) が禁止表現を導入したこと — この書き込み経路は本リポジトリの forbidden-expressions CI ジョブでゲートされていない。**改善提案 (Issue 起票は見送り、/verify で集約判断)**: `/merge` の Phase Handoff 書き込みが `main` へ直接 push される経路 (`modules/worktree-lifecycle.md` の propagation path 表を参照) は、CI による禁止表現チェックの対象外であるため、そこで導入された違反が後続の全 PR の CI を無関係にブロックし続ける構造的ギャップがある。`/merge` の Phase Handoff コミット前に `check-forbidden-expressions.sh` をローカルで実行するステップを追加するか、`main` push 用の軽量 pre-push フックを検討する価値がある。
