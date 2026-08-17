@@ -184,6 +184,10 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 
 `/auto --batch 1132 1348 1072 1363 1095` (session `24095-1786827554`) の Batch Completion Report observation scan で再度 dispatch された (8回目)。本 run も List mode (5 Issue、XS/S/M のみ、XL なし) で XL sub-issue 並列実行を伴わず、結論は変わらず SKIPPED を維持。
 
+### 2026-08-17 再確認 (/auto --batch 1096 1229 1243 1302 1273 セッションから)
+
+`/auto --batch 1096 1229 1243 1302 1273` (session `58212-1786837134`) の Batch Completion Report observation scan で再度 dispatch された (9回目)。本 run も List mode (5 Issue、Size M×4 / L×1、XL なし) で XL sub-issue 並列実行を伴わず、結論は変わらず SKIPPED を維持。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/589#issuecomment-4700058969
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 589` to verify the condition / https://github.com/saitoco/wholework/issues/589#issuecomment-4756911035
