@@ -8,7 +8,8 @@
 # in that same step (advisory, read-only diagnostic output -- see
 # skills/verify/SKILL.md Step 15). Issue #1387.
 #
-# Usage: detect-unrecorded-kills.sh <events-jsonl-path> <recoveries-md-path> [--window SECONDS]
+# Usage: detect-unrecorded-kills.sh <events-jsonl-path> <recoveries-md-path> \
+#          [--window SECONDS] [--recorded-window SECONDS] [--since SECONDS]
 #
 # Detection:
 #   For each (issue, phase) group of "phase_start" events in <events-jsonl-path>,
@@ -18,8 +19,11 @@
 #   start_i.ts and start_{i+1}.ts.
 #
 #   Each respawn signal is cross-referenced against <recoveries-md-path>: an
-#   entry whose "### Context" contains "Issue #<issue>, phase: <phase>" and
-#   whose heading timestamp is within --window seconds of the respawn's
+#   entry whose "### Context" contains "Issue #<issue>, phase: <phase-or-prefix>"
+#   (an exact phase match, or a hyphen-prefix match such as "code" matching
+#   "code-pr"/"code-patch" -- recoveries.md entries are sometimes hand-written
+#   with a generic phase family instead of the concrete phase name) and whose
+#   heading timestamp is within --recorded-window seconds of the respawn's
 #   kill time (start_{i+1}.ts) marks the signal recorded=yes; otherwise
 #   recorded=no.
 #
@@ -27,32 +31,63 @@
 #   into bursts using a greedy adjacent-gap-within-window rule -- a lone
 #   respawn signal is still reported as a burst of concurrency 1.
 #
-# --window SECONDS: burst-grouping / recoveries.md cross-reference window
-#   (default: 120 -- observed bursts cluster within 16s, with margin for
-#   respawn detection/notification delay).
+# --window SECONDS: burst-grouping window only (default: 120 -- observed
+#   bursts cluster within 16s, with margin for respawn detection/notification
+#   delay).
+#
+# --recorded-window SECONDS: recoveries.md cross-reference tolerance (default:
+#   86400 -- a parent session's manual recording of a kill can lag the actual
+#   respawn by tens of minutes to hours, a fundamentally different scale than
+#   burst-grouping adjacency; see Issue #1387's Spec retrospective "Design
+#   Gaps/Ambiguities" for the measured gap on a real entry).
+#
+# --since SECONDS: when set, only respawn signals whose kill time is within
+#   the last SECONDS seconds (relative to the time this script runs) are
+#   considered. Unset (default) means no recency filtering -- every historical
+#   signal in <events-jsonl-path> is reported, matching prior behavior. The
+#   `/verify` Step 15 call site passes an explicit value so routine runs only
+#   surface recent findings instead of the full history.
 #
 # Exit codes: 0 on a normal run (with or without findings); non-zero + stderr
 # message when an input file does not exist (same convention as
-# collect-recovery-candidates.sh). No burst/unrecorded-kill found -> no
-# stdout output, exit 0.
+# collect-recovery-candidates.sh), or when an option is missing its required
+# value. No burst/unrecorded-kill found -> no stdout output, exit 0.
 
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$SCRIPT_DIR}"
-
 WINDOW=120
+RECORDED_WINDOW=86400
+SINCE=""
 EVENTS_FILE=""
 RECOVERIES_FILE=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --window)
-      WINDOW="${2:-}"
+      [ $# -ge 2 ] || { echo "Error: --window requires a value" >&2; exit 1; }
+      WINDOW="$2"
       shift 2
       ;;
     --window=*)
       WINDOW="${1#--window=}"
+      shift
+      ;;
+    --recorded-window)
+      [ $# -ge 2 ] || { echo "Error: --recorded-window requires a value" >&2; exit 1; }
+      RECORDED_WINDOW="$2"
+      shift 2
+      ;;
+    --recorded-window=*)
+      RECORDED_WINDOW="${1#--recorded-window=}"
+      shift
+      ;;
+    --since)
+      [ $# -ge 2 ] || { echo "Error: --since requires a value" >&2; exit 1; }
+      SINCE="$2"
+      shift 2
+      ;;
+    --since=*)
+      SINCE="${1#--since=}"
       shift
       ;;
     -*)
@@ -74,7 +109,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$EVENTS_FILE" ] || [ -z "$RECOVERIES_FILE" ]; then
-  echo "Usage: $0 <events-jsonl-path> <recoveries-md-path> [--window SECONDS]" >&2
+  echo "Usage: $0 <events-jsonl-path> <recoveries-md-path> [--window SECONDS] [--recorded-window SECONDS] [--since SECONDS]" >&2
   exit 1
 fi
 
@@ -84,6 +119,34 @@ case "$WINDOW" in
     exit 1
     ;;
 esac
+if [ "$WINDOW" -eq 0 ]; then
+  echo "Error: --window must be a positive integer, got: $WINDOW" >&2
+  exit 1
+fi
+
+case "$RECORDED_WINDOW" in
+  ''|*[!0-9]*)
+    echo "Error: --recorded-window must be a positive integer, got: $RECORDED_WINDOW" >&2
+    exit 1
+    ;;
+esac
+if [ "$RECORDED_WINDOW" -eq 0 ]; then
+  echo "Error: --recorded-window must be a positive integer, got: $RECORDED_WINDOW" >&2
+  exit 1
+fi
+
+if [ -n "$SINCE" ]; then
+  case "$SINCE" in
+    ''|*[!0-9]*)
+      echo "Error: --since must be a positive integer, got: $SINCE" >&2
+      exit 1
+      ;;
+  esac
+  if [ "$SINCE" -eq 0 ]; then
+    echo "Error: --since must be a positive integer, got: $SINCE" >&2
+    exit 1
+  fi
+fi
 
 if [ ! -f "$EVENTS_FILE" ]; then
   echo "File not found: $EVENTS_FILE" >&2
@@ -95,14 +158,16 @@ if [ ! -f "$RECOVERIES_FILE" ]; then
   exit 1
 fi
 
-python3 - "$EVENTS_FILE" "$RECOVERIES_FILE" "$WINDOW" <<'PYEOF'
+python3 - "$EVENTS_FILE" "$RECOVERIES_FILE" "$WINDOW" "$RECORDED_WINDOW" "$SINCE" <<'PYEOF'
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-events_file, recoveries_file, window_arg = sys.argv[1], sys.argv[2], sys.argv[3]
+events_file, recoveries_file, window_arg, recorded_window_arg, since_arg = sys.argv[1:6]
 window_s = int(window_arg)
+recorded_window_s = int(recorded_window_arg)
+since_s = int(since_arg) if since_arg else None
 
 
 def parse_ts(ts):
@@ -122,6 +187,8 @@ with open(events_file) as f:
         try:
             ev = json.loads(line)
         except json.JSONDecodeError:
+            continue
+        if not isinstance(ev, dict):
             continue
         etype = ev.get("event")
         issue = ev.get("issue")
@@ -161,7 +228,7 @@ for (issue, phase), lst in groups.items():
         start_next = lst[i + 1]
         has_terminal = any(
             t["issue"] == issue and t["phase"] == phase
-            and start_i["ts_dt"] < t["ts_dt"] < start_next["ts_dt"]
+            and start_i["ts_dt"] < t["ts_dt"] <= start_next["ts_dt"]
             for t in terminals
         )
         if has_terminal:
@@ -175,6 +242,10 @@ for (issue, phase), lst in groups.items():
             "elapsed": elapsed,
             "spawn_detach": start_i["spawn_detach"],
         })
+
+if since_s is not None:
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=since_s)
+    signals = [s for s in signals if s["kill_ts_dt"] >= cutoff]
 
 if not signals:
     sys.exit(0)
@@ -199,7 +270,7 @@ with open(recoveries_file) as f:
         if line.startswith("### Context"):
             in_context = True
             continue
-        if line.startswith("### ") and line.strip() != "### Context":
+        if line.startswith("#"):
             in_context = False
             continue
         if in_context:
@@ -207,11 +278,21 @@ with open(recoveries_file) as f:
             if cm and cur_ts is not None:
                 entries.append((cur_ts, int(cm.group(1)), cm.group(2)))
 
+
+def phase_matches(entry_phase, signal_phase):
+    if entry_phase == signal_phase:
+        return True
+    # recoveries.md entries are sometimes hand-written with a generic phase
+    # family (e.g. "code") instead of the concrete phase_start name (e.g.
+    # "code-pr" / "code-patch"); treat that as a match too.
+    return signal_phase.startswith(entry_phase + "-")
+
+
 for sig in signals:
     recorded = "no"
     for (ets, eissue, ephase) in entries:
-        if eissue == sig["issue"] and ephase == sig["phase"]:
-            if abs((ets - sig["kill_ts_dt"]).total_seconds()) <= window_s:
+        if eissue == sig["issue"] and phase_matches(ephase, sig["phase"]):
+            if abs((ets - sig["kill_ts_dt"]).total_seconds()) <= recorded_window_s:
                 recorded = "yes"
                 break
     sig["recorded"] = recorded

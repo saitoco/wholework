@@ -150,3 +150,161 @@ JSON
     [ "$burst_lines" -eq 2 ]
     [[ "$output" == *"concurrency=1"* ]]
 }
+
+@test "error: --window with no value does not hang (fails fast with a diagnostic)" {
+    run timeout 5 bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--window requires a value"* ]]
+}
+
+@test "error: --recorded-window with no value does not hang (fails fast with a diagnostic)" {
+    run timeout 5 bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --recorded-window
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--recorded-window requires a value"* ]]
+}
+
+@test "error: --since with no value does not hang (fails fast with a diagnostic)" {
+    run timeout 5 bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --since
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--since requires a value"* ]]
+}
+
+@test "error: --window 0 is rejected" {
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 0
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--window must be a positive integer"* ]]
+}
+
+@test "--recorded-window: recorded=yes when heading is far outside --window but within --recorded-window" {
+    # Real-world shape (Issue #1387 retrospective): recoveries.md heading lags the
+    # actual respawn by ~71 minutes -- far past the 120s burst-grouping --window,
+    # but within a day-scale --recorded-window.
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-16T06:45:34Z","issue":1365,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-16T07:09:32Z","issue":1365,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"1"}
+JSON
+    cat > "$RECOVERIES_FILE" <<'MD'
+---
+type: report
+---
+
+# Orchestration Recovery Log
+
+## 2026-08-16 08:22 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1365, phase: code-pr
+- Source: parent-session-manual-recovery
+MD
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 120 --recorded-window 86400
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1365, phase: code-pr"*"recorded: yes"* ]]
+}
+
+@test "phase matching: recoveries.md generic phase family (e.g. 'code') matches concrete phase_start name" {
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-16T06:45:34Z","issue":1365,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-16T07:09:32Z","issue":1365,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"1"}
+JSON
+    cat > "$RECOVERIES_FILE" <<'MD'
+---
+type: report
+---
+
+# Orchestration Recovery Log
+
+## 2026-08-16 07:10 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1365, phase: code
+- Source: parent-session-manual-recovery
+MD
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 120 --recorded-window 120
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1365, phase: code-pr"*"recorded: yes"* ]]
+}
+
+@test "phase matching: unrelated phase family does not falsely match" {
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-16T06:45:34Z","issue":1365,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-16T07:09:32Z","issue":1365,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"1"}
+JSON
+    cat > "$RECOVERIES_FILE" <<'MD'
+---
+type: report
+---
+
+# Orchestration Recovery Log
+
+## 2026-08-16 07:10 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1365, phase: codereview
+- Source: parent-session-manual-recovery
+MD
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 120 --recorded-window 120
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1365, phase: code-pr"*"recorded: no"* ]]
+}
+
+@test "--since: filters out signals older than the cutoff, keeps recent ones" {
+    recent_kill_ts="$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ)"
+    recent_start_ts="$(date -u -v-2H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)"
+    cat > "$EVENTS_FILE" <<JSON
+{"ts":"2020-01-01T00:00:00Z","issue":3001,"event":"phase_start","session_id":"a","phase":"review","spawn_detach":"0"}
+{"ts":"2020-01-01T01:00:00Z","issue":3001,"event":"phase_start","session_id":"b","phase":"review","spawn_detach":"0"}
+{"ts":"${recent_start_ts}","issue":3002,"event":"phase_start","session_id":"c","phase":"review","spawn_detach":"0"}
+{"ts":"${recent_kill_ts}","issue":3002,"event":"phase_start","session_id":"d","phase":"review","spawn_detach":"0"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --since 86400
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #3002"* ]]
+    [[ "$output" != *"Issue #3001"* ]]
+}
+
+@test "--since omitted: reports full history (no recency filtering, backward compatible)" {
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2020-01-01T00:00:00Z","issue":3001,"event":"phase_start","session_id":"a","phase":"review","spawn_detach":"0"}
+{"ts":"2020-01-01T01:00:00Z","issue":3001,"event":"phase_start","session_id":"b","phase":"review","spawn_detach":"0"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #3001"* ]]
+}
+
+@test "edge case: JSON line that is valid but not an object is skipped, not a crash" {
+    cat > "$EVENTS_FILE" <<'JSON'
+[1,2,3]
+{"ts":"2026-08-16T06:30:47Z","issue":1000,"event":"phase_start","session_id":"a","phase":"review","spawn_detach":"0"}
+"a bare string"
+{"ts":"2026-08-16T06:45:00Z","issue":1000,"event":"phase_start","session_id":"b","phase":"review","spawn_detach":"0"}
+null
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1000, phase: review"* ]]
+}
+
+@test "edge case: a deeper heading inside a Context block does not leak into a later unrelated bullet" {
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-16T06:30:47Z","issue":9999,"event":"phase_start","session_id":"a","phase":"leaked-phase","spawn_detach":"0"}
+{"ts":"2026-08-16T06:45:00Z","issue":9999,"event":"phase_start","session_id":"b","phase":"leaked-phase","spawn_detach":"0"}
+JSON
+    cat > "$RECOVERIES_FILE" <<'MD'
+---
+type: report
+---
+
+# Orchestration Recovery Log
+
+## 2026-08-16 06:00 UTC: some-other-symptom
+
+### Context
+#### Sub-detail
+- Issue #9999, phase: leaked-phase
+- Source: parent-session-manual-recovery
+MD
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 120 --recorded-window 120
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #9999, phase: leaked-phase"*"recorded: no"* ]]
+}
