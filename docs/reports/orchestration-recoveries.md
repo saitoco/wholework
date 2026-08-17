@@ -74,6 +74,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-17 00:29 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1273, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- notification: indeterminate
+- Background command was stopped (no numeric exit code observed)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-16 08:22 UTC: manual-recovery-respawn
 
 ### Context
