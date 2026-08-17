@@ -1,0 +1,63 @@
+# Issue #1386: resolve-preview-ac-fallback: gh 失敗時の fail-open を fail-closed 化し3消費先で共通化
+
+## Overview
+
+`scripts/resolve-preview-ac-fallback.sh` は `/verify`・`/audit`・`/auto` の3消費先から呼ばれるが、`gh` コマンド失敗時に fail-open (空出力、exit 0) を返すため、「preview AC 未解決なしの正常系」と区別がつかない。`/verify` は `reconcile-phase-state.sh --check-completion` を組み合わせて別途 disambiguate しているが、`/audit`・`/auto` は同種の対応をしていない。
+
+本 Issue はスクリプト自体に `gh` 失敗を区別可能な専用シグナル (`scripts/verify-executability-marker.sh` が既に採用している exit code 2 / `N0` 相当パターン) を実装し、標準出力フォーマットは変更しない。あわせて `skills/audit/SKILL.md` Manual Waiting Count、`skills/auto/SKILL.md` Batch Completion Report の2消費先を、新シグナル参照で `gh` 失敗時は undetermined として扱うよう更新する。`skills/verify/SKILL.md` Step 5 は既に fail-closed のため対象外。
+
+## Reproduction Steps
+
+1. `gh` コマンドが失敗する状況を用意する (認証切れ・レート制限・ネットワーク断など)
+2. `scripts/resolve-preview-ac-fallback.sh <issue-number>` を実行する
+3. 空出力・exit 0 が返り、「preview AC 未解決なし (正常系)」の場合の出力と区別できないことを確認する
+4. この状態で `/audit` Manual Waiting Count、`/auto --batch` Pending manual confirmation を実行すると、`gh` 失敗ケースが「未解決なし」として扱われ、実際には未確認の preview-tier AC が集計から漏れる
+
+## Root Cause
+
+`scripts/resolve-preview-ac-fallback.sh` の `gh issue view` 呼び出し (25-27行目) が `2>/dev/null || true` で失敗を握りつぶし、「marker 不在」と「gh 失敗」を同じ空出力・exit 0 に collapse させている。3消費先のうち `/verify` Step 5 のみ `reconcile-phase-state.sh --check-completion` で別途 disambiguate しているが (`skills/verify/SKILL.md` 208-210行目)、`/audit` Manual Waiting Count と `/auto` Pending manual confirmation はこの区別を実装しておらず、スクリプト単体の fail-open 設計がそのまま両消費先の誤判定リスクに直結している。同種の `gh` 失敗検出は `scripts/verify-executability-marker.sh` の `cmd_resolve()` (149-155行目) で既に exit code 2 として実装済みであり、本 Issue はこの既存パターンを `resolve-preview-ac-fallback.sh` にも適用し、2消費先を追従させる。
+
+## Changed Files
+
+- `scripts/resolve-preview-ac-fallback.sh`: `gh issue view` 失敗時のハンドリングを `2>/dev/null || true` (fail-open, exit 0) から、`verify-executability-marker.sh` の `cmd_resolve()` と同じ `if ! latest_marker_body="$(...)"; then echo "Error: ..." >&2; exit 2; fi` パターンに変更。標準出力フォーマット (カンマ区切り 1-based インデックス、または空) は変更しない。冒頭コメント (8-9行目) の exit code 説明も更新する。bash 3.2+ 互換を維持。
+- `tests/resolve-preview-ac-fallback.bats`: 既存の `"gh failure: fails open with empty output, exit 0"` テスト (78-88行目) を `tests/verify-executability-marker.bats` の `"resolve: gh failure exits 2, distinct from no-marker"` (149-158行目) と同じ形に書き換え、`[ "$status" -eq 2 ]` を検証するテストケースに更新する (新規分岐ロジックのカバレッジ)。
+- `skills/audit/SKILL.md`: § Manual Waiting Count (363-365行目付近) を更新。`resolve-preview-ac-fallback.sh <issue>` 呼び出し後にその終了コードを確認する記述を追加し、exit code 2 の場合はこの Issue を `N0` (undetermined) バケットに fold して ac-tier:preview 行の包含判定を行わないようにする。末尾の "not disambiguated the way `N0`/exit-2 is for `verify-executability-marker.sh` below" という注記を、新しい挙動を説明する文言 (`exit code 2` という語句を含める — 対応する bats アサーションの一致対象) に置き換える。
+- `tests/audit-manual-waiting-count.bats`: 新規 `@test` を追加し、Manual Waiting Count セクションに `"exit code 2"` という語句が含まれることを検証する (新規分岐ロジックのカバレッジ)。
+- `skills/auto/SKILL.md`: § Batch Completion Report → Pending manual confirmation (1262-1282行目付近) を更新。`resolve-preview-ac-fallback.sh $NUMBER` 呼び出し後にその終了コードを確認する記述を追加し、exit code 2 の場合は当該 Issue を `TOTAL_MANUAL` から除外し、別途 undetermined カウント/リストとして集計・出力する (既存のフラットカウント構造は維持)。末尾の "a known best-effort limitation of this scan." という注記を、新しい挙動を説明する文言 (`exit code 2` という語句を含める) に置き換える。
+- `tests/auto-completion-report.bats`: 新規 `@test` を追加し、Batch Completion Report セクションに `"exit code 2"` という語句が含まれることを検証する (新規分岐ロジックのカバレッジ)。
+
+## Implementation Steps
+
+1. `scripts/resolve-preview-ac-fallback.sh` の `gh issue view` 失敗時ハンドリングを fail-open (exit 0) から exit code 2 に変更し、冒頭コメントを更新する (→ 受入条件1)
+2. `tests/resolve-preview-ac-fallback.bats` の gh 失敗テストケースを exit code 2 を検証する形に書き換える (after 1) (→ 受入条件2, 受入条件3)
+3. `skills/audit/SKILL.md` § Manual Waiting Count を更新し (exit code 2 → N0 へ fold、注記文言更新)、`tests/audit-manual-waiting-count.bats` に新規テストケースを追加する (after 1) (→ 受入条件4, 受入条件5)
+4. `skills/auto/SKILL.md` § Batch Completion Report → Pending manual confirmation を更新し (exit code 2 → undetermined カウント、注記文言更新)、`tests/auto-completion-report.bats` に新規テストケースを追加する (after 1) (→ 受入条件6, 受入条件7)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: rubric "scripts/resolve-preview-ac-fallback.sh が、gh コマンド失敗時と preview AC 未解決なしのケースを (専用の exit code 等で) 区別可能になっている。既存の scripts/verify-executability-marker.sh の gh 失敗判定 (exit code 2 / N0 相当) と整合する設計であることが望ましい。標準出力のフォーマット (カンマ区切りの1-basedインデックス、または空) は変更されていない" --> gh 失敗と未解決なしのケースが区別可能になっている (標準出力フォーマットは維持)
+- <!-- verify: command "bats tests/resolve-preview-ac-fallback.bats" --> 既存の bats テストが green (回帰保護)
+- <!-- verify: rubric "tests/resolve-preview-ac-fallback.bats に、gh コマンド失敗時 (専用シグナル) と marker 不在/ac=none による通常の空出力を区別する新規テストケースが追加されている" --> gh 失敗時と未解決なしを区別する新規テストケースが追加されている
+- <!-- verify: rubric "skills/audit/SKILL.md の Manual Waiting Count セクションが、resolve-preview-ac-fallback.sh 自体の gh 失敗を「未解決なし」として扱う既存の best-effort 制限を解消し、専用の判別シグナルを参照して gh 失敗時は undetermined として扱う (verify-executability-marker.sh の N0 相当の既存パターンと整合する) 記述に更新されている" --> Manual Waiting Count が resolve-preview-ac-fallback.sh の gh 失敗を undetermined として扱う
+- <!-- verify: section_not_contains "skills/audit/SKILL.md" "Manual Waiting Count" "not disambiguated the way" --> Manual Waiting Count セクションの古い「未対応」注記が更新されている
+- <!-- verify: rubric "skills/auto/SKILL.md の Batch Completion Report → Pending manual confirmation セクションが、resolve-preview-ac-fallback.sh 自体の gh 失敗を「未解決なし」として扱う既存の best-effort 制限を解消し、専用の判別シグナルを参照して gh 失敗時は undetermined として扱う記述に更新されている (既存のフラットカウント構造は維持してよい)" --> Pending manual confirmation が resolve-preview-ac-fallback.sh の gh 失敗を undetermined として扱う
+- <!-- verify: section_not_contains "skills/auto/SKILL.md" "Batch Completion Report" "a known best-effort limitation of this scan." --> Pending manual confirmation セクションの古い「未対応」注記が更新されている
+
+### Post-merge
+
+なし
+
+## Notes
+
+- **#1053 の先例との整合**: `docs/spec/issue-1053-preview-ac-failopen-guard.md` は「`resolve-preview-ac-fallback.sh` の標準出力インタフェース (1-based index のカンマ区切り、または空) を変更するとリスクがある」との理由でスクリプト自体を変更しない設計を選んだ。本 Issue は標準出力フォーマットを一切変更せず exit code のみを追加するため、#1053 の懸念とは抵触しない。
+- **fail-safe critical script の edge case**: `scripts/resolve-preview-ac-fallback.sh` は `fail_open` 相当のパターン (`2>/dev/null || true`) を持つ fail-safe critical スクリプトと判断した。引数の空/非数値チェック (exit 1) は本 Issue で変更しない。依存コマンド (`gh issue view`) 失敗時の挙動を fail-open (exit 0, 区別不能) から「exit code 2 で失敗を明示するが標準出力は空のまま」という設計に変更する — 標準出力自体を fail-closed 化 (全 index を未解決とみなす出力) しないのは、スクリプト単体では `ac-tier: preview` の全 index 集合を把握できず技術的に実現不能なため (Issue Retrospective の Auto-Resolve Log で確認済み)。
+- **新規テストケースの要約** (SPEC_DEPTH=light のため Spec Retrospective ではなくここに記録): (a) `tests/resolve-preview-ac-fallback.bats` — gh 失敗時に exit code 2 を返すことを検証するケースへの書き換え、(b) `tests/audit-manual-waiting-count.bats` — Manual Waiting Count セクションに `"exit code 2"` の記述が追加されたことを検証する新規ケース、(c) `tests/auto-completion-report.bats` — Batch Completion Report セクションに `"exit code 2"` の記述が追加されたことを検証する新規ケース。
+- **Steering Docs sync candidate 確認済み・変更不要**: `resolve-preview-ac-fallback.sh` の grep 横断検索で見つかった以下は、いずれも exit code や fail-open 挙動を主張していないため変更不要と判断した — `docs/structure.md`/`docs/ja/structure.md` (標準出力の説明のみ)、`modules/l0-surfaces.md` (marker 解決目的の説明のみ)、`tests/verify.bats` (`skills/verify/SKILL.md` Step 5 内の文字列存在チェックのみ)。
+- **Simplicity rule 超過について**: Pre-merge Verification が7件で light spec のガイドライン (5件) を超過している。Issue 本文の Acceptance Criteria は Comment Consumption で拾った Triage AC audit コメント (常時 UNCERTAIN な heading 引数バグ2件、常時 PASS な bats AC 1件の分割) を反映して7件に修正済みであり、Verify command sync rule により Spec 側もこれを逐語コピーする必要があるため、Implementation Steps 側 (4件) をグループ化することで対応した。
+
+## Consumed Comments
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / 「`/issue` Existing Issue Refinement の Issue Retrospective — Auto-Resolve Log (専用 exit code 方式の採用理由、AC 範囲を script から audit/auto の SKILL.md 更新まで拡大した理由、Size S→M 変更の記録)」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311390587
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / 「Triage AC audit — Pre-merge AC 3件の verify command 不備を指摘 (`section_not_contains` の heading 引数に `#### `/`### ` を含めて常時 UNCERTAIN になるバグ2件、bats AC が新規カバレッジを主張せず常時 PASS になりうる問題1件)。本 Spec 作成時に Issue 本文へ反映済み」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311413741
