@@ -209,6 +209,18 @@
 
 - N/A — 前回までの判断を踏襲。6 セッション連続の非発生も同一の health signal であり、改善提案の閾値には未到達
 
+### 2026-08-17 re-run (条件 6/7 の 7 セッション目観測)
+
+`/auto --batch 1389 1386 1387 1377` (session `87941-1786934209`) の Batch Completion Report observation scan で `event=auto-run` が再発火。
+
+#### verify (再実行分)
+
+- 条件 6/7 は今回も SKIPPED。本 batch の 4 Issue (#1389, #1386, #1387, #1377) 全件について blocked-by チェックを個別実行し確認したところ、いずれも exit 0 (ブロッカーなし) だった。blocked-by ゲートのスキップ分岐が発火する前提条件自体が本 batch でも発生しなかった。観測 7 セッション連続でシナリオ自体が未発生。
+
+#### Improvement Proposals (再実行分)
+
+- N/A — 前回までの判断を踏襲。7 セッション連続の非発生も同一の health signal であり、改善提案の閾値には未到達
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/478#issuecomment-4703000955
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/478#issuecomment-5212257510
