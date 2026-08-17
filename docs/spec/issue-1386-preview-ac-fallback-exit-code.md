@@ -61,3 +61,29 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「`/issue` Existing Issue Refinement の Issue Retrospective — Auto-Resolve Log (専用 exit code 方式の採用理由、AC 範囲を script から audit/auto の SKILL.md 更新まで拡大した理由、Size S→M 変更の記録)」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311390587
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「Triage AC audit — Pre-merge AC 3件の verify command 不備を指摘 (`section_not_contains` の heading 引数に `#### `/`### ` を含めて常時 UNCERTAIN になるバグ2件、bats AC が新規カバレッジを主張せず常時 PASS になりうる問題1件)。本 Spec 作成時に Issue 本文へ反映済み」/ https://github.com/saitoco/wholework/issues/1386#issuecomment-5311413741
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's Implementation Steps 1–4 exactly (`resolve-preview-ac-fallback.sh` exit-code-2 pattern mirrored from `verify-executability-marker.sh`'s `cmd_resolve()`, the two SKILL.md consumer updates, and the corresponding bats test changes).
+
+### Design Gaps/Ambiguities
+- N/A — no ambiguities encountered; the existing `cmd_resolve()` pattern and the Spec's per-file guidance were sufficient to implement all 4 steps without further interpretation.
+
+### Rework
+- N/A — no rework occurred; single implementation pass. Confirmed pre-implementation FAIL (via `git stash` on the two SKILL.md files) for both new `tests/audit-manual-waiting-count.bats` and `tests/auto-completion-report.bats` assertions before committing. Behavioral change detection (both SKILL.md files are referenced by multiple test files beyond a single direct counterpart) triggered a full `bats --jobs 18 tests/` run — 1828/1828 green, no pre-existing unrelated failures encountered this time (unlike the #1377 stale assertion noted in Issue #1371's retrospective, already fixed by then).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Mirrored `verify-executability-marker.sh`'s `cmd_resolve()` exit-code-2 pattern verbatim (`if ! var="$(...)"; then echo "Error: ..." >&2; exit 2; fi`) rather than inventing a new signal, per the Spec's explicit preference for consistency with the existing pattern.
+- For `skills/auto/SKILL.md`, chose to exclude an exit-2 Issue's `MANUAL_N` from `TOTAL_MANUAL` and report it in a separate `UNDETERMINED_LIST` line, keeping `OBS_N`/`OPP_N` accumulation for that Issue unaffected (those two counts do not depend on `resolve-preview-ac-fallback.sh`) — this matches the Spec's "existing flat count structure retained" instruction while still surfacing the undetermined state.
+
+### Deferred Items
+- `skills/verify/SKILL.md` Step 5 is out of scope per the Issue body (already fail-closed via `reconcile-phase-state.sh --check-completion`); no change made there.
+- Consolidating all 3 consumers onto a single disambiguation signal (currently `resolve-preview-ac-fallback.sh` exit code + `reconcile-phase-state.sh` for `/verify`) is noted in the Issue as a future optional cleanup, not addressed here.
+
+### Notes for Next Phase
+- All 7 Pre-merge AC were verified locally and checked off before PR creation (verify-executor full mode, all PASS) — `/review` should find nothing outstanding to re-verify beyond CI.
+- Full `bats --jobs 18 tests/` run (1828 tests) is green; no known pre-existing failures to account for at review time.
