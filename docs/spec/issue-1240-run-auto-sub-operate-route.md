@@ -74,3 +74,38 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (non-interactive mode): `ALWAYS_PR=true` による operate 判定抑制の非採用を Background に明記した理由、および Triage AC audit で指摘された2件の Pattern 2 (常時 PASS) verify command 欠陥の修正内容 (SKILL.md 側 grep→rubric、bats 側 `ls tests/`→`command "bats tests/run-auto-sub.bats"`) を記録 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326721499
 - saito / MEMBER / first-class / Triage AC audit: bats テスト AC (`command "bats tests/run-auto-sub.bats"`) が既存93ケース全PASSにより依然 Pattern 2 (常時 PASS) であると指摘し、`grep "operate" "tests/run-auto-sub.bats"` (新規テストケース検出) と既存の `command` AC (回帰保護) への2分割を提案。本フェーズで Issue body および本 Spec の Verification に反映済み / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326773760
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 をそのまま実装。`_spec_is_diffless()` の挿入位置 (`_observe_code_milestone()` と `run_phase_with_recovery()` の間)、operate 判定ブロックの挿入位置 (post-spec Size 再取得直後)、`case` アーム変更、`skills/auto/SKILL.md` の追記位置、bats 新規テストの挿入位置 (「Size M + auto-stop-at: review」テスト直前) は全て Spec 記載の通り。
+
+### Design Gaps/Ambiguities
+- N/A — Spec が `_spec_is_diffless()` の仕様 (見出し存在チェックと空判定の区別、抽出パターンの再利用元) を具体的に記述していたため、実装中に判断が必要な曖昧点はなかった。
+
+### Rework
+- N/A — プロトタイプ検証済みの設計をそのまま実装したため、手戻りは発生しなかった。
+
+### Smoke Test
+- N/A — Spec に `## Smoke Test` セクションが存在しないためスキップ (SKILL.md Step 11 の no-op 条件に該当)。
+
+### Additional Notes
+- Behavioral change 判定 (`modules/verify-patterns.md` §24): `scripts/run-auto-sub.sh` を変更したため、`tests/run-auto-sub.bats` 以外にも同スクリプトを参照するテストファイル (`tests/auto-sub-observability.bats`, `tests/run-code.bats`, `tests/collect-recovery-candidates.bats`, `tests/auto-xl-concurrency.bats`, `tests/auto.bats`, `tests/check-file-overlap.bats`, `tests/auto-batch.bats`, `tests/auto-completion-report.bats`, `tests/operate-route.bats`, `tests/check-skill-change-observation-ac.bats` など) が存在することを確認し、`bats --jobs 18 tests/` で full suite (1863件) を実行、全件 PASS を確認した。
+- New Verification-Test Pre-implementation FAIL Check: 新規追加した positive テスト (`Size M + diff-less Spec: ...`) は `scripts/run-auto-sub.sh` の実装変更を `git stash` で退避した状態で実行すると FAIL することを確認済み (`_spec_is_diffless()` が未実装のため `ROUTE_OPERATE` が常に false のまま `code-pr` が dispatch される)。negative-control テストは実装前後どちらでも PASS する設計 (回帰防止用) であり、この Check の対象 (新規追加された振る舞いを検証する assert) には該当しない。
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+- `_spec_is_diffless()` は `scripts/check-verify-dirty.sh` の own-issue-scope manifest 抽出パターン (`awk` でのセクション単離 + `sed -nE` でのバックティックパス抽出) をそのまま再利用した。抽出ロジックの重複実装を避け、書式差異 (インデント付きバレット、`[label]` prefix) の扱いが2箇所で乖離するリスクを排除するため。
+- operate 判定は `ALWAYS_PR` 昇格判定より前に評価し、`if/elif` で相互排他にした (Spec の priority order 指定通り)。空 diff は `always-pr` 設定に関わらず意味のある PR を生成できないため、operate が最優先。
+- `case "$EFFECTIVE_SIZE"` の `XS|S)` アームを `XS|S|OPERATE)` に拡張するだけで既存の `code-patch` dispatch ロジック (PR 番号取得や review/merge を含まない) をそのまま再利用した。新規アームを追加する設計より変更差分が小さく、`_TIER3_RECOVERY_ACTION` 等の既存の skip チェックも自動的に恩恵を受ける。
+
+### Deferred Items
+- Spec の "Steering Docs sync candidate" (`modules/size-workflow-table.md` § "Diff-less Axis (operate route)" への `run-auto-sub.sh` 言及追記) は本フェーズでは対応していない。任意項目として Spec の Notes に記載されており、必須の Changed Files には含まれていない。
+- Post-merge AC (次回 operate route の sub-issue を含む `/auto` XL または `--batch` 実行での動作確認) は observation 型のため未実施。実際の XL/`--batch` 実行で確認される。
+
+### Notes for Next Phase
+- `bats --jobs 18 tests/` で full suite 1863件 PASS 済み (behavioral change 判定により `run-auto-sub.sh` を参照する全テストファイルを対象とした)。`/review` では `tests/run-auto-sub.bats` の新規2テスト (`diff-less Spec` / `real Changed Files`) が意図通り動作することを重点確認すると良い。
+- `_spec_is_diffless()` は `## Changed Files` の見出し不在と「見出しはあるが空」を区別する設計になっている点に注意 (見出し不在は diff-less と判定しない)。既存の headless stub Spec を使うテスト (`tier3 recovery during review phase ...` など、`docs/spec/issue-42-test.md` を使用) が regression していないことを確認済み。
