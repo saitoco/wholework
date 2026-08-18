@@ -107,16 +107,16 @@
 
 ## Phase Handoff
 
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 10 (light mode) の review-light が検出した2件の Edge Cases and Robustness 指摘 (SHOULD/CONSIDER) をいずれも修正対象とした。両方とも `_spec_is_diffless()` の同一2行 (抽出正規表現・awk クローズ条件) に対する軽微かつ低リスクな修正であり、修正コストに対して false-positive (実変更を diffless と誤判定し code review をスキップする) の防止効果が大きいと判断した。
-- 修正後、Edge Case Pre-check が使用した実際の fixture (SHOULD/CONSIDER 各1件) に加え、通常系2fixture (diffless Spec / real Changed Files 相当) を再実行し、期待どおりの exit code になることを確認した上でコミットした。
+- Pre-merge AC ゲート (6件) は全て resolved かつ unchecked 0 件、review-incomplete-fallback もなしだったため、override マーカーなしでそのままマージを実行した。
+- `gh-pr-merge-status.sh` が `mergeable=true` / `reason=clean` を返したため、conflict resolution (Step 3) はスキップし squash merge を直接実行した。
 
 ### Deferred Items
-- Post-merge AC (次回 operate route の sub-issue を含む `/auto` XL または `--batch` 実行での動作確認) は observation 型のため本フェーズでも未実施のまま (`/verify` または実運用での確認待ち)。
+- Post-merge AC (次回 operate route の sub-issue を含む `/auto` XL または `--batch` 実行での動作確認) は observation 型のため未実施のまま (`/verify` または実運用での確認待ち)。
 - Spec の "Steering Docs sync candidate" (`modules/size-workflow-table.md` への `run-auto-sub.sh` 言及追記) は引き続き未対応 (任意項目のため)。
 
 ### Notes for Next Phase
-- `/merge` 前の CI は全11ジョブ SUCCESS 済み。Pre-merge AC 6件は全て PASS でチェックボックスも `[x]` 済みのため、`/merge` 実行時に追加のブロッカーはない見込み。
-- `scripts/run-auto-sub.sh` の `_spec_is_diffless()` 抽出ロジックは本フェーズで2箇所修正済み (先頭トークン限定の緩和、セクションクローズ条件の拡張)。`tests/run-auto-sub.bats` の関連2テストおよび全95件は修正後も PASS 済み。
+- squash merge・remote branch 削除・Issue #1240 の close (closes #1240 経由) が完了見込み。`/verify` は post-merge observation AC の確認を行うこと。
+- `scripts/run-auto-sub.sh` の `_spec_is_diffless()` は review フェーズで2箇所修正済み (先頭トークン限定の緩和、セクションクローズ条件の拡張)。`tests/run-auto-sub.bats` 全95件は修正後も PASS 済み。
