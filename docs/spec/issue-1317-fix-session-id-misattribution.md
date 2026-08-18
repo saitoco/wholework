@@ -63,3 +63,47 @@
 | login | authorAssociation | trust tier | 内容 | URL |
 |---|---|---|---|---|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Pre-merge AC 1 の rubric 常時 PASS リスク指摘 (Pattern 2) を受け「または当該フォールバックを残す設計判断とその安全性の根拠が明示的に文書化されている」の削除で対応済み (Issue body に反映済み)。AC 4 の bats タイムアウトに関する参考情報 (CI reference fallback 条件を満たすため恒久的 UNCERTAIN に該当しないと判断済み、対応不要)。Autonomous Auto-Resolve Log で「`.tmp/auto-session-current` file 自体の存続要否は `/spec` の判断に委ねる」「`session_id` 空の event の集計側ハンドリングは追加 AC を設けない」の 2 点を明記 | https://github.com/saitoco/wholework/issues/1317#issuecomment-5327871143 |
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implemented all 3 Implementation Steps as written: (1) removed the `.tmp/auto-session-current` fallback from the 5 `run-*.sh` wrappers, (2) updated `tests/run-code.bats`'s 4 existing tests and added 1 new test each to `tests/run-issue.bats`/`run-spec.bats`/`run-review.bats`/`run-merge.bats`, (3) updated `modules/event-emission.md`, `skills/audit/SKILL.md`, and `skills/auto/SKILL.md`.
+
+### Design Gaps/Ambiguities
+- `/code`'s "New Verification-Test Pre-implementation FAIL Check" (targets asserts that verify a target file's content via string matching — `grep`/`file_contains`-equivalent) was judged out of scope for the 5 new AUTO_SESSION_ID misattribution test cases: each replays the wrapper's shell snippet inline and asserts the resulting variable value, rather than grepping the actual `scripts/run-*.sh` file content, so there is no pre-implementation-state file version to check the assert against.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Consolidated the review-spec and 2 review-bug agents' overlapping "PGID pointer regeneration gap for `run-issue.sh`/`run-spec.sh`" findings (rated MUST/CONSIDER by different agents) into one adversarially-verified finding, adjudicated to SHOULD after 2 independent verification agents confirmed the claim's accuracy but found production evidence of no observed harm.
+- Fixed the 3 self-contained documentation-consistency SHOULD issues (adjacent enumeration/list omissions, stale quoted section label) directly in this phase rather than deferring — low-risk, doc-only, and directly closes the exact gaps review-spec flagged.
+- Left `skills/auto/SKILL.md:81`'s underlying pointer-regeneration enumeration gap and the `tests/*.bats` inline-snippet-replay test-effectiveness gap unfixed — both would require larger design/behavioral changes (Step 3 regeneration snippets; rebinding 5 bats files to real script content) better suited to a dedicated follow-up than a partial patch inside this PR's fix cycle.
+
+### Deferred Items
+- `skills/auto/SKILL.md:81`'s pointer-regeneration enumeration still omits `run-issue.sh`/`run-spec.sh` — recorded as a General Comment (SHOULD) on the PR; no follow-up Issue filed yet since 2 independent verifications found no observed production harm (session `4899-1787037881`'s `issue`/`spec` phase events correctly attributed `session_id`).
+- Test-effectiveness gap in the 5 new/updated bats tests (assert against an inline snippet copy, not the real wrapper script) — recorded as an inline PR comment (SHOULD); left as-is since it's a suite-wide pre-existing convention, not a regression introduced by this PR.
+- `modules/retro-proposals.md:74`'s stale "PGID/current fallbacks" wording — recorded as a General Comment (CONSIDER); out of this PR's diff and the Issue's Spec AC B scope.
+- Post-merge observation AC (concurrent `/auto` + manual `/issue` reproduction) remains unresolved, unchanged from the code-phase handoff — still pending a live concurrent-session scenario after merge.
+
+### Notes for Next Phase
+- No MUST issues; PR posted as `COMMENT` (not `REQUEST_CHANGES`). `/merge 1402` can proceed directly.
+- All 4 Pre-merge ACs were already `[x]` in the Issue body before this `/review` run (likely set during `/code`); re-verified independently in Step 8 and confirmed still accurate — no discrepancy found.
+- CI: 11/11 checks SUCCESS. No `github_check "gh pr checks"` AC exists on this Issue, so no CI-specific merge gate beyond the standard one.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+One structural finding surfaced by 2 of 3 review agents (review-spec + review-bug) and confirmed real (though downgraded MUST→SHOULD after adversarial verification): removing the `.tmp/auto-session-current` fallback from the 5 wrappers retroactively exposed a pre-existing, unrelated gap in `skills/auto/SKILL.md:81`'s pointer-regeneration instructions — that enumeration never covered `run-issue.sh`/`run-spec.sh` (both dispatched by `/auto` Step 3 as direct Bash tool calls, not via `run-auto-sub.sh`), and the now-removed fallback had accidentally been masking that gap for these two wrappers. This is not a divergence between this PR's Spec and its own implementation — the Spec never claimed to cover Step 3's regeneration protocol — but a case worth naming as its own pattern: **removing a defensive fallback can convert a latent, previously-masked gap elsewhere in the system into an observable one**, even when the removed fallback's own removal is fully correct and intentional (as here, matching #1224's precedent). Worth watching for in future "remove structurally-unsound fallback" PRs: check whether the fallback being removed was *also* accidentally covering an unrelated omission before assuming removal is side-effect-free.
+
+### Recurring issues
+
+Documentation-consistency findings (adjacent bullet/list omissions, stale quoted section labels) appeared 3 times in this single PR despite the PR's own stated purpose being "align docs with implementation" (`skills/audit/SKILL.md`'s Session Boundary Identification reader list, `skills/auto/SKILL.md`'s parenthetical process list, and `modules/event-emission.md`'s quoted cross-reference to a renamed section label). Each instance was the same shape: one description of "the 5 wrappers" (or "the 4 processes") was updated by the PR's diff, while an adjacent, textually-similar description a few lines away was not — because the AC's rubric text ("ドキュメント側の記述が実装と整合するよう更新されている") named the two target sections generically rather than enumerating every specific list/reference within them. This matches `verify-executor.md`'s "Security-sensitive validator rubric guidelines" pattern generalized beyond security: when a section contains multiple parallel enumerations of the same concept (a reader list here, a process list there, a quoted label elsewhere), a rubric naming only the section risks passing while individual enumerations inside it silently drift. No new Issue filed for this occurrence — the pattern is already implicitly covered by `verify-executor.md`'s existing guideline about naming security-critical sub-fields; the same "name every enumeration, not just the containing section" principle would generalize there, but one occurrence in a single PR does not yet meet the bar for a dedicated Issue.
+
+### Acceptance criteria verification difficulty
+
+None. All 4 Pre-merge ACs (3 rubric + 1 command) resolved cleanly: the 3 rubric conditions PASSed on direct diff inspection with no ambiguity, and the `command` AC resolved via CI reference fallback (`Run bats tests` job SUCCESS) with no need for full-mode execution. No UNCERTAIN classifications, no missing or inaccurate verify commands.

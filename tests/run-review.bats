@@ -853,3 +853,22 @@ MOCK
 
     cd "$BATS_TEST_TMPDIR"
 }
+
+@test "AUTO_SESSION_ID does not fall back to .tmp/auto-session-current when PGID file absent (Issue #1317, no misattribution)" {
+    # Issue #1317: run-review.sh's inline AUTO_SESSION_ID resolve no longer falls back to
+    # .tmp/auto-session-current — that file is written only by /auto Step 1, so a wrapper
+    # invoked outside /auto (e.g. a manual `/review` run while another /auto session is
+    # active) has no claim to it. Reproduces the same shell snippet as scripts/run-review.sh
+    # with the PGID file absent and .tmp/auto-session-current holding a DIFFERENT
+    # (concurrent) session's ID, and asserts AUTO_SESSION_ID resolves to empty (fail-closed)
+    # rather than adopting it.
+    mkdir -p .tmp
+    echo "concurrent-session-sid-12345-1782604910" > .tmp/auto-session-current
+    # Intentionally do NOT create .tmp/auto-session-${PGID}
+
+    unset AUTO_SESSION_ID
+    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
+
+    [ -z "$AUTO_SESSION_ID" ]
+}
