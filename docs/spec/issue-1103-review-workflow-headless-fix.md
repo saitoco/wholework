@@ -60,4 +60,8 @@ headless 実行サーフェス (`claude -p`、fork 実行された Skill、Workf
 - Issue 本文 vs 実装の conflict detection (Step 6): Issue 本文の「実装状況」セクション自身が既に自己修正済みであり、本 Spec の投資調査で追加の乖離は検出されなかった。
 
 ## Consumed Comments
-No new comments since last phase.
+
+`append-consumed-comments-section.sh` の自動生成 (bash fallback) は「新規コメントなし」と書き込んだが、これは誤り — 本セッションの Step 3 (ラベル遷移: phase/issue → phase/spec) 自体が新しい `phase/*` ラベル割当イベントを生成し、fallback スクリプトが独自に再計算する cutoff (Primary: 直近の `phase/*` ラベル割当時刻) を両コメントより後ろに押し上げてしまったため。Step 2 (Worktree Entry 直後の Comment Consumption Procedure、ラベル遷移より前に実施) では正しく cutoff `2026-08-18T13:20:48Z` (phase/issue → phase/spec ラベル遷移前の直近 `phase/*` イベント) を用いて以下 2 件を検出・消費済みであり、以下がその正しい記録:
+
+- saito / MEMBER / first-class / Issue Retrospective (`/issue` フェーズが `modules/execution-context.md:93` の precedent 記載および `workflow-guidance.md` 44-50 行目の既存実装を確認し、旧 AC2 の文言を「Workflow ツール可用性チェック」から「再呼び出し保証チェック」の実装済みの実体に合わせて修正した経緯を記録) / https://github.com/saitoco/wholework/issues/1103#issuecomment-5328811472
+- saito / MEMBER / first-class / Triage AC audit (Pre-merge AC1〜AC5 を Pattern 2 常時 PASS の観点で監査。AC1〜AC3 は意図的な常時 PASS として許容可能と判定、AC4 [`grep "Workflow"`] は検出力ゼロのため置換・削除を提案、AC5 [`command "bats tests/workflow-guidance.bats"`] は新規テスト追加なしでも常時 PASS するため `bats --filter` 形式への絞り込みを提案 — 本 Spec は Notes に記載の通り AC4 削除 + grep+フルスイート 2 段構えで対応) / https://github.com/saitoco/wholework/issues/1103#issuecomment-5328861041
