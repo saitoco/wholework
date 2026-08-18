@@ -63,3 +63,29 @@ Symptom `manual-recovery-respawn` が `docs/reports/orchestration-recoveries.md`
 ### Steering Docs sync candidate check
 
 `grep -rl "external-kill-parent-respawn"` を `docs/` `tests/` `scripts/` `modules/` に対して実行し、`docs/structure.md` / `docs/workflow.md` / `docs/tech.md` / `docs/ja/*` / `scripts/detect-external-kill.sh` / `scripts/run-auto-sub.sh` / `docs/reports/external-kill-investigation.md` がヒットすることを確認した。いずれも本エントリの検出メカニズム (Symptom / Fallback Steps) を参照するのみで、本 Issue が更新する Rationale・運用方針・閾値検出方針とは独立した記述のため、更新不要と判断した。`docs/translation-workflow.md` の同期対象は top-level `docs/*.md` に限定されており `modules/` 配下は対象外のため、`docs/ja/` 同期も不要と判断した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 を Spec の記述順どおりに実装した。追加した英語記述の具体的な文言は Spec には書かれていなかったため実装時に起こしたが、これは Spec が意図的に「反映内容」を要約指定し文言化は実装フェーズに委ねる形だったための想定内の作業であり、逸脱ではない
+
+### Design Gaps/Ambiguities
+- N/A — Implementation Steps 3 か所とも 1 対 1 で `modules/orchestration-fallbacks.md` の該当箇所に対応しており、曖昧な判断を要する箇所はなかった
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implementation Step 1 の置換対象だった最終箇条書きを、#1146 結論を反映した文へ書き換えると同時に、respawn 継続理由の判定 (想定通りの動作) を新規箇条書きとして追加した — AC1 の rubric が「クローズ内容の確認結果」と「継続理由の判定」の両方を明示的に求めていたため、1 つの箇条書きに詰め込まず 2 つに分けて書いた
+- `### Threshold Detection Handling` の記述は、Spec Notes の「AC4 判断の根拠」セクション (#1014 タイトルリネーム調査) をほぼそのまま英訳・再構成する形で書いた — 調査の事実関係は `/spec` フェーズで既に確定していたため、`/code` フェーズでの追加調査は行っていない
+- Follow-up Issue は起票しなかった — Spec 本文が「別 Issue への切り出し候補として記録するに留め、今回は実装しない旨を明記する」と明示しており、AC4 の verify command も「判断とその理由が記録されている」ことのみを要求 (起票を必須としていない) ため
+
+### Deferred Items
+- 恒久修正 (rename-resistant なリンク機構、または Issue の open/closed に依存しない「許容済み」除外区分の追加) — `### Threshold Detection Handling` に follow-up Issue 候補として記録済み。実装は本 Issue のスコープ外
+
+### Notes for Next Phase
+- Pre-merge AC 4 件は全て rubric type — `/review` での再評価時、AC1 の「#1014 クローズ内容の確認結果」が Rationale の新規 2 箇条書き (root cause 確定 + #1014 以降の継続理由判定) に分散して書かれている点に注意 (1 箇所にまとまっていない)
+- Post-merge AC (`<!-- verify-type: opportunistic -->`) は次回 `/verify` Step 15 で `manual-recovery-respawn` が閾値超過候補として再度挙がったタイミングで確認される想定 — 本 PR のマージ直後には検証されない
