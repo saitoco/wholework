@@ -114,3 +114,28 @@ review phase (cutoff 2026-08-18T10:37:58Z 以降):
 
 ### Acceptance criteria verification difficulty
 - Pre-merge の4件はいずれも `command`/`file_contains` で機械的に検証可能であり、UNCERTAIN や verify command の不備はなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Overview の root cause 分析 (#1224/#995/#893 の diagnosis 比較、3系統への分岐判定、原因1 への絞り込み理由) は Post-merge AC5 の要求を過不足なく満たしていた。
+
+#### design
+- N/A
+
+#### code
+- Code Retrospective に記録済みの通り、`_completion_code_pr()` への `git fetch` 追加という Spec 未記載の派生作業が発生したが、`_completion_code_patch()` の既存パターンを厳密にミラーする目的に沿った妥当な判断であり手戻りではない。
+
+#### review
+- review retrospective の Recurring issues が指摘する通り、Parser/Validator Edge Case Pre-check の対象範囲が「新規追加された正規表現/grep パターン」に限定されており、「新規追加された `git` コマンド呼び出しの失敗モード」(今回の fail-open 非対称性 MUST issue の実体) は対象外だった。今回は通常の review-light Perspective 2 が代わりに検出したため実害はなかったが、fail-safe critical script への新規外部コマンド依存追加という構造的パターンとして再発しうる。
+
+#### merge
+- pre-merge AC ゲート・review-incomplete-fallback チェックとも通常経路で通過。特記事項なし。
+
+#### verify
+- FAIL/UNCERTAIN なし。Post-merge AC5 は Claude Execute で PASS、AC6 は event 未発火のため SKIPPED (次回 `/auto` 完了時に再判定)。
+
+### Improvement Proposals
+- Parser/Validator Edge Case Pre-check (`/review` の edge-case サブエージェント起動条件) の対象範囲を、「新規追加された正規表現/grep パターン」だけでなく「fail-safe critical script (`scripts/reconcile-phase-state.sh` 等) への新規外部コマンド依存の追加」も含むよう拡張検討する。今回は通常の review-light が代替検出したため実害はなかったが、observed 事例はまだ1件のみ (本 Issue #1391) — 再発時に起票判断する程度の一回性の高い観察。
