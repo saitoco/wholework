@@ -23,3 +23,7 @@ GUIDANCE_FILE="$PROJECT_ROOT/skills/review/workflow-guidance.md"
 @test "workflow-guidance: EDGE_CASE_SUFFIX is applied to finder prompts" {
     grep -q '${CONFLICT_SUFFIX}${EDGE_CASE_SUFFIX}' "$GUIDANCE_FILE"
 }
+
+@test "workflow-guidance: Pre-flight falls back to static Task fan-out without re-invocation guarantee" {
+    grep -q "do NOT launch the Workflow tool for this step" "$GUIDANCE_FILE"
+}
