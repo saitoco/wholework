@@ -65,6 +65,7 @@ None (診断・判断のみで実装差分を伴わない Issue のため — Is
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / [comment](https://github.com/saitoco/wholework/issues/1382#issuecomment-5325739215)
   - 内容: `/issue` フェーズの Issue Retrospective。起票時 (2026-08-16) の前提撤回の経緯説明と、非対話モードでの refinement 内容 (AC の Pre-merge/Post-merge 再構成、`implementation-type: metadata-only` マーカー付与、曖昧性 3 件の Auto-Resolve ログ) を記録している。本文は既にこの内容を反映済みであり、本 Spec に追加で取り込むべき新規情報はなし。
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=execution-log phase=code issue=1382 --> / https://github.com/saitoco/wholework/issues/1382#issuecomment-5326031248
 ## Code Retrospective
 
 ### Deviations from Design
