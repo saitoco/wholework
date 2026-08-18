@@ -270,12 +270,21 @@ fi
 exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "0"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
     export PATH="$MOCK_DIR:$PATH"
 
     run bash "$SCRIPT" code-pr 55 --check-completion --strict
     [ "$status" -eq 0 ]
     [[ "$output" == *'"matches_expected":true'* ]]
     [[ "$output" == *'"pr_state":"OPEN"'* ]]
+    [[ "$output" == *'"worktree_commits_found":false'* ]]
 }
 
 @test "code-pr completion: no open PR -> mismatch, no stage2 recovery" {
@@ -285,12 +294,21 @@ echo "0"
 exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "0"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
     export PATH="$MOCK_DIR:$PATH"
 
     run bash "$SCRIPT" code-pr 55 --check-completion --strict
     [ "$status" -eq 1 ]
     [[ "$output" == *'"matches_expected":false'* ]]
     [[ "$output" == *"delegated to #316"* ]] || [[ "$output" == *"stage2 recovery"* ]]
+    [[ "$output" == *'"worktree_commits_found":false'* ]]
 }
 
 @test "code-pr completion: gh failure -> exit 2" {
@@ -303,6 +321,87 @@ MOCK_EOF
 
     run bash "$SCRIPT" code-pr 55 --check-completion
     [ "$status" -eq 2 ]
+}
+
+@test "code-pr completion: worktree commits found - branch has commits ahead of origin/main (push/PR-creation incomplete) -> matches_expected false, worktree_commits_found true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "0"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    # worktree branch has 1 commit ahead of origin/main — state B (committed,
+    # push/PR-creation not yet complete): no open PR found, but the worktree
+    # branch itself is not empty (#1391, mirrors the code-patch case at L1462).
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "1"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-pr 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"pr_state":null'* ]]
+    [[ "$output" == *'"worktree_commits_found":true'* ]]
+}
+
+@test "code-pr completion: worktree commits found - branch does not exist (true no-op) -> matches_expected false, worktree_commits_found false" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "0"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    # worktree branch does not exist — state A (true no-op): git rev-list fails
+    # non-zero (fatal: unknown revision or path not in the working tree).
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "fatal: unknown revision or path not in the working tree." >&2; exit 128; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-pr 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"pr_state":null'* ]]
+    [[ "$output" == *'"worktree_commits_found":false'* ]]
+}
+
+@test "code-pr completion: git fetch failure -> fails open, still emits the already-computed PR-state result (#1399 review)" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "0"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    # git fetch fails (e.g. transient network error) — the worktree_commits_found
+    # diagnostic must fail open (worktree_commits_found:false) rather than aborting
+    # the whole completion check via _handle_error, which would discard the
+    # already-computed PR-state result (no open PR found) from gh pr list above.
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then echo "fatal: unable to access remote" >&2; exit 128; fi
+if [[ "$1" == "rev-list" ]]; then echo "0"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-pr 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"pr_state":null'* ]]
+    [[ "$output" == *'"worktree_commits_found":false'* ]]
 }
 
 # --- review completion ---

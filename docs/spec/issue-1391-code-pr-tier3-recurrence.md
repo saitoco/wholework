@@ -69,3 +69,52 @@ Implementation Step 1・2 はそれぞれ新規分岐ロジックを追加する
 | Login | Association | Trust tier | Intent | URL |
 |-------|-------------|-----------|--------|-----|
 | saito | MEMBER | first-class | `/issue --non-interactive` の Issue Retrospective。AC2 を `verify-type: manual` から `verify-type: observation event=auto-run` に再分類したことを報告 (`modules/verify-classifier.md` の Evidence Collection Patterns に合致すると判断)。spec phase 時点で Issue body は既にこの再分類を反映済みであることを確認済み | https://github.com/saitoco/wholework/issues/1391#issuecomment-5326725458 |
+
+code phase (cutoff 2026-08-18T10:30:22Z 以降): No new comments since last phase.
+
+- saito / MEMBER / first-class / ## Change Tracking (by /code) / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327243554
+
+review phase (cutoff 2026-08-18T10:37:58Z 以降):
+- saito / MEMBER / first-class / `/code` の Change Tracking コメント (Issue AC Pre-merge を Spec の 4件の verify command に更新した旨の報告)。review 開始時点で既に Issue body に反映済みであることを確認済み、review 側でのアクション不要 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327243554
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 は Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- `_completion_code_pr()` は元々 `git` コマンドを一切呼び出しておらず (`gh pr list` のみ)、Spec の Implementation Step 1 は `_completion_code_patch()` の `worktree_commit_count` 算出ブロック (L306-311) のみを複製対象として挙げていたが、そのブロックは `_completion_code_patch()` 冒頭の `git fetch origin main --quiet` (別関数、L213) に暗黙で依存している。`_completion_code_pr()` にも同じ `git fetch` を追加しないと `git rev-list --count origin/main..worktree-code+issue-N` が stale なローカル `origin/main` を参照する。Spec 本文に明記はなかったが、`_completion_code_patch()` の既存パターンを厳密にミラーする意図から fetch も追加した。
+- 上記の帰結として、既存の `tests/reconcile-phase-state.bats` の code-pr completion テスト2件 ("open PR exists" / "no open PR") が `git` を一切モックしていなかった (旧実装は git を呼ばないため不要だった)。今回の変更で `_completion_code_pr()` が無条件に `git fetch`/`git rev-list` を呼ぶようになったため、この2件にも `$MOCK_DIR/git` モックを追加しないと実環境の `git` に依存する非決定的なテストになってしまう。Spec の Changed Files には新規テスト追加のみが記載されていたが、既存2テストへのモック追加も安全のため同じコミットに含めた。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (Perspective 2: Edge Cases and Robustness) が検出した MUST issue (`scripts/reconcile-phase-state.sh:359` の `git fetch` 失敗時に PR 判定結果自体が握りつぶされる問題) を、SHOULD ではなく MUST として扱い修正した。理由: `_completion_code_pr()` は fail-safe critical script の基準 (a) に該当し、この不具合は本 Issue #1391 が解決しようとしている「silent no-op の見逃し」を別経路で再導入するものだったため。
+- 修正方針は `git fetch origin main --quiet 2>/dev/null || _handle_error ...` を `|| true` に変更する fail-open化のみとし、`_completion_code_patch()` 側の既存 `git fetch` (関数冒頭、コア判定自体が依存するため fail-closed が妥当) には手を加えなかった。両者は依存の性質が異なるため意図的に非対称のままとした。
+- テストカバレッジ (CONSIDER issue) も同一コミットで対応し、`git fetch` 失敗時に `pr_state` が正しく出力されつつ `worktree_commits_found:false` にフォールバックすることを検証する新規 `@test` を追加した。
+
+### Deferred Items
+- 原因2 (#995: bats 待ち watchdog kill 反復) と原因3 (#893: comment-consumption ログの parent main 直接コミット) は本 Issue の対策対象外。Spec Notes に記載の通り、再発時は独立した cause slug (`code-pr-uncommitted-diff-bats-kill` / `code-comment-consumption-parent-dirty`) での起票を推奨する。
+- Post-merge AC (root cause 判定の記録確認、次回 `/auto` 完了時点での再発なし確認) は `/verify` フェーズで検証される。
+
+### Notes for Next Phase
+- review 修正コミット (`git fetch` fail-open化 + 新規テスト) を含め `bats tests/reconcile-phase-state.bats` (81件) / `bats tests/run-code.bats` (52件) / `python3 scripts/validate-skill-syntax.py skills/` を再実行し全て PASS を確認済み。`/merge` 前の追加確認は不要と判断。
+
+### Notes for Next Phase
+- Pre-merge verify command 4件は全て PASS 済み (`bats --jobs 18 tests/` で全1864件 PASS を確認済み、うち新規3件・既存2件のモック更新を含む)。
+- `_completion_code_pr()` に `git fetch`/`git rev-list` が新規に追加されたため、review 時に他の code-pr 呼び出し元 (`/verify`, `/merge` 等) が git 未初期化環境からこの関数を呼んでいないか確認する価値がある (本 Issue の調査範囲では該当呼び出しは見つからなかった)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の `### Fail-safe critical script identification` 節は「依存コマンド (`git rev-list --count`) が失敗した場合の挙動も既存パターンと同一の fail-open を踏襲し、新たな edge case 設計は発生しない」と明言していたが、実際には `git rev-list` とは別に新規追加された `git fetch` 呼び出しが `_handle_error` 経由で fail-closed (exit 2) になっており、この記述がカバーしていなかった。`_completion_code_patch()` の既存 `git fetch` (関数冒頭、コア判定自体が依存) と `_completion_code_pr()` の新規 `git fetch` (コア判定後、診断フィールドのためだけの依存) とでは fail-closed の妥当性が異なるにもかかわらず、「既存パターンを複製する」という Spec の表現が両者を暗黙に同一視させ、この非対称性の検討漏れにつながった可能性がある。Code Retrospective (`### Design Gaps/Ambiguities`) は `git fetch` 追加の経緯は記録していたが、追加した `git fetch` の失敗モードそのものは検討されていなかった。
+
+### Recurring issues
+- 今回の Parser/Validator Edge Case Pre-check (実測実行によるサブエージェント2件) では findings なしだったが、これは対象を「新規に追加された正規表現/grep パターン」に絞ったためであり、同じ diff 内の「新規に追加された `git` コマンド呼び出しの失敗モード」は firing condition の対象外だった。今回の MUST issue は結果的に通常の review-light (Perspective 2: Edge Cases and Robustness) が検出したが、fail-safe critical script (`scripts/reconcile-phase-state.sh`) への新規外部コマンド依存の追加は、正規表現/validator と同様に構造的な見落としリスクを持つパターンとして観察に値する。
+
+### Acceptance criteria verification difficulty
+- Pre-merge の4件はいずれも `command`/`file_contains` で機械的に検証可能であり、UNCERTAIN や verify command の不備はなかった。
