@@ -143,3 +143,15 @@
 
 #### Improvement Proposals (再評価分)
 - N/A — 前提未発生の health signal であり、改善提案の閾値には未到達
+
+### 2026-08-18 re-run (4) (/auto --batch 1395 1382 1390 1391 セッションからの再評価)
+
+`/auto --batch 1395 1382 1390 1391` (session `4899-1787037881`) の Batch Completion Report observation scan で `event=auto-run` が再度 dispatch された。
+
+#### verify (再評価分)
+
+- 本 batch の 4 Issue (#1395, #1382, #1390, #1391) の Spec を同様に grep 横断確認したが該当なし。前提未発生が継続。
+- SKIPPED と判定 (観察対象の前提が本 run でも成立しなかったため)
+
+#### Improvement Proposals (再評価分)
+- N/A — 前提未発生の health signal であり、改善提案の閾値には未到達
