@@ -383,7 +383,13 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
     fi
   elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
     echo "Warning: claude exited 0 but $_RECONCILE_PHASE phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-    if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
+    if [[ "$_RECONCILE_PHASE" == "code-pr" ]] && echo "$_reconcile_out" | grep -q '"worktree_commits_found":true'; then
+      # #1391: worktree already has committed (unpushed) implementation for this
+      # code-pr phase — an exec retry would re-run /code from scratch and discard
+      # it (see #1224). Skip retry and defer to Tier 1/2/3 recovery instead.
+      echo "auto-retry: skipping exec retry — worktree-code+issue-${ISSUE_NUMBER} has committed work not yet pushed/PR'd. Deferring to Tier 1/2/3 recovery." >&2
+      EXIT_CODE=1
+    elif [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
        [[ "$AUTO_RETRY_ENABLED" == "true" ]] && \
        [[ "$CODE_RETRY_COUNT" -lt "$AUTO_RETRY_MAX_ITERATIONS" ]]; then
       CODE_RETRY_COUNT=$(( CODE_RETRY_COUNT + 1 ))

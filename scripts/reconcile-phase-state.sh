@@ -349,6 +349,21 @@ _completion_code_pr() {
 
   local actual_json="{\"pr_state\":${pr_state_val},\"pr_number\":${pr_num_val}}"
 
+  # Worktree commits diagnostic signal: distinguish "nothing implemented yet" (state A)
+  # from "implemented and committed in worktree, push/PR-creation not yet complete"
+  # (state B) — both otherwise collapse to the same {"pr_state":null,"pr_number":null}
+  # observation, blocking scripts/run-code.sh's auto-retry gate from telling them apart
+  # (#1391). Read-only; does not change matches_expected. Mirrors the same signal in
+  # _completion_code_patch() (see the actual.worktree_commits_found row in
+  # modules/phase-state.md's Field contract table).
+  git fetch origin main --quiet 2>/dev/null || _handle_error "git fetch failed"
+  local worktree_commit_count
+  worktree_commit_count=$(git rev-list --count "origin/main..worktree-code+issue-${ISSUE_NUMBER}" 2>/dev/null) || worktree_commit_count=0
+  [[ "$worktree_commit_count" =~ ^[0-9]+$ ]] || worktree_commit_count=0
+  local worktree_commits_found=false
+  [[ "$worktree_commit_count" -gt 0 ]] && worktree_commits_found=true
+  actual_json="${actual_json%\}},\"worktree_commits_found\":${worktree_commits_found}}"
+
   if [[ "${pr_count:-0}" -gt 0 ]]; then
     _emit_result "true" "open PR found for worktree-code+issue-${ISSUE_NUMBER} branch" "$actual_json"
   else

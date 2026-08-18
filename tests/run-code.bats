@@ -846,6 +846,45 @@ MOCK
     [[ "$output" == *"max iterations reached"* ]]
 }
 
+@test "auto-retry: code-pr + worktree_commits_found:true skips exec retry and exits 1 (#1391)" {
+    # When reconcile-phase-state.sh reports worktree_commits_found:true for a
+    # code-pr phase, the worktree already has committed (unpushed) implementation
+    # work — an exec retry would re-run /code from scratch and discard it (#1224
+    # recurrence of code-pr-tier3-recovery). run-code.sh must short-circuit past
+    # the normal retry-eligibility check and exit 1 immediately, deferring to
+    # Tier 1/2/3 recovery instead.
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"code-pr","pr_state":null,"pr_number":null,"worktree_commits_found":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"skipping exec retry"* ]]
+    [[ "$output" != *"auto-retry: code phase silent no-op, retry"* ]]
+}
+
 @test "auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation" {
     # Simulates Issue #886: claude's first invocation leaves a stray untracked file
     # (silent no-op side effect) that would otherwise block check-verify-dirty.sh
