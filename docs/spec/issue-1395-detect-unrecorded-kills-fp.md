@@ -69,3 +69,6 @@ Issue 本文 Notes は (a) wrapper 非保持フェーズの除外、(b) `elapsed
 ### 新規分岐ロジックのテスト要件
 
 Implementation Step 1 (wrapper 非保持フェーズ除外) は既存スクリプトへの新規分岐追加にあたるため、Verification の AC4 (`command "bats tests/detect-unrecorded-kills.bats"` 相当を含む rubric) は、既存スイートの PASS だけでなく新規テストケース 3 件 (Implementation Step 4) を追加したうえでのスイート PASS を要件とする。
+
+## Consumed Comments
+No new comments since last phase.
