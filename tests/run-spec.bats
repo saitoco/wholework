@@ -651,6 +651,15 @@ MOCK
 }
 
 @test "auto-retry: silent no-op + AUTO_RETRY_ENABLED=false does not retry, exits 1" {
+    # Counts claude invocations directly (rather than relying on exit status/log text
+    # alone) so this test cannot pass vacuously against pre-#1369 run-spec.sh, which
+    # also exits 1 on a silent no-op but for an unrelated reason (no retry branch existed
+    # at all yet) -- the counter proves specifically that AUTO_RETRY_ENABLED=false
+    # suppressed a second invocation, not just that the exit code happened to match.
+    CLAUDE_INVOKE_COUNTER_FILE="$BATS_TEST_TMPDIR/claude_invoke_count.txt"
+    echo "0" > "$CLAUDE_INVOKE_COUNTER_FILE"
+    export CLAUDE_INVOKE_COUNTER_FILE
+
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
 permission-mode: bypass
 auto-retry-on-fail:
@@ -669,6 +678,15 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
 
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+N=\$(cat "$CLAUDE_INVOKE_COUNTER_FILE" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "$CLAUDE_INVOKE_COUNTER_FILE"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
 #!/bin/bash
 echo '{"matches_expected":false,"phase":"spec"}'
@@ -679,6 +697,7 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 1 ]
     [[ "$output" != *"auto-retry: spec phase silent no-op"* ]]
+    [ "$(cat "$CLAUDE_INVOKE_COUNTER_FILE")" -eq 1 ]
 }
 
 @test "auto-retry: SPEC_RETRY_COUNT at max does not retry and exits 1 with advisory" {
