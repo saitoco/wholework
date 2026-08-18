@@ -64,3 +64,34 @@ None (診断・判断のみで実装差分を伴わない Issue のため — Is
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / [comment](https://github.com/saitoco/wholework/issues/1382#issuecomment-5325739215)
   - 内容: `/issue` フェーズの Issue Retrospective。起票時 (2026-08-16) の前提撤回の経緯説明と、非対話モードでの refinement 内容 (AC の Pre-merge/Post-merge 再構成、`implementation-type: metadata-only` マーカー付与、曖昧性 3 件の Auto-Resolve ログ) を記録している。本文は既にこの内容を反映済みであり、本 Spec に追加で取り込むべき新規情報はなし。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を記載順にそのまま実行した。Step 4 の対象を「再評価トリガー」節のみに限定した点も Spec の指定通り (「凍結理由」節は未変更のまま残しており、Issue #598 のコメント履歴で背景を追える構成にした)。
+
+### Design Gaps/Ambiguities
+
+- Spec Notes は「Issue 本文の想定 (最も可能性が高い着地は『凍結継続、理由は Fable 5 待ち』) と Spec 作成時点調査の食い違い」を明示的に Implementation Step に組み込んでいた。実際の判断はこの食い違いの通り、「Fable 5 待ち」ではなく「H-a 未確定 + 補償層が実務上機能中」を凍結継続の理由とした — Spec の事前調査が正しく判断を導いた事例として記録する。
+- AC4 (補償層との関係整理) は「根本策 or 別軸の改善」の二択で問われていたが、実際の判断は「H-a が対象とする機構 (background task-supervision kill) には根本的に効くが、genuine hang や CI インフラ障害由来の kill には効かないため、どちらか一方ではなく両立する」という中間的な結論になった。#598 へのコメント §4 に記録済み。
+
+### Rework
+
+N/A — 手戻りなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- #598 を凍結継続と判断。理由は動機の弱さではなく (1) H-a (harness episodic background-task supervision) が未確定、(2) 補償層 (respawn) が 17/17 で実務上 100% 機能中、の 2 点
+- 旧再評価トリガー (#587結論後 + Fable5復帰後) は文面上成立済みだが、#587 の比較データが #1165 により再取得断念済みで実質空洞化していたため「解消」として取り消し線付きで記録し、H-a 確定 / 補償層取りこぼしの 2 条件に置き換えた
+- 補償層との関係は「根本策」「別軸の改善」の二択ではなく、対象とする kill 機構によって両方の性質を持つと整理した
+
+### Deferred Items
+- #596 (XL 並列度の adaptive throttling) との扱い揃えは、Issue #1382 本文 Notes の指示通りスコープ外とし、#598 へのコメント §6 に一言記録するに留めた。新規 Issue・新規 AC は起票していない
+- H-a 確定に向けた `WHOLEWORK_SPAWN_DETACH=1` 対照実験は `docs/reports/external-kill-investigation.md` が「スケジュール不能なバーストを1回消費するため現時点では実行不能」としており、本 Issue のスコープ外のまま未着手
+
+### Notes for Next Phase
+- 本 Issue は `implementation-type: metadata-only` (operate route) であり、リポジトリへの実装差分はない。post-merge AC 5 件はすべて `verify-type: manual` — `/verify` は #598 へのコメントと本文更新を目視確認する
+- #598 の新トリガーは GitHub 上 (Issue #598 本文) が正本。本 Spec とコメントは判断根拠の記録
