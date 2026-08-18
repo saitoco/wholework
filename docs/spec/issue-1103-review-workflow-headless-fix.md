@@ -58,3 +58,6 @@ headless 実行サーフェス (`claude -p`、fork 実行された Skill、Workf
 - **CI ジョブ名確認済み**: `.github/workflows/test.yml:9` (`name: Run bats tests`) が AC の `github_check` ターゲットと一致することを確認した。
 - **新規テストケース要件 (SPEC_DEPTH=light のため Step 13 retrospective を省略し、ここに記録)**: Implementation Step 1 で追加する `@test "workflow-guidance: Pre-flight falls back to static Task fan-out without re-invocation guarantee"` は、既存 (実装済み) の Pre-flight フォールバック分岐テキスト (`do NOT launch the Workflow tool for this step`) を grep-guard する。将来の編集がこの分岐を無言で弱体化・削除した場合に CI で検知できるようにするための回帰テストであり、新機能の実装を伴わない。
 - Issue 本文 vs 実装の conflict detection (Step 6): Issue 本文の「実装状況」セクション自身が既に自己修正済みであり、本 Spec の投資調査で追加の乖離は検出されなかった。
+
+## Consumed Comments
+No new comments since last phase.
