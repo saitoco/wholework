@@ -133,6 +133,10 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 
 `/auto --batch 1096 1229 1243 1302 1273` (session `58212-1786837134`) の Batch Completion Report observation scan により9回目の dispatch。前回の教訓に従い、判定確定前に本 Spec の既存 Verify Retrospective 履歴 (8 回分) を確認した上で判断した。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一セッションが処理した5 Issue (#1096, #1229, #1243, #1302, #1273) の各 verify フェーズが自身の Spec の Phase Handoff / Consumed Comments を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。9回連続で同一結論。
 
+### 追記 (2026-08-18, /auto --batch 1395 1382 1390 1391 セッションからの再評価)
+
+`/auto --batch 1395 1382 1390 1391` (session `4899-1787037881`) の Batch Completion Report observation scan により10回目の dispatch。前回の教訓に従い、判定確定前に本 Spec の既存 Verify Retrospective 履歴 (9 回分) を確認した上で判断した。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一セッションが処理した4 Issue (#1395, #1382, #1390, #1391) の各 verify フェーズが自身の Spec の Phase Handoff / Consumed Comments を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。10回連続で同一結論。
+
 ## Phase Handoff
 <!-- phase: code -->
 
