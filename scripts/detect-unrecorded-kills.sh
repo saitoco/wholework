@@ -16,7 +16,28 @@
 #   sorted by ts, a consecutive pair (start_i, start_{i+1}) is a "respawn
 #   signal" when none of wrapper_exit / phase_complete (backfilled or not) /
 #   manual_intervention occurred for that (issue, phase) strictly between
-#   start_i.ts and start_{i+1}.ts.
+#   start_i.ts and start_{i+1}.ts -- EXCEPT that a (issue, phase) group whose
+#   phase has no wrapper script is excluded from signal generation entirely
+#   (see "Wrapper-less phase exclusion" below).
+#
+#   Wrapper-less phase exclusion: a phase's wrapper base is the part of its
+#   name before the first "-" (e.g. "code-pr"/"code-patch" -> "code";
+#   "verify" -> "verify"). A phase is considered to have a wrapper when
+#   <SCRIPT_DIR>/run-<base>.sh exists on disk -- a generic, non-hardcoded
+#   check (SCRIPT_DIR resolves via WHOLEWORK_SCRIPT_DIR when set, same
+#   convention other scripts/*.sh use for BATS mocking, else the directory
+#   this script itself lives in). Phases without a wrapper (currently only
+#   "verify") cannot structurally emit wrapper_exit -- there is no
+#   run-verify.sh to emit it -- so their only possible terminal signal is
+#   phase_complete, which can also legitimately go missing for reasons other
+#   than a kill (e.g. an early-return code path). Treating a phase_complete-
+#   less run as a respawn is therefore a false positive whenever the phase
+#   is later re-run for an unrelated reason (observed: opportunistic verify
+#   re-running the same Issue's verify phase 3.5 days after an earlier run
+#   that exited without phase_complete). Excluding wrapper-less phases from
+#   signal generation avoids this false-positive class entirely, at the cost
+#   of never detecting a genuine kill in a wrapper-less phase -- accepted
+#   because no alternative terminal-event source exists for these phases.
 #
 #   Each respawn signal is cross-referenced against <recoveries-md-path>: an
 #   entry whose "### Context" contains "Issue #<issue>, phase: <phase-or-prefix>"
@@ -31,9 +52,12 @@
 #   into bursts using a greedy adjacent-gap-within-window rule -- a lone
 #   respawn signal is still reported as a burst of concurrency 1.
 #
-# --window SECONDS: burst-grouping window only (default: 120 -- observed
-#   bursts cluster within 16s, with margin for respawn detection/notification
-#   delay).
+# --window SECONDS: burst-grouping window only (default: 300 -- the prior
+#   default of 120 was derived from a single 2026-08-16 burst (bursts cluster
+#   within 16s); a 2026-08-17 burst measured a 169-second respawn interval,
+#   exceeding that default and causing one real burst to be mis-split into
+#   two. 300 covers the observed 169s with margin for respawn
+#   detection/notification delay).
 #
 # --recorded-window SECONDS: recoveries.md cross-reference tolerance (default:
 #   86400 -- a parent session's manual recording of a kill can lag the actual
@@ -55,7 +79,9 @@
 
 set -uo pipefail
 
-WINDOW=120
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+
+WINDOW=300
 RECORDED_WINDOW=86400
 SINCE=""
 EVENTS_FILE=""
@@ -158,16 +184,22 @@ if [ ! -f "$RECOVERIES_FILE" ]; then
   exit 1
 fi
 
-python3 - "$EVENTS_FILE" "$RECOVERIES_FILE" "$WINDOW" "$RECORDED_WINDOW" "$SINCE" <<'PYEOF'
+python3 - "$EVENTS_FILE" "$RECOVERIES_FILE" "$WINDOW" "$RECORDED_WINDOW" "$SINCE" "$SCRIPT_DIR" <<'PYEOF'
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 
-events_file, recoveries_file, window_arg, recorded_window_arg, since_arg = sys.argv[1:6]
+events_file, recoveries_file, window_arg, recorded_window_arg, since_arg, script_dir = sys.argv[1:7]
 window_s = int(window_arg)
 recorded_window_s = int(recorded_window_arg)
 since_s = int(since_arg) if since_arg else None
+
+
+def has_wrapper(phase):
+    base = phase.strip().split("-", 1)[0]
+    return os.path.isfile(os.path.join(script_dir, f"run-{base}.sh"))
 
 
 def parse_ts(ts):
@@ -223,6 +255,8 @@ for key in groups:
 
 signals = []
 for (issue, phase), lst in groups.items():
+    if not has_wrapper(phase):
+        continue
     for i in range(len(lst) - 1):
         start_i = lst[i]
         start_next = lst[i + 1]
