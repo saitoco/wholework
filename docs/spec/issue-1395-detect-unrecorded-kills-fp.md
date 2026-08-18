@@ -112,16 +112,16 @@ N/A
 - なし。Pre-merge AC 5件は rubric 4件 + github_check 1件で UNCERTAIN なく PASS 判定できた。CI (`Run bats tests`) は Step 9 の待機完了後に SUCCESS を確認した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Base Branch Conflict Pre-check: `git merge-tree` の結果コンフリクトなし (worktree の merge-base が `origin/main` の tip と一致) — base-conflict-context ファイルは生成しなかった
-- Parser/Validator Edge Case Pre-check を発火 (`has_wrapper()` が外部ログ由来の `phase` 文字列を解釈する関数のため条件(c)に該当) し、実行結果 1 件 (SHOULD) を review-light Perspective 2 に反映した
-- SHOULD 知見 (`has_wrapper()` の先頭空白未正規化) を Step 12 で修正 (`phase.strip()` 追加 + bats フィクスチャ追加)。MUST ではないため任意対応だが、実装が単純かつ低リスクなため対応した
+- Pre-merge AC ゲート: `check-pre-merge-ac.sh` で Pre-merge AC 5件すべて `[x]` を確認、`unchecked_count=0` で通過
+- review-incomplete-fallback チェック: `reconcile-phase-state.sh review 1395 --pr 1396 --check-completion` の結果に `review_incomplete_fallback` フィールドなし (false 相当) — 追加ゲート条件なし
+- PR #1396 は squash merge + ブランチ削除で完了 (mergeable=clean, CI success, review approved)
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- `/merge 1396` を実行可能。Pre-merge AC 5件はすべて `[x]`、CI 全件 SUCCESS、MUST 知見なし
 - Post-merge AC (`/verify` Step 15 実行時にバーストが本物の kill のみで構成されることを確認) は `/verify` 側の責務
+- `/verify 1395` を実行可能
