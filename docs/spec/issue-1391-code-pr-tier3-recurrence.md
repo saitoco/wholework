@@ -69,3 +69,33 @@ Implementation Step 1・2 はそれぞれ新規分岐ロジックを追加する
 | Login | Association | Trust tier | Intent | URL |
 |-------|-------------|-----------|--------|-----|
 | saito | MEMBER | first-class | `/issue --non-interactive` の Issue Retrospective。AC2 を `verify-type: manual` から `verify-type: observation event=auto-run` に再分類したことを報告 (`modules/verify-classifier.md` の Evidence Collection Patterns に合致すると判断)。spec phase 時点で Issue body は既にこの再分類を反映済みであることを確認済み | https://github.com/saitoco/wholework/issues/1391#issuecomment-5326725458 |
+
+code phase (cutoff 2026-08-18T10:30:22Z 以降): No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 は Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- `_completion_code_pr()` は元々 `git` コマンドを一切呼び出しておらず (`gh pr list` のみ)、Spec の Implementation Step 1 は `_completion_code_patch()` の `worktree_commit_count` 算出ブロック (L306-311) のみを複製対象として挙げていたが、そのブロックは `_completion_code_patch()` 冒頭の `git fetch origin main --quiet` (別関数、L213) に暗黙で依存している。`_completion_code_pr()` にも同じ `git fetch` を追加しないと `git rev-list --count origin/main..worktree-code+issue-N` が stale なローカル `origin/main` を参照する。Spec 本文に明記はなかったが、`_completion_code_patch()` の既存パターンを厳密にミラーする意図から fetch も追加した。
+- 上記の帰結として、既存の `tests/reconcile-phase-state.bats` の code-pr completion テスト2件 ("open PR exists" / "no open PR") が `git` を一切モックしていなかった (旧実装は git を呼ばないため不要だった)。今回の変更で `_completion_code_pr()` が無条件に `git fetch`/`git rev-list` を呼ぶようになったため、この2件にも `$MOCK_DIR/git` モックを追加しないと実環境の `git` に依存する非決定的なテストになってしまう。Spec の Changed Files には新規テスト追加のみが記載されていたが、既存2テストへのモック追加も安全のため同じコミットに含めた。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_completion_code_pr()` の `worktree_commits_found` シグナルは `_completion_code_patch()` と全く同じ設計 (fail-open な `git rev-list --count`、`matches_expected` には影響しない診断専用フィールド) を踏襲した。新たな edge case 設計を追加していないため review での再検証負荷は低い想定。
+- `run-code.sh` の短絡分岐は既存の retry-eligibility チェック (`if [[ AUTONOMY_TIER... ]]`) の手前に `elif` として追加し、`worktree_commits_found:true` の場合のみ `EXIT_CODE=1` で即終了する形にした。既存の CODE_RETRY_COUNT 加算ロジックには一切触れていない。
+- Issue AC の Pre-merge が元々「なし」だったため、Spec の Pre-merge Verification (4件) を Step 11 の auto-append 手順で Issue 本文に反映した。
+
+### Deferred Items
+- 原因2 (#995: bats 待ち watchdog kill 反復) と原因3 (#893: comment-consumption ログの parent main 直接コミット) は本 Issue の対策対象外。Spec Notes に記載の通り、再発時は独立した cause slug (`code-pr-uncommitted-diff-bats-kill` / `code-comment-consumption-parent-dirty`) での起票を推奨する。
+- Post-merge AC (root cause 判定の記録確認、次回 `/auto` 完了時点での再発なし確認) は `/verify` フェーズで検証される。
+
+### Notes for Next Phase
+- Pre-merge verify command 4件は全て PASS 済み (`bats --jobs 18 tests/` で全1864件 PASS を確認済み、うち新規3件・既存2件のモック更新を含む)。
+- `_completion_code_pr()` に `git fetch`/`git rev-list` が新規に追加されたため、review 時に他の code-pr 呼び出し元 (`/verify`, `/merge` 等) が git 未初期化環境からこの関数を呼んでいないか確認する価値がある (本 Issue の調査範囲では該当呼び出しは見つからなかった)。
