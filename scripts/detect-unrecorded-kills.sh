@@ -198,7 +198,7 @@ since_s = int(since_arg) if since_arg else None
 
 
 def has_wrapper(phase):
-    base = phase.split("-", 1)[0]
+    base = phase.strip().split("-", 1)[0]
     return os.path.isfile(os.path.join(script_dir, f"run-{base}.sh"))
 
 

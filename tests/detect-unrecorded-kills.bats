@@ -353,3 +353,17 @@ JSON
     [ "$status" -eq 0 ]
     [[ "$output" == *"Issue #1401, phase: code-pr"*"elapsed: 7000s"*"recorded: no"* ]]
 }
+
+@test "has_wrapper normalization: a phase with leading whitespace still resolves to its real wrapper" {
+    # A phase value with incidental leading whitespace (e.g. from a malformed
+    # producer) must not be misclassified as wrapper-less -- has_wrapper()
+    # strips the phase before splitting on "-", so " code-pr" still resolves
+    # to run-code.sh and is not silently excluded from signal generation.
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-17T00:00:00Z","issue":1402,"event":"phase_start","session_id":"a","phase":" code-pr","spawn_detach":"0"}
+{"ts":"2026-08-17T00:01:00Z","issue":1402,"event":"phase_start","session_id":"b","phase":" code-pr","spawn_detach":"1"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1402, phase:  code-pr"*"recorded: no"* ]]
+}
