@@ -1,3 +1,9 @@
+---
+type: project
+ssot_for:
+  - xl-decomposition-file-authoring
+---
+
 English | [日本語](../ja/guide/xl-decomposition.md)
 
 # XL Decomposition Guide
