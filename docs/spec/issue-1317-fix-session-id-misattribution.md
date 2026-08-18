@@ -76,23 +76,20 @@
 - None.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Consolidated the review-spec and 2 review-bug agents' overlapping "PGID pointer regeneration gap for `run-issue.sh`/`run-spec.sh`" findings (rated MUST/CONSIDER by different agents) into one adversarially-verified finding, adjudicated to SHOULD after 2 independent verification agents confirmed the claim's accuracy but found production evidence of no observed harm.
-- Fixed the 3 self-contained documentation-consistency SHOULD issues (adjacent enumeration/list omissions, stale quoted section label) directly in this phase rather than deferring — low-risk, doc-only, and directly closes the exact gaps review-spec flagged.
-- Left `skills/auto/SKILL.md:81`'s underlying pointer-regeneration enumeration gap and the `tests/*.bats` inline-snippet-replay test-effectiveness gap unfixed — both would require larger design/behavioral changes (Step 3 regeneration snippets; rebinding 5 bats files to real script content) better suited to a dedicated follow-up than a partial patch inside this PR's fix cycle.
+- Proceeded directly to squash merge — `gh-pr-merge-status.sh` reported `mergeable=true`/`reason=clean`, no conflict resolution needed.
+- Pre-merge AC gate: all 4 pre-merge acceptance conditions were already `[x]`; `review_incomplete_fallback` check confirmed organic (non-fallback) Review Response Summary completion — no override marker required.
 
 ### Deferred Items
-- `skills/auto/SKILL.md:81`'s pointer-regeneration enumeration still omits `run-issue.sh`/`run-spec.sh` — recorded as a General Comment (SHOULD) on the PR; no follow-up Issue filed yet since 2 independent verifications found no observed production harm (session `4899-1787037881`'s `issue`/`spec` phase events correctly attributed `session_id`).
-- Test-effectiveness gap in the 5 new/updated bats tests (assert against an inline snippet copy, not the real wrapper script) — recorded as an inline PR comment (SHOULD); left as-is since it's a suite-wide pre-existing convention, not a regression introduced by this PR.
-- `modules/retro-proposals.md:74`'s stale "PGID/current fallbacks" wording — recorded as a General Comment (CONSIDER); out of this PR's diff and the Issue's Spec AC B scope.
-- Post-merge observation AC (concurrent `/auto` + manual `/issue` reproduction) remains unresolved, unchanged from the code-phase handoff — still pending a live concurrent-session scenario after merge.
+- Post-merge observation AC (concurrent `/auto` + manual `/issue` reproduction confirming `session_id` is not misattributed) remains unresolved — pending for `/verify` to check post-merge.
+- `skills/auto/SKILL.md:81`'s pointer-regeneration enumeration gap for `run-issue.sh`/`run-spec.sh` — still not filed as a follow-up Issue (no observed production harm per review phase).
+- Test-effectiveness gap in the 5 new/updated bats tests (inline snippet replay, not real wrapper content) — unchanged from review phase, left as pre-existing suite-wide convention.
 
 ### Notes for Next Phase
-- No MUST issues; PR posted as `COMMENT` (not `REQUEST_CHANGES`). `/merge 1402` can proceed directly.
-- All 4 Pre-merge ACs were already `[x]` in the Issue body before this `/review` run (likely set during `/code`); re-verified independently in Step 8 and confirmed still accurate — no discrepancy found.
-- CI: 11/11 checks SUCCESS. No `github_check "gh pr checks"` AC exists on this Issue, so no CI-specific merge gate beyond the standard one.
+- `/verify` should check the post-merge observation AC: run a manual `/issue` while a concurrent `/auto` session is active and confirm the emitted event's `session_id` is empty (fail-closed), not the concurrent session's id.
+- No MUST/SHOULD blockers carried into merge; all review findings were already resolved or recorded as PR comments in the review phase.
 
 ## review retrospective
 
