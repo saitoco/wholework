@@ -72,3 +72,37 @@ Issue #1329 で低リスクと評価された、spec phase への `auto-retry-on
 
 - **saito** (MEMBER, first-class) — Issue Retrospective (Ambiguity Resolution Rationale / Key Policy Decisions を `/issue` フェーズから引き継ぐ内容。SPEC_DEPTH=light のため Spec 側への retrospective 転記は対象外だが、文脈として consume 済み) — https://github.com/saitoco/wholework/issues/1369#issuecomment-5325637030
 - **saito** (MEMBER, first-class) — Triage AC 監査: Pre-merge AC 5件目 (`command "bats tests/run-spec.bats"`) が新規カバレッジ主張なしに常時 PASS してしまう問題を指摘し、修正文言を提示。`/spec` 開始時に Issue 本文へ適用済み — https://github.com/saitoco/wholework/issues/1369#issuecomment-5325693052
+
+### code phase (cutoff: 最新の `phase/ready` ラベル付与時刻 2026-08-18T08:46:14Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **bash 3.2 nounset-safe な exec 引数展開への修正**: Implementation Step 1 で `run-code.sh` から `exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` をそのまま移植した直後、新規 bats テスト (retry 発火ケース) が macOS デフォルトの bash 3.2 (`set -u` 下) で `_TRAILING_ARGS[@]: unbound variable` により FAIL することを検出した。原因は `run-code.sh` の呼び出しが常に `--patch`/`--pr` のいずれかのフラグを伴う (`_TRAILING_ARGS` が空配列にならない) のに対し、`run-spec.sh` の既定呼び出し (Sonnet デフォルトパス、追加フラグなし) では `_TRAILING_ARGS` が空配列になり、bash 3.2 特有の「空配列の `${arr[@]}` 展開は nounset 下で unbound variable」という既知の挙動を踏む点にある。コードベース既存のイディオム (`"${arr[@]+"${arr[@]}"}"`、`scripts/check-verify-dirty.sh`/`scripts/setup-labels.sh`/`scripts/check-translation-sync.sh` で使用実績あり) に修正し、`scripts/run-spec.sh` の exec 行に適用した。`run-code.sh` 側の同型パターンは今回のスコープ外のため follow-up Issue #1397 として起票した。
+- **`tests/run-spec.bats` への default `git` mock 追加**: `tests/run-code.bats` の `setup()` にはデフォルトの `git` mock (rev-parse --show-toplevel 対応、それ以外は exit 0) が存在するが、`tests/run-spec.bats` の `setup()` には存在しなかった (本 Issue 以前は `run-spec.sh` が git を呼ぶロジックを持たず、ギャップが顕在化していなかった)。新規リトライロジックの `git ls-files` プリフライトチェックがこのギャップを露呈させ (実 git が bats tmpdir 内で "not a git repository" により exit 128、`set -e` 下でスクリプトが即終了)、新規テストが説明のつかない形で FAIL した。`run-code.bats` と同じ default git mock を `run-spec.bats` の `setup()` に追加して解消した。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の設計方針自体に曖昧さはなく、上記2件はテストで発見された正しさの修正であり設計判断の見直しではない。
+
+### Rework
+
+- **AUTO_RETRY_ENABLED=false テストケースの強化**: `tests/run-code.bats` の対応テストの assertion 形 (exit 1 + retry ログ行の不在) をそのまま移植したところ、Step 9 の New Verification-Test Pre-implementation FAIL Check で pre-implementation の `run-spec.sh` (retry 機構が全く存在しない版) に対しても意図せず PASS することが判明した — リトライ機構が「無効化されている」状態と「そもそも存在しない」状態は、exit code とログ文字列だけでは区別できないため。`claude` 呼び出し回数を直接カウントするアサーションに書き換え、より具体的な検証にした。ただし構造的には、この種の「起きないことを検証する」テストは「機能が全く存在しない」ベースラインに対しても原理的に vacuous PASS し得る限界がある点は変わらない — 同じ限界は #1320 (`run-code.bats` 側の対応テスト) にも遡って存在する可能性があるが、本 Issue のスコープ外として扱った。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run-code.sh` の `_write_code_retry_recovery`/`_push_with_retry` はそのまま移植し、`_write_spec_retry_recovery` の Recovery Applied 参照先も Spec の設計判断通り共通アンカー (`#auto-retry-on-fail-code_retry_fire`) を使用した。
+- `modules/orchestration-fallbacks.md` の `## auto-retry-on-fail (code_retry_fire)` セクションは Spec の設計判断 (in-place 拡張) に従い拡張。Escalation セクションのみ Spec Implementation Steps に明示がなかったが、`apply-fallback.sh` の `detect_symptom_anchor()` が `$PHASE == "code-patch"` に限定されている実装事実 (spec phase では Tier 2 ハンドラが発火しない) を反映する形で phase 別に追記した。
+- `docs/tech.md`/`docs/ja/tech.md` の「code-side auto-retry」記述は、Spec Notes で「/code の裁量」と明記されていた項目であり、Step 9 のドキュメント整合性チェックが同じギャップを独立に検出したため更新した。
+
+### Deferred Items
+- None — Pre-merge AC 5件はすべて実装済みで checkbox も更新済み。Post-merge AC (observation, 実際の spec phase silent no-op 発生時の動作確認) は `/verify` フェーズの対象。
+
+### Notes for Next Phase
+- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれないため review/merge では対応不要。
+- `bats --jobs 18 tests/` によるフルスイート実行 (1861件) は全 PASS 済み — Behavioral Change Detection (`modules/orchestration-fallbacks.md` を複数テストファイルが参照) により full-suite override が要求されたため実施した。
