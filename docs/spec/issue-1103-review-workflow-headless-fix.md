@@ -66,3 +66,31 @@ headless 実行サーフェス (`claude -p`、fork 実行された Skill、Workf
 
 - saito / MEMBER / first-class / Issue Retrospective (`/issue` フェーズが `modules/execution-context.md:93` の precedent 記載および `workflow-guidance.md` 44-50 行目の既存実装を確認し、旧 AC2 の文言を「Workflow ツール可用性チェック」から「再呼び出し保証チェック」の実装済みの実体に合わせて修正した経緯を記録) / https://github.com/saitoco/wholework/issues/1103#issuecomment-5328811472
 - saito / MEMBER / first-class / Triage AC audit (Pre-merge AC1〜AC5 を Pattern 2 常時 PASS の観点で監査。AC1〜AC3 は意図的な常時 PASS として許容可能と判定、AC4 [`grep "Workflow"`] は検出力ゼロのため置換・削除を提案、AC5 [`command "bats tests/workflow-guidance.bats"`] は新規テスト追加なしでも常時 PASS するため `bats --filter` 形式への絞り込みを提案 — 本 Spec は Notes に記載の通り AC4 削除 + grep+フルスイート 2 段構えで対応) / https://github.com/saitoco/wholework/issues/1103#issuecomment-5328861041
+
+Code フェーズ (本セッション): cutoff `2026-08-18T13:41:11Z` (phase/ready ラベル割当時刻) 以降の新規コメントなし。cross-phase marker exception (`type=verify-fail` / `type=preview-ac-unverified`) 該当コメントもなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec Implementation Steps 1〜3 の通りに実装した (`tests/workflow-guidance.bats` へのテスト追加のみ、`skills/review/workflow-guidance.md` は変更不要)。
+
+### Design Gaps/Ambiguities
+- `skills/code/SKILL.md` Step 8 の「New Verification-Test Pre-implementation FAIL Check」は、新規 assert が参照する「実装対象ファイル」を revert して事前 FAIL を確認する手順を前提としているが、本 Issue のように新規テストが変更対象外のファイル (`skills/review/workflow-guidance.md`、既存実装済みかつ no-change-needed) を grep-guard する回帰テストの場合、revert 対象の「実装対象ファイル」自体が存在しない。この形は Spec Notes が明記する通り「新機能の実装を伴わない回帰テスト」という意図的なケースであり、代わりに `grep -c "do NOT launch the Workflow tool for this step" skills/review/workflow-guidance.md` (結果: 1件、一意) でパターンの特異性を確認し、フルスイート実行 (4/4 PASS) で妥当性を確認した。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1〜3 の通り、`tests/workflow-guidance.bats` への新規 `@test` 追加のみを実施し、`skills/review/workflow-guidance.md` / `modules/execution-context.md` への変更は行わなかった (Spec 投資調査で AC1〜AC3 の主張を既存記述が満たすことを確認済みのため)。
+- Pre-merge AC1〜AC4 を verify-executor full mode で実行し全て PASS を確認、Issue body のチェックボックスを更新した (`gh-issue-edit.sh` 経由)。AC5 (`github_check "gh run list"`) は patch route の CI 未発生除外ルールにより未チェックのまま据え置いた。
+
+### Deferred Items
+- AC5 (bats テストスイートが CI で pass する) — patch route では本コミットがまだ push されておらず CI 未実行のため、この Code フェーズでは検証できない。post-push 後の `/verify` で検証される。
+- Post-merge AC (`capabilities.workflow: true` の状態で Size M/L の Issue に対し `/auto` を実行し review フェーズが完走することを確認する) — manual verify-type のため post-merge `/verify` 側の対応。
+
+### Notes for Next Phase
+- 本 Issue は patch route (ROUTE=patch、Size XS へ再評価済み) — PR は作成されない。次フェーズは `/verify` (post-push の CI 結果と post-merge AC の確認)。
+- 新規テストは既存実装済みの Pre-flight フォールバック分岐に対する回帰テストであり、新機能実装は伴わない。将来 `skills/review/workflow-guidance.md` の当該分岐が弱体化・削除された場合、このテストが CI で検知する。
