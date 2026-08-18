@@ -128,6 +128,19 @@ MOCK
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
+    # Mock git: default handles `rev-parse --show-toplevel` (used for REPO_ROOT), else no-op success.
+    # Needed so auto-retry-on-fail's `git ls-files` preflight check does not fall through to the
+    # real system git (which would fail with "not a git repository" inside $BATS_TEST_TMPDIR).
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
     # Mock reconcile-phase-state.sh: default returns empty (no false alarm)
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
 #!/bin/bash
@@ -588,4 +601,344 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     [[ "$output" != *"classify=phase-guard-blocked"* ]]
+}
+
+@test "auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry (SPEC_RETRY_COUNT increments)" {
+    # When reconcile returns matches_expected:false and auto-retry is configured,
+    # run-spec.sh re-invokes itself via exec. To avoid an infinite loop in the test,
+    # the second invocation uses a reconcile mock that returns matches_expected:true.
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"spec"}'
+else
+  echo '{"matches_expected":true,"phase":"spec"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"auto-retry: spec phase silent no-op"* ]]
+    [ "$(cat "$RETRY_COUNTER_FILE")" -ge 2 ]
+}
+
+@test "auto-retry: silent no-op + AUTO_RETRY_ENABLED=false does not retry, exits 1" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: false
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"spec"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" != *"auto-retry: spec phase silent no-op"* ]]
+}
+
+@test "auto-retry: SPEC_RETRY_COUNT at max does not retry and exits 1 with advisory" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"spec"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    SPEC_RETRY_COUNT=3 run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" != *"auto-retry: spec phase silent no-op, retry"* ]]
+    [[ "$output" == *"max iterations reached"* ]]
+}
+
+@test "auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation" {
+    # Simulates Issue #886 (code phase) applied to the spec phase: claude's first
+    # invocation leaves a stray untracked file (silent no-op side effect) that would
+    # otherwise block check-verify-dirty.sh on the retry re-invocation. The preflight
+    # block must stash it via `git stash push` so the retry can proceed.
+    STRAY_FILE="$BATS_TEST_TMPDIR/stray-output.md"
+    GIT_CALL_LOG="$BATS_TEST_TMPDIR/git_calls.log"
+    : > "$GIT_CALL_LOG"
+    export GIT_CALL_LOG
+
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    CLAUDE_INVOKE_COUNTER_FILE="$BATS_TEST_TMPDIR/claude_invoke_count.txt"
+    echo "0" > "$CLAUDE_INVOKE_COUNTER_FILE"
+    export CLAUDE_INVOKE_COUNTER_FILE
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    # claude: only the first invocation leaves a stray untracked file behind
+    # (simulating a silent no-op side effect).
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+N=\$(cat "$CLAUDE_INVOKE_COUNTER_FILE" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "$CLAUDE_INVOKE_COUNTER_FILE"
+if [[ "\$N" -eq 1 ]]; then
+  touch "$STRAY_FILE"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    # check-verify-dirty.sh: exit 1 while the stray file exists, exit 0 once
+    # it has been stashed away.
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<MOCK
+#!/bin/bash
+if [[ -f "$STRAY_FILE" ]]; then
+  exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+
+    # git: report the stray file for `ls-files --others --exclude-standard`,
+    # and remove it (simulating a real stash) on `stash push`, logging both calls.
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$*" >> "$GIT_CALL_LOG"
+if [[ "\$1" == "ls-files" ]]; then
+  if [[ -f "$STRAY_FILE" ]]; then
+    echo "stray-output.md"
+  fi
+  exit 0
+fi
+if [[ "\$1" == "stash" && "\$2" == "push" ]]; then
+  rm -f "$STRAY_FILE"
+  exit 0
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "$BATS_TEST_TMPDIR"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"spec"}'
+else
+  echo '{"matches_expected":true,"phase":"spec"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"auto-retry preflight: stashing parent-main untracked files: stray-output.md"* ]]
+    grep -q "stash push" "$GIT_CALL_LOG"
+    [ ! -f "$STRAY_FILE" ]
+}
+
+@test "auto-retry: spec_retry_fire records recovery entry before exec re-invocation (Issue #1369)" {
+    # Simulates Issue #1369: when auto-retry-on-fail fires, run-spec.sh must record a
+    # spec-retry-fire entry to orchestration-recoveries.md and commit/push it BEFORE the
+    # `exec` self-restart -- exec replaces the process, so the retried invocation has no
+    # memory of the failure that triggered it. Verifies (a) the entry is appended to the
+    # mocked orchestration-recoveries.md, and (b) git add/commit/push are logged before the
+    # second `claude` invocation (i.e. before the exec re-invocation runs).
+    RECOVERIES_FILE="$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    mkdir -p "$(dirname "$RECOVERIES_FILE")"
+    cat > "$RECOVERIES_FILE" <<'EOF'
+---
+type: report
+description: Cross-Issue orchestration recovery log. Append-only. Newest entries first.
+---
+
+# Orchestration Recovery Log
+
+<!-- Log entries appear below, newest first. -->
+EOF
+    export RECOVERIES_FILE
+
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    COMBINED_LOG="$BATS_TEST_TMPDIR/combined_calls.log"
+    : > "$COMBINED_LOG"
+    export COMBINED_LOG
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+echo "CLAUDE_INVOKE" >> "$COMBINED_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"spec"}'
+else
+  echo '{"matches_expected":true,"phase":"spec"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "$BATS_TEST_TMPDIR"
+  exit 0
+fi
+ARGS=("\$@")
+if [[ "\${ARGS[0]}" == "-C" ]]; then
+  ARGS=("\${ARGS[@]:2}")
+fi
+case "\${ARGS[0]}" in
+  diff)
+    echo "GIT diff" >> "$COMBINED_LOG"
+    exit 1
+    ;;
+  add)
+    echo "GIT add \${ARGS[*]}" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  commit)
+    echo "GIT commit" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  push)
+    echo "GIT push" >> "$COMBINED_LOG"
+    exit 0
+    ;;
+  ls-files)
+    exit 0
+    ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+
+    # (a) spec-retry-fire entry appended with expected fields
+    grep -q ": spec-retry-fire$" "$RECOVERIES_FILE"
+    grep -q "Issue #123, phase: spec" "$RECOVERIES_FILE"
+    grep -q "modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire" "$RECOVERIES_FILE"
+
+    # (b) git add/commit/push happened before the second claude invocation (exec re-invocation)
+    SECOND_CLAUDE_LINE=$(grep -n "CLAUDE_INVOKE" "$COMBINED_LOG" | sed -n '2p' | cut -d: -f1)
+    COMMIT_LINE=$(grep -n "GIT commit" "$COMBINED_LOG" | head -1 | cut -d: -f1)
+    PUSH_LINE=$(grep -n "GIT push" "$COMBINED_LOG" | head -1 | cut -d: -f1)
+    [ -n "$SECOND_CLAUDE_LINE" ]
+    [ -n "$COMMIT_LINE" ]
+    [ -n "$PUSH_LINE" ]
+    [ "$COMMIT_LINE" -lt "$SECOND_CLAUDE_LINE" ]
+    [ "$PUSH_LINE" -lt "$SECOND_CLAUDE_LINE" ]
 }
