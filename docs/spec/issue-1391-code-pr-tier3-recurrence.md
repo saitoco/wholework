@@ -72,6 +72,7 @@ Implementation Step 1・2 はそれぞれ新規分岐ロジックを追加する
 
 code phase (cutoff 2026-08-18T10:30:22Z 以降): No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Change Tracking (by /code) / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327243554
 ## Code Retrospective
 
 ### Deviations from Design
