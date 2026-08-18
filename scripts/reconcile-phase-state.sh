@@ -356,7 +356,11 @@ _completion_code_pr() {
   # (#1391). Read-only; does not change matches_expected. Mirrors the same signal in
   # _completion_code_patch() (see the actual.worktree_commits_found row in
   # modules/phase-state.md's Field contract table).
-  git fetch origin main --quiet 2>/dev/null || _handle_error "git fetch failed"
+  # Fail-open on fetch failure (unlike _completion_code_patch()'s fetch, which gates
+  # that function's own core check): this fetch only feeds the diagnostic-only field
+  # below, so a transient failure must not discard the PR-state result already
+  # computed above via _handle_error's exit 2 (review finding on PR #1399).
+  git fetch origin main --quiet 2>/dev/null || true
   local worktree_commit_count
   worktree_commit_count=$(git rev-list --count "origin/main..worktree-code+issue-${ISSUE_NUMBER}" 2>/dev/null) || worktree_commit_count=0
   [[ "$worktree_commit_count" =~ ^[0-9]+$ ]] || worktree_commit_count=0
