@@ -90,23 +90,19 @@ review phase (cutoff 2026-08-18T10:37:58Z 以降):
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (Perspective 2: Edge Cases and Robustness) が検出した MUST issue (`scripts/reconcile-phase-state.sh:359` の `git fetch` 失敗時に PR 判定結果自体が握りつぶされる問題) を、SHOULD ではなく MUST として扱い修正した。理由: `_completion_code_pr()` は fail-safe critical script の基準 (a) に該当し、この不具合は本 Issue #1391 が解決しようとしている「silent no-op の見逃し」を別経路で再導入するものだったため。
-- 修正方針は `git fetch origin main --quiet 2>/dev/null || _handle_error ...` を `|| true` に変更する fail-open化のみとし、`_completion_code_patch()` 側の既存 `git fetch` (関数冒頭、コア判定自体が依存するため fail-closed が妥当) には手を加えなかった。両者は依存の性質が異なるため意図的に非対称のままとした。
-- テストカバレッジ (CONSIDER issue) も同一コミットで対応し、`git fetch` 失敗時に `pr_state` が正しく出力されつつ `worktree_commits_found:false` にフォールバックすることを検証する新規 `@test` を追加した。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は unchecked_count=0、review-incomplete-fallback チェックも `matches_expected:true` (Review Response Summary found) だったため、override なしで通常経路のままスカッシュマージを実行した。
+- `gh-pr-merge-status.sh` が `mergeable=true reason=clean ci_status=success review_status=approved` を返したため、Step 3 (コンフリクト解消) はスキップし Step 4 に直行した。
 
 ### Deferred Items
 - 原因2 (#995: bats 待ち watchdog kill 反復) と原因3 (#893: comment-consumption ログの parent main 直接コミット) は本 Issue の対策対象外。Spec Notes に記載の通り、再発時は独立した cause slug (`code-pr-uncommitted-diff-bats-kill` / `code-comment-consumption-parent-dirty`) での起票を推奨する。
 - Post-merge AC (root cause 判定の記録確認、次回 `/auto` 完了時点での再発なし確認) は `/verify` フェーズで検証される。
 
 ### Notes for Next Phase
-- review 修正コミット (`git fetch` fail-open化 + 新規テスト) を含め `bats tests/reconcile-phase-state.bats` (81件) / `bats tests/run-code.bats` (52件) / `python3 scripts/validate-skill-syntax.py skills/` を再実行し全て PASS を確認済み。`/merge` 前の追加確認は不要と判断。
-
-### Notes for Next Phase
-- Pre-merge verify command 4件は全て PASS 済み (`bats --jobs 18 tests/` で全1864件 PASS を確認済み、うち新規3件・既存2件のモック更新を含む)。
-- `_completion_code_pr()` に `git fetch`/`git rev-list` が新規に追加されたため、review 時に他の code-pr 呼び出し元 (`/verify`, `/merge` 等) が git 未初期化環境からこの関数を呼んでいないか確認する価値がある (本 Issue の調査範囲では該当呼び出しは見つからなかった)。
+- Post-merge の観察系 AC (`docs/reports/orchestration-recoveries.md` への同型 `code-pr-tier3-recovery` エントリが Issue #1391 作成日 (2026-08-17) 以降追加されていないこと) は次回 `/auto` 完了時点で確認する必要があるため、`/verify` は現時点で判定不能 (`verify-type: observation event=auto-run`) として扱うこと。
+- Pre-merge verify command 4件は review フェーズ時点で全て PASS 済み。merge フェーズでは追加のテスト実行は行っていない (mergeable=clean だったため Step 3 の Run Tests はスキップ)。
 
 ## review retrospective
 
