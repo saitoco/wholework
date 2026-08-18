@@ -63,3 +63,30 @@
 | login | authorAssociation | trust tier | 内容 | URL |
 |---|---|---|---|---|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Pre-merge AC 1 の rubric 常時 PASS リスク指摘 (Pattern 2) を受け「または当該フォールバックを残す設計判断とその安全性の根拠が明示的に文書化されている」の削除で対応済み (Issue body に反映済み)。AC 4 の bats タイムアウトに関する参考情報 (CI reference fallback 条件を満たすため恒久的 UNCERTAIN に該当しないと判断済み、対応不要)。Autonomous Auto-Resolve Log で「`.tmp/auto-session-current` file 自体の存続要否は `/spec` の判断に委ねる」「`session_id` 空の event の集計側ハンドリングは追加 AC を設けない」の 2 点を明記 | https://github.com/saitoco/wholework/issues/1317#issuecomment-5327871143 |
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implemented all 3 Implementation Steps as written: (1) removed the `.tmp/auto-session-current` fallback from the 5 `run-*.sh` wrappers, (2) updated `tests/run-code.bats`'s 4 existing tests and added 1 new test each to `tests/run-issue.bats`/`run-spec.bats`/`run-review.bats`/`run-merge.bats`, (3) updated `modules/event-emission.md`, `skills/audit/SKILL.md`, and `skills/auto/SKILL.md`.
+
+### Design Gaps/Ambiguities
+- `/code`'s "New Verification-Test Pre-implementation FAIL Check" (targets asserts that verify a target file's content via string matching — `grep`/`file_contains`-equivalent) was judged out of scope for the 5 new AUTO_SESSION_ID misattribution test cases: each replays the wrapper's shell snippet inline and asserts the resulting variable value, rather than grepping the actual `scripts/run-*.sh` file content, so there is no pre-implementation-state file version to check the assert against.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Kept the `.tmp/auto-session-current` file itself (Spec Notes: option A retains it, per the Autonomous Auto-Resolve Log deferring this to `/spec`) — only removed the 5 wrappers' read path. `scripts/collect-run-facts.sh` / `scripts/filter-session-verified-issues.sh` still read it as a documented fail-open fallback.
+- Extended the exact same inline-snippet-replay test pattern already used by `tests/run-code.bats` to the other 4 wrapper bats files, rather than introducing a new test helper — keeps the 5 new/updated tests structurally identical and easy to audit together.
+- Did not add a new AC for how the collector/aggregation side handles empty `session_id` events (Auto-Resolve Log during `/issue` explicitly deferred this) — out of scope for this Issue.
+
+### Deferred Items
+- Post-merge observation AC (concurrent `/auto` + manual `/issue` reproduction) is unresolved pending a live concurrent-session scenario after merge.
+- Spec Notes' scope-out: `scripts/collect-run-facts.sh` and `scripts/filter-session-verified-issues.sh` retain the same-shape `.tmp/auto-session-current` fallback (fail-open, not fail-closed like the 5 wrappers) — explicitly out of scope for this Issue; revisit if misattribution recurs through that path.
+
+### Notes for Next Phase
+- Pre-merge AC 4's `bats` command already covers all 5 touched wrapper test files plus `emit-event.bats`; the full suite (`bats --jobs 18 tests/`, 1871/1871 PASS) was also run due to behavioral-change detection (multiple test files beyond direct counterparts reference the modified scripts/docs).
+- No `github_check "gh pr checks"` AC exists on this Issue, so the CI verification AC exclusion note in `/code` Step 10 does not apply here.
