@@ -74,6 +74,7 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (non-interactive mode): `ALWAYS_PR=true` による operate 判定抑制の非採用を Background に明記した理由、および Triage AC audit で指摘された2件の Pattern 2 (常時 PASS) verify command 欠陥の修正内容 (SKILL.md 側 grep→rubric、bats 側 `ls tests/`→`command "bats tests/run-auto-sub.bats"`) を記録 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326721499
 - saito / MEMBER / first-class / Triage AC audit: bats テスト AC (`command "bats tests/run-auto-sub.bats"`) が既存93ケース全PASSにより依然 Pattern 2 (常時 PASS) であると指摘し、`grep "operate" "tests/run-auto-sub.bats"` (新規テストケース検出) と既存の `command` AC (回帰保護) への2分割を提案。本フェーズで Issue body および本 Spec の Verification に反映済み / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326773760
+- No new comments since last phase. (review フェーズ開始時点、cutoff=2026-08-18T10:49:03Z 以降の新規 Issue/PR コメントなし)
 
 ## Code Retrospective
 
