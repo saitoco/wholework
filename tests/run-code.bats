@@ -628,37 +628,39 @@ MOCK
     [ ! -f "$FALLBACK_LOG" ]
 }
 
-@test "AUTO_SESSION_ID resolves from .tmp/auto-session-current when PGID file absent (parent /auto path)" {
-    # Issue #791 iteration B: adds .tmp/auto-session-current as a fallback in the
-    # AUTO_SESSION_ID resolve chain. Note: as of PR #793 (Issue #770), SKILL.md writes
-    # to .tmp/auto-session-${PGID}, not auto-session-current. This fallback covers the
-    # case where the PGID file is absent (e.g., PGID mismatch between Bash tool call
-    # contexts, or if a future code path writes auto-session-current again).
+@test "AUTO_SESSION_ID does not fall back to .tmp/auto-session-current when PGID file absent (Issue #1317, no misattribution)" {
+    # Issue #1317: the auto-session-current fallback (Issue #791 iteration B) was removed
+    # because that file is written only by /auto Step 1 and is not owned by a wrapper
+    # invoked outside /auto. Reading it when the PGID file is absent risked adopting a
+    # concurrent /auto session's session_id (misattribution). This test reproduces that
+    # exact situation — PGID file absent, .tmp/auto-session-current holds a DIFFERENT
+    # (concurrent) session's ID — and asserts AUTO_SESSION_ID resolves to empty (fail-closed)
+    # rather than adopting it.
     #
     # We assert the resolve logic by replaying the same shell snippet used in
-    # scripts/run-code.sh L50-51 (and identical in run-spec/review/merge/issue.sh).
+    # scripts/run-code.sh (and identical in run-spec/review/merge/issue.sh).
     mkdir -p .tmp
-    echo "test-sid-12345-1782604910" > .tmp/auto-session-current
+    echo "concurrent-session-sid-12345-1782604910" > .tmp/auto-session-current
     # Intentionally do NOT create .tmp/auto-session-${PGID}
 
     unset AUTO_SESSION_ID
     PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 
-    [ "$AUTO_SESSION_ID" = "test-sid-12345-1782604910" ]
+    [ -z "$AUTO_SESSION_ID" ]
 }
 
-@test "AUTO_SESSION_ID PGID file takes priority over .tmp/auto-session-current (batch path preserved)" {
-    # Backward compatibility: when both files exist, PGID-based file wins because
-    # run-auto-sub.sh writes to it per batch session. The fallback only kicks in
-    # when PGID file is absent.
+@test "AUTO_SESSION_ID resolves from PGID file, ignoring .tmp/auto-session-current (batch path preserved)" {
+    # When the PGID-based file exists, it is used regardless of whether
+    # .tmp/auto-session-current also exists (that file is no longer consulted at all
+    # post-#1317). run-auto-sub.sh writes to the PGID file per batch session.
     mkdir -p .tmp
-    echo "fallback-sid-FROM-CURRENT" > .tmp/auto-session-current
+    echo "concurrent-session-sid-FROM-CURRENT" > .tmp/auto-session-current
     PGID=$(ps -o pgid= -p $$ | tr -d ' ')
     echo "primary-sid-FROM-PGID" > ".tmp/auto-session-${PGID}"
 
     unset AUTO_SESSION_ID
-    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 
     [ "$AUTO_SESSION_ID" = "primary-sid-FROM-PGID" ]
 }
@@ -670,21 +672,21 @@ MOCK
 
     unset AUTO_SESSION_ID
     PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 
     [ -z "$AUTO_SESSION_ID" ]
 }
 
-@test "AUTO_SESSION_ID env var takes priority over both files (caller override)" {
+@test "AUTO_SESSION_ID env var takes priority over PGID file (caller override)" {
     # When AUTO_SESSION_ID is already set in environment, file resolution must
     # not override it. This preserves the caller-controlled override path.
     mkdir -p .tmp
-    echo "FROM-CURRENT" > .tmp/auto-session-current
+    echo "concurrent-session-sid-FROM-CURRENT" > .tmp/auto-session-current
     PGID=$(ps -o pgid= -p $$ | tr -d ' ')
     echo "FROM-PGID" > ".tmp/auto-session-${PGID}"
 
     export AUTO_SESSION_ID="ENV-OVERRIDE"
-    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 
     [ "$AUTO_SESSION_ID" = "ENV-OVERRIDE" ]
 }

@@ -45,8 +45,10 @@ fi
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
 PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-# Primary: PGID-based file (Issue #770). Fallback: auto-session-current (Issue #791 iter B).
-AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+# Primary: PGID-based file (Issue #770). No fallback to auto-session-current: that file is
+# written only by /auto Step 1, so a wrapper invoked outside /auto has no claim to it and
+# reading it risks misattributing a concurrent /auto session's session_id (Issue #1317).
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 export AUTO_SESSION_ID
 source "$SCRIPT_DIR/emit-event.sh"
 
