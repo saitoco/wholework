@@ -99,17 +99,29 @@ N/A
 
 N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。review-light Perspective 1 (Spec Deviation) で Spec Implementation Steps 1〜5 と PR diff の一致 (suppression 方式 (a) のみ、汎用 `run-<base>.sh` 存在チェック、`WINDOW` 120→300 とヘッダ根拠、フィクスチャ3件、`leaked-phase`→`code-pr` リネーム) を確認した。
+
+### Recurring issues
+- **Parser/Validator Edge Case Pre-check が実装判断で見落とされがちな正規化漏れを検出**: `has_wrapper(phase)` は外部ログ (`.tmp/auto-events.jsonl`) 由来の `phase` 文字列を `.strip()` せずに `split("-", 1)[0]` していたため、先頭空白を含む `phase` 値 (`" code-pr"`) では wrapper 保持フェーズが無診断で wrapper 非保持と誤判定されていた。実データ相当のフィクスチャテスト (AC4) は正常系の文字列のみを対象としており、この種の入力表記ゆれは Spec のトレードオフ検討 (Notes「抑制方式の選択肢とトレードオフ」) にも記載がなかった。エッジケース実行サブエージェントによる実測 (シミュレーションではなく実行) がこの回帰を検出し、`/review` Step 12 で修正・テスト追加した。
+  - **改善提案**: 「外部プロセスが書き込むログファイルの文字列フィールドをキーとして使う」パターン (今回は `phase`) を持つ Spec では、Implementation Steps に「該当フィールドの正規化 (strip 等) を明示するか、正規化しない場合はその理由を明記する」ことを Notes に含めるべきかもしれない。頻度が低い ( #1395 系列で初観測) ため、次回同種のパターンが出た場合に起票判断する。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 5件は rubric 4件 + github_check 1件で UNCERTAIN なく PASS 判定できた。CI (`Run bats tests`) は Step 9 の待機完了後に SUCCESS を確認した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Adopted suppression approach (a) only (wrapper-less phase exclusion), as the Spec specified — no `elapsed` upper bound was introduced, so the AC4(c) long-elapsed-kill regression guard is satisfied trivially by not touching that detection path
-- `has_wrapper(phase)` checks `scripts/run-<base>.sh` existence generically (base = phase name split on first `-`), matching the Spec's explicit rejection of hardcoding `verify` by name
-- Renamed the existing `leaked-phase` synthetic fixture to `code-pr` (a real wrapper-holding phase) so the new filter does not change that test's own detection target, per the Spec's Changed Files note
+- Base Branch Conflict Pre-check: `git merge-tree` の結果コンフリクトなし (worktree の merge-base が `origin/main` の tip と一致) — base-conflict-context ファイルは生成しなかった
+- Parser/Validator Edge Case Pre-check を発火 (`has_wrapper()` が外部ログ由来の `phase` 文字列を解釈する関数のため条件(c)に該当) し、実行結果 1 件 (SHOULD) を review-light Perspective 2 に反映した
+- SHOULD 知見 (`has_wrapper()` の先頭空白未正規化) を Step 12 で修正 (`phase.strip()` 追加 + bats フィクスチャ追加)。MUST ではないため任意対応だが、実装が単純かつ低リスクなため対応した
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- `github_check "gh pr checks" "Run bats tests"` (Issue AC5) is left unchecked — excluded from this phase's verify-executor pass because the PR did not yet exist when Step 10 ran (SKILL.md's "CI verification AC exclusion (route-agnostic)"). `/review` verifies it once CI has run.
-- All 4 rubric ACs and the 25-case bats suite (22 existing + 3 new) were confirmed PASS locally before push.
+- `/merge 1396` を実行可能。Pre-merge AC 5件はすべて `[x]`、CI 全件 SUCCESS、MUST 知見なし
+- Post-merge AC (`/verify` Step 15 実行時にバーストが本物の kill のみで構成されることを確認) は `/verify` 側の責務
