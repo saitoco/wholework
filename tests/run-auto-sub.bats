@@ -281,6 +281,49 @@ MOCK
     [ ! -f "$BATS_TEST_TMPDIR/run-verify.log" ]
 }
 
+@test "Size M + diff-less Spec: operate route re-determined, code-patch dispatched instead of code-pr" {
+    mkdir -p docs/spec
+    cat > docs/spec/issue-42-operate-route.md <<'SPEC'
+# Issue #42: test spec
+
+## Changed Files
+
+なし (operate route — external tool operations only, no repository file changes)
+
+## Implementation Steps
+
+1. Run an external MCP tool call.
+SPEC
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Post-spec operate detection"* ]]
+    grep -q "42 --patch" "$RUN_CODE_LOG"
+    [ ! -f "$RUN_REVIEW_LOG" ]
+    [ ! -f "$RUN_MERGE_LOG" ]
+}
+
+@test "Size M + Spec with real Changed Files: operate route not triggered, code-pr dispatched as usual" {
+    mkdir -p docs/spec
+    cat > docs/spec/issue-42-normal.md <<'SPEC'
+# Issue #42: test spec
+
+## Changed Files
+
+- `scripts/example.sh`: add new option
+
+## Implementation Steps
+
+1. Edit scripts/example.sh.
+SPEC
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ -f "$RUN_MERGE_LOG" ]
+}
+
 @test "Size M + auto-stop-at: review: run-review.sh is called, run-merge.sh is not called" {
     echo "auto-stop-at: review" >> "$BATS_TEST_TMPDIR/.wholework.yml"
 
