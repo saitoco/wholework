@@ -93,18 +93,19 @@ No new comments since last phase.
 - **AUTO_RETRY_ENABLED=false テストケースの強化**: `tests/run-code.bats` の対応テストの assertion 形 (exit 1 + retry ログ行の不在) をそのまま移植したところ、Step 9 の New Verification-Test Pre-implementation FAIL Check で pre-implementation の `run-spec.sh` (retry 機構が全く存在しない版) に対しても意図せず PASS することが判明した — リトライ機構が「無効化されている」状態と「そもそも存在しない」状態は、exit code とログ文字列だけでは区別できないため。`claude` 呼び出し回数を直接カウントするアサーションに書き換え、より具体的な検証にした。ただし構造的には、この種の「起きないことを検証する」テストは「機能が全く存在しない」ベースラインに対しても原理的に vacuous PASS し得る限界がある点は変わらない — 同じ限界は #1320 (`run-code.bats` 側の対応テスト) にも遡って存在する可能性があるが、本 Issue のスコープ外として扱った。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode、4 観点統合) を実行し、SHOULD 1件 (`scripts/collect-run-facts.sh` の `spec_retry_fire` 未登録) を review 内で修正・コミット済み。CONSIDER 3件 (flat-key 未対応・quoted 値の silent fallback・`git ls-files`/`stash` の暗黙 cwd 依存) は `run-code.sh` 側にも同一に存在する既存の制約と確認できたため、Issue 起票の抑制方針に従い記録のみに留めた。
-- Parser/Validator Edge Case Pre-check (サブエージェントによる実 fixture 実行) を `scripts/run-spec.sh` の新規 `.wholework.yml` パーサに対して実施し、上記 CONSIDER 3件のうち2件を検出した。
+- Squash merge (`gh pr merge --squash --delete-branch`) を PR #1398 に対して実行。pre-merge AC 5件は `check-pre-merge-ac.sh` で unchecked_count=0 を確認済み、review completion は fallback-origin ではなく organic (`review_incomplete_fallback` 非該当) だったため、追加確認なしでマージを実行した。
+- CI status=success、review_status=approved、mergeable=clean をマージ実行前に `gh-pr-merge-status.sh` で確認済み。conflict resolution は不要だった。
 
 ### Deferred Items
-- None — Pre-merge AC 5件は review でも PASS 再確認済み。Post-merge AC (observation) は `/verify` フェーズの対象のまま。
+- None — Post-merge AC (observation) は `/verify` フェーズの対象のまま。
 
 ### Notes for Next Phase
-- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれないため merge では対応不要。
+- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれない。
 - `run-code.sh`/`run-spec.sh` 共有の awk パーサ脆弱性 (flat-key 未対応、quoted 値の silent fallback) は review comment として記録済み・未起票。将来 Issue 化する場合は両ファイルを対象とする共有 follow-up が妥当。
+- `/verify` は post-merge observation AC (「実際に spec phase で silent no-op が発生した際、自動リトライが機能することを確認する」) を、次の `event=auto-run` 発火時に `docs/reports/orchestration-recoveries.md` の spec-retry-fire エントリまたは `.tmp/auto-events.jsonl` 内 retry イベントで確認する。
 
 ## review retrospective
 
