@@ -5,6 +5,8 @@
 set -euo pipefail
 ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus] [--fable] [--max]}"
 shift
+# Save trailing args before parsing loop so exec re-invocation can pass them unchanged
+_TRAILING_ARGS=("$@")
 
 # Parse options
 # Default: --model sonnet, --effort max (Opus path: xhigh by default, max with --max)
@@ -115,6 +117,106 @@ else
   _PERM_LABEL="skip (autonomous mode)"
 fi
 
+AUTONOMY_TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1 2>/dev/null || echo L1)
+_WW_YML="${REPO_ROOT}/.wholework.yml"
+AUTO_RETRY_ENABLED="false"
+AUTO_RETRY_MAX_ITERATIONS=3
+if [[ -f "$_WW_YML" ]]; then
+  _raw_enabled=$(awk '/^auto-retry-on-fail:/{f=1; next} f && /^[[:space:]]+enabled:/{gsub(/.*enabled:[[:space:]]*/,""); gsub(/[[:space:]].*/,""); print; exit} /^[^[:space:]]/{f=0}' "$_WW_YML" | tr -d ' ')
+  [[ "$_raw_enabled" == "true" ]] && AUTO_RETRY_ENABLED="true"
+  _raw_max=$(awk '/^auto-retry-on-fail:/{f=1; next} f && /^[[:space:]]+(max_iterations|threshold):/{gsub(/.*:[[:space:]]*/,""); gsub(/[[:space:]].*/,""); print; exit} /^[^[:space:]]/{f=0}' "$_WW_YML" | tr -d ' ')
+  if [[ -n "$_raw_max" && "$_raw_max" =~ ^[0-9]+$ && "$_raw_max" -gt 0 ]]; then
+    AUTO_RETRY_MAX_ITERATIONS="$_raw_max"
+  fi
+fi
+SPEC_RETRY_COUNT=${SPEC_RETRY_COUNT:-0}
+export SPEC_RETRY_COUNT
+
+# Pushes HEAD to origin, retrying with fetch+rebase on non-fast-forward rejection.
+# Same pattern as scripts/run-auto-sub.sh's _push_with_retry().
+# Usage: _push_with_retry REPO_ROOT
+# Returns 0 on success, 1 if all retries are exhausted or a step fails.
+_push_with_retry() {
+  local repo_root="$1"
+  local attempt=0
+  local branch
+
+  while true; do
+    if git -C "$repo_root" push origin HEAD; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    if [[ $attempt -ge 3 ]]; then
+      return 1
+    fi
+    branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD) || return 1
+    git -C "$repo_root" fetch origin "$branch" || return 1
+    if ! git -C "$repo_root" rebase "origin/${branch}"; then
+      git -C "$repo_root" rebase --abort 2>/dev/null || true
+      return 1
+    fi
+  done
+}
+
+# _write_spec_retry_recovery ISSUE ITERATION
+# Records a spec_retry_fire recovery event to orchestration-recoveries.md immediately
+# before the exec self-restart -- exec replaces the running process, so recording
+# after exec (or in the retried process) can never observe the failure that triggered
+# it; recording must happen here, before exec.
+# Skips silently if the file does not exist (file not in repo -> return 0).
+# See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
+_write_spec_retry_recovery() {
+  local issue="$1"
+  local iteration="$2"
+  local repo_root="${REPO_ROOT:-.}"
+  local recoveries_file="${repo_root}/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$recoveries_file" ]]; then
+    return 0
+  fi
+  local _date
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  python3 << PYEOF 2>/dev/null || true
+fpath = "${recoveries_file}"
+marker = "<!-- Log entries appear below, newest first. -->"
+entry = (
+    "\n## ${_date}: spec-retry-fire\n"
+    "\n### Context\n"
+    "- Issue #${issue}, phase: spec\n"
+    "- Source: run-spec.sh auto-retry-on-fail\n"
+    "- Wrapper: run-spec.sh, iteration: ${iteration}/${AUTO_RETRY_MAX_ITERATIONS}\n"
+    "\n### Diagnosis\n"
+    "- cause: silent-no-op\n"
+    "- reconcile-phase-state.sh --check-completion reported matches_expected:false (silent no-op) prior to this retry\n"
+    "\n### Recovery Applied\n"
+    "- modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire\n"
+    "\n### Outcome\n"
+    "- retry fired (iteration ${iteration}/${AUTO_RETRY_MAX_ITERATIONS})\n"
+    "\n### Improvement Candidate\n"
+    "- 未起票\n"
+)
+try:
+    content = open(fpath).read()
+    idx = content.find(marker)
+    if idx != -1:
+        pos = idx + len(marker)
+        content = content[:pos] + entry + content[pos:]
+        open(fpath, "w").write(content)
+except Exception:
+    pass
+PYEOF
+  if ! git -C "$repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+    if git -C "$repo_root" add "docs/reports/orchestration-recoveries.md" \
+       && git -C "$repo_root" commit -s -m "Record spec_retry_fire recovery for issue #${issue}
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+       && _push_with_retry "$repo_root"; then
+      echo "[recovery] spec-retry-fire recovery log committed and pushed" >&2
+    else
+      echo "WARNING: could not commit/push spec-retry-fire recovery log" >&2
+    fi
+  fi
+}
+
 echo "=== run-spec.sh: Starting /spec for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
 source "$SCRIPT_DIR/watchdog-defaults.sh"
@@ -207,7 +309,35 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
     fi
   elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
     echo "Warning: claude exited 0 but spec phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-    EXIT_CODE=1
+    if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
+       [[ "$AUTO_RETRY_ENABLED" == "true" ]] && \
+       [[ "$SPEC_RETRY_COUNT" -lt "$AUTO_RETRY_MAX_ITERATIONS" ]]; then
+      SPEC_RETRY_COUNT=$(( SPEC_RETRY_COUNT + 1 ))
+      export SPEC_RETRY_COUNT
+      echo "auto-retry: spec phase silent no-op, retry ${SPEC_RETRY_COUNT}/${AUTO_RETRY_MAX_ITERATIONS}" >&2
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        EMIT_ISSUE_NUMBER="$ISSUE_NUMBER" emit_event "spec_retry_fire" \
+          "iteration=${SPEC_RETRY_COUNT}" \
+          "trigger_reason=silent_no_op"
+      fi
+      # auto-retry preflight: stash parent-main untracked files (except in-progress
+      # docs/sessions/** from other concurrent sessions) so a silent no-op's stray
+      # file does not block check-verify-dirty.sh on the retry re-invocation.
+      _STRAY_UNTRACKED=$(git ls-files --others --exclude-standard -- ':!docs/sessions/**' 2>/dev/null | head -5)
+      if [[ -n "$_STRAY_UNTRACKED" ]]; then
+        echo "auto-retry preflight: stashing parent-main untracked files: $_STRAY_UNTRACKED" >&2
+        git stash push --include-untracked -m "auto-retry preflight for #$ISSUE_NUMBER" -- ':!docs/sessions/**' 2>/dev/null || true
+      fi
+      # See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
+      _write_spec_retry_recovery "$ISSUE_NUMBER" "$SPEC_RETRY_COUNT"
+      exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]+"${_TRAILING_ARGS[@]}"}"
+    else
+      if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
+         [[ "$AUTO_RETRY_ENABLED" == "true" ]]; then
+        echo "auto-retry: max iterations reached (${SPEC_RETRY_COUNT}/${AUTO_RETRY_MAX_ITERATIONS}). Manual intervention required." >&2
+      fi
+      EXIT_CODE=1
+    fi
   fi
 fi
 

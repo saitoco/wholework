@@ -72,3 +72,51 @@ Issue #1329 で低リスクと評価された、spec phase への `auto-retry-on
 
 - **saito** (MEMBER, first-class) — Issue Retrospective (Ambiguity Resolution Rationale / Key Policy Decisions を `/issue` フェーズから引き継ぐ内容。SPEC_DEPTH=light のため Spec 側への retrospective 転記は対象外だが、文脈として consume 済み) — https://github.com/saitoco/wholework/issues/1369#issuecomment-5325637030
 - **saito** (MEMBER, first-class) — Triage AC 監査: Pre-merge AC 5件目 (`command "bats tests/run-spec.bats"`) が新規カバレッジ主張なしに常時 PASS してしまう問題を指摘し、修正文言を提示。`/spec` 開始時に Issue 本文へ適用済み — https://github.com/saitoco/wholework/issues/1369#issuecomment-5325693052
+
+### code phase (cutoff: 最新の `phase/ready` ラベル付与時刻 2026-08-18T08:46:14Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **bash 3.2 nounset-safe な exec 引数展開への修正**: Implementation Step 1 で `run-code.sh` から `exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` をそのまま移植した直後、新規 bats テスト (retry 発火ケース) が macOS デフォルトの bash 3.2 (`set -u` 下) で `_TRAILING_ARGS[@]: unbound variable` により FAIL することを検出した。原因は `run-code.sh` の呼び出しが常に `--patch`/`--pr` のいずれかのフラグを伴う (`_TRAILING_ARGS` が空配列にならない) のに対し、`run-spec.sh` の既定呼び出し (Sonnet デフォルトパス、追加フラグなし) では `_TRAILING_ARGS` が空配列になり、bash 3.2 特有の「空配列の `${arr[@]}` 展開は nounset 下で unbound variable」という既知の挙動を踏む点にある。コードベース既存のイディオム (`"${arr[@]+"${arr[@]}"}"`、`scripts/check-verify-dirty.sh`/`scripts/setup-labels.sh`/`scripts/check-translation-sync.sh` で使用実績あり) に修正し、`scripts/run-spec.sh` の exec 行に適用した。`run-code.sh` 側の同型パターンは今回のスコープ外のため follow-up Issue #1397 として起票した。
+- **`tests/run-spec.bats` への default `git` mock 追加**: `tests/run-code.bats` の `setup()` にはデフォルトの `git` mock (rev-parse --show-toplevel 対応、それ以外は exit 0) が存在するが、`tests/run-spec.bats` の `setup()` には存在しなかった (本 Issue 以前は `run-spec.sh` が git を呼ぶロジックを持たず、ギャップが顕在化していなかった)。新規リトライロジックの `git ls-files` プリフライトチェックがこのギャップを露呈させ (実 git が bats tmpdir 内で "not a git repository" により exit 128、`set -e` 下でスクリプトが即終了)、新規テストが説明のつかない形で FAIL した。`run-code.bats` と同じ default git mock を `run-spec.bats` の `setup()` に追加して解消した。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の設計方針自体に曖昧さはなく、上記2件はテストで発見された正しさの修正であり設計判断の見直しではない。
+
+### Rework
+
+- **AUTO_RETRY_ENABLED=false テストケースの強化**: `tests/run-code.bats` の対応テストの assertion 形 (exit 1 + retry ログ行の不在) をそのまま移植したところ、Step 9 の New Verification-Test Pre-implementation FAIL Check で pre-implementation の `run-spec.sh` (retry 機構が全く存在しない版) に対しても意図せず PASS することが判明した — リトライ機構が「無効化されている」状態と「そもそも存在しない」状態は、exit code とログ文字列だけでは区別できないため。`claude` 呼び出し回数を直接カウントするアサーションに書き換え、より具体的な検証にした。ただし構造的には、この種の「起きないことを検証する」テストは「機能が全く存在しない」ベースラインに対しても原理的に vacuous PASS し得る限界がある点は変わらない — 同じ限界は #1320 (`run-code.bats` 側の対応テスト) にも遡って存在する可能性があるが、本 Issue のスコープ外として扱った。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (light mode、4 観点統合) を実行し、SHOULD 1件 (`scripts/collect-run-facts.sh` の `spec_retry_fire` 未登録) を review 内で修正・コミット済み。CONSIDER 3件 (flat-key 未対応・quoted 値の silent fallback・`git ls-files`/`stash` の暗黙 cwd 依存) は `run-code.sh` 側にも同一に存在する既存の制約と確認できたため、Issue 起票の抑制方針に従い記録のみに留めた。
+- Parser/Validator Edge Case Pre-check (サブエージェントによる実 fixture 実行) を `scripts/run-spec.sh` の新規 `.wholework.yml` パーサに対して実施し、上記 CONSIDER 3件のうち2件を検出した。
+
+### Deferred Items
+- None — Pre-merge AC 5件は review でも PASS 再確認済み。Post-merge AC (observation) は `/verify` フェーズの対象のまま。
+
+### Notes for Next Phase
+- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれないため merge では対応不要。
+- `run-code.sh`/`run-spec.sh` 共有の awk パーサ脆弱性 (flat-key 未対応、quoted 値の silent fallback) は review comment として記録済み・未起票。将来 Issue 化する場合は両ファイルを対象とする共有 follow-up が妥当。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし — Pre-merge AC 5件 (rubric 4件 + command 1件) はいずれも実装と齟齬なく直接検証できた。verify command の文言不備や曖昧さも観測されなかった。
+
+### Recurring issues
+
+- **ラッパー移植時の下流共有インフラ未更新パターン**: `run-code.sh` → `run-spec.sh` への移植は Spec 記載の対象範囲 (`run-spec.sh` 本体、`orchestration-fallbacks.md`、`tests/run-spec.bats`、`docs/tech.md`) では完結していたが、`spec_retry_fire` イベントを消費する下流の fact-collection パイプライン (`scripts/collect-run-facts.sh` の `anomalies` 列挙、`modules/run-fact-matching.md` の fact_tokens vocabulary、`scripts/emit-event.sh` のイベントカタログ) は本 PR の実装フェーズでは更新されず、`/review` の review-light 実行で検出された (SHOULD、review 内で修正済み)。PR 自身が「`code_retry_fire`/`spec_retry_fire` は単一の共有メカニズム」と明記していた分、この非対称は本来の設計意図と矛盾していた。今後同種のラッパー移植 Issue では、Implementation Steps に「新規イベント名を消費する下流コンシューマの棚卸し」を明示的なチェック項目として含めることが望ましい。
+- **Parser/Validator Edge Case Pre-check による既存脆弱性の検出**: `scripts/run-spec.sh` に移植された `.wholework.yml` 設定パーサ (awk ベース) を実際に fixture 実行したところ、flat-key 形式 (`auto-retry-on-fail.enabled: true`) 未対応、および quoted 値 (`max_iterations: "7"`) の silent fallback という2件の脆弱性が確認された。いずれも `run-code.sh` 側に同一の形で既存する問題であり、本 PR による新規リグレッションではないため review comment として記録するに留め、Issue 起票は見送った (Issue 起票の抑制方針を優先)。将来これらのパーサ挙動の改善が優先される場合は `run-code.sh`/`run-spec.sh` 双方を対象とする共有 follow-up として起票するのが妥当。
+
+### Acceptance criteria verification difficulty
+
+なし — rubric ベースの AC 4件はいずれも diff から一意に判定でき、UNCERTAIN は0件だった。command 型 AC 1件 (`bats tests/run-spec.bats`) も CI job `Run bats tests` (`bats --jobs $(nproc) tests/` によるフルスイート実行) との run command containment が明確で、CI reference fallback により迷いなく PASS 判定できた。

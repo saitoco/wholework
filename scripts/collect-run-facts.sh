@@ -36,7 +36,8 @@
 #   pr_state       - `gh pr view <pr> --json state` result, or "" when unavailable
 #   phases         - [{"name":...,"status":"complete"|"started","backfilled":bool}]
 #   anomalies      - counts for the exhaustive event set: recovery, watchdog_kill,
-#                    manual_intervention, concurrent_commit_detected, code_retry_fire
+#                    manual_intervention, concurrent_commit_detected, code_retry_fire,
+#                    spec_retry_fire
 #   recovery_tiers - sorted unique array of recovery event tiers (1/2/3) seen for this issue,
 #                    or [] if none. anomalies.recovery keeps its existing count-only semantics.
 #   fact_tokens    - token array for scan-pending-ac.sh's pre-filtering. Deliberately
@@ -195,7 +196,7 @@ def phase_entry($events; $p):
     recovery_tiers: ([$events[] | select(.event == "recovery") | .tier // empty | tonumber?] | unique),
     phases: ($phase_names | map(phase_entry($events; .))),
     anomalies: (
-      ["recovery","watchdog_kill","manual_intervention","concurrent_commit_detected","code_retry_fire"]
+      ["recovery","watchdog_kill","manual_intervention","concurrent_commit_detected","code_retry_fire","spec_retry_fire"]
       | map(. as $name | {($name): ($events | map(select(.event == $name)) | length)})
       | add
     )
