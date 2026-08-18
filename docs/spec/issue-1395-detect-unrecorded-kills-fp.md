@@ -76,3 +76,36 @@ Cutoff: most recent `phase/*` label assignment at Step 2 (Worktree Entry) time (
 
 - saito / MEMBER / first-class / Issue Retrospective (auto-resolved ambiguity points, rationale for the AC added at `/issue` time) / https://github.com/saitoco/wholework/issues/1395#issuecomment-5324187653
 - saito / MEMBER / first-class / AC audit: flagged the "wrapper-holding-phase elapsed-upper-bound" rubric AC as an always-PASS risk (no suppression logic yet exists, so "long kills still detected" is vacuously true); recommended folding it into the fixture-test AC instead of relying on rubric alone — acted on in this Spec (see Notes § "AC 構成の変更") / https://github.com/saitoco/wholework/issues/1395#issuecomment-5324193556
+
+### /code phase
+
+No new comments since last phase (cutoff: most recent `phase/*` label assignment, `2026-08-18T07:40:22Z`, the `phase/ready` label predating this `/code` run's own `phase/code` transition).
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — implementation followed the Spec's Implementation Steps 1-5 as written, including the (a)-only suppression approach and the `scripts/run-<phase-base>.sh` existence check.
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted suppression approach (a) only (wrapper-less phase exclusion), as the Spec specified — no `elapsed` upper bound was introduced, so the AC4(c) long-elapsed-kill regression guard is satisfied trivially by not touching that detection path
+- `has_wrapper(phase)` checks `scripts/run-<base>.sh` existence generically (base = phase name split on first `-`), matching the Spec's explicit rejection of hardcoding `verify` by name
+- Renamed the existing `leaked-phase` synthetic fixture to `code-pr` (a real wrapper-holding phase) so the new filter does not change that test's own detection target, per the Spec's Changed Files note
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `github_check "gh pr checks" "Run bats tests"` (Issue AC5) is left unchecked — excluded from this phase's verify-executor pass because the PR did not yet exist when Step 10 ran (SKILL.md's "CI verification AC exclusion (route-agnostic)"). `/review` verifies it once CI has run.
+- All 4 rubric ACs and the 25-case bats suite (22 existing + 3 new) were confirmed PASS locally before push.
