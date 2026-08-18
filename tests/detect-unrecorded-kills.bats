@@ -287,8 +287,8 @@ JSON
 
 @test "edge case: a deeper heading inside a Context block does not leak into a later unrelated bullet" {
     cat > "$EVENTS_FILE" <<'JSON'
-{"ts":"2026-08-16T06:30:47Z","issue":9999,"event":"phase_start","session_id":"a","phase":"leaked-phase","spawn_detach":"0"}
-{"ts":"2026-08-16T06:45:00Z","issue":9999,"event":"phase_start","session_id":"b","phase":"leaked-phase","spawn_detach":"0"}
+{"ts":"2026-08-16T06:30:47Z","issue":9999,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-16T06:45:00Z","issue":9999,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"0"}
 JSON
     cat > "$RECOVERIES_FILE" <<'MD'
 ---
@@ -301,10 +301,55 @@ type: report
 
 ### Context
 #### Sub-detail
-- Issue #9999, phase: leaked-phase
+- Issue #9999, phase: code-pr
 - Source: parent-session-manual-recovery
 MD
     run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE" --window 120 --recorded-window 120
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Issue #9999, phase: leaked-phase"*"recorded: no"* ]]
+    [[ "$output" == *"Issue #9999, phase: code-pr"*"recorded: no"* ]]
+}
+
+@test "false positive suppression: verify phase re-run days later without phase_complete produces no output" {
+    # verify has no scripts/run-verify.sh wrapper, so it cannot structurally emit
+    # wrapper_exit; a phase_complete-less run followed (3.5 days later, matching the
+    # real opportunistic-verify recurrence this AC guards against) by a re-run of the
+    # same Issue's verify phase must not be reported as a respawn signal.
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-14T02:00:00Z","issue":1395,"event":"phase_start","session_id":"a","phase":"verify","spawn_detach":"0"}
+{"ts":"2026-08-17T14:00:00Z","issue":1395,"event":"phase_start","session_id":"b","phase":"verify","spawn_detach":"0"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "window bundling: 169-second respawn interval is bundled into one burst under the new default --window" {
+    # 2026-08-17 real burst: two consecutive kills in a wrapper-holding phase
+    # (code-pr) 169 seconds apart. The prior default --window 120 would have
+    # mis-split this into two bursts; the new default 300 must bundle them.
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-17T10:00:00Z","issue":1400,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-17T10:05:00Z","issue":1400,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-17T10:07:49Z","issue":1400,"event":"phase_start","session_id":"c","phase":"code-pr","spawn_detach":"1"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    burst_lines=$(echo "$output" | grep -c "^## Burst:")
+    [ "$burst_lines" -eq 1 ]
+    [[ "$output" == *"concurrency=2"* ]]
+}
+
+@test "regression guard: a long-elapsed kill in a wrapper-holding phase is still detected after suppression" {
+    # wrapper-less phase exclusion must not accidentally suppress detection in
+    # phases that do have a wrapper (code-pr), even when elapsed time is large
+    # (~7000s) -- this Spec deliberately does not add any elapsed-time upper
+    # bound, so a long-elapsed kill in a wrapper-holding phase must remain
+    # detected as a respawn signal.
+    cat > "$EVENTS_FILE" <<'JSON'
+{"ts":"2026-08-17T00:00:00Z","issue":1401,"event":"phase_start","session_id":"a","phase":"code-pr","spawn_detach":"0"}
+{"ts":"2026-08-17T01:56:40Z","issue":1401,"event":"phase_start","session_id":"b","phase":"code-pr","spawn_detach":"1"}
+JSON
+    run bash "$SCRIPT" "$EVENTS_FILE" "$RECOVERIES_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Issue #1401, phase: code-pr"*"elapsed: 7000s"*"recorded: no"* ]]
 }
