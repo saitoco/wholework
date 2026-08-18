@@ -89,3 +89,26 @@ Symptom `manual-recovery-respawn` が `docs/reports/orchestration-recoveries.md`
 ### Notes for Next Phase
 - Pre-merge AC 4 件は全て rubric type — `/review` での再評価時、AC1 の「#1014 クローズ内容の確認結果」が Rationale の新規 2 箇条書き (root cause 確定 + #1014 以降の継続理由判定) に分散して書かれている点に注意 (1 箇所にまとまっていない)
 - Post-merge AC (`<!-- verify-type: opportunistic -->`) は次回 `/verify` Step 15 で `manual-recovery-respawn` が閾値超過候補として再度挙がったタイミングで確認される想定 — 本 PR のマージ直後には検証されない
+
+## Issue Retrospective
+
+### 今回の `/issue` 実行内容
+
+Issue 本文は起票者自身によって 2026-08-18 に既に大幅改訂済み (タイトル・Purpose・AC・Out of Scope・改訂経緯セクションまで含む) だったため、今回の `/issue` 実行では新たな曖昧性ポイントの抽出・AC 再設計・本文編集は行っていません。実施した確認は以下の通りです。
+
+- **Steering Docs 整合性確認**: `docs/product.md` § Terms・`docs/tech.md` § Forbidden Expressions と照合し、`verify command` 表記など用語上の問題なし
+- **Background の事実確認 (advisory)**: `collect-recovery-candidates.sh` の `--threshold` フラグ、`docs/reports/orchestration-recoveries.md` の該当見出し、`modules/orchestration-fallbacks.md#external-kill-parent-respawn` アンカーの実在をコードベース照合し、いずれも齟齬なし
+- **AC 分類・verify command 妥当性確認**: checkbox format / observation `session=next` / metadata-only marker / BRE メタ文字の機械チェックはすべて問題なし。AC 3 が要求する記載先 (`modules/orchestration-fallbacks.md` の `external-kill-parent-respawn` エントリ) を実際に確認したところ、Symptom/Fallback Steps/Escalation/Rationale はあるが、本 Issue が求める「正常な復旧として扱う」運用方針の明文化はまだ存在せず (Rationale はむしろ「根本原因は未解決の仮説」という #1146 以前の古い記述のまま) — AC 3・AC 4 は実装を要する正当な差分であることを確認
+- **AC verify command integrity audit (Step 15)**: AC 1・AC 2 の rubric text が対象ファイルを明示していないため、`modules/verify-executor.md` の Grader input scope (Issue body が既定入力) により、実装前の現状の `## Background` 記述だけで PASS 判定されうる (常時 PASS) リスクを検出。非破壊方針に従い、Issue 本文は編集せず監査コメントとして別途投稿済み
+- **Blocked-by 依存関係**: 本文に `Blocked by #N` パターンなし、ブロッカーなし
+- **Title Drift**: 現行タイトルは改訂後の Purpose と整合しており変更不要
+- **Scope Assessment**: Size S、単一スコープのため sub-issue 分割は不要
+
+### Consumed Comments
+
+| login | authorAssociation | trust tier | 要旨 | URL |
+|-------|-------------------|-----------|------|-----|
+| saito | MEMBER | first-class | 起票時点 (改訂前) の AC1 rubric に対する triage 監査コメント。Background の推測記述だけで常時 PASS になりうると指摘 | https://github.com/saitoco/wholework/issues/1390#issuecomment-5311170047 |
+| saito | MEMBER | first-class | 上記監査を受けての本文改訂 (2026-08-18)。タイトル・Purpose・AC (2→Pre-merge 4 + Post-merge 1)・Out of Scope・改訂経緯セクションを更新した旨の記録 | https://github.com/saitoco/wholework/issues/1390#issuecomment-5324980664 |
+
+両コメントとも起票者自身 (MEMBER) による first-class input として本文の現状 (改訂済み) に既に反映済みであることを確認した。
