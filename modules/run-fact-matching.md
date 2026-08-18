@@ -76,7 +76,7 @@ match against pending AC condition text before this module's Step 3 rubric judgm
   `"run-merge.sh"`) — see the "Excluded" list below for what this replaces
 - PR number: `"#<N>"`
 - Anomaly keys with count ≥ 1: `recovery`, `watchdog_kill`, `manual_intervention`,
-  `concurrent_commit_detected`, `code_retry_fire`
+  `concurrent_commit_detected`, `code_retry_fire`, `spec_retry_fire`
 - Recovery tier: `"tier <N>"` for each tier (`1`/`2`/`3`) seen in `recovery_tiers`
 - Batch mode: `"batch"`, only when the session's top-level `mode` is `batch`
 
@@ -230,11 +230,12 @@ was adopted:
      The exception exists for completeness against direct `collect-run-facts.sh` invocations
      outside this module's pipeline (e.g. ad-hoc debugging), where `--no-github` may be passed.
    - The condition text asserts something did **not** happen, and the corresponding signal
-     is not one of the five `anomalies` keys (`recovery` / `watchdog_kill` /
-     `manual_intervention` / `concurrent_commit_detected` / `code_retry_fire`) **and not a
+     is not one of the six `anomalies` keys (`recovery` / `watchdog_kill` /
+     `manual_intervention` / `concurrent_commit_detected` / `code_retry_fire` /
+     `spec_retry_fire`) **and not a
      specific recovery tier** — a condition asserting "Tier N recovery did not fire" is
      directly decidable from whether `N` is absent from `recovery_tiers`, so it is not subject
-     to this fail-safe branch. Absent a `recovery_tiers`-backed tier claim or one of the five
+     to this fail-safe branch. Absent a `recovery_tiers`-backed tier claim or one of the six
      `anomalies` keys, there is no general-purpose "nothing happened" fact to check
      absence-claims against.
    - The condition text is a conjunction of multiple sub-conditions and only some of them
