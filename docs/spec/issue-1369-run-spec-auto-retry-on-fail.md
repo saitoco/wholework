@@ -93,16 +93,30 @@ No new comments since last phase.
 - **AUTO_RETRY_ENABLED=false テストケースの強化**: `tests/run-code.bats` の対応テストの assertion 形 (exit 1 + retry ログ行の不在) をそのまま移植したところ、Step 9 の New Verification-Test Pre-implementation FAIL Check で pre-implementation の `run-spec.sh` (retry 機構が全く存在しない版) に対しても意図せず PASS することが判明した — リトライ機構が「無効化されている」状態と「そもそも存在しない」状態は、exit code とログ文字列だけでは区別できないため。`claude` 呼び出し回数を直接カウントするアサーションに書き換え、より具体的な検証にした。ただし構造的には、この種の「起きないことを検証する」テストは「機能が全く存在しない」ベースラインに対しても原理的に vacuous PASS し得る限界がある点は変わらない — 同じ限界は #1320 (`run-code.bats` 側の対応テスト) にも遡って存在する可能性があるが、本 Issue のスコープ外として扱った。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `run-code.sh` の `_write_code_retry_recovery`/`_push_with_retry` はそのまま移植し、`_write_spec_retry_recovery` の Recovery Applied 参照先も Spec の設計判断通り共通アンカー (`#auto-retry-on-fail-code_retry_fire`) を使用した。
-- `modules/orchestration-fallbacks.md` の `## auto-retry-on-fail (code_retry_fire)` セクションは Spec の設計判断 (in-place 拡張) に従い拡張。Escalation セクションのみ Spec Implementation Steps に明示がなかったが、`apply-fallback.sh` の `detect_symptom_anchor()` が `$PHASE == "code-patch"` に限定されている実装事実 (spec phase では Tier 2 ハンドラが発火しない) を反映する形で phase 別に追記した。
-- `docs/tech.md`/`docs/ja/tech.md` の「code-side auto-retry」記述は、Spec Notes で「/code の裁量」と明記されていた項目であり、Step 9 のドキュメント整合性チェックが同じギャップを独立に検出したため更新した。
+- review-light (light mode、4 観点統合) を実行し、SHOULD 1件 (`scripts/collect-run-facts.sh` の `spec_retry_fire` 未登録) を review 内で修正・コミット済み。CONSIDER 3件 (flat-key 未対応・quoted 値の silent fallback・`git ls-files`/`stash` の暗黙 cwd 依存) は `run-code.sh` 側にも同一に存在する既存の制約と確認できたため、Issue 起票の抑制方針に従い記録のみに留めた。
+- Parser/Validator Edge Case Pre-check (サブエージェントによる実 fixture 実行) を `scripts/run-spec.sh` の新規 `.wholework.yml` パーサに対して実施し、上記 CONSIDER 3件のうち2件を検出した。
 
 ### Deferred Items
-- None — Pre-merge AC 5件はすべて実装済みで checkbox も更新済み。Post-merge AC (observation, 実際の spec phase silent no-op 発生時の動作確認) は `/verify` フェーズの対象。
+- None — Pre-merge AC 5件は review でも PASS 再確認済み。Post-merge AC (observation) は `/verify` フェーズの対象のまま。
 
 ### Notes for Next Phase
-- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれないため review/merge では対応不要。
-- `bats --jobs 18 tests/` によるフルスイート実行 (1861件) は全 PASS 済み — Behavioral Change Detection (`modules/orchestration-fallbacks.md` を複数テストファイルが参照) により full-suite override が要求されたため実施した。
+- Follow-up Issue #1397 (`run-code.sh` の同型 exec 引数展開の nounset-safe化) が起票済み。本 Issue #1369 のスコープには含まれないため merge では対応不要。
+- `run-code.sh`/`run-spec.sh` 共有の awk パーサ脆弱性 (flat-key 未対応、quoted 値の silent fallback) は review comment として記録済み・未起票。将来 Issue 化する場合は両ファイルを対象とする共有 follow-up が妥当。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし — Pre-merge AC 5件 (rubric 4件 + command 1件) はいずれも実装と齟齬なく直接検証できた。verify command の文言不備や曖昧さも観測されなかった。
+
+### Recurring issues
+
+- **ラッパー移植時の下流共有インフラ未更新パターン**: `run-code.sh` → `run-spec.sh` への移植は Spec 記載の対象範囲 (`run-spec.sh` 本体、`orchestration-fallbacks.md`、`tests/run-spec.bats`、`docs/tech.md`) では完結していたが、`spec_retry_fire` イベントを消費する下流の fact-collection パイプライン (`scripts/collect-run-facts.sh` の `anomalies` 列挙、`modules/run-fact-matching.md` の fact_tokens vocabulary、`scripts/emit-event.sh` のイベントカタログ) は本 PR の実装フェーズでは更新されず、`/review` の review-light 実行で検出された (SHOULD、review 内で修正済み)。PR 自身が「`code_retry_fire`/`spec_retry_fire` は単一の共有メカニズム」と明記していた分、この非対称は本来の設計意図と矛盾していた。今後同種のラッパー移植 Issue では、Implementation Steps に「新規イベント名を消費する下流コンシューマの棚卸し」を明示的なチェック項目として含めることが望ましい。
+- **Parser/Validator Edge Case Pre-check による既存脆弱性の検出**: `scripts/run-spec.sh` に移植された `.wholework.yml` 設定パーサ (awk ベース) を実際に fixture 実行したところ、flat-key 形式 (`auto-retry-on-fail.enabled: true`) 未対応、および quoted 値 (`max_iterations: "7"`) の silent fallback という2件の脆弱性が確認された。いずれも `run-code.sh` 側に同一の形で既存する問題であり、本 PR による新規リグレッションではないため review comment として記録するに留め、Issue 起票は見送った (Issue 起票の抑制方針を優先)。将来これらのパーサ挙動の改善が優先される場合は `run-code.sh`/`run-spec.sh` 双方を対象とする共有 follow-up として起票するのが妥当。
+
+### Acceptance criteria verification difficulty
+
+なし — rubric ベースの AC 4件はいずれも diff から一意に判定でき、UNCERTAIN は0件だった。command 型 AC 1件 (`bats tests/run-spec.bats`) も CI job `Run bats tests` (`bats --jobs $(nproc) tests/` によるフルスイート実行) との run command containment が明確で、CI reference fallback により迷いなく PASS 判定できた。
