@@ -81,6 +81,10 @@ Cutoff: most recent `phase/*` label assignment at Step 2 (Worktree Entry) time (
 
 No new comments since last phase (cutoff: most recent `phase/*` label assignment, `2026-08-18T07:40:22Z`, the `phase/ready` label predating this `/code` run's own `phase/code` transition).
 
+### /review phase
+
+No new comments since last phase (cutoff: most recent `phase/*` label assignment, `2026-08-18T07:49:09Z`, the `phase/review` label predating this `/review` run; issue+pr scope, no comments found).
+
 ## Code Retrospective
 
 ### Deviations from Design
