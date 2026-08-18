@@ -71,4 +71,8 @@ Issue 本文 Notes は (a) wrapper 非保持フェーズの除外、(b) `elapsed
 Implementation Step 1 (wrapper 非保持フェーズ除外) は既存スクリプトへの新規分岐追加にあたるため、Verification の AC4 (`command "bats tests/detect-unrecorded-kills.bats"` 相当を含む rubric) は、既存スイートの PASS だけでなく新規テストケース 3 件 (Implementation Step 4) を追加したうえでのスイート PASS を要件とする。
 
 ## Consumed Comments
-No new comments since last phase.
+
+Cutoff: most recent `phase/*` label assignment at Step 2 (Worktree Entry) time (`2026-08-18T05:49:22Z`, the `phase/issue` label assignment predating this `/spec` run's own `phase/spec` transition in Step 3). Note: the bash safety-net script (`append-consumed-comments-section.sh`, run in Step 12) recomputes this cutoff fresh from GitHub's current timeline, by which point Step 3's own `phase/spec` label assignment is the most recent `phase/*` event — newer than both comments below — so its automated pass found 0 new entries and wrote a placeholder. This section replaces that placeholder with the actual comments consumed during this run's own Step 2 procedure (correct cutoff, run before Step 3's label transition).
+
+- saito / MEMBER / first-class / Issue Retrospective (auto-resolved ambiguity points, rationale for the AC added at `/issue` time) / https://github.com/saitoco/wholework/issues/1395#issuecomment-5324187653
+- saito / MEMBER / first-class / AC audit: flagged the "wrapper-holding-phase elapsed-upper-bound" rubric AC as an always-PASS risk (no suppression logic yet exists, so "long kills still detected" is vacuously true); recommended folding it into the fixture-test AC instead of relying on rubric alone — acted on in this Spec (see Notes § "AC 構成の変更") / https://github.com/saitoco/wholework/issues/1395#issuecomment-5324193556
