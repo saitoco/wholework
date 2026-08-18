@@ -624,6 +624,36 @@ _observe_code_milestone() {
   echo "initial"
 }
 
+# _spec_is_diffless NUMBER
+# Mechanical diff-less detection: mirrors skills/auto/SKILL.md Step 3a's operate route
+# demotion, but only re-implements criterion 1 of modules/size-workflow-table.md's
+# "Diff-less Axis (operate route)" (`## Changed Files` has no repository file entries).
+# Criterion 2 (all Implementation Steps are external-tool operations) requires semantic
+# judgment that bash cannot reproduce; /code Step 0 still re-derives the full operate
+# determination independently, so this helper only decides which phase name to dispatch.
+# Returns 0 (true) when the sub-issue's own Spec exists, has a `## Changed Files` heading,
+# and that section contains no backtick-quoted file paths. Returns 1 (false) otherwise,
+# including when no Spec is found or the heading itself is absent (a Spec with no
+# `## Changed Files` heading at all must not be treated as diff-less).
+_spec_is_diffless() {
+  local number="$1"
+  local spec_file=""
+  for f in docs/spec/issue-"${number}"-*.md; do
+    if [[ -f "$f" ]]; then
+      spec_file="$f"
+      break
+    fi
+  done
+  [[ -n "$spec_file" ]] || return 1
+
+  grep -q '^## Changed Files' "$spec_file" 2>/dev/null || return 1
+
+  local changed_files
+  changed_files="$(awk '/^## Changed Files/{flag=1; next} /^#/{flag=0} flag' "$spec_file" \
+    | sed -nE 's/^[[:space:]]*-[[:space:]]+.*`([^`]+)`.*/\1/p' || true)"
+  [[ -z "$changed_files" ]]
+}
+
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3
@@ -897,10 +927,23 @@ fi
 
 echo "${LOG_PREFIX} Size: ${SIZE}"
 
+# Post-spec operate route demotion (mirror of skills/auto/SKILL.md Step 3a "Operate route
+# demotion" for the single-issue path). A diff-less Spec cannot produce a meaningful PR
+# regardless of Size or always-pr, so this check runs before, and takes priority over, the
+# always-pr promotion below.
+ROUTE_OPERATE=false
+if _spec_is_diffless "$SUB_NUMBER"; then
+  ROUTE_OPERATE=true
+  echo "${LOG_PREFIX} Post-spec operate detection: Spec has no repository file changes, route re-determined as operate."
+  emit_event "operate_route_detected"
+fi
+
 ALWAYS_PR=$("$SCRIPT_DIR/get-config-value.sh" always-pr false 2>/dev/null || echo false)
 AUTO_STOP_AT=$("$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify 2>/dev/null || echo verify)
 EFFECTIVE_SIZE="$SIZE"
-if [[ "$ALWAYS_PR" == "true" ]] && [[ "$SIZE" =~ ^(XS|S)$ ]]; then
+if [[ "$ROUTE_OPERATE" == "true" ]]; then
+  EFFECTIVE_SIZE="OPERATE"
+elif [[ "$ALWAYS_PR" == "true" ]] && [[ "$SIZE" =~ ^(XS|S)$ ]]; then
   echo "${LOG_PREFIX} always-pr: true is set in .wholework.yml. Promoting to pr route."
   emit_event "always_pr_promotion" "size=${SIZE}"
   EFFECTIVE_SIZE="M"
@@ -911,7 +954,7 @@ emit_event "wrapper_alive" "checkpoint=pre_phase_dispatch"
 # Execute phases according to Size-based route.
 # verify is deferred to the parent /auto session (issue #485)
 case "$EFFECTIVE_SIZE" in
-  XS|S)
+  XS|S|OPERATE)
     echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
     run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
     if [[ "${_TIER3_RECOVERY_ACTION:-}" == "skip" ]]; then

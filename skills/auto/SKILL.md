@@ -330,6 +330,8 @@ Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 
 `run-auto-sub.sh` independently loads `ALWAYS_PR` from `.wholework.yml` (via `get-config-value.sh always-pr false`) and applies the same patch→pr promotion logic as Step 2 above when determining each sub-issue's Size-based route — so `always-pr: true` is honored consistently for both the single-Issue path and the XL sub-issue path.
 
+`run-auto-sub.sh` also independently re-derives the operate route (diff-less) demotion described in Step 3a's "Operate route demotion" above, for each sub-issue's own Spec — this is the same asymmetry the single-Issue path resolves via Step 3a, mirrored on the XL sub-issue path. After the post-spec Size refetch, `run-auto-sub.sh` checks the sub-issue's own `docs/spec/issue-<N>-*.md` for a `## Changed Files` section with no repository file entries (criterion 1 of `modules/size-workflow-table.md` § "Diff-less Axis (operate route)" only — criterion 2's semantic judgment over Implementation Steps is left to `/code` Step 0, which still re-derives the full operate determination independently). When diff-less, `run-auto-sub.sh` dispatches `code-patch` (not `code-pr`) regardless of Size or `always-pr` — an empty diff cannot produce a meaningful PR — and passes the `code-patch` phase name to `reconcile-phase-state.sh`, so the operate-marker-aware `code-patch` completion signature (`modules/phase-state.md` § "Operate Route Completion Signature") is used instead of the PR-based `code-pr` signature.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_MAX_CONCURRENT` (maximum concurrent sub-issue executions; default: 5).
 
 1. **Fetch dependency graph**:

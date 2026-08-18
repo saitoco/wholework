@@ -74,3 +74,49 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (non-interactive mode): `ALWAYS_PR=true` による operate 判定抑制の非採用を Background に明記した理由、および Triage AC audit で指摘された2件の Pattern 2 (常時 PASS) verify command 欠陥の修正内容 (SKILL.md 側 grep→rubric、bats 側 `ls tests/`→`command "bats tests/run-auto-sub.bats"`) を記録 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326721499
 - saito / MEMBER / first-class / Triage AC audit: bats テスト AC (`command "bats tests/run-auto-sub.bats"`) が既存93ケース全PASSにより依然 Pattern 2 (常時 PASS) であると指摘し、`grep "operate" "tests/run-auto-sub.bats"` (新規テストケース検出) と既存の `command` AC (回帰保護) への2分割を提案。本フェーズで Issue body および本 Spec の Verification に反映済み / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326773760
+- No new comments since last phase. (review フェーズ開始時点、cutoff=2026-08-18T10:49:03Z 以降の新規 Issue/PR コメントなし)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 をそのまま実装。`_spec_is_diffless()` の挿入位置 (`_observe_code_milestone()` と `run_phase_with_recovery()` の間)、operate 判定ブロックの挿入位置 (post-spec Size 再取得直後)、`case` アーム変更、`skills/auto/SKILL.md` の追記位置、bats 新規テストの挿入位置 (「Size M + auto-stop-at: review」テスト直前) は全て Spec 記載の通り。
+
+### Design Gaps/Ambiguities
+- N/A — Spec が `_spec_is_diffless()` の仕様 (見出し存在チェックと空判定の区別、抽出パターンの再利用元) を具体的に記述していたため、実装中に判断が必要な曖昧点はなかった。
+
+### Rework
+- N/A — プロトタイプ検証済みの設計をそのまま実装したため、手戻りは発生しなかった。
+
+### Smoke Test
+- N/A — Spec に `## Smoke Test` セクションが存在しないためスキップ (SKILL.md Step 11 の no-op 条件に該当)。
+
+### Additional Notes
+- Behavioral change 判定 (`modules/verify-patterns.md` §24): `scripts/run-auto-sub.sh` を変更したため、`tests/run-auto-sub.bats` 以外にも同スクリプトを参照するテストファイル (`tests/auto-sub-observability.bats`, `tests/run-code.bats`, `tests/collect-recovery-candidates.bats`, `tests/auto-xl-concurrency.bats`, `tests/auto.bats`, `tests/check-file-overlap.bats`, `tests/auto-batch.bats`, `tests/auto-completion-report.bats`, `tests/operate-route.bats`, `tests/check-skill-change-observation-ac.bats` など) が存在することを確認し、`bats --jobs 18 tests/` で full suite (1863件) を実行、全件 PASS を確認した。
+- New Verification-Test Pre-implementation FAIL Check: 新規追加した positive テスト (`Size M + diff-less Spec: ...`) は `scripts/run-auto-sub.sh` の実装変更を `git stash` で退避した状態で実行すると FAIL することを確認済み (`_spec_is_diffless()` が未実装のため `ROUTE_OPERATE` が常に false のまま `code-pr` が dispatch される)。negative-control テストは実装前後どちらでも PASS する設計 (回帰防止用) であり、この Check の対象 (新規追加された振る舞いを検証する assert) には該当しない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light の Perspective 1 (Spec Deviation) で issue なし。`_spec_is_diffless()` の挿入位置、operate 判定ブロックの位置、`case` アーム変更、`skills/auto/SKILL.md` の追記内容は Spec 記載通りで、構造的な乖離は見つからなかった。
+
+### Recurring issues
+- Edge Case Execution sub-agent (Parser/Validator Edge Case Pre-check) が2件検出 (SHOULD 1件、CONSIDER 1件)、いずれも `_spec_is_diffless()` の同一箇所 (`sed`/`awk` によるセクション抽出) に起因していた。Phase Handoff (code フェーズ) には「`scripts/check-verify-dirty.sh` の抽出パターンをそのまま再利用した」との記述があったが、再利用元パターン自体の境界条件 (先頭トークン限定マッチ、`## ` レベル限定クローズ) は精査されておらず、そのまま持ち込まれていた。**パターン**: 既存コードからの「そのまま再利用」判断は、再利用元がカバーしていない境界条件まで無条件に引き継ぐリスクがある — 移植時は再利用元パターンの境界条件も併せて棚卸しするとよい。今回は `/review` の Parser/Validator Edge Case Pre-check (firing condition (a): 正規表現によるバリデーション/抽出の追加) が機械的に発火し、実行ベースの fixture テストで検出できた。
+
+### Acceptance criteria verification difficulty
+- N/A — 6件の Pre-merge AC (grep×2, rubric×3, command×1) は全て UNCERTAIN なく PASS 判定できた。`command "bats tests/run-auto-sub.bats"` は safe mode における CI Reference Fallback (`Run bats tests` job の run command containment による identity confirmation) がスムーズに機能し、verify command 自体の欠陥は見つからなかった。
+
+## Phase Handoff
+
+<!-- phase: review -->
+
+### Key Decisions
+- Step 10 (light mode) の review-light が検出した2件の Edge Cases and Robustness 指摘 (SHOULD/CONSIDER) をいずれも修正対象とした。両方とも `_spec_is_diffless()` の同一2行 (抽出正規表現・awk クローズ条件) に対する軽微かつ低リスクな修正であり、修正コストに対して false-positive (実変更を diffless と誤判定し code review をスキップする) の防止効果が大きいと判断した。
+- 修正後、Edge Case Pre-check が使用した実際の fixture (SHOULD/CONSIDER 各1件) に加え、通常系2fixture (diffless Spec / real Changed Files 相当) を再実行し、期待どおりの exit code になることを確認した上でコミットした。
+
+### Deferred Items
+- Post-merge AC (次回 operate route の sub-issue を含む `/auto` XL または `--batch` 実行での動作確認) は observation 型のため本フェーズでも未実施のまま (`/verify` または実運用での確認待ち)。
+- Spec の "Steering Docs sync candidate" (`modules/size-workflow-table.md` への `run-auto-sub.sh` 言及追記) は引き続き未対応 (任意項目のため)。
+
+### Notes for Next Phase
+- `/merge` 前の CI は全11ジョブ SUCCESS 済み。Pre-merge AC 6件は全て PASS でチェックボックスも `[x]` 済みのため、`/merge` 実行時に追加のブロッカーはない見込み。
+- `scripts/run-auto-sub.sh` の `_spec_is_diffless()` 抽出ロジックは本フェーズで2箇所修正済み (先頭トークン限定の緩和、セクションクローズ条件の拡張)。`tests/run-auto-sub.bats` の関連2テストおよび全95件は修正後も PASS 済み。
