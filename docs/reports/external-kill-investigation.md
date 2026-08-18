@@ -803,3 +803,31 @@ What the occurrence does establish is narrower and factual: bursts recur at inte
 At the time of writing, neither kill appears in `docs/reports/orchestration-recoveries.md` (its only 2026-08-17 entries are from 00:29 UTC, unrelated). The session was still in flight, so the record may yet be written — but this is the second consecutive burst where the parent session's recording lags the event, reinforcing why #1387 exists.
 
 **A useful side effect**: once that session completes, running `detect-unrecorded-kills.sh` against this real data exercises both of its functions — unrecorded-kill detection and burst grouping — on an occurrence it did not have when it was written.
+
+## 2026-08-18 Update — upstream re-check (#1146 continuing task)
+
+Re-confirmed the state of the three upstream issues that #1146's closure hinges on. No new local test can move this — as the Issue itself states, H-a cannot be verified locally, so upstream movement is the only decisive path.
+
+### State of the three upstream issues
+
+| Issue | State | Comments since last check | Staff response | CHANGELOG fix |
+|---|---|---|---|---|
+| [#76974](https://github.com/anthropics/claude-code/issues/76974) | OPEN | 0 | None | Not found |
+| [#76942](https://github.com/anthropics/claude-code/issues/76942) | OPEN | 2 (2026-07-20, 2026-08-04) | None — both `authorAssociation: NONE` | Not found |
+| [#83814](https://github.com/anthropics/claude-code/issues/83814) | OPEN | 1 (2026-08-04) | None — `authorAssociation: NONE` | Not found |
+
+All three remain OPEN with zero staff engagement across the full observation window (earliest filed 2026-07-12; most recent activity 2026-08-04). The comments present are from unaffiliated reporters (`NONE` association), not Anthropic staff.
+
+**CHANGELOG check**: grepped `anthropics/claude-code`'s `CHANGELOG.md` for background-task-kill-related entries. Several exist (daemon-restart auto-resume, teardown SIGTERM-before-SIGKILL, 5GB-output kill, Ctrl+C double-tap, orphaned-tree cleanup on terminal close, etc.), but none matches this report's specific symptom — *sporadic SIGKILL of `run_in_background=true` tasks by the CLI's own task supervision, unrelated to daemon restart/user action/output size/terminal lifecycle*. The closest thematic candidate ("long-running commands and workflows now survive the session's process being stopped, restarted, or updated") is a session-process-lifecycle improvement, not a confirmed fix for this signature — flagged as unconfirmed, not counted as a match.
+
+### Judgment: escalate the 2026-08-16 burst data upstream?
+
+**Recommendation: yes, worth posting** — but this report only records the judgment; posting to a third-party public repository is a separate, explicit action requiring the user's own confirmation before it happens.
+
+Rationale: the 2026-08-16 3-session-simultaneous burst (16 s respawn spacing across independent process trees, one session only 53 min old) is a data point neither #76974 nor #76942/#83814 currently carry — their own reported evidence is single-session, single-kill anecdotes. A cross-process-tree simultaneous kill is harder to explain by any single session's own behavior and narrows the hypothesis space toward host/harness-level supervision (H-a), which is exactly the open question in all three upstream reports. Combined with three months of zero staff response, a concrete new data point is more likely to draw attention than a "+1" comment would.
+
+### Consequences for #1146's continuing tasks
+
+- **Upstream re-check task**: satisfied by this section — no landing-point change (all three still OPEN, no fix, no staff response); re-check again next time #1146 is revisited.
+- **Burst observation protocol task**: unaffected by this update; still open.
+- **Close conditions**: none of the three (upstream fix / #598 landing / compensation-layer sufficiency judgment) fired by this check — #1146 stays open.
