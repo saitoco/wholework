@@ -203,24 +203,45 @@ N/A — Implementation Steps 1–9 were followed as planned: call site placement
 - `_resolve_preview_url_command()` の出力トリム処理を実装中に一度簡略化した — 当初 `${_resolved%%[[:space:]]}` という不要な中間行を書いたが、bash 3.2 での動作確認 (`/bin/bash -c` での直接実行) の過程で冗長・不要と判明し削除した。最終形は `#`-トリムの標準的な 2 行パラメータ展開イディオムのみ
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の設計どおり実装した (call site 位置、`{pr}` 置換、3 段 timeout フォールバック、失敗系の全列挙に逸脱なし)
-- `_resolve_preview_url_command()` は `_gh_api_bounded()` の直後に配置し、`[[ -z "${PREVIEW_URL:-}" ]] && _resolve_preview_url_command || true` の形で `_preview_timeout_sec` 代入直後・`PREVIEW_URL` 分岐直前から呼び出した
-- Pre-merge の 6 grep/rubric 系 AC はチェック済みにした。`github_check "gh pr checks" "Run bats tests"` は CI verification AC exclusion (pr route) によりチェックせず `/review` に委ねる
+- `--full` review (Size L) を実施。review-spec (opus) + review-bug×2 (opus) の static Task fan-out で findings を収集し、review-bug 由来 13 件は重複統合の上 10 件を 2 段階検証、8 PASS / 2 REJECT に絞り込んだ (`scripts/run-review.sh:195-196` の wall-clock 予算増加と `set -e` 抑制の latent fragility の 2 件を false positive として除外)
+- MUST issue は 0 件。SHOULD 4 件は全て修正 (ドキュメント整合性 3 件 + `_resolve_preview_url_command()` 第3フォールバック分岐の timeout 未境界化のコード修正 1 件)。CONSIDER 7 件のうち 5 件を修正 (ドキュメント補完 4 件 + bare-scheme URL 検証バグ修正 1 件)、2 件は明示的にスキップ (stderr diagnosability はデバッグ用途のみの複雑化、docs/structure.md は対象外ファイルへの低確信度の拡張提案)
+- Parser/Validator Edge Case Pre-check (PR 作者 MEMBER のため実コード実行を許可) で `_resolve_preview_url_command()` を 18 パターンの fixture で実際に実行し、欠陥ゼロを確認
 
 ### Deferred Items
 
-- `skills/review/SKILL.md` Step 8.0 (`/review` skill 直接呼び出し経路) の `preview-url-command` 対応 — `allowed-tools` に任意コマンドを列挙できない権限モデル上の制約により対象外。follow-up 候補
-- provider 別 (Amplify / Vercel / Netlify / Cloudflare Pages) の preview URL 解決 adapter の同梱 — Issue の Out of Scope どおり `#781` の設計判断を維持
-- `{{base_url}}` 解決 3 系統の adapter chain への統合 — `#781` 由来の既存 follow-up として据え置き
-- 解決コマンドのタイムアウト値の設定可能化 — 実測ニーズが出るまで固定 30 秒
-- bats の裸の `[[ "$output" ]]` アサーションが bash 3.2 で `set -e` に反応しない問題 (Code Retrospective 参照) — 可視化・周知を目的として `#1412` を起票、既存 ~1000 箇所の一括修正は対象外
+- stderr diagnosability 改善 (`scripts/run-review.sh:152`、全分岐で `2>/dev/null` によりプロジェクトスクリプトのエラー内容が失われる) — フォールバック自体は既に正しく安全に動作しているため今回のスコープ外
+- docs/structure.md への `.wholework/adapters/` 説明拡張 (`preview-url-command` 用スクリプトの言及) — 本 PR の変更対象外ファイルであり見送り
+- `skills/review/SKILL.md` Step 8.0 (`/review` skill 直接呼び出し経路) の `preview-url-command` 対応 — code フェーズから引き継ぎ、権限モデル上の制約により対象外のまま
+- bats の裸の `[[ "$output" ]]` アサーション問題 (`#1412`) — code retrospective で起票済み、review フェーズでは追加対応なし
+- Post-merge AC (`preview-url-command` 宣言プロジェクトでの `/auto` 実行観測) — `/verify` に引き継ぎ
 
 ### Notes for Next Phase
 
-- `/review` は PR #1411 の CI (`Run bats tests` ジョブ) を確認すること — code フェーズでは `github_check "gh pr checks"` AC を意図的に未チェックのまま残した (CI verification AC exclusion)
-- 新規 `tests/run-review.bats` の 6 テストのうち、内容検証を伴う 5 件は `|| false` を付与済み — bats + bash 3.2 環境では裸の `[[ "$output" ]]` は FAIL を検出しないため、今後同ファイルにテストを追加する際もこのパターンを踏襲すること (`#1412` にも記録)
-- `docs/ja/` 同期済み (customization / tech / adapter-guide の 3 ファイル)。`check-translation-sync.sh` で IN_SYNC を確認済み (無関係な既存 drift が `docs/guide/xl-decomposition.md` に 1 件あるが本 Issue の対象外)
+- `/merge 1411` 実行前提: 修正コミット 4 件 (customization.md 系 EN+JA / ja adapter-guide リンク / detect-config-markers.md 消費者注記 / run-review.sh コード修正) はすべて CI green (`bats --jobs 18 tests/` 1878/1878 PASS、shellcheck 新規警告なし) を確認済み
+- `scripts/run-review.sh` の第3フォールバック分岐 (timeout/gtimeout 不在時) を background watchdog で 30 秒境界化した。実行環境依存で bats では直接カバーされない分岐のため、`.tmp/` 上の一時ハーネスで success/failure/timeout の 3 ケースを手動検証済み (詳細は review retrospective 参照)。将来この分岐へさらに手を入れる場合も同様の手動検証を推奨
+- Pre-merge AC 7 件は全て PASS 済み (チェック状態変更なし)。Post-merge AC は `/verify` の対象
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+構造的な乖離は見つからなかった。`--full` review (review-spec + review-bug×2 + 2 段階検証) で確認した限り、call site 位置・`{pr}` 置換・3 段 timeout フォールバック・失敗系の全列挙のいずれも Spec 通りに実装されていた。唯一の細かい差異 (2048 文字ガードが `head -n 1` 適用後の値に対して働く、Spec Step 3 表の文言はトリム前の総出力を指すように読める) は実害のない解釈上の余白で、ドキュメント追記で解消した。
+
+### Recurring issues
+
+このセッションで最も多かった指摘カテゴリは「新規追加した説明が、既存の関連する説明と局所的には正しいが全体としては不整合になる」パターンだった (SHOULD 4 件中 3 件がこれに該当):
+- 新セクション追加時に、同じトピックを扱う既存文 (`docs/guide/customization.md:201` の "Wholework は自動解決しない") を更新し忘れる
+- 新設定キーの依存関係 (`capabilities.pr-preview: true` 必須) が、依存元のドキュメント (`docs/tech.md`) には書かれているが、ユーザー向け SSoT (`docs/guide/customization.md` の Available Keys 表) には書かれていない
+- ja ミラーの新規段落が、ja 内部の相互参照慣習 (`../../guide/...` は言語切替リンク専用、intra-ja は兄弟ファイルへの相対パス) を踏襲せず英語ページへリンクしてしまう
+
+`check-translation-sync.sh` はコードフェンス数と更新日の同期は検出するが、この種の「新規追記が既存文と論理的に矛盾する」「ja 内部リンクが慣習を破る」を検出しない。Spec/Doc レビュー (review-spec) の Perspective 2 (Documentation Consistency) がこれを拾えたのは、diff だけでなくファイル全体を読んで既存文脈と突き合わせたため — grep ベースの機械チェックでは検出できない種類の drift だった。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN は 0 件。7 件の Pre-merge 条件はすべて grep/rubric ベースで機械的に PASS 判定できた。`github_check "gh pr checks" "Run bats tests"` は Issue 側で CI に委ねる設計だったため `/code` フェーズでは未チェックのまま残されており、`/review` の Step 9 (CI Status Check) 確認と整合して初めてチェック可能になった — Pre-merge AC が「CI verification AC exclusion」と「`/review` の CI 確認」の 2 段階に分かれる設計は、今回問題なく機能した。
+
+Parser/Validator Edge Case Pre-check (実際にコードを実行するサブエージェント) は `_resolve_preview_url_command()` に対して 18 パターンの fixture を実行し、欠陥ゼロという結果だったが、その過程で「`{pr}` 置換前に `PR_NUMBER` が `^[0-9]+$` で検証済みである」という前提を静的読解ではなく実行確認込みで裏付けられた。この種の「設計判断の前提を実行で裏付ける」検証は、Spec フェーズの `## Uncertainty resolution` (同じく実行確認で `get-config-value.sh` のクォート挙動を検証した) と同じパターンで、`/spec` → `/review` の両フェーズで一貫して機能した。
