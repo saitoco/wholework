@@ -131,7 +131,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `session-auto-rename` | boolean | `false` | Rename session title to issue number and title when `/auto N` is invoked |
 | `steering-hint` | boolean | `true` | Show `/doc init` hint when steering docs are missing |
 | `production-url` | string | `""` | Production URL for browser-based verify commands |
-| `preview-url-command` | string | `""` | Shell command that resolves `PREVIEW_URL` for a project-side script (e.g. a hosting-provider adapter under `.wholework/adapters/`). Supports a `{pr}` placeholder substituted with the PR number. Only consulted by `scripts/run-review.sh`'s preview-wait gate (covers `/auto`, scheduled runs, and direct wrapper invocation) — not by `/review` invoked directly as a skill. The command string must not contain a space followed by `#` (stripped as an inline comment by `scripts/get-config-value.sh`). |
+| `preview-url-command` | string | `""` | Shell command that resolves `PREVIEW_URL` for a project-side script (e.g. a hosting-provider adapter under `.wholework/adapters/`). Requires `capabilities.pr-preview: true`; without it this key is ignored (the resolution call site lives inside `run-review.sh`'s `pr-preview` gate). Supports a `{pr}` placeholder substituted with the PR number. Only consulted by `scripts/run-review.sh`'s preview-wait gate (covers `/auto`, scheduled runs, and direct wrapper invocation) — not by `/review` invoked directly as a skill. The command string must not contain a space followed by `#` (stripped as an inline comment by `scripts/get-config-value.sh`). The value is executed verbatim via `bash -c`, so `.wholework.yml` must be treated as trusted on the checked-out branch, the same trust level as `permission-mode`. |
 | `spec-path` | string | `docs/spec` | Where specs are stored |
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
@@ -198,7 +198,7 @@ The same flag also gates `/code`'s pr route: after PR creation, `/code` waits fo
 
 **Resolving `PREVIEW_URL`:**
 
-The `PREVIEW_URL` environment variable must be exported before invoking `/review`. Wholework does not resolve it automatically — this is the responsibility of your CI pipeline or a project-side script. For example:
+The `PREVIEW_URL` environment variable must be exported before invoking `/review`. Wholework does not resolve it automatically unless `preview-url-command` is declared (see "Automating `PREVIEW_URL` resolution" below) — otherwise this is the responsibility of your CI pipeline or a project-side script. For example:
 
 ```bash
 # In CI (e.g., GitHub Actions) — set before running /review
@@ -221,7 +221,7 @@ For hosting providers that never create a GitHub deployment (e.g. AWS Amplify Ho
 preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
 ```
 
-The `{pr}` placeholder is substituted with the PR number before the command runs; omit it to run the command with no arguments (e.g. a script that resolves the PR from the current branch itself). Resolution order: an already-exported `PREVIEW_URL` takes precedence over `preview-url-command`, which in turn takes precedence over the GitHub Deployments API. If the command exits non-zero, produces empty output, or its output is not an `http://`/`https://` URL, `run-review.sh` falls back to the existing Deployments API polling unchanged (no new fail-open or fail-closed behavior is introduced).
+The `{pr}` placeholder is substituted with the PR number before the command runs; omit it to run the command with no arguments (e.g. a script that resolves the PR from the current branch itself). Resolution order: an already-exported `PREVIEW_URL` takes precedence over `preview-url-command`, which in turn takes precedence over the GitHub Deployments API. Requires `capabilities.pr-preview: true` — without it, `run-review.sh`'s preview-wait gate never runs and this key is ignored. Only the first line of the command's stdout is used (CR and surrounding whitespace stripped), so the command must print the URL as its first line — any further output is ignored, not validated. If the command exits non-zero, produces empty output, produces output longer than 2048 characters, or its (first-line) output is not an `http://`/`https://` URL, `run-review.sh` falls back to the existing Deployments API polling unchanged (no new fail-open or fail-closed behavior is introduced).
 
 Coverage: this key is only consulted by `scripts/run-review.sh`'s preview-wait gate — i.e. `/auto`, scheduled runs, and direct `run-review.sh` invocation. It is not consulted when `/review` is invoked directly as a skill; that path still requires manually exporting `PREVIEW_URL` as described above.
 
