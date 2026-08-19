@@ -155,8 +155,22 @@ _resolve_preview_url_command() {
     _resolved=$(gtimeout 30 bash -c "$_cmd" 2>/dev/null)
     _resolved_status=$?
   else
-    _resolved=$(bash -c "$_cmd" 2>/dev/null)
+    # No timeout/gtimeout available (e.g. stock macOS without coreutils):
+    # bound the command manually via a background watchdog, since an
+    # unbounded arbitrary project script would otherwise stall this gate
+    # indefinitely (WHOLEWORK_PREVIEW_TIMEOUT_SEC does not cover this call).
+    mkdir -p .tmp 2>/dev/null || true
+    local _tmpout=".tmp/preview-url-command-output.$$"
+    bash -c "$_cmd" >"$_tmpout" 2>/dev/null &
+    local _cmd_pid=$!
+    ( sleep 30; kill -0 "$_cmd_pid" 2>/dev/null && kill -9 "$_cmd_pid" 2>/dev/null ) &
+    local _watchdog_pid=$!
+    wait "$_cmd_pid" 2>/dev/null
     _resolved_status=$?
+    kill "$_watchdog_pid" 2>/dev/null
+    wait "$_watchdog_pid" 2>/dev/null
+    _resolved=$(cat "$_tmpout" 2>/dev/null)
+    rm -f "$_tmpout"
   fi
 
   if [[ "$_resolved_status" -ne 0 ]]; then
@@ -177,13 +191,10 @@ _resolve_preview_url_command() {
     echo "Warning: preview-url-command output exceeds 2048 chars; falling back to Deployments API polling" >&2
     return 0
   fi
-  case "$_resolved_trimmed" in
-    http://*|https://*) ;;
-    *)
-      echo "Warning: preview-url-command output is not an http(s) URL; falling back to Deployments API polling" >&2
-      return 0
-      ;;
-  esac
+  if ! [[ "$_resolved_trimmed" =~ ^https?://[^[:space:]/]+ ]]; then
+    echo "Warning: preview-url-command output is not an http(s) URL; falling back to Deployments API polling" >&2
+    return 0
+  fi
 
   PREVIEW_URL="$_resolved_trimmed"
   export PREVIEW_URL
