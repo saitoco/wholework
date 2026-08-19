@@ -163,3 +163,50 @@ Issue の Purpose は「`/auto` 経由・スケジュール実行・人間によ
 ### Auto-Resolve Log
 
 Step 7 の曖昧点解消結果は Issue の retrospective コメントとして投稿する (`modules/ambiguity-detector.md` の配置ルール: `issue` / `spec` フェーズは issue retrospective コメント)。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の Proposal は変更対象を 3 点 (`detect-config-markers.md` / `run-review.sh` / ドキュメント) に絞っていたが、`PREVIEW_URL` をキーワードにした横断 grep で復旧ガイダンス 2 箇所 (`modules/orchestration-fallbacks.md` の Structural PENDING Fix 行、`scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT`) が「`PREVIEW_URL` を手動 export せよ」と案内し続けることが判明した。Issue 本文の変更対象リストをそのまま Changed Files にすると、新機能の追加後も運用者に旧手順を案内し続ける状態が残る
+- `docs/guide/customization.md` の Available Keys 表は自らを「`.wholework.yml` キーの SSoT」と宣言しているため、AC が「説明とサンプル設定」しか要求していなくても表への行追加は必須。AC 文面だけを追って節への追記で済ませると SSoT が欠損する
+
+### Judgment rationale
+
+- **PR 番号の渡し方に `{pr}` 置換を選んだ理由**: 環境変数案・位置引数自動追加案と比べ、設定 1 行を読むだけで PR 番号の受け渡しが自己完結して見える。かつ「プレースホルダを書かない = 引数なし実行」が自然に成立するため、Issue が挙げていた 3 案のうち 2 案 (プレースホルダ / 引数なし) を単一機構でカバーできる
+- **adapter chain に乗せなかった理由**: `modules/adapter-resolver.md` は skill が Read して従う LLM 駆動モジュールで、bash wrapper (`run-review.sh`) からは構造的に呼べない。「特化機能追加は adapter-resolver lazy chain が default」という既存方針の例外として、消費者が bash wrapper であることを根拠に設定キー + wrapper 実装を選んだ
+- **`skills/review/SKILL.md` Step 8.0 を対象外にした理由**: Issue の Purpose は「人間による直接実行」も掲げており当初は含める方向で検討したが、`allowed-tools` に任意のプロジェクト宣言コマンドを列挙できないという権限モデル上の障害を発見して除外した。`get-config-value.sh` がどの SKILL.md の `allowed-tools` にも登録されていない (設定読み取りは skill 側では LLM 駆動の `detect-config-markers.md` が担う) という既存の役割分担が、この判断の裏付けになっている
+
+### Uncertainty resolution
+
+- `get-config-value.sh` がコマンド文字列 (引用符あり/なし、フラグ付き) を欠損なく返すかは設計の前提だったため、`WHOLEWORK_CONFIG_PATH` を一時 YAML に向けて spec フェーズ中に実測した。両形式とも正しく返る一方、値に半角スペース + `#` を含むと切り捨てられることも同時に判明し、制約としてドキュメント側に明文化する Implementation Step に反映した。設定キーを追加する Issue では、パーサの「通る形」だけでなく「通らない形」も実測しておくと、後段で仕様として書き残せる
+- `${var//\{pr\}/$N}` の bash 3.2 互換性は `/bin/bash -c` (`BASH_VERSION=3.2.57`) で直接実行して確認した。CI には `macOS shell compatibility` ジョブがあるが `bash -n` の構文チェックのみで、パラメータ展開の意味論までは守らないため、実行による確認が必要だった
+
+### New test cases required for new branch logic
+
+- `scripts/run-review.sh` に新規分岐 (`preview-url-command` 解決経路) を追加するため、`tests/run-review.bats` に新規 `@test` 6 件 (解決成功 / export 済み `PREVIEW_URL` 優先 / `{pr}` 置換 / コマンド失敗フォールバック / 空出力フォールバック / 非 URL 出力フォールバック) の追加を Implementation Steps 4 と Pre-merge 検証項目 7 に明記した
+
+## Phase Handoff
+
+### Key Decisions
+
+- `preview-url-command` は `.wholework.yml` のフラットな文字列キーとし、`get-config-value.sh` (bash wrapper 専用の設定リーダ) 経由で読む。skill 側の LLM 駆動 `detect-config-markers.md` と役割が分かれている既存構造をそのまま踏襲する
+- PR 番号は `{pr}` プレースホルダ置換で渡す。`$PR_NUMBER` は `run-review.sh` 冒頭で `^[0-9]+$` 検証済みのため置換値からの injection 経路は無い
+- 呼び出し位置は既存の `capabilities.pr-preview` ゲート内、`_preview_timeout_sec` 代入直後・`PREVIEW_URL` 分岐直前。優先順位は export 済み `PREVIEW_URL` > `preview-url-command` > Deployments API
+- 失敗系 (非 0 終了 / 空出力 / 2048 文字超 / 非 http(s) 出力) はすべて既存の Deployments API 経路へフォールバックし、新たな fail-open も fail-closed も導入しない
+- 実行時間上限は同ファイルの `_gh_api_bounded()` と同じ `timeout` / `gtimeout` / 素の実行の 3 段フォールバックで 30 秒固定。新規の設定キーは増やさない
+
+### Deferred Items
+
+- `skills/review/SKILL.md` Step 8.0 (`/review` skill 直接呼び出し経路) の `preview-url-command` 対応 — `allowed-tools` に任意コマンドを列挙できない権限モデル上の制約により対象外。follow-up 候補
+- provider 別 (Amplify / Vercel / Netlify / Cloudflare Pages) の preview URL 解決 adapter の同梱 — Issue の Out of Scope どおり `#781` の設計判断を維持
+- `{{base_url}}` 解決 3 系統の adapter chain への統合 — `#781` 由来の既存 follow-up として据え置き
+- 解決コマンドのタイムアウト値の設定可能化 — 実測ニーズが出るまで固定 30 秒
+
+### Notes for Next Phase
+
+- `export PREVIEW_URL` を忘れないこと。`run-review.sh` は後段で `claude -p` を子プロセスとして起動するため、解決した値を export しないと `/review` 側の Step 8.0 fast path と `--when="test -n \"$PREVIEW_URL\""` ガードに届かない (本機能の実効性を左右する最重要点)
+- `tests/run-review.bats` の既存 `setup()` にある `get-config-value.sh` モックは `permission-mode` 以外に `$DEFAULT` (空文字) を返すため既存テストは無改修で通る。新規テストは各 `@test` 内でモックを上書きする
+- `local x=$(cmd)` 形式は `local` が終了ステータスを隠すため使わない。宣言と代入を分けること (`set -euo pipefail` 下)
+- `tests/detect-wrapper-anomaly.bats` は `IMPROVEMENT_HINT` に対し `PREVIEW_URL` の部分文字列一致のみを assert している。`scripts/detect-wrapper-anomaly.sh` の hint を書き換える際は `PREVIEW_URL` の語を残せばテスト変更は不要
+- `docs/ja/` 同期対象は customization / tech / adapter-guide の 3 ファイル。`docs/translation-workflow.md` の手順 5 (コードフェンス個数の一致確認) を必ず実施すること
