@@ -137,6 +137,10 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 
 `/auto --batch 1395 1382 1390 1391` (session `4899-1787037881`) の Batch Completion Report observation scan により10回目の dispatch。前回の教訓に従い、判定確定前に本 Spec の既存 Verify Retrospective 履歴 (9 回分) を確認した上で判断した。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一セッションが処理した4 Issue (#1395, #1382, #1390, #1391) の各 verify フェーズが自身の Spec の Phase Handoff / Consumed Comments を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能。10回連続で同一結論。
 
+### 追記 (2026-08-19, /auto #1410 セッションからの再評価)
+
+`/auto 1410` (session `9640-1787125619`) の完了後の event-based observation scan により11回目の dispatch。前回までの教訓に従い、判定確定前に本 Spec の既存 Verify Retrospective 履歴 (10 回分) を確認した上で判断した。状況に変化なく結論を維持 (UNCERTAIN)。前半「後続フェーズに参照される」の追加確認事例として、同一 `/auto` セッション自身 (#1410) の code/review/merge/verify 各フェーズが自身の Spec (`docs/spec/issue-1410-preview-url-command.md`) の Phase Handoff / Consumed Comments を読み判断に反映している。後半「重複/矛盾記述が減っている」は引き続き測定不能 — ベースライン不在という構造的限界は解消されていない。11回連続で同一結論。#1406 (chronically-stalled Issue の dispatch スロット占有問題) が本条件のような構造的恒久 UNCERTAIN パターンを既にカバーしているため、重複起票はしない。
+
 ## Phase Handoff
 <!-- phase: code -->
 
