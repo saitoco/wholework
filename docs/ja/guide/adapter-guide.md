@@ -55,8 +55,8 @@ adapter と並べて `.wholework/adapters/` 配下に置く (例:
 は bash wrapper であり、skill のように adapter contract の `.md` ファイルを
 「読んで従う」ことができないため、設定キーに直接スクリプトパスを宣言する形を
 取る。完全な契約 (フォールバック挙動・`{pr}` 置換・カバー範囲) は
-[`docs/guide/customization.md`](../../guide/customization.md) の
-"Resolving `PREVIEW_URL`" 節を参照。
+[`docs/ja/guide/customization.md`](customization.md) の
+「`preview-url-command` による `PREVIEW_URL` 解決の自動化」節を参照。
 
 ---
 
