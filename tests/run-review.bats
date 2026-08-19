@@ -515,6 +515,255 @@ MOCK
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
 }
 
+@test "success: preview-url-command resolves PREVIEW_URL when the env var is unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Resolved PREVIEW_URL via preview-url-command for PR #123"* ]] || false
+    [[ "$output" == *"PR preview reachable via PREVIEW_URL"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: exported PREVIEW_URL takes precedence over preview-url-command" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+    export PREVIEW_URL="https://already-exported.example.com"
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<MOCK
+#!/bin/bash
+KEY="\$1"; DEFAULT="\${2:-}"
+case "\$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "touch $MOCK_DIR/preview-cmd-executed && echo https://should-not-be-used.example.com" ;;
+    *) echo "\$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ ! -f "$MOCK_DIR/preview-cmd-executed" ]
+    [[ "$output" != *"Resolved PREVIEW_URL via preview-url-command"* ]] || false
+    [[ "$output" == *"PR preview reachable via PREVIEW_URL"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: preview-url-command {pr} placeholder is substituted with the PR number" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo https://pr-{pr}.example-preview.com" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/curl" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$MOCK_DIR/curl_calls.log"
+echo -n "200"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/curl"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "pr-123.example-preview.com" "$MOCK_DIR/curl_calls.log"
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-url-command failure falls back to the Deployments API branch" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "exit 1" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-url-command exited non-zero"* ]] || false
+    [[ "$output" == *"Waiting for PR preview deployment"* ]] || false
+    [[ "$output" == *"PR preview deployment ready"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-url-command empty output falls back to the Deployments API branch" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "true" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-url-command produced empty output"* ]] || false
+    [[ "$output" == *"Waiting for PR preview deployment"* ]] || false
+    [[ "$output" == *"PR preview deployment ready"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-url-command non-URL output falls back to the Deployments API branch" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo not-a-url" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-url-command output is not an http(s) URL"* ]] || false
+    [[ "$output" == *"Waiting for PR preview deployment"* ]] || false
+    [[ "$output" == *"PR preview deployment ready"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
 @test "no-op: pr-preview capability unset does not trigger preview wait branch" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]

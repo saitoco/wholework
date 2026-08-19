@@ -632,7 +632,7 @@ A permanent fix — either a rename-resistant linking mechanism (e.g. keyed on I
 ### Structural PENDING (retry does not help)
 
 - **How to tell**: if the PENDING message includes `state=none`, run `gh api "repos/:owner/:repo/deployments?per_page=1" --jq 'length'`. A `0` for the whole repo confirms this hosting provider never creates a GitHub deployment (e.g. AWS Amplify Hosting) — the Fallback Steps retry above will not resolve this no matter how many times it repeats
-- **Fix**: export `PREVIEW_URL` on the project side, then re-run `run-review.sh`. Its `PREVIEW_URL` fast path bypasses the Deployments API polling entirely and confirms preview readiness via HTTP reachability (2xx / 401 / 403) instead
+- **Fix**: export `PREVIEW_URL` on the project side, then re-run `run-review.sh`. Its `PREVIEW_URL` fast path bypasses the Deployments API polling entirely and confirms preview readiness via HTTP reachability (2xx / 401 / 403) instead — or declare `preview-url-command` in `.wholework.yml` to make this permanent (`run-review.sh` runs the command itself before the fast path, no manual export needed on subsequent runs)
 - **Detection**: `scripts/detect-wrapper-anomaly.sh`'s `preview-deployment-absent` pattern (see #1128) detects the same two conditions mechanically
 
 ### Escalation
@@ -642,6 +642,7 @@ A permanent fix — either a rename-resistant linking mechanism (e.g. keyed on I
 - Introduced in Issue #1115: #1050 added exit code 2 (PENDING) to `run-review.sh` as an intentional third terminal state, but neither `run_phase_with_recovery()` in `scripts/run-auto-sub.sh` nor `skills/auto/SKILL.md` pr route item 8 distinguished it from any other non-zero exit — so a correctly-behaving wrapper could trigger expensive Tier 3 sub-agent diagnosis under a false "review crashed" premise
 - See also #1066 (`wait-ci-checks.sh` bucket-based `ci_result:` reporting, the upstream signal `run-review.sh` PENDING relies on) and #1053 (preview-tier AC fail-open hardening)
 - Extended in Issue #1128: `run-review.sh`'s preview gate now has a `PREVIEW_URL` fast path matching `skills/review/SKILL.md` Step 8.0's existing contract, so projects that resolve `PREVIEW_URL` on their own (e.g. via a project-local adapter) are no longer stuck polling the Deployments API on providers that never create one
+- Extended in Issue #1410: `run-review.sh` can now resolve `PREVIEW_URL` itself via a project-declared `preview-url-command`, removing the need for a human or CI step to export it before every run — this also covers `/auto`-driven and scheduled execution, which #1128's manual-export fast path alone did not
 
 ---
 

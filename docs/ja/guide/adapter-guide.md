@@ -44,6 +44,20 @@ capabilities:
 > Wholework は動的検出 (ToolSearch / `command -v`) にフォールバックする。
 > 明示的な宣言により、セッション状態によらず再現可能な挙動が得られる。
 
+**`preview-url-command`** — 関連するが別の仕組み: `scripts/run-review.sh` が
+`bash -c` 経由で直接呼び出し `PREVIEW_URL` を解決する、プロジェクトローカルの
+*スクリプト* (adapter contract の `.md` ファイルではない)。GitHub deployment を
+作らないホスティングプロバイダ (AWS Amplify Hosting 等) 向け。スクリプトは他の
+adapter と並べて `.wholework/adapters/` 配下に置く (例:
+`.wholework/adapters/resolve-preview-url.sh`) と発見しやすく、`.wholework.yml`
+で `preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"` の
+ように宣言する。これは下記の 3 層 Adapter 解決を**通らない** — `run-review.sh`
+は bash wrapper であり、skill のように adapter contract の `.md` ファイルを
+「読んで従う」ことができないため、設定キーに直接スクリプトパスを宣言する形を
+取る。完全な契約 (フォールバック挙動・`{pr}` 置換・カバー範囲) は
+[`docs/guide/customization.md`](../../guide/customization.md) の
+"Resolving `PREVIEW_URL`" 節を参照。
+
 ---
 
 ## Adapter 解決

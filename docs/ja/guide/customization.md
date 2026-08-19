@@ -120,6 +120,7 @@ capabilities:
 | `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
+| `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行をカバー) のみが参照する — `/review` を skill として直接呼ぶ経路では参照されない。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。 |
 | `spec-path` | string | `docs/spec` | spec の保存先 |
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
@@ -200,6 +201,18 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 - `/review` 時に `PREVIEW_URL` が設定されている: auto サブケースの preview 層 AC は preview URL に対して実行される。manual サブケースの preview 層 AC は同じ URL に対する人間の確認項目として提示される (verify command がないため `--when` ガードで `PREVIEW_URL` をゲートする対象がない)。
 - `/review` 時に `PREVIEW_URL` が未設定: auto サブケースの preview 層 AC は `--when` ガードが発動し SKIPPED になる（人間がフォローアップ）。manual サブケースの preview 層 AC はガードを持たないため `PREVIEW_URL` の有無に関わらず引き続き人間の確認項目として提示される。
 - `/verify` (post-merge) 時: `ac-tier: preview` 付き AC (auto・manual 両サブケース) はデフォルトで skip される (二重検証防止)。`/review` は Pre-merge に `ac-tier: preview` AC が 1 件以上ある実行ごとに毎回 `type=preview-ac-unverified` マーカーコメントを投稿する — 今回 UNCERTAIN のまま終わったインデックスの一覧、あるいは全て検証・確認済みなら `ac=none` sentinel のいずれかを持つ。`/verify` は常に最新 1 件のマーカーのみを参照する (latest-wins) ため、fix-cycle で `/review` が再実行され以前 UNCERTAIN だった AC が検証済みになった場合でも、古いマーカーが最新として誤参照されることはない。その最新マーカーで未検証のまま残っている AC については、`/verify` が verify command の有無で分岐する — auto サブケースは SKIPPED にせずフォールバックする (`production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する)。manual サブケースはフォールバックできる verify command がないため、常に人間による確認が必要な旨を記録する。このフォールバックとは別に本番でも同 AC (auto サブケース) を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
+
+**`preview-url-command` による `PREVIEW_URL` 解決の自動化:**
+
+GitHub deployment を作らないホスティングプロバイダ (AWS Amplify Hosting 等) では、`/review` 実行の都度手動で `PREVIEW_URL` を export する運用は `/auto` 駆動やスケジュール実行にはスケールしません — 人間や CI パイプラインが変数を export できるステップが存在しないためです。`.wholework.yml` に `preview-url-command` を宣言すると、`scripts/run-review.sh` がそれを自動的に解決します:
+
+```yaml
+preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
+```
+
+`{pr}` プレースホルダはコマンド実行前に PR 番号へ置換されます。省略した場合は引数なしでコマンドが実行されます (例: 現在のブランチから自身で PR を解決するスクリプト)。解決順序は「export 済みの `PREVIEW_URL` > `preview-url-command` > GitHub Deployments API」です。コマンドが非 0 終了する、出力が空になる、あるいは出力が `http://`/`https://` の URL でない場合、`run-review.sh` は既存の Deployments API ポーリングへそのままフォールバックします (新たな fail-open も fail-closed も導入されません)。
+
+カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート — すなわち `/auto`・スケジュール実行・`run-review.sh` の直接実行のみで参照されます。`/review` を skill として直接呼び出す経路では参照されず、その経路は引き続き上記の手動 `PREVIEW_URL` export が必要です。
 
 ## `.wholework/domains/`
 
