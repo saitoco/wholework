@@ -51,6 +51,18 @@ Required for `mcp_call` verify commands. Wholework uses the declared list to pro
 > Wholework falls back to dynamic detection (ToolSearch / `command -v`).
 > Explicit declaration provides reproducible behavior regardless of session state.
 
+**`preview-url-command`** — a related but distinct mechanism: a project-local *script*
+(not an adapter contract `.md` file) that `scripts/run-review.sh` invokes directly via
+`bash -c` to resolve `PREVIEW_URL`, for hosting providers that never create a GitHub
+deployment (e.g. AWS Amplify Hosting). Place the script under `.wholework/adapters/`
+(e.g. `.wholework/adapters/resolve-preview-url.sh`) alongside your other adapters for
+discoverability, and declare it with `preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"`
+in `.wholework.yml`. This does **not** go through the 3-layer Adapter Resolution below —
+`run-review.sh` is a bash wrapper and cannot "Read and follow" an adapter contract `.md`
+file the way skills do — it is a plain script path declared directly in the config key.
+See [`docs/guide/customization.md`](customization.md) § "Resolving `PREVIEW_URL`" for the
+full contract (fallback behavior, `{pr}` substitution, coverage scope).
+
 ---
 
 ## Adapter Resolution

@@ -131,6 +131,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `session-auto-rename` | boolean | `false` | Rename session title to issue number and title when `/auto N` is invoked |
 | `steering-hint` | boolean | `true` | Show `/doc init` hint when steering docs are missing |
 | `production-url` | string | `""` | Production URL for browser-based verify commands |
+| `preview-url-command` | string | `""` | Shell command that resolves `PREVIEW_URL` for a project-side script (e.g. a hosting-provider adapter under `.wholework/adapters/`). Requires `capabilities.pr-preview: true`; without it this key is ignored (the resolution call site lives inside `run-review.sh`'s `pr-preview` gate). Supports a `{pr}` placeholder substituted with the PR number. Only consulted by `scripts/run-review.sh`'s preview-wait gate (covers `/auto`, scheduled runs, and direct wrapper invocation) — not by `/review` invoked directly as a skill. The command string must not contain a space followed by `#` (stripped as an inline comment by `scripts/get-config-value.sh`). The value is executed verbatim via `bash -c`, so `.wholework.yml` must be treated as trusted on the checked-out branch, the same trust level as `permission-mode`. |
 | `spec-path` | string | `docs/spec` | Where specs are stored |
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
@@ -197,7 +198,7 @@ The same flag also gates `/code`'s pr route: after PR creation, `/code` waits fo
 
 **Resolving `PREVIEW_URL`:**
 
-The `PREVIEW_URL` environment variable must be exported before invoking `/review`. Wholework does not resolve it automatically — this is the responsibility of your CI pipeline or a project-side script. For example:
+The `PREVIEW_URL` environment variable must be exported before invoking `/review`. Wholework does not resolve it automatically unless `preview-url-command` is declared (see "Automating `PREVIEW_URL` resolution" below) — otherwise this is the responsibility of your CI pipeline or a project-side script. For example:
 
 ```bash
 # In CI (e.g., GitHub Actions) — set before running /review
@@ -211,6 +212,18 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 - `PREVIEW_URL` set at `/review` time: auto-subcase preview-tier ACs are executed against the preview URL; manual-subcase preview-tier ACs are presented as human-check items against the same URL (they have no `--when` guard to gate on `PREVIEW_URL`, since there is no verify command to run).
 - `PREVIEW_URL` not set: auto-subcase preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up; manual-subcase preview-tier ACs are still presented as human-check items (unaffected by `PREVIEW_URL`, since they have no guard).
 - At `/verify` (post-merge): `ac-tier: preview` ACs (both auto and manual subcases) are skipped by default to prevent double verification. `/review` posts a `type=preview-ac-unverified` marker comment on every run that has at least one `ac-tier: preview` AC in Pre-merge — listing the indices left UNCERTAIN this run, or the sentinel `ac=none` when all preview-tier ACs were verified/checked. `/verify` always resolves only the single most-recent such marker (latest-wins), so a later `/review` run (e.g., after a fix cycle) that clears a previously UNCERTAIN AC is reflected correctly instead of leaving an earlier, now-stale marker as the reference. For any AC still listed as unverified in that latest marker, `/verify` falls back depending on whether it has a verify command: an auto-subcase AC falls back to verifying against `production-url` if configured, or an explicit "unverified" warning if not; a manual-subcase AC has no verify command to fall back with, so it is always recorded as requiring human verification — instead of silently marking either as SKIPPED. To also verify against production regardless of this fallback, duplicate the (auto-subcase) AC in the `### Post-merge` section without the tag.
+
+**Automating `PREVIEW_URL` resolution with `preview-url-command`:**
+
+For hosting providers that never create a GitHub deployment (e.g. AWS Amplify Hosting), manually exporting `PREVIEW_URL` before every `/review` run does not scale to `/auto`-driven or scheduled execution — there is no step where a human or CI pipeline can export the variable. Declare `preview-url-command` in `.wholework.yml` to let `scripts/run-review.sh` resolve it automatically:
+
+```yaml
+preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
+```
+
+The `{pr}` placeholder is substituted with the PR number before the command runs; omit it to run the command with no arguments (e.g. a script that resolves the PR from the current branch itself). Resolution order: an already-exported `PREVIEW_URL` takes precedence over `preview-url-command`, which in turn takes precedence over the GitHub Deployments API. Requires `capabilities.pr-preview: true` — without it, `run-review.sh`'s preview-wait gate never runs and this key is ignored. Only the first line of the command's stdout is used (CR and surrounding whitespace stripped), so the command must print the URL as its first line — any further output is ignored, not validated. If the command exits non-zero, produces empty output, produces output longer than 2048 characters, or its (first-line) output is not an `http://`/`https://` URL, `run-review.sh` falls back to the existing Deployments API polling unchanged (no new fail-open or fail-closed behavior is introduced).
+
+Coverage: this key is only consulted by `scripts/run-review.sh`'s preview-wait gate — i.e. `/auto`, scheduled runs, and direct `run-review.sh` invocation. It is not consulted when `/review` is invoked directly as a skill; that path still requires manually exporting `PREVIEW_URL` as described above.
 
 ## `.wholework/domains/`
 
