@@ -74,6 +74,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-19 10:53 UTC: manual-recovery-verified-already-complete
+
+### Context
+- Issue #1410, phase: merge
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- notification: indeterminate
+- External-kill detected mid-run; reconcile-phase-state.sh confirmed PR #1411 was already MERGED before the kill, so no respawn was needed
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-19 09:52 UTC: manual-recovery-respawn
 
 ### Context
