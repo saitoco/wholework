@@ -4,15 +4,15 @@
 
 エージェンティック・ワークのための GitHub Issue 駆動型 Claude Code スキル。
 
-Claude Code エージェントのためのワークフロー・ハーネス — あなたの Issue を、検証済みの成果として届けます。
+Claude Code エージェントのためのワークフロー・ハーネス — Issue を、出荷可能で検証済みの成果に変えます。
 
 ## 🌐 なぜ Wholework なのか
 
 1. **Issue-to-spec 設計** — Issue が *何を* と *完了条件* を定義し、spec が *どう進めるか* を分解します。検証可能な受け入れ基準を最優先とし、マージ後に `/verify` が自動でチェックします。
 2. **サイズに応じたルーティングを備えたフルフェーズワークフロー** — `/issue → /spec → /code → /review → /merge → /verify` が要件定義からマージ後の検証まで、ライフサイクル全体をカバーします。
-3. **エージェンティック実行** — `/auto` は Claude Code を long-horizon なコーディングエージェントに変えます。課題は実行可能なタスクに分解され、全フェーズを無人で進みます。1 つの Issue でも Backlog 全体でも、必要な時間だけ任せられます。
+3. **エージェンティック実行** — `/auto` は Claude Code を long-horizon なコーディングエージェントに変えます。Issue は実行可能なタスクに分解され、全フェーズを無人で進みます。1 つの Issue でも Backlog 全体でも、必要な時間だけ任せられます。
 4. **手持ちのツールで動く** — 既存の GitHub リポジトリと標準的な GitHub Flow に沿って動作し、どのフェーズでも介入したり任せたりできます。
-5. **Issue 駆動、コードに限らず** — Issue 駆動の仕事であれば何にでも適用できます: Web サイト、ドキュメント、IaC、リサーチ、OSS プロジェクト運営など。
+5. **Issue 駆動、コードに限らず** — Issue が仕事を駆動する場面であればどこにでも適用できます: Web サイト、ドキュメント、IaC、リサーチ、OSS プロジェクト運営など。
 
 ## 📋 動作要件
 
@@ -28,13 +28,13 @@ Claude Code エージェントのためのワークフロー・ハーネス — 
 /plugin install wholework@saitoco-wholework
 ```
 
-スキルは `wholework:<skill-name>` として利用できます（例: `/wholework:review`、`/wholework:code`）。
+スキルは `wholework:<skill-name>` として利用できます (例: `/wholework:review`、`/wholework:code`)。
 
 開発環境のセットアップについては [docs/ja/structure.md](docs/ja/structure.md#install) を参照してください。
 
 ## 🚀 クイックスタート
 
-Wholework を初めて使いますか？ [クイックスタートガイド](docs/ja/guide/quick-start.md) が、インストールから最初の手動 `/issue` → `/code` → `/verify` サイクルまでを約 5 分で案内します。
+Wholework を初めて使いますか? [クイックスタートガイド](docs/ja/guide/quick-start.md) が、インストールから最初の手動 `/issue` → `/code` → `/verify` サイクルまでを約 5 分で案内します。
 
 全トピックを俯瞰したい場合は [ユーザーガイドのインデックス](docs/ja/guide/index.md) を参照してください。
 
@@ -48,11 +48,11 @@ Wholework は 6 つの組み合わせ可能なスキルで開発ライフサイ�
 
 ## 🛠️ カスタマイズ
 
-Wholework は `.wholework.yml`（フィーチャーフラグとパス）、`.wholework/domains/`（スキルごとの指示）、adapter（ツール連携）を通じてプロジェクトに適応します。詳細は [カスタマイズガイド](docs/ja/guide/customization.md) を参照してください。
+Wholework は `.wholework.yml` (フィーチャーフラグとパス)、`.wholework/domains/` (スキルごとの指示)、adapter (ツール連携) を通じてプロジェクトに適応します。詳細は [カスタマイズガイド](docs/ja/guide/customization.md) を参照してください。
 
 ## 🔒 セキュリティ
 
-Wholework のスキルは `gh`、`git`、ファイル書き込みなどの操作をリポジトリに対して実行します。`/auto` はデフォルトで `--dangerously-skip-permissions` を使用し、`.wholework.yml` で `permission-mode: auto` を設定した場合は `--permission-mode auto` を使用します。副作用、必要な権限、permission mode オプションの全容は [SECURITY.md](SECURITY.md) を参照してください。
+Wholework のスキルは、リポジトリに対して `gh`、`git`、ファイル書き込みの各操作を実行します。`/auto` はデフォルトで `--permission-mode auto` を使用し、`.wholework.yml` で `permission-mode: bypass` を設定した場合は `--dangerously-skip-permissions` を使用します。副作用、必要な権限、permission mode オプションの全容は [SECURITY.md](SECURITY.md) を参照してください。
 
 ## 💬 サポート
 
@@ -65,4 +65,4 @@ Wholework のスキルは `gh`、`git`、ファイル書き込みなどの操作
 
 ## ⚖️ ライセンス
 
-Apache License 2.0. [LICENSE](LICENSE) を参照してください。
+Apache License 2.0。[LICENSE](LICENSE) を参照してください。

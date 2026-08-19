@@ -96,6 +96,16 @@ claude --plugin-dir /path/to/wholework
 
 `/auto` による無人実行の場合、開始前に issue が triage 済み（`phase/*` か `triaged` ラベルあり）であることを確認してください。
 
+## スキル更新がセッション中に反映されない
+
+**症状**: `SKILL.md` ファイルを編集した後（または `git pull` で新しい skill バージョンを取得した後）、同一セッション内でそのスキルを呼び出すと旧バージョンのまま動作する。新しく追加されたフラグ・サブコマンド・ステップがスキルの挙動に反映されない。
+
+**原因**: Claude Code はセッション開始時（または `claude -p` サブプロセス起動時）に `SKILL.md` の内容を LLM システムプロンプトへスナップショットする。セッション中にディスク上で行われた変更は、新しいセッションが開始されるまで反映されない。
+
+**修正**: Claude Code セッションを再起動する（閉じて開き直す、または `claude -p` サブプロセスの場合は次回起動時に更新済みファイルが読み込まれる）。セッション内でのホットリロードコマンドは存在しない。
+
+詳細と reload トリガーの一覧表は `docs/reports/skill-loader-cache-behavior.md`（Issue #673 の調査結果）を参照。
+
 ## さらに助けが必要なとき
 
 - [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues) で issue を開く

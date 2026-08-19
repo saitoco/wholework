@@ -4,56 +4,68 @@
 
 Wholework 向けにプロジェクト固有の capability adapter を作成するためのステップバイステップガイド。
 
-本ガイドは **自己完結型** です。Claude Code はこのファイルだけを読んで新しい adapter を作成できます。Wholework のソースリポジトリへのアクセスは不要です。
+このガイドは **自己完結型** — Claude Code はこのファイルだけを読めば新しい adapter を作成できる。
+Wholework のソースリポジトリへのアクセスは不要。
 
 ## 概要
 
-Wholework の adapter パターンは、プロジェクト固有の capability — MCP server、CLI ツール、外部サービス — を Wholework のワークフロー（`/issue`、`/code`、`/verify`）へ統合するための仕組みです。
+Wholework の adapter パターンを使うと、プロジェクト固有の capability — MCP サーバー、
+CLI ツール、外部サービス — を Wholework のワークフロー (`/issue`、`/code`、`/verify`) に統合できる。
 
-Adapter は統一された contract に従う Markdown ファイルです。Wholework は 3 層の優先順位で adapter を解決するため、Wholework plugin 本体を変更せずにプロジェクト固有の振る舞いを追加できます。
+adapter は統一された contract に従う Markdown ファイル。Wholework は 3 層の優先順位で
+adapter を解決するため、Wholework プラグイン自体を変更することなくプロジェクト固有の挙動を追加できる。
 
 ---
 
-## 前提
+## 前提条件
 
-### `.wholework.yml` で capabilities を宣言
+### `.wholework.yml` で capability を宣言する
 
-プロジェクトルートに `.wholework.yml` を置き、利用可能な capability を宣言します。
+プロジェクトルートに `.wholework.yml` を配置し、利用可能な capability を宣言する。
 
 ```yaml
 # .wholework.yml
 capabilities:
   browser: true               # ブラウザベースの検証が利用可能
-  mcp:                        # このプロジェクトセッションで利用可能な MCP ツール
+  mcp:                        # このプロジェクトで利用可能な MCP ツール
     - my_service_list_items
     - my_service_create_item
 ```
 
-**`capabilities.browser`** — browser 自動化ツール（`browser-use` CLI または Playwright MCP）が利用可能な場合に `true` を設定。`browser_check` / `browser_screenshot` verify command の実行に必要です。
+**`capabilities.browser`** — ブラウザ自動操作ツール (`browser-use` CLI または Playwright MCP) が
+利用可能な場合に `true` を設定する。`browser_check` / `browser_screenshot` の verify command を
+実行するために必要。
 
-**`capabilities.mcp`** — このプロジェクトセッションで利用可能な MCP ツール名のリスト。`mcp_call` verify command に必要です。Wholework は宣言済みリストを使って `/issue` で `mcp_call` 受入条件を提案し、`/verify` で実行します。
+**`capabilities.mcp`** — このプロジェクトセッションで利用可能な MCP ツール名のリスト。
+`mcp_call` の verify command に必要。Wholework は宣言済みリストを使って `/issue` で
+`mcp_call` の acceptance condition を提案し、`/verify` でそれを実行する。
 
-> `.wholework.yml` が存在しない、または capability が宣言されていない場合、Wholework は動的検出（ToolSearch / `command -v`）にフォールバックします。明示宣言はセッション状態に依存しない再現可能な挙動を提供します。
+> `.wholework.yml` が存在しない、または capability が宣言されていない場合、
+> Wholework は動的検出 (ToolSearch / `command -v`) にフォールバックする。
+> 明示的な宣言により、セッション状態によらず再現可能な挙動が得られる。
 
 ---
 
 ## Adapter 解決
 
-Wholework は **3 層の優先順位** で adapter を解決します:
+Wholework は **3 層の優先順位** で adapter を解決する:
 
-| 優先度 | レイヤ | パス |
+| 優先度 | 層 | パス |
 |----------|-------|------|
-| 1 | プロジェクトローカル | `.wholework/adapters/{capability}-adapter.md` |
-| 2 | ユーザーグローバル | `~/.wholework/adapters/{capability}-adapter.md` |
-| 3 | バンドルデフォルト | `${CLAUDE_PLUGIN_ROOT}/modules/{capability}-adapter.md` |
+| 1 | Project-local | `.wholework/adapters/{capability}-adapter.md` |
+| 2 | User-global | `~/.wholework/adapters/{capability}-adapter.md` |
+| 3 | Bundled default | `${CLAUDE_PLUGIN_ROOT}/modules/{capability}-adapter.md` |
 
-Wholework はこの順序で検索し、**最初に見つかったファイル** を使います。
+Wholework はこの順序で検索し、**最初に見つかったファイル** を使用する。
 
-- **プロジェクトローカル**（`.wholework/adapters/`） — プロジェクト単位のオーバーライド。プロジェクトリポジトリに commit する。MCP server やプロジェクト固有の CLI ツールに使う
-- **ユーザーグローバル**（`~/.wholework/adapters/`） — ユーザーの全プロジェクトに適用。個人の CLI 設定に使う
-- **バンドルデフォルト** — Wholework に同梱。`browser` と `lighthouse` を out-of-the-box でカバー
+- **Project-local** (`.wholework/adapters/`) — プロジェクトごとの上書き。プロジェクトリポジトリに
+  コミットされる。MCP サーバーやプロジェクト固有の CLI ツールに使う。
+- **User-global** (`~/.wholework/adapters/`) — ユーザーの全プロジェクトに適用される。
+  個人的な CLI の好みに使う。
+- **Bundled default** — Wholework に同梱される。`browser` と `lighthouse` を標準で
+  カバーする。
 
-新しい capability を追加するには、プロジェクトローカルのパスに adapter ファイルを作成します:
+新しい capability を追加するには、project-local パスに adapter ファイルを作成する:
 
 ```
 .wholework/
@@ -65,9 +77,10 @@ Wholework はこの順序で検索し、**最初に見つかったファイル**
 
 ## Adapter Contract テンプレート
 
-すべての adapter はこの contract に従わなければなりません。以下のテンプレートをコピーし、capability 固有の詳細を埋めてください。
+すべての adapter はこの contract に従う必要がある。以下のテンプレートをコピーし、
+capability 固有の詳細を記入する。
 
-テンプレートには 3 つの必須セクションがすべて含まれます:
+テンプレートには必須の 3 セクションがすべて含まれる:
 **Detection**、**Tool-specific Execution**、**Return Result**。
 
 ```markdown
@@ -75,79 +88,81 @@ Wholework はこの順序で検索し、**最初に見つかったファイル**
 
 ## Purpose
 
-{この adapter が何をするか、どの capability を提供するかの説明}
+{Description of what this adapter does and what capability it provides}
 
 Caller: `modules/verify-executor.md` (via `modules/adapter-resolver.md`)
 
 ## Input
 
-呼び出し側は以下を提供します:
+The caller provides the following:
 
-- **Command type**: {サポートする verify command のリスト、例: `my_service_list`}
-- **Arguments**: {コマンドごとの引数}
+- **Command type**: {list of supported verify commands, e.g., `my_service_list`}
+- **Arguments**: {arguments per command}
 
 ## Processing Steps
 
 ### Step 1: Tool Detection
 
-以下の優先順位で利用可能なツールを検出します。最初に見つかったツールを使います。
+Detect available tools in the following priority order. Use the first tool found.
 
-| 優先度 | ツール | 検出方法 |
+| Priority | Tool | Detection Method |
 |----------|------|-----------------|
-| 1 | {Tool A} | Bash で `command -v tool-a` を実行、exit code が 0 なら検出 |
-| 2 | {MCP tool} | ToolSearch `select:{mcp_tool_name}` で検出、利用可能なら検出 |
-| 3 | 未検出 | 上記のいずれも利用不可 |
+| 1 | {Tool A} | Run `command -v tool-a` in Bash; detected if exit code is 0 |
+| 2 | {MCP tool} | Use ToolSearch with `select:{mcp_tool_name}`; detected if available |
+| 3 | Not detected | None of the above available |
 
-**未検出の場合**: 詳細説明とともに UNCERTAIN を返す。
+**When not detected**: Return UNCERTAIN with a detailed explanation.
 
 ### Step 2: Tool-specific Execution
 
-検出したツールに応じて実行します。
+Execute according to the detected tool.
 
 #### {Tool A}
 
-**`{command_type}` の実行手順:**
+**Execution steps for `{command_type}`:**
 
-1. 初期化または認証ステップを実行
-2. 提供された引数でツールを呼び出す
-3. 出力を検査し PASS / FAIL / UNCERTAIN を判定
+1. Run the initialization or authentication step
+2. Invoke the tool with the provided arguments
+3. Inspect the output and determine PASS / FAIL / UNCERTAIN
 
 #### {MCP tool}
 
-**`{command_type}` の実行手順:**
+**Execution steps for `{command_type}`:**
 
-1. 提供された引数で `{mcp_tool_name}` を呼び出す
-2. レスポンスを検査し PASS / FAIL / UNCERTAIN を判定
+1. Call `{mcp_tool_name}` with the provided arguments
+2. Inspect the response and determine PASS / FAIL / UNCERTAIN
 
 ### Step 3: Return Result
 
-結果を以下のいずれかで返します:
+Return the result as one of:
 
-- **PASS**: 検証条件を満たした
-- **FAIL**: 検証条件を満たさなかった（詳細な理由を含める）
-- **UNCERTAIN**: 自動判定不可（ツール未発見、実行エラー、など）
+- **PASS**: Verification condition satisfied
+- **FAIL**: Verification condition not satisfied (include detailed reason)
+- **UNCERTAIN**: Cannot determine automatically (tool not found, execution error, etc.)
 
 ## Output
 
 - **Result**: PASS / FAIL / UNCERTAIN
-- **Detail**: 検証結果の説明
+- **Detail**: Description of the verification result
 
 ## Reference Marker
 
-このファイルを Read した呼び出し側は最終出力に以下のマーカーを含めなければなりません:
+The caller that has Read this file must include the following marker in its final output:
 
 `[ref:{capability}-adapter:{random-4-char-alphanum}]`
 ```
 
 ---
 
-## ワークフロー統合例
+## ワークフロー統合の例
 
-本セクションでは MCP ベースの invoice サービスを具体例に、`mcp_call` verify command を使う受入条件の設計方法を示します。
+このセクションでは、MCP ベースの請求書サービスを具体例として使い、`mcp_call` verify command
+を使う acceptance criteria の設計方法を示す。
 
 ### シナリオ
 
-あるプロジェクトが `invoice_list` と `invoice_create` というツールを持つ invoice MCP server を統合します。`.wholework.yml` は以下を宣言します:
+あるプロジェクトが `invoice_list` と `invoice_create` ツールを持つ invoice MCP サーバーを
+統合している。`.wholework.yml` は以下を宣言する:
 
 ```yaml
 capabilities:
@@ -156,21 +171,22 @@ capabilities:
     - invoice_create
 ```
 
-### Issue 本文の受入条件
+### Issue 本文の acceptance criteria
 
-`/issue` は宣言された MCP ツールを検出すると、受入条件セクションに `mcp_call` 条件を提案します。例:
+`/issue` が宣言済みの MCP ツールを検出すると、acceptance criteria セクションに
+`mcp_call` の条件を提案する。例:
 
 ```markdown
 ## Acceptance Criteria
 
 ### Pre-merge (auto-verified)
 
-- [ ] <!-- verify: mcp_call "invoice_list" {} "items" --> `invoice_list` が `items` フィールドを含むリストを返す
-- [ ] <!-- verify: file_exists "src/invoice-handler.ts" --> Invoice handler モジュールが作成されている
+- [ ] <!-- verify: mcp_call "invoice_list" {} "items" --> `invoice_list` returns a list with an `items` field
+- [ ] <!-- verify: file_exists "src/invoice-handler.ts" --> Invoice handler module is created
 
 ### Post-merge
 
-- [ ] <!-- verify: mcp_call "invoice_create" {"title": "Test"} "id" --> `invoice_create` が `id` フィールドを含むレスポンスを返す
+- [ ] <!-- verify: mcp_call "invoice_create" {"title": "Test"} "id" --> `invoice_create` returns a response with an `id` field
 ```
 
 **`mcp_call` の構文:**
@@ -179,29 +195,30 @@ mcp_call "{tool_name}" {json_args} "{expected_field_or_string}"
 ```
 
 - `tool_name` — `.wholework.yml` で宣言された MCP ツール名
-- `json_args` — ツールに渡す JSON オブジェクト（引数なしは `{}`）
-- `expected_field_or_string` — レスポンスに現れるべきフィールド名または文字列
+- `json_args` — ツールに渡す JSON オブジェクト (引数なしの場合は `{}`)
+- `expected_field_or_string` — レスポンスに含まれるべきフィールド名または文字列
 
 ### Adapter の作成
 
-`/verify` がこれらの条件を実行できるようにするため、プロジェクトローカル adapter を作成します:
+`/verify` がこれらの条件を実行できるようにするには、project-local adapter を作成する:
 
 **`.wholework/adapters/invoice-adapter.md`** — 上記の contract テンプレートに従う。
 
-Step 1（Tool Detection）では ToolSearch で MCP ツールを確認します:
+Step 1 (Tool Detection) では、ToolSearch 経由で MCP ツールを確認する:
 ```markdown
-| 1 | invoice MCP | ToolSearch `select:invoice_list,invoice_create`、両方とも利用可能なら検出 |
+| 1 | invoice MCP | ToolSearch `select:invoice_list,invoice_create`; detected if both are available |
 ```
 
-Step 2（Execution）では `mcp_call "invoice_list" {} "items"` を以下に変換します:
-- `invoice_list` MCP ツールを `{}` で呼び出す
-- レスポンスに `items` フィールドがあれば PASS、なければ FAIL
+Step 2 (Execution) では、`mcp_call "invoice_list" {} "items"` を以下のように変換する:
+- `{}` を引数に `invoice_list` MCP ツールを呼び出す
+- レスポンスの `items` フィールドを確認 → 存在すれば PASS、なければ FAIL
 
 ---
 
 ## Claude Code プロンプトテンプレート
 
-以下のプロンプトを使って Claude Code にプロジェクト向けの adapter 作成を依頼できます。プレースホルダを置換して Claude Code に貼り付けてください。
+以下のプロンプトを使って、Claude Code にプロジェクト向けの adapter 作成を依頼する。
+プレースホルダーを置き換えて、プロンプトを Claude Code に貼り付ける。
 
 ### プロンプト
 
@@ -229,7 +246,7 @@ After creating the adapter, show me an example acceptance condition I can add
 to an Issue for pre-merge verification.
 ```
 
-### 埋めた例（invoice MCP server）
+### 記入済みの例 (invoice MCP サーバー)
 
 ```
 Please create a Wholework adapter for the invoice service in this project.
@@ -259,9 +276,16 @@ to an Issue for pre-merge verification.
 
 ---
 
-## さらに深く読む
+## 参考資料
 
-以下のドキュメントは adapter パターンと環境適応アーキテクチャの背景をより深く説明します。adapter 作成に **必須ではありません** — 本ガイドは自己完結型です — が、内部構造を理解したい、あるいはバンドル adapter を拡張したい場合に役立ちます。
+以下のドキュメントは、adapter パターンと環境適応アーキテクチャの背景をより深く理解するための
+資料。adapter を作成するために **必須ではない** — このガイドは自己完結型 — が、
+内部構造を理解したい場合や、同梱の adapter を拡張したい場合に有用。
 
-- **`docs/environment-adaptation.md`**（Wholework リポジトリ） — 4 層環境適応アーキテクチャ（Declaration → Detection → Disclosure → Execution）の完全な説明。`detect-config-markers.md`、`--when` 修飾子、レイヤ間関係図を扱う
-- **`modules/browser-adapter.md`**（Wholework リポジトリ） — バンドル adapter のリファレンス実装。マルチツール検出（browser-use CLI vs Playwright MCP）、コマンド変換表、Basic 認証処理、セキュリティ制約を示す。自前の adapter を書く際の具体例として使う
+- **`docs/environment-adaptation.md`** (Wholework repo) — 4 層の環境適応アーキテクチャ
+  (Declaration → Detection → Disclosure → Execution) の完全な説明。`detect-config-markers.md`、
+  `--when` モディファイア、層間の関係図をカバーする。
+
+- **`modules/browser-adapter.md`** (Wholework repo) — 同梱 adapter のリファレンス実装。
+  マルチツール検出 (browser-use CLI vs. Playwright MCP)、コマンド変換テーブル、
+  Basic 認証の扱い、セキュリティ制約を示す。自分の adapter を書く際の具体例として利用できる。

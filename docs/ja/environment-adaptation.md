@@ -23,6 +23,7 @@ copilot-review: true          # GitHub Copilot review 連携
 coderabbit-review: true       # CodeRabbit AI review 連携
 opportunistic-verify: true    # Opportunistic 検証（マージ後条件の自動実行）
 skill-proposals: true         # スキル提案機能
+permission-mode: auto         # /auto サブプロセスの permission mode（デフォルト: auto、legacy は bypass）
 spec-path: custom/specs       # Spec ファイル保存先（デフォルト: docs/spec）
 steering-docs-path: custom/docs  # Steering Documents ディレクトリ（デフォルト: docs）
 capabilities:
@@ -72,9 +73,12 @@ SKILL.md のコアを軽量に保ち、環境依存のロジック（Domain）�
 
 | パターン | 条件チェック | 例 |
 |---------|----------------|---------|
-| Marker 検出 | `.wholework.yml` の値 | `external-review-phase.md`（`copilot-review: true` で Read） |
-| ファイル存在 | 特定ファイルの存在 | `skill-dev-recheck.md`（`validate-skill-syntax.py` があれば Read） |
-| ディレクトリスキャン | `.wholework/domains/{skill}/` を Glob | プロジェクトローカル domain ファイル（存在すればロード） |
+| Marker 検出 | `.wholework.yml` の YAML key | `review/external-review-phase.md`（`copilot-review: true`、`claude-code-review: true`、または `coderabbit-review: true` で Read） |
+| ファイル存在 | 特定ファイルの存在 | `review/skill-dev-recheck.md`（`scripts/validate-skill-syntax.py` が存在すれば Read） |
+| MCP 可用性 | Claude Code セッション内での MCP ツール存在 | `spec/figma-design-phase.md`（Figma MCP ツールが ToolSearch でロードされていれば Read） |
+| 深度ルーティング | スキル起動モード（`--full` / `--light`） | `spec/codebase-search.md`（`--full` モードで Read、`--light` ではスキップ） |
+| Capability フラグ | `.wholework.yml` の `capabilities.{name}: true` | `verify/browser-verify-phase.md`（`HAS_BROWSER_CAPABILITY=true` で Read） |
+| ディレクトリスキャン | `.wholework/domains/{skill}/` を Glob | プロジェクトローカル domain ファイル（存在すれば無条件でロード） |
 
 ### Domain 用語定義
 

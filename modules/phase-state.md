@@ -5,6 +5,8 @@ ssot_for:
   - reconcile-json-schema
 ---
 
+English | [日本語](../docs/ja/phase-state.md)
+
 # phase-state
 
 SSoT module for phase-level state definitions used by `scripts/reconcile-phase-state.sh` and `/auto` SKILL.md.

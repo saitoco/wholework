@@ -25,6 +25,7 @@ Wholework の事前経験は不要です。
 | [Adapter 執筆ガイド](adapter-guide.md) | MCP サーバー、CLI ツール、外部サービス向けのプロジェクト固有 adapter を作成 |
 | [Figma ベストプラクティス](figma-best-practices.md) | AI コード生成精度を最大化する Figma デザインファイルの作成方法 |
 | [スクリプトガイド](scripting.md) | シェルスクリプトの規約: jq の `// empty` ガード、エラー処理 |
+| [自律性](autonomy.md) | skill がどこまで follow-on ループを発火し GitHub 状態を書き込めるかを決める autonomy tier (L1/L2/L3) を選択 |
 
 ## 用語
 

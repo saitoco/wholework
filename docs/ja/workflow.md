@@ -101,7 +101,7 @@ squash merge を実行してリモートブランチを削除します。コン�
 
 Core Phases を順次連鎖させるオーケストレーター。各フェーズは独立した `claude -p` プロセスとして実行され、コンテキスト分離を保証します。デフォルトは `--permission-mode auto` を使用。`.wholework.yml` に `permission-mode: bypass` を設定すると `--dangerously-skip-permissions` を使用します（詳細: [SECURITY.md](../../SECURITY.md)）。`/auto 123 [--patch|--pr] [--review=full|--review=light] [--stop-at=<phase>]` で Size ベースのルーティングを含む E2E ワークフローを駆動します:
 
-`.wholework.yml` による pipeline 制御: `always-pr: true` を設定すると Size に関わらず全 Issue を PR route で実行します。`auto-stop-at: <phase>` を設定すると指定フェーズで `/auto` を停止します（有効値: `spec`、`code`、`review`、`merge`、`verify`）。例: `auto-stop-at: review` は review フェーズ後に停止し、手動でマージ判断が必要な website 系プロジェクトに適しています。`--stop-at=<phase>` フラグを使うと `.wholework.yml` の設定を一時的に上書きできます。
+**`.wholework.yml` による pipeline 制御**: `always-pr: true` を設定すると Size に関わらず全 Issue を PR route で実行します。`auto-stop-at: <phase>` を設定すると指定フェーズ（`spec`、`code`、`review`、`merge`、`verify` のいずれか。デフォルトは `verify`）の後でパイプラインを停止します。website 系プロジェクトで auto-merge を防ぐには `auto-stop-at: review` を使用してください。呼び出しごとの上書きは `--stop-at=<phase>` で行えます。両キーは `autonomy:` tier とは独立しています。詳細: [docs/ja/guide/customization.md](guide/customization.md#website-project-recommended-settings)
 
 - **patch XS/S**: spec（必要時）→ code → verify
 - **pr M/L**: spec（必要時）→ code → review（M → `--light`、L → `--full`）→ merge → verify
@@ -158,7 +158,7 @@ Issue に Type（`bug`/`feature`/`task`）、Size（XS–XL）、Priority を付
 
 ### `/doc` — 基盤ドキュメント管理
 
-プロジェクトの基盤情報を `docs/` で保守します。各ドキュメントは YAML フロントマターの `type` フィールドで種別を定義します（Steering Documents は `type: steering`、運用ドキュメントは `type: project`）。`/doc sync` は `type: steering` と `type: project` のドキュメントを識別し、すべてを正規化します。`workflow.md`（`type: project`）もその対象です。各 Skill は条件付きでこれらのドキュメントを参照し、存在しない場合はスキップします（後方互換性）。`/doc sync --deep` はコードベース分析（エントリーポイント、依存グラフ、テストファイル、コメント/docstring）と既存 .md ファイルの統合スキャン（4 パターン分類、吸収対象判定）、構造的アンチパターン検出（SSoT 逆方向参照、ポインタのみセクション、Skill Coverage Gap）を含む拡張逆生成オプションを実行します。`/doc init --deep` と `/doc {doc} --deep` は新規作成時に同等のインライン分析を行い、質問フローを介さずにドラフトを自動生成します。`/doc translate {lang}` は英語ドキュメント（README.md、Steering Documents、Project Documents）の翻訳を指定言語（BCP 47 / ISO 639-1 言語コード。例: `ja`、`ko`、`zh-cn`）で `docs/{lang}/` および `README.{lang}.md` に生成し、自動でコミット・プッシュします。詳細: [`skills/doc/SKILL.md`](../../skills/doc/SKILL.md)
+`docs/` 配下でプロジェクトの基盤情報を保守します。各ドキュメントは YAML frontmatter の `type` フィールドで役割を宣言します（Steering Documents は `type: steering`、運用ドキュメントは `type: project`）。`/doc sync` は両方の種別を識別し正規化します。`/doc sync --deep` はコードベース分析（エントリーポイント、依存グラフ、テストファイル、コメント/docstring）に加え、既存 .md ファイルの統合スキャン（4 パターン分類、吸収対象判定）、narrative semantic drift 検出（Missing coverage、Partial description、Obsolete mention、Skill Coverage Gap）、構造的アンチパターン検出（SSoT Reverse Reference、Pointer-only Section）を追加します。`/doc init --deep` と `/doc {doc} --deep` は新規ファイルに対して同等のインライン分析を行い、質問フローなしでドラフトを自動生成します。`/doc translate {lang}` は英語ドキュメント（README.md、Steering Documents、Project Documents）の翻訳を `docs/{lang}/` と `README.{lang}.md` に生成し、自動でコミット・プッシュします。詳細: [`skills/doc/SKILL.md`](../../skills/doc/SKILL.md)
 
 **翻訳同期**: `docs/*.md` と `docs/guide/*.md` は `docs/ja/` 配下に 1:1 の対応ファイル（`docs/ja/*.md` および `docs/ja/guide/*.md`）を持ちます。どのファイルが非同期かを確認するには次のコマンドを実行してください:
 
