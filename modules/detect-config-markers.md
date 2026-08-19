@@ -87,7 +87,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `review-bug` has inverse mapping: `review-bug: false` → `SKIP_REVIEW_BUG=true` (skip bug detection), `review-bug: true` → `SKIP_REVIEW_BUG=false` (bug detection enabled)
 - `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
 - `production-url` is treated as URL string with quotes removed
-- `preview-url-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Because `scripts/get-config-value.sh` strips everything from an inline ` #` onward, the command string must not contain a space followed by `#`
+- `preview-url-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Because `scripts/get-config-value.sh` strips everything from an inline ` #` onward, the command string must not contain a space followed by `#`. Currently consumed only by `scripts/run-review.sh` (bash wrapper) via `get-config-value.sh`; no skill reads `PREVIEW_URL_COMMAND` directly — see `docs/guide/customization.md` § "Resolving `PREVIEW_URL`" for coverage scope
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
