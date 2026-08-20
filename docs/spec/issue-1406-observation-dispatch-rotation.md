@@ -41,6 +41,8 @@
 
 4. `modules/observation-trigger.md` を編集する (after 3) (→ AC1)。`## scripts/observation-trigger.sh` § "**Who invokes `/verify`**" § "**`/auto` dispatch cap (#952)**" サブ箇条書き内の "`observation-trigger.sh`'s stdout is already ascending-sorted by Issue number (`sort -un`), so the cap naturally prioritizes the longest-waiting Issue first." の一文を、`scripts/rotate-observation-dispatch.sh` によるカーソルベースのラウンドロビン回転 (`.tmp/observation-dispatch-cursor` に最後に dispatch した Issue 番号を永続化し、次回はその続きから候補を回転させる) の説明に更新する。同箇条書き内の他の記述 (全 matched Issue への通知コメント投稿は cap に関係なく行われる、deferred Issue は次回 `auto-run` イベントで再マッチする) はそのまま維持する。
 
+5. `docs/structure.md` および対訳ミラー `docs/ja/structure.md` を編集する (after 1) (→ `docs/structure.md` 自身の Maintenance rule 準拠、実装フェーズで追加判明)。`scripts/rotate-observation-dispatch.sh` の新規追加により `scripts/`/`tests/` のファイル数コメントを更新 (89→90 files / 125→126 files) し、Key Files > Scripts の一覧に新規スクリプトの説明行を追記する。
+
 ## Verification
 
 ### Pre-merge
@@ -71,8 +73,65 @@ Issue 本文は3つの想定アプローチ (N 回連続 SKIPPED/UNCERTAIN で�
 
 `observation-dispatch-threshold` の Available Keys 行は cap の件数上限のみを説明しており選出順序には言及していないため、本 Issue の変更 (選出順序の変更) では更新不要と判断した (grep で確認済み)。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `## Changed Files` には含まれていないが、`docs/structure.md` の Maintenance rule (「`modules/`/`scripts/` 配下にファイルを追加/削除/リネームした場合は同じ変更でこのセクションの表・リストを更新すること」) に従い、`docs/structure.md`（`scripts/`/`tests/` ファイル数コメント更新 + Key Files 一覧への `rotate-observation-dispatch.sh` 追記）と、その `docs/ja/` 対訳ミラー (`docs/translation-workflow.md` の同期義務) を追加で更新した。Spec の Notes には記載がなかったが、既存の SSoT ドキュメントメンテナンスルールの直接適用であり、設計判断の変更ではない。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Implementation Steps は具体的で、実装は手順どおりに進んだ。
+
+### Rework
+
+- N/A — 新規テストは実装前に FAIL することを確認済みで、実装後は初回実行で全件 PASS した。手戻りは発生していない。
+
+### Notes
+
+- `scripts/check-forbidden-expressions.sh` の非推奨用語チェックが `skills/auto/SKILL.md` の追記文言中の大文字始まりの "Dispatch"（文頭語としての通常語）に誤反応した。これは `/auto` の旧称という固有名詞としての用語 (docs/product.md § Terms 参照) との文字列一致によるもので、文を「Then dispatch ...」と書き換えて回避した。今後同様の追記をする際、文頭に大文字の "Dispatch" を置く言い回しは避けるとよい。
+
 ## Consumed Comments
 
 | login | authorAssociation | trust tier | 意図 | URL |
 |-------|-------------------|-----------|------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Pre-merge AC1 の常時 PASS パターン (grep ベース AC) を rubric AC へ統合したことの記録。新規の曖昧点なし、`/spec` へ委任した実装方式選定の方針を確認 | https://github.com/saitoco/wholework/issues/1406#issuecomment-5359151015 |
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — 実装は Spec の Implementation Steps 1〜4 と完全に一致していた。Spec に含まれていなかった `docs/structure.md`/`docs/ja/structure.md` の追加変更 (Implementation Step 5) も、実装フェーズで Spec に事後追記済みで、Code Retrospective に記録された正当な Maintenance rule 適用であり、構造的な乖離ではなかった。
+
+### Recurring issues
+
+- 新規スクリプト `scripts/rotate-observation-dispatch.sh` の Parser/Validator Edge Case Pre-check (外部入力を正規表現で検証・正規化するスクリプトが該当) が発火し、実際にスクリプトを実行する専用エージェントと `review-light` エージェントの両方が、それぞれ独立に類似のパターン (境界値/異常な引数を渡した際、意図した単一のエラーメッセージ経路を通らず生の shell/coreutils 内部エラーが stderr に漏れる) を検出した。1件は `--threshold` に極端に大きい値を渡した場合 (bash の符号付き64bit整数比較の限界)、もう1件は `--cursor-file` に既存ディレクトリを渡した場合 (リダイレクト自体のシェルレベル失敗が `2>/dev/null` で抑制されない) で、いずれも「fail-open/hard-error の契約は守られているが、契約が約束する『単一のメッセージ』という粒度では守られていない」という共通パターンだった。両方とも Step 12 で修正済み (`^[0-9]{1,15}$` による桁数上限、`if` 条件全体を `{ ... } 2>/dev/null` でラップ)。今後、外部入力を検証する新規スクリプトを書く際は、値の型 (正規表現) だけでなく実行時の数値範囲・パス種別 (ディレクトリ vs ファイル) も含めて、意図したエラーメッセージ経路から外れないかを実行して確認するとよい。
+
+### Acceptance criteria verification difficulty
+
+- N/A — Pre-merge AC は rubric 1件のみで、Issue 本文と git diff から明確に判定可能だった。UNCERTAIN や verify command の不備は発生しなかった。`tests/rotate-observation-dispatch.bats` の 8ケース PASS が客観的な補強証跡として機能した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 12 で SHOULD 指摘2件 (`scripts/rotate-observation-dispatch.sh` の `--threshold` 極端値処理、`--cursor-file` ディレクトリ指定時の stderr リーク) を修正。いずれも fail-open/hard-error の実質的な安全性には影響しない stderr/エラーメッセージの整形の問題だったため、MUST 昇格せず SHOULD のまま修正して完了させた。
+- Parser/Validator Edge Case Pre-check (新規スクリプトが外部入力を正規表現で検証するため発火) を実行し、専用サブエージェントによる実行ベースの edge case 検証と `review-light` の Perspective 2 の両方から独立に類似の指摘を得た。
+
+### Deferred Items
+- Post-merge AC (`/auto --batch` で #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認) は opportunistic 検証のまま、`/merge` 以降の運用サイクルに委ねる。
+
+### Notes for Next Phase
+- Pre-merge AC (rubric) は PASS 判定・チェック済み。post-merge AC は未チェックのまま (意図通り)。
+- `/merge` 実行前提: CI 全11ジョブ SUCCESS、MUST issue なし (review event は COMMENTED)。修正コミット (`28e7dcb4`) は fix-cycle 後も bats 8/8 PASS・validate-skill-syntax 0 error を確認済み。
+
+### Key Decisions
+- Spec の指定どおりラウンドロビン方式を実装。カーソルは `.tmp/observation-dispatch-cursor`（グローバル・非ロック・fail-open）に永続化し、`scripts/rotate-observation-dispatch.sh` が回転 + cap 適用 + カーソル書き込みを一手に担う設計とした。
+- `skills/auto/SKILL.md` の single-issue route と batch route の両方を、同一の置き換えパターン（`FILTERED_MATCHES` → `rotate-observation-dispatch.sh` → `DISPATCH_SET`）で更新し、ルート間の記述の非対称を避けた。
+
+### Deferred Items
+- Post-merge AC（次回 `/auto --batch` 実行時に #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認）は opportunistic 検証のため、実際の `/auto --batch` 運用サイクルでの自然な確認を待つ。
+
+### Notes for Next Phase
+- Pre-merge AC（rubric）はチェック済み。post-merge AC は未チェックのまま残っている（意図通り、opportunistic 検証待ち）。
+- `docs/structure.md`/`docs/ja/structure.md` のファイル数コメント更新は Spec の Changed Files に含まれていなかった追加変更（Implementation Step 5 として Spec に事後追記済み）。今後同種の変更（scripts/ 配下への新規ファイル追加）を伴う Issue では、`docs/structure.md` の Maintenance rule 適用を Changed Files の段階で織り込むと手戻りが減る。

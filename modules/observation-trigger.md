@@ -146,8 +146,15 @@ responsibility:
     scan steps additionally cap active dispatch to the first `OBSERVATION_DISPATCH_THRESHOLD`
     matched numbers per run (`observation-dispatch-threshold` in `.wholework.yml`, default `5`;
     see `modules/detect-config-markers.md`). `observation-trigger.sh`'s stdout is already
-    ascending-sorted by Issue number (`sort -un`), so the cap naturally prioritizes the
-    longest-waiting Issue first. Numbers beyond the cap are not lost: the notification comment
+    ascending-sorted by Issue number (`sort -un`), but before the cap is applied,
+    `scripts/rotate-observation-dispatch.sh` (#1406) rotates that list against a persisted
+    cursor — the last Issue number dispatched — stored in `.tmp/observation-dispatch-cursor`:
+    candidates greater than the cursor come first (ascending), followed by candidates at or
+    below the cursor (ascending), wrapping back to the head of the ascending list once the
+    cursor reaches the largest candidate. This keeps a fixed handful of chronically-stalled
+    Issues (whose premise never changes between dispatches) from permanently occupying every
+    cap slot — each dispatch cycle continues from where the previous one left off instead of
+    always starting from the oldest-pending Issue. Numbers beyond the cap are not lost: the notification comment
     above is posted to every matched Issue regardless of the cap (subject to the idempotency
     guard described above — see "Idempotency guard marker format"), and because
     `opportunistic-search.sh` re-scans all unchecked `event=auto-run` observation ACs on every

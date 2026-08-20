@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (89 files)
+├── scripts/             # Utility scripts used by skills and agents (90 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (125 files)
+├── tests/               # Bats test files for scripts (126 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -211,6 +211,7 @@ Key modules:
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run, and prints matched Issue numbers to stdout for caller dispatch
 - `scripts/filter-session-verified-issues.sh` — filter observation scan candidate Issue numbers, excluding Issues with a `phase=verify` event already recorded for the current `/auto` session (fail-open)
+- `scripts/rotate-observation-dispatch.sh` — rotate observation-dispatch candidate Issue numbers against a persisted cursor (last dispatched Issue number) before applying the `OBSERVATION_DISPATCH_THRESHOLD` cap, so chronically-stalled Issues do not permanently occupy every dispatch slot
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
 - `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
 - `scripts/collect-run-facts.sh` — structure a completed `/auto` run's facts (route including the diff-less operate value, run mode, Size, phase outcomes, PR state, anomaly counts, recovery tiers, fact tokens) as JSON from `.tmp/auto-events.jsonl`, for run-fact AC reconciliation (`modules/run-fact-matching.md`)
