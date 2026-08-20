@@ -116,3 +116,10 @@ No new comments since last phase.
 
 #### Improvement Proposals (再評価分)
 - N/A — #1406 が既に同じ構造的問題 (oldest-first dispatch cap による特定 Issue の恒久占有) をカバーしているため、重複起票はしない。本エントリはその実例として #1406 に有用な追加傍証となる。
+
+### 2026-08-21 再々確認 (/auto --batch セッション、#1406 修正後の初回 dispatch)
+
+`#1406` (ラウンドロビン回転方式) がマージされた後の初回 `Event-based observation scan` で本 Issue が dispatch された。DISPATCH_SET は `[731, 732, 736, 737, 755]` — 従来固定されていた `[478, 562, 589, 590, 724]` から外れており、`#1406` の修正が実際に機能して chronically-stalled Issue 群の恒久占有を解消したことを実証する直接的な証跡となった。判定結果自体は前回 (2026-08-20) と同じ SKIPPED を維持 (regression 検出サイクルの新規証跡なし)。
+
+#### Improvement Proposals (再々評価分)
+- N/A — #1406 の効果検証が目的であり、新規の改善提案はない。
