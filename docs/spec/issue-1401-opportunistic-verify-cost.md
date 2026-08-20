@@ -41,3 +41,27 @@ None (repository files)。成果物は Issue #1401 本文自体 (GitHub state、
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: Issue Retrospective — Triage AC 監査コメント (AC1 の rubric が起票時点で常時 PASS してしまう Pattern 2 型問題の指摘) を踏まえ、AC1 (hit rate 定量化) を削除し、AC2 (改善案提示) の rubric text に「本 Issue 本文への追記」という評価対象の明示を追加、Pre-merge/Post-merge のセクション分割と `implementation-type: metadata-only` マーカーを付与した判断根拠を記録。本 Spec 作成時点の Issue 本文には既に反映済みで、追加で取り込むべき新規情報はなし。 / https://github.com/saitoco/wholework/issues/1401#issuecomment-5358812202
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: 直前コメントの `### Consumed Comments` サブセクション記載漏れの追記 (対象: issuecomment-5336448321、Triage AC 監査コメント本体)。本 Spec 作成に新規に影響する情報はなし。 / https://github.com/saitoco/wholework/issues/1401#issuecomment-5358814948
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps を順序どおりに実行した。
+
+### Design Gaps/Ambiguities
+- なし。Spec 作成時点で確認済みの行番号・呼び出し箇所は `/code` 実行時点でも変化がなく、再確認は形式的な裏取りで完了した。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 改善提案は2軸 (フィルタリング精度 / 実行頻度・対象範囲) の両方を Issue 本文に採用した。Spec 作成時点の前提 (行番号・呼び出し箇所) が `/code` 実行時点でも崩れていなかったため。
+- rubric AC の判定は、追記内容が対象ファイルを特定できる具体性を持つことを根拠に PASS とし、チェックボックスを `[x]` に更新した。
+
+### Deferred Items
+- 改善提案自体の実装 (`keyword=` 属性必須化、セッション/バッチ単位の重複排除ゲート追加) は本 Issue のスコープ外。Issue 本文の「### 改善提案」に記載した対象ファイルを参照し、別 Issue での実装を想定。
+
+### Notes for Next Phase
+- 本 Issue は operate route (diff-less) のため、`/verify` の Post-merge AC はなし。Pre-merge の rubric AC は本フェーズで PASS 済み・チェック済み。
