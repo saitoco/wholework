@@ -10,6 +10,21 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: auto-resolved 2 ambiguity points (AC2 verify command を 3 シナリオ別 grep に分割、AC4 `--commit=` 引数削除) — [issue comment](https://github.com/saitoco/wholework/issues/732#issuecomment-4804994158)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/732#issuecomment-4805071721
+- saito / MEMBER / first-class / ## Acceptance Test Results (Re-run) / https://github.com/saitoco/wholework/issues/732#issuecomment-4805238386
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5200981728
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5212260563
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5225314372
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5229258185
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5235400669
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5246554159
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5255741673
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5296376113
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5304271556
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5310544650
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5327720435
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5341227821
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/732#issuecomment-5354364654
 ## Changed Files
 
 - `tests/phase-handoff.bats`: new file — shallow documentation tests for `modules/phase-handoff.md` (bash 3.2+ compatible)
