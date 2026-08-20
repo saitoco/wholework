@@ -104,3 +104,12 @@
 
 ### Improvement Proposals
 - N/A
+
+### 2026-08-21 再確認 (/auto --batch セッション、#1406 修正後の dispatch)
+
+`#1406` (ラウンドロビン回転方式) がマージされた後の `Event-based observation scan` で本 Issue が dispatch された (DISPATCH_SET `[731, 732, 736, 737, 755]`)。Post-merge observation AC (`event=auto-run`) の実質初回評価。
+
+2026-06-25 以降 `modules/phase-handoff.md` を変更した2コミット (#1041, #1374) を調査したが、`tests/phase-handoff.bats` への変更はいずれも新規テストケース追加のみで、既存アサーションが FAIL してから修正で green 化した regression 検出の証跡は見つからず。AC のフォールバック規定に従い SKIPPED を維持。
+
+#### Improvement Proposals (再評価分)
+- N/A
