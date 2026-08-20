@@ -160,3 +160,15 @@
 
 #### Improvement Proposals (再評価分)
 - N/A — 前提未発生の health signal であり、改善提案の閾値には未到達
+
+### 2026-08-20 re-run (5) (/auto 1417 セッションからの再評価)
+
+`/auto 1417` (session `71172-1787214280`) の完了後の event-based observation scan で `event=auto-run` が再度 dispatch された。
+
+#### verify (再評価分)
+
+- 本セッションの Spec (issue #1417, `preview-basic-auth-command` config key追加) を含め repository 全体を grep 横断確認したが該当なし。前提未発生が継続。
+- SKIPPED と判定 (観察対象の前提が本 run でも成立しなかったため)
+
+#### Improvement Proposals (再評価分)
+- N/A — 前提未発生の health signal であり、改善提案の閾値には未到達
