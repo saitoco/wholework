@@ -70,6 +70,33 @@ Steering Docs sync candidate 横断検索 (`grep -rl "orchestration-recoveries.m
 
 ### Step 5 スポットチェックの記録欄 (`/code` が実施後に追記する)
 
-- ローテーション前の `collect-recovery-candidates.sh` 出力: (`/code` フェーズで記録)
-- ローテーション後の `collect-recovery-candidates.sh` 出力: (`/code` フェーズで記録)
-- 差分の説明: (`/code` フェーズで記録)
+- ローテーション前の `collect-recovery-candidates.sh` 出力: 32 group-key、合計 92 エントリを集計 (`code-pr-tier3-recovery: 3`, `manual-recovery-commit-push: 2`, `manual-recovery-push-only: 2`, `manual-recovery-push-and-pr: 2`, `manual-recovery-respawn-skip-code: 2`, `manual-recovery-merge-rerun/pre-merge-ac-command-unverifiable: 2`, `manual-recovery-manual-recovery-review-uncommitted-work/background-notification-wait: 2`, `manual-recovery-review-rerun/ci-infra-outage-during-ci-wait: 2`, その他は 1 件ずつ)
+- ローテーション後の `collect-recovery-candidates.sh` 出力: 21 group-key に減少。カウントが変化したのは `code-pr-tier3-recovery` (3→1)、`manual-recovery-commit-push` (2→1) の 2 件のみ。以下 11 group-key はカウント 0 (集計結果から消滅): `manual-recovery-pr-create`, `manual-recovery-push-only` (bare key。cause-suffix 付きの `manual-recovery-push-only/background-notification-wait` は影響なし), `manual-recovery-push-and-pr`, `manual-recovery-completion-override`, `manual-recovery-respawn-skip-code`, `manual-recovery-skip-forward`, `nested-verify-committed-to-review-worktree`, `Silent no-op when prior Issue's merge already satisfied AC`, `silent-no-op recovered via wrapper-anomaly Tier 2 retry`, `false-positive silent-no-op on patch route`, `watchdog kill before PR creation; recovery sub-agent op unsupported`
+- 差分の説明: カウントが変化した 2 group-key (`code-pr-tier3-recovery`, `manual-recovery-commit-push`) は、いずれも live ファイル側に直近発生分 (それぞれ 1 件) が残存しており、減少分はすべて今回アーカイブされた 58 エントリ (2026-06-03〜2026-07-31 03:08) 側の古い occurrence だった。カウントが 0 になった 11 group-key はいずれも該当 occurrence の全件がアーカイブ範囲に含まれていたケースで、live ファイル側に残る occurrence は無い。未解決 (直近再発が追跡対象) の group-key で live 側のカウントが失われたものはなく、Purpose および受け入れ条件 1 が求める非破壊性を満たすことを確認した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 を Spec の記載順どおりに実施した。ステップの並べ替え・省略・統合は発生していない
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes (Auto-Resolve Log、Steering Docs sync candidate 確認結果) が実装時の判断点を事前に解消しており、実装フェーズで新たに発見された曖昧点はなかった
+
+### Rework
+- 58 エントリのブロック (1183 行) をライブファイルからアーカイブファイルへ逐語移動する際、当初 Bash heredoc/リダイレクトで `.tmp/` に中間ファイルを作成してしまい (グローバル規約「一時ファイルは Write ツールで作成」に反する)、気づいた時点で削除してやり直した。最終的には、1183 行を Edit ツールの `old_string` に手動転記すると transcription drift のリスクがあるため、`git show HEAD:<path> | sed -n '<range>p'` で未コミットの元ファイル (このセッションではまだ何もコミットしていなかったため HEAD に原本が残っていた) からバイト完全に抽出し、`sed -i` でライブファイル側を切り詰める方式に切り替えた。逐語保持が受け入れ条件の前提 (要約しない) である大きなブロック移動では、Edit ツールでの手動転記より `git show` + `sed` による機械的な抽出のほうが安全であるという教訓は今後の同種タスク (アーカイブ/ローテーション実装) に有用
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1〜5 をそのまま実施し、逸脱なし (詳細は Code Retrospective 参照)
+- 58 エントリの逐語移動は Edit ツールでの手動転記ではなく `git show HEAD:<path> | sed -n` + `sed -i` による機械的抽出で実施し、transcription drift リスクを排除した
+- Pre-merge AC (rubric) は実装内容 (Rotation / Archival Policy セクション新設) に照らして PASS と判定し、Issue のチェックボックスを更新済み
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`、次回ローテーション発火時の非破壊性確認) は今回未発火のため未検証のまま。次回ローテーション実施者が Spec Implementation Step 5 と同じ手順 (前後の `collect-recovery-candidates.sh` 出力比較) を再実行することで満たされる
+
+### Notes for Next Phase
+- 本 Issue は patch route (直接 main へコミット) のため PR は作成されない。`/verify` は origin/main 上のコミット `chore: recoveries.md にローテーション/アーカイブ方針を導入 (closes #1408)` を対象に Pre-merge AC を再確認すること
+- テストは `bats --jobs 18 tests/` で全 1887 件 PASS 済み (Behavioral Change Detection により `scripts/collect-recovery-candidates.sh` を参照する他テストファイルの存在からフルスイート実行と判定)
+- `docs/reports/orchestration-recoveries-archive.md` は新規ファイルであり `docs/structure.md` への追記は前例 (`orchestration-fallbacks-archive.md`) に倣い見送っている
