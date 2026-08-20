@@ -17,6 +17,11 @@
 # (written by run-auto-sub.sh --write-manual-recovery --notification). It is not part of the
 # group-key and is inert to the parsing below -- only "- cause:" affects grouping.
 #
+# Note (Issue #1408): entries rotated out to docs/reports/orchestration-recoveries-archive.md
+# once the live file exceeds its rotation trigger (see orchestration-recoveries.md's
+# "Rotation / Archival Policy" section) are outside this script's input and therefore excluded
+# from frequency grouping going forward.
+#
 # Exclusion (Issue #1152): judged per entry, not per group-key, so a resolved symptom
 # and a genuine post-fix recurrence of the same group-key can be told apart.
 #   1. Resolve the group-key's corresponding Issue:
