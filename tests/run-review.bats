@@ -86,7 +86,7 @@ load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
     # Isolate from parent process env (e.g. running inside /code or /auto session)
-    unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID PREVIEW_URL
+    unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID PREVIEW_URL PREVIEW_BASIC_USER PREVIEW_BASIC_PASS
 
     # Mock curl: default responds 200 (only reached when PREVIEW_URL fast path tests override it)
     cat > "$MOCK_DIR/curl" <<'MOCK'
@@ -761,6 +761,323 @@ MOCK
     [[ "$output" == *"Warning: preview-url-command output is not an http(s) URL"* ]] || false
     [[ "$output" == *"Waiting for PR preview deployment"* ]] || false
     [[ "$output" == *"PR preview deployment ready"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: preview-basic-auth-command resolves PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS when both are unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
+    preview-basic-auth-command) echo "echo user1:pass1" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Resolved PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS via preview-basic-auth-command for PR #123"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: exported PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS take precedence over preview-basic-auth-command" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+    export PREVIEW_URL="https://already-exported.example.com"
+    export PREVIEW_BASIC_USER="already-user"
+    export PREVIEW_BASIC_PASS="already-pass"
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<MOCK
+#!/bin/bash
+KEY="\$1"; DEFAULT="\${2:-}"
+case "\$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-basic-auth-command) echo "touch $MOCK_DIR/basic-auth-cmd-executed && echo shouldnot:beused" ;;
+    *) echo "\$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ ! -f "$MOCK_DIR/basic-auth-cmd-executed" ]
+    [[ "$output" != *"Resolved PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS via preview-basic-auth-command"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: preview-basic-auth-command {pr} placeholder is substituted with the PR number" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<MOCK
+#!/bin/bash
+KEY="\$1"; DEFAULT="\${2:-}"
+case "\$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
+    preview-basic-auth-command) echo "echo user-{pr}:pass-{pr} | tee $MOCK_DIR/basic-auth-value.log" ;;
+    *) echo "\$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "user-123:pass-123" "$MOCK_DIR/basic-auth-value.log"
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-basic-auth-command failure (non-zero exit) leaves Basic Auth unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-basic-auth-command) echo "exit 1" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-basic-auth-command exited non-zero"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-basic-auth-command empty output leaves Basic Auth unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-basic-auth-command) echo "true" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-basic-auth-command produced empty output"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-basic-auth-command output without ':' leaves Basic Auth unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-basic-auth-command) echo "echo justausernamewithoutcolon" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-basic-auth-command output is not in username:password format"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "fallback: preview-basic-auth-command output with empty username or password leaves Basic Auth unset" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-basic-auth-command) echo "echo :passwordonly" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: preview-basic-auth-command output is not in username:password format"* ]] || false
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "masking: resolved username/password values never appear in output" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
+    preview-basic-auth-command) echo "echo secretuser:secretpass123" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Resolved PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS via preview-basic-auth-command for PR #123"* ]] || false
+    [[ "$output" != *"secretuser"* ]] || false
+    [[ "$output" != *"secretpass123"* ]] || false
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
 }
 

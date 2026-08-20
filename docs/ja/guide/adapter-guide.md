@@ -58,6 +58,17 @@ adapter と並べて `.wholework/adapters/` 配下に置く (例:
 [`docs/ja/guide/customization.md`](customization.md) の
 「`preview-url-command` による `PREVIEW_URL` 解決の自動化」節を参照。
 
+**`preview-basic-auth-command`** — 上記 `preview-url-command` と同じ仕組みで、
+`PREVIEW_URL` の代わりに `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決する。
+スクリプトは他の adapter と並べて `.wholework/adapters/` 配下に置き、
+`.wholework.yml` で
+`preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"`
+のように宣言する。`preview-url-command` と同様、これは下記の 3 層 Adapter 解決を
+**通らない** — `scripts/run-review.sh` が `bash -c` 経由で呼び出す、設定キーに
+直接宣言されたスクリプトパスである。完全な契約は
+[`docs/ja/guide/customization.md`](customization.md) の
+「`preview-basic-auth-command` による Basic 認証情報解決の自動化」節を参照。
+
 ---
 
 ## Adapter 解決

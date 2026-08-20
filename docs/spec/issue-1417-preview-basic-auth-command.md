@@ -222,3 +222,54 @@ Issue 本文 Background 末尾の 3 件の open question は、Issue Retrospecti
 | Author | Association | Trust tier | Summary | URL |
 |--------|-------------|------------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Background 事実確認 (grep 裏付け済み)、Post-merge AC の `verify-type` タグ修正 (`opportunistic event=review-run` → `manual`、`event=` は `observation` 専用のため)、Background 末尾の曖昧点 3 件は AC 文言に非影響のため Auto-resolution 条件を満たすと判定・現状維持、blocked-by オープンなし、Size M (sub-issue 分割対象外) を記録。 | https://github.com/saitoco/wholework/issues/1417#issuecomment-5353381634 |
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を記載順どおりに実装した。`_resolve_preview_basic_auth_command()` の実装・呼び出し箇所・一時ファイル規約 (`mktemp .tmp/preview-basic-auth-command-output-XXXXXX`) はいずれも Spec の擬似コードと一致する。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Notes 節(設計判断・Fail-safe critical script 該当性・allowed-tools impact chain check)が実装時の疑問をあらかじめ解消済みだった。
+
+### Rework
+
+N/A — 手戻りなし。
+
+### Test Verification Note
+
+新規追加した 7 bats テストのうち 6 件について、実装前コミット (`ff96a0c0~1`) の `scripts/run-review.sh` に対して FAIL することを確認した (`git checkout ff96a0c0~1 -- scripts/run-review.sh` で一時的に実装前状態へ戻し再実行 → 復元)。残り 1 件 (「exported PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS take precedence over preview-basic-auth-command」) は「新機能が呼ばれないこと」を検証するテストのため、実装前状態でも意味的に PASS するのが正しい挙動であり、FAIL しないことを確認した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — `review-light` エージェントによる Perspective 1 (Spec Deviation) 確認の結果、Implementation Steps 1〜5 は記載順どおりに実装されており、構造的な乖離は検出されなかった。
+
+### Recurring issues
+
+Nothing to note — 同種の指摘が複数発生した形跡はない。今回の唯一の指摘 (Edge Case Execution によるバリデーション漏れ) は `_resolve_preview_url_command()` を模倣する形で実装された新規関数固有のものであり、他ファイルへの波及はなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 7件はすべて grep / file_contains / rubric / github_check のいずれかで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。`preview-url-command` (#1410) と同型の設計だったため、verify command も流用しやすく検証コストは低かった。
+
+### Additional observation (Parser/Validator Edge Case Pre-check)
+
+`_resolve_preview_basic_auth_command()` に対する Edge Case Execution (実行ベースの検証、19 フィクスチャ) で、`:` は含むが username/password の一方または両方が空文字列というケース (`:password` 等) がバリデーションを素通りし、空文字列の資格情報を「解決済み」としてログ・export してしまう CONSIDER 相当の指摘が見つかった。`_resolve_preview_url_command()` 側は正規表現 (`^https?://[^[:space:]/]+`) で非空値を暗黙に要求する形になっていたのに対し、今回の新規関数は「`:` の有無」のみをチェックしており非空性を見落としていた — 同型実装を模倣する際に、模倣元が持つ暗黙の制約 (今回は正規表現による非空性保証) まで含めて引き継げていない典型例。Step 12 でその場で修正 (空オペランドチェック追加 + bats フィクスチャ追加) し、全 58 bats テスト PASS を確認済み。Spec の Implementation Steps に「模倣元の暗黙の入力制約も列挙する」チェック項目があれば、実装フェーズで拾えていた可能性がある。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 10 は `.wholework.yml` の `always-pr`/Size (M) に基づき `REVIEW_DEPTH=light` (1エージェント統合レビュー) で実行した
+- Parser/Validator Edge Case Pre-check の発火条件 (新規関数が外部コマンド出力を解釈・検証する) に該当したため、`_resolve_preview_basic_auth_command()` を対象に実行ベースの Edge Case 検証 (19 フィクスチャ) を実施した
+- 検出した CONSIDER 指摘 (空 username/password が `:` チェックを素通りする) はその場で修正し、bats フィクスチャを追加した (MUST/SHOULD ではなく CONSIDER だが、1行の安全な修正かつ実行ベースで裏付けが取れていたため即時対応を選択)
+
+### Deferred Items
+- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの `/auto` 実行観察) は `verify-type: manual` のため引き続き未チェック — `/verify` フェーズで human follow-up として扱われる
+
+### Notes for Next Phase
+- Pre-merge AC 7件は全て PASS (grep/file_contains/rubric/github_check)。AC7 (bats テスト CI) は `/review` 実行時点で CI 全11ジョブ SUCCESS を確認済み
+- `/review` の Step 12 で 1 件の CONSIDER 修正コミット (`6e4f6a75`) を追加済み — `/merge` 時点で PR の最新コミットに含まれていることを前提としてよい

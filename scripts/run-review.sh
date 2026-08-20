@@ -201,10 +201,81 @@ _resolve_preview_url_command() {
   echo "Resolved PREVIEW_URL via preview-url-command for PR #${PR_NUMBER}" >&2
 }
 
+# Resolve PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS from a project-declared
+# preview-basic-auth-command (Issue #1417), when neither is already
+# exported. Same 30s bounded execution and non-zero-exit/empty-output/
+# 2048-char-length guards as _resolve_preview_url_command above;
+# additionally requires the (trimmed, first-line) output to contain a
+# `:` separating username from password. Any failure mode leaves both
+# variables unset and preserves the existing unauthenticated fallback
+# unchanged (deliberate fail-open, matching the Issue's explicit design
+# — not a new introduction of fail-open behavior).
+_resolve_preview_basic_auth_command() {
+  local _cmd
+  _cmd=$("$SCRIPT_DIR/get-config-value.sh" preview-basic-auth-command "" 2>/dev/null || echo "")
+  [[ -z "$_cmd" ]] && return 0
+
+  _cmd="${_cmd//\{pr\}/$PR_NUMBER}"
+
+  local _resolved _resolved_status
+  if command -v timeout >/dev/null 2>&1; then
+    _resolved=$(timeout --kill-after=10 30 bash -c "$_cmd" 2>/dev/null)
+    _resolved_status=$?
+  elif command -v gtimeout >/dev/null 2>&1; then
+    _resolved=$(gtimeout 30 bash -c "$_cmd" 2>/dev/null)
+    _resolved_status=$?
+  else
+    mkdir -p .tmp 2>/dev/null || true
+    local _tmpout
+    _tmpout="$(mktemp .tmp/preview-basic-auth-command-output-XXXXXX)"
+    bash -c "$_cmd" >"$_tmpout" 2>/dev/null &
+    local _cmd_pid=$!
+    ( sleep 30; kill -0 "$_cmd_pid" 2>/dev/null && kill -9 "$_cmd_pid" 2>/dev/null ) &
+    local _watchdog_pid=$!
+    wait "$_cmd_pid" 2>/dev/null
+    _resolved_status=$?
+    kill "$_watchdog_pid" 2>/dev/null
+    wait "$_watchdog_pid" 2>/dev/null
+    _resolved=$(cat "$_tmpout" 2>/dev/null)
+    rm -f "$_tmpout"
+  fi
+
+  if [[ "$_resolved_status" -ne 0 ]]; then
+    echo "Warning: preview-basic-auth-command exited non-zero (status=${_resolved_status}); leaving Basic Auth unset" >&2
+    return 0
+  fi
+
+  _resolved=$(printf '%s' "$_resolved" | head -n 1 | tr -d '\r')
+  local _resolved_trimmed
+  _resolved_trimmed="${_resolved#"${_resolved%%[![:space:]]*}"}"
+  _resolved_trimmed="${_resolved_trimmed%"${_resolved_trimmed##*[![:space:]]}"}"
+
+  if [[ -z "$_resolved_trimmed" ]]; then
+    echo "Warning: preview-basic-auth-command produced empty output; leaving Basic Auth unset" >&2
+    return 0
+  fi
+  if [[ "${#_resolved_trimmed}" -gt 2048 ]]; then
+    echo "Warning: preview-basic-auth-command output exceeds 2048 chars; leaving Basic Auth unset" >&2
+    return 0
+  fi
+  if [[ "$_resolved_trimmed" != *:* ]] \
+     || [[ -z "${_resolved_trimmed%%:*}" ]] \
+     || [[ -z "${_resolved_trimmed#*:}" ]]; then
+    echo "Warning: preview-basic-auth-command output is not in username:password format; leaving Basic Auth unset" >&2
+    return 0
+  fi
+
+  PREVIEW_BASIC_USER="${_resolved_trimmed%%:*}"
+  PREVIEW_BASIC_PASS="${_resolved_trimmed#*:}"
+  export PREVIEW_BASIC_USER PREVIEW_BASIC_PASS
+  echo "Resolved PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS via preview-basic-auth-command for PR #${PR_NUMBER}" >&2
+}
+
 if [[ -z "$_pending_reason" ]] && [[ -f .wholework.yml ]] \
    && grep -A 20 '^capabilities:' .wholework.yml 2>/dev/null | grep -qE '^[[:space:]]*pr-preview:[[:space:]]*true'; then
   _preview_timeout_sec="${WHOLEWORK_PREVIEW_TIMEOUT_SEC:-600}"
   [[ -z "${PREVIEW_URL:-}" ]] && _resolve_preview_url_command || true
+  [[ -z "${PREVIEW_BASIC_USER:-}" && -z "${PREVIEW_BASIC_PASS:-}" ]] && _resolve_preview_basic_auth_command || true
   if [[ -n "${PREVIEW_URL:-}" ]]; then
     # Fast path (#1128): mirror skills/review/SKILL.md Step 8.0, which already
     # prefers an exported PREVIEW_URL and skips the Deployments API lookup.
