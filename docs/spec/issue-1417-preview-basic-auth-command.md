@@ -260,16 +260,15 @@ Nothing to note — Pre-merge AC 7件はすべて grep / file_contains / rubric 
 `_resolve_preview_basic_auth_command()` に対する Edge Case Execution (実行ベースの検証、19 フィクスチャ) で、`:` は含むが username/password の一方または両方が空文字列というケース (`:password` 等) がバリデーションを素通りし、空文字列の資格情報を「解決済み」としてログ・export してしまう CONSIDER 相当の指摘が見つかった。`_resolve_preview_url_command()` 側は正規表現 (`^https?://[^[:space:]/]+`) で非空値を暗黙に要求する形になっていたのに対し、今回の新規関数は「`:` の有無」のみをチェックしており非空性を見落としていた — 同型実装を模倣する際に、模倣元が持つ暗黙の制約 (今回は正規表現による非空性保証) まで含めて引き継げていない典型例。Step 12 でその場で修正 (空オペランドチェック追加 + bats フィクスチャ追加) し、全 58 bats テスト PASS を確認済み。Spec の Implementation Steps に「模倣元の暗黙の入力制約も列挙する」チェック項目があれば、実装フェーズで拾えていた可能性がある。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 10 は `.wholework.yml` の `always-pr`/Size (M) に基づき `REVIEW_DEPTH=light` (1エージェント統合レビュー) で実行した
-- Parser/Validator Edge Case Pre-check の発火条件 (新規関数が外部コマンド出力を解釈・検証する) に該当したため、`_resolve_preview_basic_auth_command()` を対象に実行ベースの Edge Case 検証 (19 フィクスチャ) を実施した
-- 検出した CONSIDER 指摘 (空 username/password が `:` チェックを素通りする) はその場で修正し、bats フィクスチャを追加した (MUST/SHOULD ではなく CONSIDER だが、1行の安全な修正かつ実行ベースで裏付けが取れていたため即時対応を選択)
+- Pre-merge AC ゲート (7件、review-incomplete-fallback なし) と `gh-pr-merge-status.sh` (mergeable=true, reason=clean) を確認した上でコンフリクトなしのスカッシュマージを実行した
+- base ブランチが `main` のため `closes #1417` により Issue は自動クローズされる想定
 
 ### Deferred Items
 - Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの `/auto` 実行観察) は `verify-type: manual` のため引き続き未チェック — `/verify` フェーズで human follow-up として扱われる
 
 ### Notes for Next Phase
-- Pre-merge AC 7件は全て PASS (grep/file_contains/rubric/github_check)。AC7 (bats テスト CI) は `/review` 実行時点で CI 全11ジョブ SUCCESS を確認済み
-- `/review` の Step 12 で 1 件の CONSIDER 修正コミット (`6e4f6a75`) を追加済み — `/merge` 時点で PR の最新コミットに含まれていることを前提としてよい
+- Pre-merge AC 7件は全て PASS 済み (grep/file_contains/rubric/github_check)。AC7 (bats テスト CI) はマージ前に CI SUCCESS を確認済み
+- `/verify` は Post-merge AC (manual verify-type) の確認に注力すること
