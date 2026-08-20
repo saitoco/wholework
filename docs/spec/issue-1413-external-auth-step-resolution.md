@@ -42,7 +42,7 @@
 ### Pre-merge
 - <!-- verify: grep "非対話|headless|ヘッドレス" skills/issue/SKILL.md --> `skills/issue/SKILL.md` に、外部サービスログインを要するスクリーンショット/操作を含む Issue の Background 記述ガイダンスが追加されている
 - <!-- verify: rubric "skills/issue/SKILL.md contains guidance that when Implementation Steps require logging into an external service (e.g. for screenshots), the Issue Background should state that /code runs headless/non-interactive, rather than assuming credentials are available at implementation time" --> ガイダンスの内容が実装フェーズの実行制約 (ヘッドレス/非対話) と整合する形で記述されている
-- <!-- verify: grep "対話セッション|事前撮影|interactive prep" skills/spec/SKILL.md --> `skills/spec/SKILL.md` に、外部サービスログイン要求ステップの解決メカニズムを明記させるガイダンスが追加されている
+- <!-- verify: grep "対話セッション|事前撮影|Interactive prep" skills/spec/SKILL.md --> `skills/spec/SKILL.md` に、外部サービスログイン要求ステップの解決メカニズムを明記させるガイダンスが追加されている
 - <!-- verify: rubric "skills/spec/SKILL.md guidance describes at least two concrete resolution mechanisms for Implementation Steps requiring external-service login: (a) an interactive prep session before headless /code captures the needed screenshot/credential-gated artifact and commits it, and (b) running /code interactively as a fallback" --> 2つの解決メカニズム (事前撮影セッション / 対話実行) が具体的に記述されている
 - <!-- verify: rubric "the added skills/spec/SKILL.md guidance explicitly addresses its relationship to modules/costly-step-protocol.md's existing spec-approval-needed marker mechanism, either by extending it or by explaining why a separate mechanism is used, without contradicting the existing Producer/Consumer Contract" --> 既存の `modules/costly-step-protocol.md` との関係が整理されており、矛盾なく共存する設計になっている
 

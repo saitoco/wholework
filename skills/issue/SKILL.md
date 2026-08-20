@@ -248,6 +248,10 @@ If the required 権限 turns out to be insufficient (discovered during implement
 - Add or update an AC that captures the remediation path — e.g., "the 権限 holder is notified and requested to perform the operation" — instead of leaving the Issue blocked with no documented next step.
 - Do not silently drop the AC to sidestep the check; the goal is to make the access gap visible as early as possible.
 
+**External-service login headless-execution constraint (Background):**
+
+When the Issue's implementation is expected to include an operation that requires logging into an external service (e.g., capturing a screenshot of an external SaaS admin panel), record in `## Background` that `/code` runs `--non-interactive` (headless) and therefore has no channel to perform an interactive login — do not assume login credentials or an authenticated session will be available at implementation time. State this as a fact about the execution constraint only; designing the concrete resolution mechanism (how the login-gated step will actually be completed) is `/spec`'s responsibility, per the `/issue` (What) vs `/spec` (How) boundary (`docs/product.md` § "`/issue` (What) vs `/spec` (How) Responsibility Boundary").
+
 **BRE metacharacter detection in verify commands:**
 
 After assigning verify-type tags, scan all `<!-- verify: grep "PATTERN" ... -->` commands in the Issue body. For each `grep` verify command, extract the PATTERN string (the first quoted argument after `grep`) and check whether it contains BRE metacharacters: `\|`, `\(`, `\)`, `\+`, `\?`.
