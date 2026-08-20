@@ -83,5 +83,32 @@
 - `/verify` should confirm the `tests/claude-watchdog.bats` FAIL noted above does not appear in the actual post-push CI run on `main`; if it does, this would upgrade from "sandbox artifact" to a real regression requiring investigation (though the diff here cannot plausibly cause it, since it never touches that script or test).
 - No Post-merge acceptance criteria exist for this Issue ("Post-merge: なし"), so `/verify` has no post-merge AC to check beyond the standard CI verification.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `docs/product.md` の `/issue` (What) vs `/spec` (How) 責任分界に沿った設計。既存の `modules/costly-step-protocol.md` との関係を独立マーカー (`external-auth-required`) として整理し、矛盾なく共存させた判断は妥当だった。
+
+#### design
+- 4 AC 全てに rubric + grep/section_contains の組み合わせで意味検証と機械的安全網を両立。
+
+#### code
+- Deviations from Design: なし (Spec 記載通り verbatim 実装)。
+- AC3 の verify command が `interactive prep` (小文字) だったが、Spec が指示する実装テキストは `Interactive prep session` (大文字始まり) で、`grep` の大文字小文字区別により false FAIL となるミスマッチが発見され、code フェーズ内で Issue body・Spec 双方の verify command を修正済み (`Interactive prep` へ)。AC のヒント文言と Spec が指示する実装テキストの大文字小文字が食い違うと、実装が正しくても verify command が false FAIL する構造的リスクがあり、再発しうるパターン。
+- `tests/claude-watchdog.bats` の局所 FAIL (本 Issue の diff と無関係、sandbox 固有) を認識した上で、実 CI (main) での green 実績を根拠に push を継続する判断があった。`/verify` が post-push CI (headSha `f1f4c963`) で SUCCESS を確認し、この判断が正しかったことを裏付けた。
+
+#### review
+- patch route のため review フェーズなし。
+
+#### merge
+- patch route のため merge フェーズなし。commit message の `closes #1413` により自動クローズ。
+
+#### verify
+- Pre-merge 5件は SKIPPED (already checked; `/code` で全件チェック済み)。Post-merge 条件なし。CI (headSha `f1f4c963`) は SUCCESS — Code Retrospective が指摘した sandbox 固有 FAIL は実 CI では再現しないことを確認。
+
+### Improvement Proposals
+- AC の verify command ヒント (`grep` 等) の文言と、Spec の Implementation Steps が指示する実装テキストの大文字小文字が食い違うと、実装が Spec 通りに正しく行われても verify command が false FAIL しうる。`/spec` または `/issue` の AC 監査手順 (`skills/triage/skill-dev-verify-audit.md` 等) に、grep 型 verify command のパターン文字列と対応する Spec 本文中の実装テキストの大文字小文字一致を確認するチェックを追加する改善が考えられる。今回は code フェーズ内で自己訂正され実害はなかったため、再発頻度を見て判断する一回性の学びに留める。
+
 ## Consumed Comments
 No new comments since last phase.
