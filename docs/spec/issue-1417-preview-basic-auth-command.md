@@ -259,6 +259,31 @@ Nothing to note — Pre-merge AC 7件はすべて grep / file_contains / rubric 
 
 `_resolve_preview_basic_auth_command()` に対する Edge Case Execution (実行ベースの検証、19 フィクスチャ) で、`:` は含むが username/password の一方または両方が空文字列というケース (`:password` 等) がバリデーションを素通りし、空文字列の資格情報を「解決済み」としてログ・export してしまう CONSIDER 相当の指摘が見つかった。`_resolve_preview_url_command()` 側は正規表現 (`^https?://[^[:space:]/]+`) で非空値を暗黙に要求する形になっていたのに対し、今回の新規関数は「`:` の有無」のみをチェックしており非空性を見落としていた — 同型実装を模倣する際に、模倣元が持つ暗黙の制約 (今回は正規表現による非空性保証) まで含めて引き継げていない典型例。Step 12 でその場で修正 (空オペランドチェック追加 + bats フィクスチャ追加) し、全 58 bats テスト PASS を確認済み。Spec の Implementation Steps に「模倣元の暗黙の入力制約も列挙する」チェック項目があれば、実装フェーズで拾えていた可能性がある。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective (issue phase) で verify-type タグの誤り (`opportunistic event=review-run` → `manual`) を検出・修正済み。AC 自体の曖昧性・検証可能性の問題はなし。
+
+#### design
+- SPEC_DEPTH=light。Code Retrospective の "Design Gaps/Ambiguities" は N/A — 実装時に設計判断で迷った箇所はなかった。
+
+#### code
+- Deviations from Design: N/A（Implementation Steps 1〜5 を記載順どおり実装）。Rework: なし。
+
+#### review
+- CONSIDER 1件: `_resolve_preview_basic_auth_command()` が模倣元 `_resolve_preview_url_command()` の暗黙の非空性制約（正規表現 `^https?://[^[:space:]/]+` 由来）を引き継がず、`:password` 等の空 username/password をバリデーション素通りさせるギャップがあった。Review 中にその場で修正（空オペランドチェック追加）・bats フィクスチャ追加済み、全58件 PASS 確認済み。
+
+#### merge
+- コンフリクトなし。CI 全11ジョブ SUCCESS。squash merge で正常完了。
+
+#### verify
+- Pre-merge 7件は SKIPPED（already checked; `/review` で全て PASS 済み）。Post-merge manual AC（実プロジェクトでの `/auto` 実行観察）は Claude 実行不可（`reason=external-service-required`）のため未チェックのまま `phase/verify` に遷移。FAIL・UNCERTAIN なし。
+
+### Improvement Proposals
+- review retrospective で指摘された「模倣元実装の暗黙の入力制約（今回は非空性を保証する正規表現）を、模倣先の新規実装が引き継げていなかった」パターンは、既存パターンを模倣する新規実装（今回の `preview-url-command` → `preview-basic-auth-command` 等）で再発しうる。Spec の Implementation Steps ガイダンスに「模倣元実装の暗黙の入力制約を列挙するチェック項目」を追加する改善が有効と考えられる。
+
 ## Phase Handoff
 <!-- phase: merge -->
 
