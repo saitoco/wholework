@@ -121,6 +121,7 @@ capabilities:
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
 | `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (解決の呼び出し箇所は `run-review.sh` の `pr-preview` ゲート内にある)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行をカバー) のみが参照する — `/review` を skill として直接呼ぶ経路では参照されない。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`permission-mode` と同じ信頼レベル)。 |
+| `preview-basic-auth-command` | string | `""` | `preview-url-command` が `PREVIEW_URL` を解決するのと同じ仕組みで、プロジェクト側スクリプトが `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`preview-url-command` と同じゲート)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートのみが参照する。コマンド標準出力の 1 行目は `username:password` 形式である必要がある (最初の `:` で分割) — それ以外の結果 (非 0 終了、空出力、2048 文字超の出力、1 行目に `:` が無い) の場合は両変数を未設定のまま維持し、既存の非認証フォールバックを保持する。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`preview-url-command`/`permission-mode` と同じ信頼レベル)。 |
 | `spec-path` | string | `docs/spec` | spec の保存先 |
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
@@ -213,6 +214,18 @@ preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
 `{pr}` プレースホルダはコマンド実行前に PR 番号へ置換されます。省略した場合は引数なしでコマンドが実行されます (例: 現在のブランチから自身で PR を解決するスクリプト)。解決順序は「export 済みの `PREVIEW_URL` > `preview-url-command` > GitHub Deployments API」です。`capabilities.pr-preview: true` が必須です — 未設定の場合 `run-review.sh` の preview 待ちゲートは実行されず、このキーは無視されます。コマンド標準出力の 1 行目のみが URL として解釈されます (CR と前後の空白は除去) — それ以降の出力は検証対象外です。コマンドが非 0 終了する、出力が空になる、出力が 2048 文字を超える、あるいは (1 行目の) 出力が `http://`/`https://` の URL でない場合、`run-review.sh` は既存の Deployments API ポーリングへそのままフォールバックします (新たな fail-open も fail-closed も導入されません)。
 
 カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート — すなわち `/auto`・スケジュール実行・`run-review.sh` の直接実行のみで参照されます。`/review` を skill として直接呼び出す経路では参照されず、その経路は引き続き上記の手動 `PREVIEW_URL` export が必要です。
+
+**`preview-basic-auth-command` による Basic 認証情報解決の自動化:**
+
+Basic 認証で保護された preview 環境 (自動作成される branch preview に対するホスティングプロバイダの一般的なオプション) では、`PREVIEW_URL` と同様に `/review` 呼び出し前に `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を export する必要があります — これらが設定された後の消費のされ方は `modules/verify-executor.md` / `modules/browser-adapter.md` / `modules/lighthouse-adapter.md` を参照してください。`.wholework.yml` に `preview-basic-auth-command` を宣言すると、`scripts/run-review.sh` が `preview-url-command` と同様に両変数を自動的に解決・export します:
+
+```yaml
+preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"
+```
+
+コマンド標準出力の 1 行目は `username:password` 形式である必要があります (最初の `:` で分割するため、password 内に `:` が含まれていてもそのまま保持されます)。`{pr}` プレースホルダは `preview-url-command` と同様、コマンド実行前に PR 番号へ置換されます。解決処理は `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` のいずれも export 済みでない場合にのみ実行されます — 既存の手動 export は常に優先されます。`capabilities.pr-preview: true` が必須です — 未設定の場合、`preview-url-command` と同じゲートによりこのキーは無視されます。コマンドが非 0 終了する、出力が空になる、出力が 2048 文字を超える、あるいは 1 行目に `:` が含まれない場合、両変数は未設定のまま維持され、既存の非認証フォールバックがそのまま保持されます (新たな fail-open も fail-closed も導入されません)。解決されたコマンドの生出力、および分割後の username/password の値は、ログや検証出力に一切書き出されません (`****` としてマスキング) — `modules/browser-adapter.md` § Step 3 と同じマスキング方針に従います。
+
+カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート — すなわち `/auto`・スケジュール実行・`run-review.sh` の直接実行のみで参照されます。`/review` を skill として直接呼び出す経路では参照されず、その経路は引き続き `modules/browser-adapter.md` に記載の手動 `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` export が必要です。
 
 ## `.wholework/domains/`
 
