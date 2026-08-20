@@ -241,17 +241,35 @@ N/A — 手戻りなし。
 
 新規追加した 7 bats テストのうち 6 件について、実装前コミット (`ff96a0c0~1`) の `scripts/run-review.sh` に対して FAIL することを確認した (`git checkout ff96a0c0~1 -- scripts/run-review.sh` で一時的に実装前状態へ戻し再実行 → 復元)。残り 1 件 (「exported PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS take precedence over preview-basic-auth-command」) は「新機能が呼ばれないこと」を検証するテストのため、実装前状態でも意味的に PASS するのが正しい挙動であり、FAIL しないことを確認した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — `review-light` エージェントによる Perspective 1 (Spec Deviation) 確認の結果、Implementation Steps 1〜5 は記載順どおりに実装されており、構造的な乖離は検出されなかった。
+
+### Recurring issues
+
+Nothing to note — 同種の指摘が複数発生した形跡はない。今回の唯一の指摘 (Edge Case Execution によるバリデーション漏れ) は `_resolve_preview_url_command()` を模倣する形で実装された新規関数固有のものであり、他ファイルへの波及はなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 7件はすべて grep / file_contains / rubric / github_check のいずれかで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。`preview-url-command` (#1410) と同型の設計だったため、verify command も流用しやすく検証コストは低かった。
+
+### Additional observation (Parser/Validator Edge Case Pre-check)
+
+`_resolve_preview_basic_auth_command()` に対する Edge Case Execution (実行ベースの検証、19 フィクスチャ) で、`:` は含むが username/password の一方または両方が空文字列というケース (`:password` 等) がバリデーションを素通りし、空文字列の資格情報を「解決済み」としてログ・export してしまう CONSIDER 相当の指摘が見つかった。`_resolve_preview_url_command()` 側は正規表現 (`^https?://[^[:space:]/]+`) で非空値を暗黙に要求する形になっていたのに対し、今回の新規関数は「`:` の有無」のみをチェックしており非空性を見落としていた — 同型実装を模倣する際に、模倣元が持つ暗黙の制約 (今回は正規表現による非空性保証) まで含めて引き継げていない典型例。Step 12 でその場で修正 (空オペランドチェック追加 + bats フィクスチャ追加) し、全 58 bats テスト PASS を確認済み。Spec の Implementation Steps に「模倣元の暗黙の入力制約も列挙する」チェック項目があれば、実装フェーズで拾えていた可能性がある。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜5 を記載順どおりに実装し、擬似コード・関数シグネチャ・一時ファイル規約をそのまま採用した (`_resolve_preview_url_command()` との対称性を優先)
-- 新規 bats テスト 7 件は既存の `preview-url-command` テストブロック (518〜765行目) の直後、`preview-url-command` 関連テストと `no-op` テストの間に挿入し、既存のモックハーネス (`get-config-value.sh` の `case` 文モック) をそのまま再利用した
-- `setup()` の `unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID PREVIEW_URL` に `PREVIEW_BASIC_USER PREVIEW_BASIC_PASS` を追加し、親プロセス環境からの汚染を防止した (既存の `PREVIEW_URL` 分離と同じ意図の最小拡張)
+- Step 10 は `.wholework.yml` の `always-pr`/Size (M) に基づき `REVIEW_DEPTH=light` (1エージェント統合レビュー) で実行した
+- Parser/Validator Edge Case Pre-check の発火条件 (新規関数が外部コマンド出力を解釈・検証する) に該当したため、`_resolve_preview_basic_auth_command()` を対象に実行ベースの Edge Case 検証 (19 フィクスチャ) を実施した
+- 検出した CONSIDER 指摘 (空 username/password が `:` チェックを素通りする) はその場で修正し、bats フィクスチャを追加した (MUST/SHOULD ではなく CONSIDER だが、1行の安全な修正かつ実行ベースで裏付けが取れていたため即時対応を選択)
 
 ### Deferred Items
-- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの `/auto` 実行観察) は `verify-type: manual` のため未チェックのまま — `/verify` フェーズで human follow-up として扱われる
+- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの `/auto` 実行観察) は `verify-type: manual` のため引き続き未チェック — `/verify` フェーズで human follow-up として扱われる
 
 ### Notes for Next Phase
-- Pre-merge AC7 (`github_check "gh pr checks" "Run bats tests"`) は Step 10 の CI verification AC exclusion (route-agnostic) によりこのフェーズでは未チェック — `/review` が PR の CI 結果を見て検証する
-- Spec に `## Spec Retrospective` セクションが存在しなかったため、`## Code Retrospective` は `## Consumed Comments` の直後に追記した (通常の配置規約と異なる点に注意)
+- Pre-merge AC 7件は全て PASS (grep/file_contains/rubric/github_check)。AC7 (bats テスト CI) は `/review` 実行時点で CI 全11ジョブ SUCCESS を確認済み
+- `/review` の Step 12 で 1 件の CONSIDER 修正コミット (`6e4f6a75`) を追加済み — `/merge` 時点で PR の最新コミットに含まれていることを前提としてよい
