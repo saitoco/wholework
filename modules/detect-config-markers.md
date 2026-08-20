@@ -40,6 +40,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `steering-hint` | `HAS_STEERING_HINT` | `true` | `true` (default true; `false` when `steering-hint: false`) |
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
 | `preview-url-command` | `PREVIEW_URL_COMMAND` | Command string (extract value as-is) | `""` |
+| `preview-basic-auth-command` | `PREVIEW_BASIC_AUTH_COMMAND` | Command string (extract value as-is) | `""` |
 | `spec-path` | `SPEC_PATH` | Path string (extract value as-is) | `docs/spec` |
 | `steering-docs-path` | `STEERING_DOCS_PATH` | Path string (extract value as-is) | `docs` |
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
@@ -88,6 +89,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
 - `production-url` is treated as URL string with quotes removed
 - `preview-url-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Because `scripts/get-config-value.sh` strips everything from an inline ` #` onward, the command string must not contain a space followed by `#`. Currently consumed only by `scripts/run-review.sh` (bash wrapper) via `get-config-value.sh`; no skill reads `PREVIEW_URL_COMMAND` directly — see `docs/guide/customization.md` § "Resolving `PREVIEW_URL`" for coverage scope
+- `preview-basic-auth-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Same inline-comment-stripping caveat as `preview-url-command` (a space followed by `#` is stripped by `scripts/get-config-value.sh`). Currently consumed only by `scripts/run-review.sh` (bash wrapper) via `get-config-value.sh`; no skill reads `PREVIEW_BASIC_AUTH_COMMAND` directly — see `docs/guide/customization.md` § "Automating Basic Auth credential resolution with `preview-basic-auth-command`" for coverage scope
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
@@ -121,6 +123,7 @@ HAS_SESSION_AUTO_RENAME: true if session-auto-rename: true is set (default: fals
 HAS_STEERING_HINT: false if steering-hint: false is set (default: true)
 PRODUCTION_URL: URL string extracted from production-url (default: "")
 PREVIEW_URL_COMMAND: shell command string extracted from preview-url-command (default: "")
+PREVIEW_BASIC_AUTH_COMMAND: shell command string extracted from preview-basic-auth-command (default: "")
 SPEC_PATH: path string extracted from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "docs")
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
