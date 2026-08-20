@@ -26,3 +26,6 @@
 - **Size XS**: 変更対象は `scripts/detect-unrecorded-kills.sh` 1 ファイル。出力文字列の変更のみでロジック分岐の追加はないため Axis 2 の増加要因に該当せず、テストファイルを変更しないため CI Dependency Minimum Override (Size M 下限) にも該当しない
 - **Type Task**: 検出器は docstring 通りに動作しており機能欠陥ではない。出力ラベルの語彙選択の問題であり maintenance に相当する
 - **Theme observability**: 「detection without persistence, logging gaps」— 検出結果の解釈可能性は observability の範疇
+
+## Consumed Comments
+No new comments since last phase.
