@@ -136,6 +136,28 @@ For each source document in the translation target list, update the source (Engl
 
 ### Step 5: Review Generated Translations
 
+**Relative link verification (mechanical check, run before requesting approval):**
+
+For each generated translation file, extract Markdown relative links (`[text](path)` where `path` does not start with `http://`, `https://`, or `#`) and confirm the target file exists on disk, resolved relative to the translation file's own directory:
+
+```bash
+for f in README.{lang}.md docs/{lang}/*.md; do
+  [ -f "$f" ] || continue
+  dir=$(dirname "$f")
+  grep -oE '\]\(([^)]+)\)' "$f" | sed -E 's/^\]\(([^)]+)\)$/\1/' | while read -r link; do
+    case "$link" in
+      http://*|https://*|\#*) continue ;;
+    esac
+    target="$dir/$link"
+    if [ ! -f "$target" ]; then
+      echo "Broken relative link: $f -> $link (resolved: $target)"
+    fi
+  done
+done
+```
+
+If any broken relative link is reported, fix the corresponding translation file (per the Relative Link Rewriting Rules in Step 3) and re-run this check before proceeding — do not present the summary/approval prompt below until no broken links remain.
+
 Display a summary of generated files (file list and line count). Ask with AskUserQuestion for approval:
 
 ```
