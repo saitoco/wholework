@@ -347,7 +347,7 @@ for burst in bursts:
     print(f"## Burst: {start_ts} - {end_ts} UTC (concurrency={len(burst)})")
     for m in burst:
         print(
-            f"- Issue #{m['issue']}, phase: {m['phase']}, kill: {m['kill_ts']}, "
+            f"- Issue #{m['issue']}, phase: {m['phase']}, respawn: {m['kill_ts']}, "
             f"elapsed: {int(m['elapsed'])}s, spawn_detach: {m['spawn_detach']}, "
             f"recorded: {m['recorded']}"
         )
