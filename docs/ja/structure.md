@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (89 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (90 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (125 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (126 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -204,6 +204,7 @@ wholework/
 - `scripts/log-permission.sh` — permission イベントをログに記録 (JSON 出力)
 - `scripts/observation-trigger.sh` — イベント発生時に observation タイプの AC をディスパッチする: `opportunistic-search.sh --event` を呼び出し、マッチした各 Issue に `/verify` の再実行を推奨するコメントを投稿し、呼び出し元のディスパッチ用にマッチした Issue 番号を stdout に出力する
 - `scripts/filter-session-verified-issues.sh` — 現在の `/auto` セッションで既に `phase=verify` イベントが記録されている Issue を除外して、observation スキャン候補の Issue 番号をフィルタする (fail-open)
+- `scripts/rotate-observation-dispatch.sh` — `OBSERVATION_DISPATCH_THRESHOLD` の cap を適用する前に、永続化したカーソル (最後に dispatch した Issue 番号) を基準に observation-dispatch 候補の Issue 番号を回転させ、premise が不変の chronically-stalled Issue が dispatch スロットを恒久占有しないようにする
 - `scripts/opportunistic-search.sh` — opportunistic な skill 検索と observation イベントスキャン
 - `scripts/post_merge_check.sh` — 複数の Issue のマージ後 manual (verify-type: manual) AC を 1 セッションでまとめて実行する。AC ごとに P/F/S をプロンプトし、全 PASS で phase/done に遷移するか、FAIL で再オープンする
 - `scripts/collect-run-facts.sh` — 完了した `/auto` 実行のファクト (diff-less な operate 値を含む経路、実行モード、Size、フェーズの結果、PR の状態、異常件数、リコンサイル tier、fact トークン) を `.tmp/auto-events.jsonl` から JSON として構造化する。run-fact AC reconciliation (`modules/run-fact-matching.md`) 用
