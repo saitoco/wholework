@@ -194,7 +194,7 @@ Key modules:
 - `scripts/collect-verify-retention-stats.sh` — measure `phase/verify` retention by verify-type (how much post-merge AC is still waiting vs. already resolved, and how old the waiting is), with an optional comparison-window date filter; for `/audit stats --retention`
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/html-selector-match.py` — standard-library-only Python CSS selector matcher (compound selectors + descendant/`>`/`+`/`~` combinator chains) used by `modules/verify-executor.md`'s `html_check` verify command; reads HTML from stdin via `curl | python3 html-selector-match.py "selector"` and prints the match count
-- `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
+- `scripts/handle-permission-mode-failure.sh` — diagnose likely `--permission-mode auto` classifier failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label

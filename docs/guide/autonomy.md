@@ -41,7 +41,7 @@ Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop)**
 
 ### L3 Unattended
 
-Skills write GitHub state (label transitions, close/reopen, comments) fully unattended. `CronCreate` is available as an L2→L1 path (B), but it is session-scoped and in-memory — nothing is written to disk, registered jobs auto-expire after 7 days, and under `permission-mode: auto` unattended self-registration is blocked by the Claude Code auto mode classifier. Registering a `CronCreate` schedule therefore requires an attended session; it is not something an unattended L3 run can do on its own.
+Skills write GitHub state (label transitions, close/reopen, comments) fully unattended. `CronCreate` is available as an L2→L1 path (B), but it is session-scoped and in-memory — nothing is written to disk, registered jobs auto-expire after 7 days, and unattended self-registration is blocked by the Claude Code auto mode classifier. Registering a `CronCreate` schedule therefore requires an attended session; it is not something an unattended L3 run can do on its own.
 
 Use L3 when:
 - You have verified that L2 works well for your project
@@ -68,9 +68,9 @@ Skills declare the L2→L1 paths they use in their frontmatter (`loop-paths-used
 - **Mandatory dependency** (the skill cannot work without it): the skill refuses to start and prints an error telling you which tier to set.
 - **Degradable** (the skill works without it): the skill prints a warning and falls back to path A (advisory — it prints a recommendation for you to act on).
 
-## How the tier relates to `permission-mode`
+## How the tier relates to `--permission-mode`
 
-`permission-mode` controls Claude Code subprocess permissions (which `gh` and shell commands are auto-approved vs. prompted). The autonomy tier controls **which GitHub state Wholework may write and which loops it may fire**. They are orthogonal — you can have `permission-mode: bypass` and `autonomy: L1` simultaneously.
+Claude Code's `--permission-mode` flag controls subprocess permissions (which `gh` and shell commands are auto-approved vs. prompted). The autonomy tier controls **which GitHub state Wholework may write and which loops it may fire**. They are orthogonal — subprocess permission handling and `autonomy: L1` can be set independently.
 
 For the complete tier × path permission matrix and L0 write rules, see [`modules/autonomy-tier.md`](../../modules/autonomy-tier.md).
 

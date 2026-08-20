@@ -1,6 +1,6 @@
 {
   "autoMode": {
-    "description": "Recommended allow rules for wholework /auto workflow. Copy this into .claude/settings.local.json (gitignored) and restart Claude Code before using permission-mode: auto.",
+    "description": "Recommended allow rules for wholework /auto workflow. Copy this into .claude/settings.local.json (gitignored) and restart Claude Code before running /auto.",
     "allow": [
       "gh issue: wholework skills create, update, comment on, and close GitHub Issues as part of the automated workflow (e.g. gh issue create, gh issue edit, gh issue comment, gh issue close)",
       "gh pr: wholework skills create, review, and merge pull requests as part of the automated workflow (e.g. gh pr create, gh pr review, gh pr merge, gh pr edit)",

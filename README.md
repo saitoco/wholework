@@ -52,12 +52,12 @@ Wholework adapts to your project through `.wholework.yml` (feature flags and pat
 
 ## 🔒 Security
 
-Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` uses `--permission-mode auto` by default, or `--dangerously-skip-permissions` when `permission-mode: bypass` is set in `.wholework.yml`. See [SECURITY.md](SECURITY.md) for a full description of side effects, required permissions, and permission mode options.
+Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` always uses `--permission-mode auto`. See [SECURITY.md](SECURITY.md) for a full description of side effects, required permissions, and the allow rules template.
 
 ## 💬 Support
 
 - **Bug reports & feature requests** — open an issue via [GitHub Issues](https://github.com/saitoco/wholework/issues/new/choose). Templates are provided for bug reports and feature requests.
-- **Security concerns** — see [SECURITY.md](SECURITY.md) for the full description of side effects, required permissions, and permission-bypass behavior.
+- **Security concerns** — see [SECURITY.md](SECURITY.md) for the full description of side effects, required permissions, and auto mode classifier behavior.
 
 ## 🌱 Contributing
 
