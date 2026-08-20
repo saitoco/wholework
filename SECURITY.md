@@ -37,25 +37,11 @@ Skills write to the following locations on your local filesystem:
 
 ## Permission Modes (`/auto`)
 
-The `/auto` skill chains all phases (spec → code → review → merge → verify) into a single autonomous run. Each phase is invoked as a subprocess via `claude -p`. Two permission modes are available, selectable via the `permission-mode` key in `.wholework.yml`.
+The `/auto` skill chains all phases (spec → code → review → merge → verify) into a single autonomous run. Each phase is invoked as a subprocess via `claude -p --permission-mode auto`, which runs the Claude Code auto-mode classifier. Auto mode applies guardrails: operations are classified as ALLOW, soft_deny (requires approval), or BLOCK, so the evaluation framework remains active throughout every phase.
 
-### Choosing a Mode
+### Applying the allow rules template
 
-Set in `.wholework.yml`:
-
-```yaml
-# auto mode (default — recommended)
-permission-mode: auto
-
-# bypass mode (legacy / opt-out)
-permission-mode: bypass
-```
-
-### auto mode (default)
-
-Uses `--permission-mode auto`, which runs the Claude Code auto-mode classifier. Auto mode applies guardrails: operations are classified as ALLOW, soft_deny (requires approval), or BLOCK. This is safer than bypass because the evaluation framework remains active.
-
-**Conflict resolution with allow rules**: Auto mode's default `soft_deny` rules conflict with two wholework operations:
+Auto mode's default `soft_deny` rules conflict with two wholework operations:
 
 - **Git Push to Default Branch** — `/code` with patch route pushes directly to `main`
 - **External System Writes** — each phase runs in a fresh subprocess, so Issues/PRs created in a prior phase are treated as "not created in this session"
@@ -69,36 +55,11 @@ To resolve these conflicts, copy the recommended allow rules template into `.cla
 
 After applying the template, restart Claude Code (settings are cached at session start and are not hot-reloaded).
 
-### bypass mode (legacy)
+The template enumerates only the subcommand-level patterns wholework actually uses (`gh issue`, `gh pr`, `gh label`, `gh api`, `gh run`, `git push origin main`); destructive patterns not listed in the template retain their `soft_deny` classification. If allow rules are instead written broadly (e.g., `gh *` or `git push *` blanket allow), this least-privilege property narrows — keep template edits scoped to the subcommands wholework needs.
 
-Uses `--dangerously-skip-permissions`, which bypasses all Claude Code permission prompts:
+### Plan and model requirements
 
-- File reads/writes, shell commands, and tool calls execute without asking for confirmation
-- All side effects described above occur without user approval per operation
-- Phase-to-phase context is isolated (each subprocess starts fresh)
-
-### Security comparison: auto + least privilege vs bypass
-
-`permission-mode auto` with the minimal allow rules template is safer than bypass for two reasons:
-
-1. **least privilege**: bypass removes all guards; auto + minimal allow rules grants exceptions only for the specific operations wholework needs (`gh issue`, `gh pr`, `gh label`, `gh api`, `gh run`, `git push origin main`). Destructive patterns not listed in the template retain their `soft_deny` classification.
-2. **Defense in depth**: allow rules are pinpoint exceptions within the auto-mode evaluation framework. bypass skips the evaluator entirely — there is no framework to catch unexpected actions.
-
-Note: if allow rules are written broadly (e.g., `gh *` or `git push *` blanket allow), this safety advantage narrows. The template enumerates only the subcommand-level patterns wholework actually uses.
-
-### Migration
-
-**Upgrading from the old default (bypass → auto)**
-
-If you have not set `permission-mode` in `.wholework.yml`, `/auto` now uses `auto` mode. To continue using `bypass`, add this line to your `.wholework.yml`:
-
-```yaml
-permission-mode: bypass
-```
-
-**Non-Max plan users (Pro, etc.)**
-
-`--permission-mode auto` requires the Claude Code Max plan. If you are on a non-Max plan and run `/auto` without explicitly setting `permission-mode: bypass`, the subprocess will exit early. `scripts/handle-permission-mode-failure.sh` detects this condition at runtime and prints a diagnostic with the remediation step (`permission-mode: bypass` in `.wholework.yml`) to stderr, so the failure is never silent.
+Auto mode is available on all plans. Team and Enterprise administrators can disable it organization-wide via the managed setting `permissions.disableAutoMode`. Auto mode requires an auto-mode-capable model — Sonnet 4.6 or later, Opus 4.6 or later, or Fable 5. `scripts/handle-permission-mode-failure.sh` detects a likely auto-mode-related early exit at runtime (a non-zero exit within 30 seconds) and prints a diagnostic pointing back to this section, so the failure is never silent.
 
 ## Required Tools and Authentication
 

@@ -118,14 +118,8 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
-if [[ "$PERMISSION_MODE" == "auto" ]]; then
-  PERMISSION_FLAG="--permission-mode auto"
-  _PERM_LABEL="permission-mode auto (with allow rules template)"
-else
-  PERMISSION_FLAG="--dangerously-skip-permissions"
-  _PERM_LABEL="skip (autonomous mode)"
-fi
+# Fixed, not config-derived: this repo has no permission-mode opt-out (#1418).
+PERMISSION_FLAG="--permission-mode auto"
 
 AUTONOMY_TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1 2>/dev/null || echo L1)
 _REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -234,7 +228,7 @@ source "$SCRIPT_DIR/watchdog-defaults.sh"
 print_start_banner "issue" "$ISSUE_NUMBER" "code"
 echo "Model: sonnet"
 echo "Effort: high"
-echo "Permissions: ${_PERM_LABEL}"
+echo "Permissions: permission-mode auto (with allow rules template)"
 if [[ "$ROUTE_FLAG" == "--patch" ]]; then
   echo "Route: patch (${BASE_BRANCH:-main} direct commit)"
 elif [[ "$ROUTE_FLAG" == "--pr" ]]; then
@@ -277,7 +271,7 @@ fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /code has context: fork, so calling it via claude -p "/code N" prevents
-# --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
+# --permission-mode auto from propagating to the fork sub-agent (#284)
 # By passing SKILL.md body directly, we bypass frontmatter interpretation
 SKILL_FILE="${SCRIPT_DIR}/../skills/code/SKILL.md"
 
@@ -366,7 +360,7 @@ else
   EXIT_CODE=$?
 fi
 set -e
-"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
+"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS"
 
 if [[ "$ROUTE_FLAG" == "--patch" ]]; then
   _RECONCILE_PHASE="code-patch"

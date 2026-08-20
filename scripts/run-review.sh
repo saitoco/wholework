@@ -90,14 +90,8 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
-if [[ "$PERMISSION_MODE" == "auto" ]]; then
-  PERMISSION_FLAG="--permission-mode auto"
-  _PERM_LABEL="permission-mode auto (with allow rules template)"
-else
-  PERMISSION_FLAG="--dangerously-skip-permissions"
-  _PERM_LABEL="skip (autonomous mode)"
-fi
+# Fixed, not config-derived: this repo has no permission-mode opt-out (#1418).
+PERMISSION_FLAG="--permission-mode auto"
 
 echo "=== run-review.sh: Starting /review for PR #${PR_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
@@ -105,7 +99,7 @@ source "$SCRIPT_DIR/watchdog-defaults.sh"
 print_start_banner "pr" "$PR_NUMBER" "review"
 echo "Model: sonnet"
 echo "Effort: high"
-echo "Permissions: ${_PERM_LABEL}"
+echo "Permissions: permission-mode auto (with allow rules template)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
@@ -340,7 +334,7 @@ fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /review has context: fork, so calling it via claude -p "/review N" prevents
-# --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
+# --permission-mode auto from propagating to the fork sub-agent (#284)
 # By passing SKILL.md body directly, we bypass frontmatter interpretation
 SKILL_FILE="${SCRIPT_DIR}/../skills/review/SKILL.md"
 
@@ -407,7 +401,7 @@ _run_claude_review_session() {
     EXIT_CODE=$?
   fi
   set -e
-  "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
+  "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS"
 }
 
 _run_claude_review_session

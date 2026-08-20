@@ -110,14 +110,8 @@ if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   emit_event "phase_start" "phase=${EMIT_PHASE_NAME}" "spawn_detach=$([[ -n "${_WHOLEWORK_DETACHED:-}" ]] && echo 1 || echo 0)"
 fi
 
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
-if [[ "$PERMISSION_MODE" == "auto" ]]; then
-  PERMISSION_FLAG="--permission-mode auto"
-  _PERM_LABEL="permission-mode auto (with allow rules template)"
-else
-  PERMISSION_FLAG="--dangerously-skip-permissions"
-  _PERM_LABEL="skip (autonomous mode)"
-fi
+# Fixed, not config-derived: this repo has no permission-mode opt-out (#1418).
+PERMISSION_FLAG="--permission-mode auto"
 
 AUTONOMY_TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1 2>/dev/null || echo L1)
 _WW_YML="${REPO_ROOT}/.wholework.yml"
@@ -225,7 +219,7 @@ source "$SCRIPT_DIR/watchdog-defaults.sh"
 print_start_banner "issue" "$ISSUE_NUMBER" "spec"
 echo "Model: ${MODEL}"
 echo "Effort: ${EFFORT}"
-echo "Permissions: ${_PERM_LABEL}"
+echo "Permissions: permission-mode auto (with allow rules template)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 if [[ "$MODEL" == "claude-fable-5" ]]; then
@@ -301,7 +295,7 @@ else
   EXIT_CODE=$?
 fi
 set -e
-"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
+"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS"
 
 if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" spec "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true

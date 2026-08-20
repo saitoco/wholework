@@ -139,12 +139,8 @@ INPUT JSON:
 ${INPUT_JSON}"
 
 # --- Invoke claude -p (following run-*.sh precedent) ---
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
-if [[ "$PERMISSION_MODE" == "auto" ]]; then
-  PERMISSION_FLAG="--permission-mode auto"
-else
-  PERMISSION_FLAG="--dangerously-skip-permissions"
-fi
+# Fixed, not config-derived: this repo has no permission-mode opt-out (#1418).
+PERMISSION_FLAG="--permission-mode auto"
 
 source "$SCRIPT_DIR/watchdog-defaults.sh"
 load_watchdog_timeout "$SCRIPT_DIR"
