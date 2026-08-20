@@ -149,5 +149,12 @@
 - **新規 SSoT モジュール作成時のクロスチェック checklist**: `/code` または `/spec` の SKILL.md に、新規 SSoT モジュール (`modules/<name>.md` で "SSoT" / "authoritative reference" を謳うもの) を作成する場合の implementation checklist を追加する。最低限以下の項目を含める:
   1. 参照元ドキュメント (e.g., `verify-executor.md` の command list) と SSoT モジュール内の関連テーブル/列挙の整合性確認
   2. "How to Reference" 等の例示コードは Callers セクションと同期、または抽象パターンのみ示す (実装からの逆引きで誤情報を混入しない)
+
+### 2026-08-21 再確認 (/auto --batch セッション、#1406 修正後の dispatch)
+
+`#1406` 後の `Event-based observation scan` で dispatch。post-merge observation AC (`event=auto-run`) を評価。`git log -S "execution-context.md" -- skills/code/SKILL.md skills/review/SKILL.md` により、Issue #1123 で `test-runner.md`/`review/SKILL.md`/`code/SKILL.md` に重複していた foreground 実行ルールが `modules/execution-context.md` の単一 SSoT に統合・参照される形に変更されたことを確認。さらに #1213/#1233 でも継続的に参照が拡大している。標準化が実際に観察されたため **PASS** と判定 (checkbox 更新済み)。
+
+#### Improvement Proposals (再評価分)
+- N/A — 新規提案なし。上記の SSoT クロスチェック checklist 提案は既存のまま (未起票であれば別途判断)。
   - 動機: #755 review で発覚した 2 件の SHOULD は同一パターン「SSoT モジュールの記述と実装との乖離」。SSoT モジュールは下流の参照基準として機能するため、初版の正確性が後続スキル開発の品質を左右する。
   - 対象 skill: `/code` (実装段階での checklist)、または `/spec` (設計段階でのクロスリファレンス計画)。
