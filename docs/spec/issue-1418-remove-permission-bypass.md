@@ -169,3 +169,50 @@ Issue 本文の pre-merge AC 11 項目は代表サンプルであり、Changed F
 ### 自律的 auto-resolve (非対話モード)
 
 本 Spec は `--non-interactive` で作成されたため、`AskUserQuestion` を使わず全曖昧点をモデル判断で解決した。解決内容は Issue の retrospective コメントとして投稿する Auto-Resolve Log に記録する。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `scripts/handle-permission-mode-failure.sh` は 3 引数から 2 引数へ縮小する。第 3 引数 `permission_mode` は撤去後 `auto` 以外の値を取り得ず、`[ "$permission_mode" = "auto" ]` というガードは恒真になる。これ自体が Issue の言う「bypass 分岐を前提にした記述」であるため、スクリプトを維持しつつ引数だけ落とす。bash は余分な位置引数を無視するので呼び出し側の更新漏れがあっても壊れない (ただし本 Issue 内で 5 箇所すべて揃える)
+- `modules/verify-patterns.md` と `skills/review/SKILL.md` の shell quoting 例文は、`get-config-value.sh permission-mode auto` という本 Issue で消滅する呼び出しを引用している。現存する同形の `"$SCRIPT_DIR/get-config-value.sh" autonomy L1` (`scripts/run-code.sh`) に差し替え、例文が実在コードを指す状態を保つ。両ファイルは同一例文の複製なので必ず同時に更新する
+- `SECURITY.md` のプラン要件記述は公式ドキュメント実査で更新する。現行の「Max plan required」は誤りで、実際は全プラン対応・Team/Enterprise は管理者が `permissions.disableAutoMode` で無効化可能・モデル要件あり。bypass 削除のついでに事実誤りも正す
+- bats テストでは mock `claude` の `--dangerously-skip-permissions)` 分岐を**削除せず維持**する。`! grep -q "FLAG_SKIP_PERMS=1"` という否定アサーションを成立させる回帰ガードとして機能するため、mock 側から消すとガードが空振りする
+- pre-merge AC は Issue 本文の 11 項目を逐語のまま維持し、独自追加しない。simplicity 上限 (10) を 1 件超えるが、verify command 同期規則と件数整合チェックを優先した
+
+### Deferred Items
+
+- `docs/ja/*` と `README.ja.md` の同期は Step 10 (`/doc translate ja`) に集約し、個別 verify command は付与しない (Issue 本文の指示)。post-merge AC で確認する
+- `/auto` 実行時に classifier ブロック起因の hang が起きないことの確認は post-merge の opportunistic AC に委ねる。撤去自体の pre-merge 検証は静的な `file_not_contains` と bats のみ
+- `#398` (plan 別 `permission-mode: auto` 互換性の preflight probe、Icebox) は本 Issue の対象外のまま。今回の実査で「Plan: All plans」が確認できたため、#398 の前提が弱まった可能性がある — 再評価は別 Issue で
+
+### Notes for Next Phase
+
+- **AC の `file_not_contains` はコメント行も検出する**。`scripts/run-code.sh` 280 行目と `scripts/run-review.sh` 342 行目の `# --dangerously-skip-permissions from propagating to the fork sub-agent (#284)` は分岐ではなくコメントだが、文言を変えないと受入条件 A / D が FAIL する。最も見落としやすい箇所
+- `docs/guide/customization.md` の AC は全出現の除去を要求する。サンプル YAML (68-70) と Available Keys 表 (151) だけでは不足で、134 / 135 行目 (信頼レベルの類比) と 166 行目 (`themes` のキー衝突例) も言い換えが必要
+- `.wholework.yml` (本リポジトリ自身の 3 行目) は Issue 本文の Scope 一覧に無いが Purpose には含まれる。Changed Files に追加済みなので削除を忘れないこと
+- `SECURITY.md` の `permission-mode: bypass` という設定値表記 (51 / 96 / 101 行目) は AC 対象外 (`dangerously-skip-permissions` 文字列を含まない)。AC が PASS しても残留しうるので明示的に除去する
+- SKILL.md 4 ファイルを編集するため `scripts/validate-skill-syntax.py` の制約に注意 — 本文への半角感嘆符と三連バッククォートを持ち込まない
+- `tests/run-review.bats` の fixture `permission-mode: bypass` は約 20 箇所ある。一括置換後に残存がないか `grep -rn 'permission-mode' tests/` で確認すること
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の `## Scope` が `grep -rl` の結果と完全一致していなかった (`.wholework.yml` と `docs/guide/auto-mode-template.json` が欠落)。撤去系 Issue では起票時の grep 結果をそのまま Scope に貼るだけでは足りず、「設定キー自体を消す」という Purpose の帰結として自リポジトリの設定ファイルが対象に入ることを明示的に確認する必要がある
+- 撤去対象シンボルが**例示**として使われている箇所 (`modules/verify-patterns.md` / `skills/review/SKILL.md` の shell quoting 例、`skills/spec/SKILL.md` の挿入位置の例) は、機能的な依存ではないため Scope 検討時に見落としやすい。ただし放置すると「実在しないコードを指す例文」になり、後続の Spec/review がその例を信じて誤った検索文字列を生成する二次被害が起きる
+- AC の `file_not_contains` は**コメント行も対象**という性質が、本 Issue では 2 箇所 (run-code.sh / run-review.sh の #284 コメント) で効いてくる。「分岐の削除」という Issue の言葉から実装者がコメントまで想起するとは限らないので、Spec 側で行番号付きで明示した
+
+### Judgment rationale
+
+- `handle-permission-mode-failure.sh` を「維持するが引数を減らす」と解釈した。Issue 本文は「撤去対象ではない」と明言する一方で「bypass 分岐を前提にした記述が残っていないか確認する」と要求しており、恒真ガードになる第 3 引数はまさに後者に該当すると判断した。スクリプト自体の存在は保つのでどちらの指示にも反しない
+- pre-merge AC を追加しない判断をした。Step 4 / 5 など AC 未カバーの実装ステップが残るが、verify command 同期規則 (Issue 本文からの逐語コピー) を破ってまで AC を増やすより、Spec の Changed Files と Implementation Steps で担保し `/review` の Spec 準拠チェックに載せるほうが規約整合的と判断した。この未カバー範囲は Notes に明示列挙してある
+- `docs/workflow.md` の operate route の逃げ道 (`permission-mode: bypass` を設定して任意の外部 CLI を使う) が消えることを、機能縮小として受け入れた。Issue が意図した帰結そのものであり、代替手段 (`/code` の allowed-tools 拡張) が既に文書化されているため
+
+### Uncertainty resolution
+
+- 「auto mode は Max プラン必須か」— `SECURITY.md` の現行記述と Issue 本文の背景 (2026-08-14 に Pro/Max/Team でデフォルト化) が食い違っていた。Claude Code 公式ドキュメント (`code.claude.com/docs/en/permission-modes`) を実査し、**Plan: All plans** / Team・Enterprise は管理者が `permissions.disableAutoMode` で無効化可能 / モデルは Opus 4.6 以降・Sonnet 4.6 以降・Fable 5 と確定した。`SECURITY.md` の記述は事実誤りとして更新対象に含めた
+- 「Claude Code 側の `bypassPermissions` mode 自体が廃止されたのか」— 廃止されていない。公式ドキュメントに `bypassPermissions` は現役のモードとして記載がある。本 Issue は wholework が提供していた opt-out 経路を消すだけ、という位置づけを Overview に明記した
+- 「`spawn-recovery-subagent.sh` が使う `claude-sonnet-4-6` は auto mode 対応モデルか」— 対応する (Sonnet 4.6 以降が要件)。撤去によって recovery subagent が起動不能になるリスクはない
+- 新規テストケース要件チェックは非該当と判定した (分岐の追加ではなく削除のため)。ただし bypass テスト削除後に「auto しか渡らない」ことを保証する否定アサーションが消えると回帰検知が空くため、`! grep -q "FLAG_SKIP_PERMS=1"` の維持を Step 9 の必須事項として明記した
