@@ -258,7 +258,9 @@ _resolve_preview_basic_auth_command() {
     echo "Warning: preview-basic-auth-command output exceeds 2048 chars; leaving Basic Auth unset" >&2
     return 0
   fi
-  if [[ "$_resolved_trimmed" != *:* ]]; then
+  if [[ "$_resolved_trimmed" != *:* ]] \
+     || [[ -z "${_resolved_trimmed%%:*}" ]] \
+     || [[ -z "${_resolved_trimmed#*:}" ]]; then
     echo "Warning: preview-basic-auth-command output is not in username:password format; leaving Basic Auth unset" >&2
     return 0
   fi
