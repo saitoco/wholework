@@ -786,7 +786,7 @@ When the Issue involves real external or MCP tool calls (examples: verify comman
 - **Dependencies**: note "(after N)" for sequential deps, "(parallel with N, M)" for parallel-safe steps
 - **Acceptance criteria mapping**: note "(→ acceptance criteria X)" for each step
 - **post-merge manual steps are required**: even when an AC's verify-type is `post-merge manual`, the corresponding implementation step is mandatory in the current PR. "post-merge manual" describes how the AC is verified (human observation after merge), not whether implementation can be deferred. Record the step explicitly so the code phase does not skip it.
-- **Insertion position**: specify by nearby code context (e.g., "immediately before `--dangerously-skip-permissions`") rather than line numbers. Line numbers shift as files change and become unreliable guides for implementation.
+- **Insertion position**: specify by nearby code context (e.g., "immediately before `PERMISSION_FLAG=\"--permission-mode auto\"`") rather than line numbers. Line numbers shift as files change and become unreliable guides for implementation.
 - **Costly/irreversible steps**: append `<!-- spec-approval-needed: cost=<low|high>, reversibility=<low|high> -->` to the step line and add the matching Deferral Protocol entry to `## Notes` (see the "Costly/irreversible step marking" subsection above and `${CLAUDE_PLUGIN_ROOT}/modules/costly-step-protocol.md`). This is the one case where `/code` may legitimately not execute a Spec step.
 
 1. Step 1 (→ acceptance criteria A)

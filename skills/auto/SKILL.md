@@ -7,7 +7,7 @@ allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue 
 
 # Autonomous Execution
 
-Receive an Issue number and run spec (when needed)→code→review→merge→verify in sequence using Size-based routing. code/review/merge phases run via `run-*.sh` using `claude -p --dangerously-skip-permissions` for a fresh context with full permission bypass. verify runs as a Skill invocation in the parent session (enabling AskUserQuestion for manual AC confirmation).
+Receive an Issue number and run spec (when needed)→code→review→merge→verify in sequence using Size-based routing. code/review/merge phases run via `run-*.sh` using `claude -p --permission-mode auto` for a fresh, auto-mode-classified context. verify runs as a Skill invocation in the parent session (enabling AskUserQuestion for manual AC confirmation).
 
 If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
@@ -308,7 +308,7 @@ Proceed to Step 4 using the updated ROUTE and REVIEW_DEPTH.
 
 Select the route section below based on the current ROUTE value (set in Step 2 and potentially overridden by Step 3a's route demotion logic).
 
-Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --dangerously-skip-permissions` for a fresh context and full permission bypass.
+Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --permission-mode auto` for a fresh, auto-mode-classified context.
 
 **Execution pattern:**
 - Each `run-*.sh` runs via Bash with `run_in_background: true` and **no explicit `timeout` parameter**, in sequence. Do not wrap the call in an external Bash timeout — a legitimately long-running phase (e.g., Size L/XL code phases) must not be killed by the harness before it finishes.

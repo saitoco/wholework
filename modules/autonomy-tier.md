@@ -22,7 +22,7 @@ L1/L2/L3 loop state only has meaning when it is written back to L0 (public, mult
 | **L0: GitHub state** | Issues / Labels / PRs / blockedBy / `closes #N` | Event-driven (PR merge, label transition, comment, close) | Public, multi-actor, cross-query-capable |
 | **L1: Claude Code primitive** | Session memory | `/loop` / `/goal` / `ScheduleWakeup` | Volatile (session-scoped) |
 | **L2: Wholework skill internal** | Spec / retro / `auto-events.jsonl` | Tail extension (#700/702) | File-persistent |
-| **L3: `CronCreate`** | Session memory (in-memory only; nothing written to disk) | `CronCreate` (Claude Code primitive; not an OS-level scheduler) | Volatile, session-scoped — recurring jobs auto-expire after 7 days. Under `permission-mode: auto`, unattended self-registration is blocked by the Claude Code auto mode classifier. |
+| **L3: `CronCreate`** | Session memory (in-memory only; nothing written to disk) | `CronCreate` (Claude Code primitive; not an OS-level scheduler) | Volatile, session-scoped — recurring jobs auto-expire after 7 days. Under Claude Code auto mode, unattended self-registration is blocked by the auto mode classifier. |
 
 Wholework's XL Issue feature is itself an L0 loop: the parent Issue is the goal, sub-issues + `blockedBy` form the DAG, `phase/*` labels are the state machine, and the aggregation rules in `docs/workflow.md § XL Parent Issue Phase Management` provide the stop condition (all children in `phase/done` closes the parent).
 

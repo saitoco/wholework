@@ -1,6 +1,5 @@
 opportunistic-verify: true
 skill-proposals: true
-permission-mode: auto
 session-auto-rename: true
 autonomy: L3
 verify-max-iterations: 3

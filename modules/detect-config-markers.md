@@ -54,7 +54,6 @@ From the loaded content, search for each YAML key in the marker definition table
 | `watchdog-timeout-review-seconds` | `WATCHDOG_TIMEOUT_REVIEW_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_REVIEW_DEFAULT`) |
 | `watchdog-timeout-merge-seconds` | `WATCHDOG_TIMEOUT_MERGE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_MERGE_DEFAULT`) |
 | `watchdog-timeout-issue-seconds` | `WATCHDOG_TIMEOUT_ISSUE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default — see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_ISSUE_DEFAULT`) |
-| `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"auto"` |
 | `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 | `auto-max-concurrent` | `AUTO_MAX_CONCURRENT` | Integer string (extract as-is; use `5` if ≤0 or non-numeric) | `5` |
 | `patch-lock-timeout` | `PATCH_LOCK_TIMEOUT_SECONDS` | Integer string (extract as-is; use `300` if ≤0 or non-numeric) | `300` (used by `scripts/worktree-merge-push.sh`) |
@@ -137,7 +136,6 @@ WATCHDOG_TIMEOUT_CODE_SECONDS: integer from watchdog-timeout-code-seconds (defau
 WATCHDOG_TIMEOUT_REVIEW_SECONDS: integer from watchdog-timeout-review-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
 WATCHDOG_TIMEOUT_MERGE_SECONDS: integer from watchdog-timeout-merge-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
 WATCHDOG_TIMEOUT_ISSUE_SECONDS: integer from watchdog-timeout-issue-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
-PERMISSION_MODE: string extracted from permission-mode (default: "auto")
 VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 AUTO_MAX_CONCURRENT: integer from auto-max-concurrent (default: "5"; falls back to "5" if ≤0 or non-numeric)
 PATCH_LOCK_TIMEOUT_SECONDS: integer from patch-lock-timeout (default: "300"; falls back to "300" if ≤0 or non-numeric)

@@ -264,7 +264,7 @@ For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/
 
 **Security note for `command` hints**: In full mode, "execute `command` hints" means:
 - **Interactive mode**: present the command to the user and execute only after approval. Treat suspicious commands as UNCERTAIN.
-- **Non-interactive mode** (`--dangerously-skip-permissions` environment): no approval required. Execute commands directly. `command` hints are written in Issue bodies managed by repository maintainers and are treated as trusted commands. Do not use in repositories where external contributors have write access.
+- **Non-interactive mode** (`--permission-mode auto` environment): no approval required. Execute commands directly. `command` hints are written in Issue bodies managed by repository maintainers and are treated as trusted commands. Do not use in repositories where external contributors have write access.
 
 **`rubric` commands**: Processed via the same verify-executor translation table. Runs in both safe and full modes (`always_allow` — no side effects); the grader receives the Issue body, git diff, and any files explicitly named in the rubric text as input. Returns PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description.
 

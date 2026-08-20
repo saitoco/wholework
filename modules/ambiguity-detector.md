@@ -39,7 +39,7 @@ The clarification question and Issue update procedures after extraction are desc
 
 ## Non-Interactive Mode Handling
 
-When invoked via `run-*.sh` with `claude -p --dangerously-skip-permissions`, skills operate in **non-interactive mode** (signaled by `--non-interactive` in ARGUMENTS). In this mode, `AskUserQuestion` is unavailable — the process would hang waiting for stdin that never arrives. Instead, apply the following three-tier policy at every decision point:
+When invoked via `run-*.sh` with `claude -p --permission-mode auto`, skills operate in **non-interactive mode** (signaled by `--non-interactive` in ARGUMENTS). In this mode, `AskUserQuestion` is unavailable — the process would hang waiting for stdin that never arrives. Instead, apply the following three-tier policy at every decision point:
 
 ### Three-Tier Policy
 

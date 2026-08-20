@@ -303,7 +303,7 @@ now-superseded marker.
 
 **`file_contains` exact match check:**
 
-For `file_contains` verify commands, verify that the pattern is an exact substring of the implementation code in the PR diff. Shell quoting causes false negatives: `get-config-value.sh permission-mode auto` will not match `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`. When a FAIL result stems from a quoting or path-prefix discrepancy rather than a genuine implementation gap, report it as a spec quality issue requiring a verify command update.
+For `file_contains` verify commands, verify that the pattern is an exact substring of the implementation code in the PR diff. Shell quoting causes false negatives: `get-config-value.sh autonomy L1` will not match `"$SCRIPT_DIR/get-config-value.sh" autonomy L1`. When a FAIL result stems from a quoting or path-prefix discrepancy rather than a genuine implementation gap, report it as a spec quality issue requiring a verify command update.
 
 ### FAIL Blocking Behavior
 
