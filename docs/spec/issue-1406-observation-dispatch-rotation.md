@@ -97,8 +97,33 @@ Issue 本文は3つの想定アプローチ (N 回連続 SKIPPED/UNCERTAIN で�
 |-------|-------------------|-----------|------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Pre-merge AC1 の常時 PASS パターン (grep ベース AC) を rubric AC へ統合したことの記録。新規の曖昧点なし、`/spec` へ委任した実装方式選定の方針を確認 | https://github.com/saitoco/wholework/issues/1406#issuecomment-5359151015 |
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — 実装は Spec の Implementation Steps 1〜4 と完全に一致していた。Spec に含まれていなかった `docs/structure.md`/`docs/ja/structure.md` の追加変更 (Implementation Step 5) も、実装フェーズで Spec に事後追記済みで、Code Retrospective に記録された正当な Maintenance rule 適用であり、構造的な乖離ではなかった。
+
+### Recurring issues
+
+- 新規スクリプト `scripts/rotate-observation-dispatch.sh` の Parser/Validator Edge Case Pre-check (外部入力を正規表現で検証・正規化するスクリプトが該当) が発火し、実際にスクリプトを実行する専用エージェントと `review-light` エージェントの両方が、それぞれ独立に類似のパターン (境界値/異常な引数を渡した際、意図した単一のエラーメッセージ経路を通らず生の shell/coreutils 内部エラーが stderr に漏れる) を検出した。1件は `--threshold` に極端に大きい値を渡した場合 (bash の符号付き64bit整数比較の限界)、もう1件は `--cursor-file` に既存ディレクトリを渡した場合 (リダイレクト自体のシェルレベル失敗が `2>/dev/null` で抑制されない) で、いずれも「fail-open/hard-error の契約は守られているが、契約が約束する『単一のメッセージ』という粒度では守られていない」という共通パターンだった。両方とも Step 12 で修正済み (`^[0-9]{1,15}$` による桁数上限、`if` 条件全体を `{ ... } 2>/dev/null` でラップ)。今後、外部入力を検証する新規スクリプトを書く際は、値の型 (正規表現) だけでなく実行時の数値範囲・パス種別 (ディレクトリ vs ファイル) も含めて、意図したエラーメッセージ経路から外れないかを実行して確認するとよい。
+
+### Acceptance criteria verification difficulty
+
+- N/A — Pre-merge AC は rubric 1件のみで、Issue 本文と git diff から明確に判定可能だった。UNCERTAIN や verify command の不備は発生しなかった。`tests/rotate-observation-dispatch.bats` の 8ケース PASS が客観的な補強証跡として機能した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
+
+### Key Decisions
+- Step 12 で SHOULD 指摘2件 (`scripts/rotate-observation-dispatch.sh` の `--threshold` 極端値処理、`--cursor-file` ディレクトリ指定時の stderr リーク) を修正。いずれも fail-open/hard-error の実質的な安全性には影響しない stderr/エラーメッセージの整形の問題だったため、MUST 昇格せず SHOULD のまま修正して完了させた。
+- Parser/Validator Edge Case Pre-check (新規スクリプトが外部入力を正規表現で検証するため発火) を実行し、専用サブエージェントによる実行ベースの edge case 検証と `review-light` の Perspective 2 の両方から独立に類似の指摘を得た。
+
+### Deferred Items
+- Post-merge AC (`/auto --batch` で #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認) は opportunistic 検証のまま、`/merge` 以降の運用サイクルに委ねる。
+
+### Notes for Next Phase
+- Pre-merge AC (rubric) は PASS 判定・チェック済み。post-merge AC は未チェックのまま (意図通り)。
+- `/merge` 実行前提: CI 全11ジョブ SUCCESS、MUST issue なし (review event は COMMENTED)。修正コミット (`28e7dcb4`) は fix-cycle 後も bats 8/8 PASS・validate-skill-syntax 0 error を確認済み。
 
 ### Key Decisions
 - Spec の指定どおりラウンドロビン方式を実装。カーソルは `.tmp/observation-dispatch-cursor`（グローバル・非ロック・fail-open）に永続化し、`scripts/rotate-observation-dispatch.sh` が回転 + cap 適用 + カーソル書き込みを一手に担う設計とした。
