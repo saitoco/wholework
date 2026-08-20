@@ -305,6 +305,99 @@ to an Issue for pre-merge verification.
 
 ---
 
+## Preview URL / Basic Auth Command Recipes
+
+The `preview-url-command` and `preview-basic-auth-command` keys (see "Prerequisites" above)
+each expect a project-local script under `.wholework/adapters/`. This section provides
+copy-paste starting points for two common cases.
+
+> These scripts are **not** code that Wholework itself tests or maintains — they are
+> documentation samples for you to copy into your own project's `.wholework/adapters/`
+> and adapt as needed, the same "provider adapters stay project-side" boundary the
+> Adapter Resolution section above draws for capability adapters.
+
+### `preview-url-command` — AWS Amplify Hosting (production-proven)
+
+AWS Amplify Hosting never creates a GitHub Deployments API record, so the default
+Deployments-API polling in `scripts/run-review.sh` never resolves `PREVIEW_URL` for
+Amplify-hosted previews (see "Automating `PREVIEW_URL` resolution" above). This recipe
+extracts the preview URL from the `aws-amplify-*` bot's PR comment instead — no AWS
+credentials are required.
+
+Prerequisites: `gh` CLI authenticated, `jq` (only needed if you extend the script;
+the version below relies on `gh`'s built-in `--jq` support).
+
+**`.wholework/adapters/resolve-preview-url.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# Resolves the AWS Amplify Hosting preview URL for a PR by extracting it from the
+# aws-amplify-* bot's PR comment. No AWS credentials required.
+set -euo pipefail
+
+PR_NUMBER="${1:?Usage: resolve-preview-url.sh <pr-number>}"
+
+gh pr view "$PR_NUMBER" --json comments \
+  --jq '.comments[] | select(.author.login | test("^aws-amplify")) | .body' \
+  | grep -oE 'https://[A-Za-z0-9.-]+\.amplifyapp\.com[^[:space:])"'"'"']*' \
+  | head -n1
+```
+
+Declare it in `.wholework.yml`:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
+```
+
+This recipe has been exercised in real usage against a downstream project's Amplify-hosted
+previews, extracting the `*.amplifyapp.com` URL from the bot comment without AWS credentials.
+
+### `preview-basic-auth-command` — generic CI secret template (illustrative, unproven)
+
+Unlike the Amplify recipe above, this template has **no confirmed production track record** —
+`preview-basic-auth-command` itself is a newer key with no adopted implementation yet. It is a
+provider-agnostic illustration, not a recipe tied to a specific hosting provider: it reads
+CI-injected secret environment variables and prints them in `username:password` format. Treat
+it as a starting point to rewrite against your project's actual secret source (a secrets
+manager, a password-manager CLI, etc.) rather than as a ready-to-use script.
+
+**`.wholework/adapters/resolve-preview-basic-auth.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# Illustrative template only — not exercised in production. Reads CI-injected secret
+# environment variables and prints them in `username:password` format. Replace the
+# env-var read below with your project's actual secret source.
+set -euo pipefail
+
+if [ -z "${WHOLEWORK_PREVIEW_BASIC_USER:-}" ] || [ -z "${WHOLEWORK_PREVIEW_BASIC_PASS:-}" ]; then
+  echo "resolve-preview-basic-auth.sh: WHOLEWORK_PREVIEW_BASIC_USER/WHOLEWORK_PREVIEW_BASIC_PASS not set" >&2
+  exit 1
+fi
+
+echo "${WHOLEWORK_PREVIEW_BASIC_USER}:${WHOLEWORK_PREVIEW_BASIC_PASS}"
+```
+
+Declare it in `.wholework.yml`:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"
+```
+
+If the CI secrets are unavailable, the script exits non-zero, matching
+`preview-basic-auth-command`'s documented failure fallback (both variables left unset,
+existing unauthenticated fallback preserved).
+
+As more providers accumulate production-proven `preview-url-command` recipes, or a
+production-proven `preview-basic-auth-command` implementation emerges, add them as
+additional subsections here, grouped by key and by provider.
+
+---
+
 ## Further Reading
 
 The following documents provide deeper background on the adapter pattern and the

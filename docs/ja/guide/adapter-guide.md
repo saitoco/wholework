@@ -301,6 +301,100 @@ to an Issue for pre-merge verification.
 
 ---
 
+## Preview URL / Basic Auth Command のレシピ
+
+`preview-url-command` と `preview-basic-auth-command` (上記「前提条件」参照) は、それぞれ
+`.wholework/adapters/` 配下のプロジェクトローカルなスクリプトを期待する。本節では、
+よくある 2 ケースについてコピペで使える出発点を示す。
+
+> これらのスクリプトは wholework 本体がテスト・保守するコードでは **ない** —
+> 自分のプロジェクトの `.wholework/adapters/` にコピーして必要に応じて書き換えるための
+> ドキュメント上のサンプルであり、上記 Adapter 解決節が capability adapter について
+> 引いている「provider 別 adapter はプロジェクト側の責務」という境界と同じもの。
+
+### `preview-url-command` — AWS Amplify Hosting 向け (実運用検証済み)
+
+AWS Amplify Hosting は GitHub Deployments API にレコードを作らないため、
+`scripts/run-review.sh` の既定の Deployments API ポーリングでは Amplify ホスティングの
+プレビューについて `PREVIEW_URL` を解決できない (上記「`preview-url-command` による
+`PREVIEW_URL` 解決の自動化」参照)。このレシピは代わりに `aws-amplify-*` bot の PR コメントから
+プレビュー URL を抽出する — AWS 認証情報は不要。
+
+前提: `gh` CLI 認証済み、`jq` (スクリプトを拡張する場合のみ必要。以下の版は `gh` 組み込みの
+`--jq` サポートに依存する)。
+
+**`.wholework/adapters/resolve-preview-url.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# aws-amplify-* bot の PR コメントから AWS Amplify Hosting のプレビュー URL を抽出する。
+# AWS 認証情報は不要。
+set -euo pipefail
+
+PR_NUMBER="${1:?Usage: resolve-preview-url.sh <pr-number>}"
+
+gh pr view "$PR_NUMBER" --json comments \
+  --jq '.comments[] | select(.author.login | test("^aws-amplify")) | .body' \
+  | grep -oE 'https://[A-Za-z0-9.-]+\.amplifyapp\.com[^[:space:])"'"'"']*' \
+  | head -n1
+```
+
+`.wholework.yml` での宣言:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
+```
+
+このレシピは、ある downstream プロジェクトの Amplify ホスティングされたプレビューに対する
+実運用で機能実証済みであり、AWS 認証情報なしで bot コメントから `*.amplifyapp.com` の URL を
+抽出している。
+
+### `preview-basic-auth-command` — 汎用的な CI シークレットテンプレート (イラスト的・実運用未検証)
+
+上記の Amplify レシピと異なり、このテンプレートには **実運用での採用実績がまだ無い** —
+`preview-basic-auth-command` 自体がより新しいキーであり、まだ採用された実装例が無いため。
+これは特定のホスティングプロバイダに紐づくレシピではなく、provider 非依存のイラスト的な例で
+あり、CI が注入するシークレット環境変数を読み取り `username:password` 形式で出力する。
+そのまま使えるスクリプトとしてではなく、自分のプロジェクトの実際のシークレット供給元
+(secrets manager、password manager CLI 等) に合わせて書き換えるための出発点として扱うこと。
+
+**`.wholework/adapters/resolve-preview-basic-auth.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# イラスト的テンプレートのみ — 実運用では検証されていない。CI が注入するシークレット
+# 環境変数を読み取り username:password 形式で出力する。下記の環境変数読み取り部分を
+# 自分のプロジェクトの実際のシークレット供給元に置き換えること。
+set -euo pipefail
+
+if [ -z "${WHOLEWORK_PREVIEW_BASIC_USER:-}" ] || [ -z "${WHOLEWORK_PREVIEW_BASIC_PASS:-}" ]; then
+  echo "resolve-preview-basic-auth.sh: WHOLEWORK_PREVIEW_BASIC_USER/WHOLEWORK_PREVIEW_BASIC_PASS not set" >&2
+  exit 1
+fi
+
+echo "${WHOLEWORK_PREVIEW_BASIC_USER}:${WHOLEWORK_PREVIEW_BASIC_PASS}"
+```
+
+`.wholework.yml` での宣言:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"
+```
+
+CI シークレットが利用できない場合、スクリプトは非零終了する。これは
+`preview-basic-auth-command` のドキュメント化された失敗時フォールバック
+(両変数が未設定のまま残り、既存の非認証フォールバックが維持される) と整合する。
+
+他 provider 向けの実運用検証済み `preview-url-command` レシピが増えた場合や、
+実運用実績を伴う `preview-basic-auth-command` の実装が出てきた場合は、キーごと・
+provider ごとに見出しを分けてこの節に追記すること。
+
+---
+
 ## 参考資料
 
 以下のドキュメントは、adapter パターンと環境適応アーキテクチャの背景をより深く理解するための
