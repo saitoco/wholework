@@ -42,6 +42,7 @@ None (repository files)。成果物は Issue #1401 本文自体 (GitHub state、
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: Issue Retrospective — Triage AC 監査コメント (AC1 の rubric が起票時点で常時 PASS してしまう Pattern 2 型問題の指摘) を踏まえ、AC1 (hit rate 定量化) を削除し、AC2 (改善案提示) の rubric text に「本 Issue 本文への追記」という評価対象の明示を追加、Pre-merge/Post-merge のセクション分割と `implementation-type: metadata-only` マーカーを付与した判断根拠を記録。本 Spec 作成時点の Issue 本文には既に反映済みで、追加で取り込むべき新規情報はなし。 / https://github.com/saitoco/wholework/issues/1401#issuecomment-5358812202
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: 直前コメントの `### Consumed Comments` サブセクション記載漏れの追記 (対象: issuecomment-5336448321、Triage AC 監査コメント本体)。本 Spec 作成に新規に影響する情報はなし。 / https://github.com/saitoco/wholework/issues/1401#issuecomment-5358814948
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=execution-log phase=code issue=1401 --> / https://github.com/saitoco/wholework/issues/1401#issuecomment-5359026525
 ## Code Retrospective
 
 ### Deviations from Design
