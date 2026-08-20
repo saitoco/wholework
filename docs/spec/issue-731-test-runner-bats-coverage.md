@@ -106,3 +106,12 @@ No new comments since last phase.
 
 ### Improvement Proposals
 - N/A
+
+### 2026-08-20 再確認 (/auto 1417 セッションから、実質初回の post-merge observation 評価)
+
+`/auto 1417` (session `71172-1787214280`) の完了後の event-based observation scan で `event=auto-run` が dispatch された。2026-06-26 の初回判定以降、本条件は12回 (`auto-run`) トリガーされたが、oldest-first dispatch cap が常に #562/#589/#590/#724 で占有され (`#1406` が指摘する構造的問題の実例)、一度も実際の `/verify` 評価に到達していなかった。今回が実質的な初回再評価。
+
+2026-06-26 以降 `modules/test-runner.md`/`tests/test-runner.bats` を変更した6コミットを調査したが、既存スイートが FAIL してから修正で green 化した regression 検出の証跡は見つからず (直接変更した2コミットはいずれも新規テストケース追加)。AC のフォールバック規定に従い SKIPPED を維持。
+
+#### Improvement Proposals (再評価分)
+- N/A — #1406 が既に同じ構造的問題 (oldest-first dispatch cap による特定 Issue の恒久占有) をカバーしているため、重複起票はしない。本エントリはその実例として #1406 に有用な追加傍証となる。
