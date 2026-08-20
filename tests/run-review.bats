@@ -8,7 +8,7 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-review.sh
 
 setup() {
     # Isolate test from repo .wholework.yml
-    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    : > "$BATS_TEST_TMPDIR/.wholework.yml"
     cd "$BATS_TEST_TMPDIR"
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
@@ -19,12 +19,11 @@ setup() {
     CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
     export CLAUDE_CALL_LOG
 
-    # Mock get-config-value.sh: return "bypass" by default
+    # Mock get-config-value.sh: return the caller-supplied default for any key
     cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     *) echo "$DEFAULT" ;;
 esac
 exit 0
@@ -198,7 +197,7 @@ teardown() {
 
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_MODEL=1" "$CLAUDE_CALL_LOG"
-    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_PLUGIN_DIR=1" "$CLAUDE_CALL_LOG"
 
     grep -q "ANTHROPIC_MODEL=sonnet" "$CLAUDE_CALL_LOG"
@@ -217,7 +216,7 @@ teardown() {
     [[ "$output" == *"Starting /review for PR #456"* ]]
     [[ "$output" == *"Finished /review for PR #456"* ]]
     [[ "$output" == *"Model: sonnet"* ]]
-    [[ "$output" == *"Permissions: skip (autonomous mode)"* ]]
+    [[ "$output" == *"Permissions: permission-mode auto (with allow rules template)"* ]]
 }
 
 @test "success: CLAUDECODE env var is not inherited by claude subprocess" {
@@ -318,7 +317,6 @@ MOCK
 
 @test "PENDING: pr-preview capability pending deployment skips claude and exits 2" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -358,7 +356,6 @@ MOCK
 
 @test "success: pr-preview capability with successful deployment runs claude normally" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -397,7 +394,6 @@ MOCK
 
 @test "success: PREVIEW_URL fast path with curl 200 runs claude without polling Deployments API" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -432,7 +428,6 @@ MOCK
 
 @test "success: PREVIEW_URL fast path with curl 401 (Basic Auth) is treated as reachable" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -454,7 +449,6 @@ MOCK
 
 @test "PENDING: PREVIEW_URL fast path unreachable (curl 000) exits 2 without running claude" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -477,7 +471,6 @@ MOCK
 
 @test "success: PREVIEW_URL unset falls back to existing Deployments API branch" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -517,7 +510,6 @@ MOCK
 
 @test "success: preview-url-command resolves PREVIEW_URL when the env var is unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -527,7 +519,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -544,7 +535,6 @@ MOCK
 
 @test "success: exported PREVIEW_URL takes precedence over preview-url-command" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -555,7 +545,6 @@ YML
 #!/bin/bash
 KEY="\$1"; DEFAULT="\${2:-}"
 case "\$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "touch $MOCK_DIR/preview-cmd-executed && echo https://should-not-be-used.example.com" ;;
     *) echo "\$DEFAULT" ;;
 esac
@@ -573,7 +562,6 @@ MOCK
 
 @test "success: preview-url-command {pr} placeholder is substituted with the PR number" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -583,7 +571,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo https://pr-{pr}.example-preview.com" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -607,7 +594,6 @@ MOCK
 
 @test "fallback: preview-url-command failure falls back to the Deployments API branch" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -617,7 +603,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "exit 1" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -660,7 +645,6 @@ MOCK
 
 @test "fallback: preview-url-command empty output falls back to the Deployments API branch" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -670,7 +654,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "true" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -713,7 +696,6 @@ MOCK
 
 @test "fallback: preview-url-command non-URL output falls back to the Deployments API branch" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -723,7 +705,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo not-a-url" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -766,7 +747,6 @@ MOCK
 
 @test "success: preview-basic-auth-command resolves PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS when both are unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -776,7 +756,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
     preview-basic-auth-command) echo "echo user1:pass1" ;;
     *) echo "$DEFAULT" ;;
@@ -793,7 +772,6 @@ MOCK
 
 @test "success: exported PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS take precedence over preview-basic-auth-command" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -806,7 +784,6 @@ YML
 #!/bin/bash
 KEY="\$1"; DEFAULT="\${2:-}"
 case "\$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-basic-auth-command) echo "touch $MOCK_DIR/basic-auth-cmd-executed && echo shouldnot:beused" ;;
     *) echo "\$DEFAULT" ;;
 esac
@@ -823,7 +800,6 @@ MOCK
 
 @test "success: preview-basic-auth-command {pr} placeholder is substituted with the PR number" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -833,7 +809,6 @@ YML
 #!/bin/bash
 KEY="\$1"; DEFAULT="\${2:-}"
 case "\$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
     preview-basic-auth-command) echo "echo user-{pr}:pass-{pr} | tee $MOCK_DIR/basic-auth-value.log" ;;
     *) echo "\$DEFAULT" ;;
@@ -850,7 +825,6 @@ MOCK
 
 @test "fallback: preview-basic-auth-command failure (non-zero exit) leaves Basic Auth unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -860,7 +834,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-basic-auth-command) echo "exit 1" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -901,7 +874,6 @@ MOCK
 
 @test "fallback: preview-basic-auth-command empty output leaves Basic Auth unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -911,7 +883,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-basic-auth-command) echo "true" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -952,7 +923,6 @@ MOCK
 
 @test "fallback: preview-basic-auth-command output without ':' leaves Basic Auth unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -962,7 +932,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-basic-auth-command) echo "echo justausernamewithoutcolon" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -1003,7 +972,6 @@ MOCK
 
 @test "fallback: preview-basic-auth-command output with empty username or password leaves Basic Auth unset" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -1013,7 +981,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-basic-auth-command) echo "echo :passwordonly" ;;
     *) echo "$DEFAULT" ;;
 esac
@@ -1054,7 +1021,6 @@ MOCK
 
 @test "masking: resolved username/password values never appear in output" {
     cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
-permission-mode: bypass
 capabilities:
   pr-preview: true
 YML
@@ -1064,7 +1030,6 @@ YML
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     preview-url-command) echo "echo https://preview-{pr}.example.com" ;;
     preview-basic-auth-command) echo "echo secretuser:secretpass123" ;;
     *) echo "$DEFAULT" ;;
@@ -1104,38 +1069,11 @@ MOCK
     [[ "$output" == *"Exit code: 42"* ]]
 }
 
-@test "permission-mode: auto config passes --permission-mode auto" {
-    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
-#!/bin/bash
-KEY="$1"; DEFAULT="${2:-}"
-case "$KEY" in
-    permission-mode) echo "auto" ;;
-    *) echo "$DEFAULT" ;;
-esac
-MOCK
-    chmod +x "$MOCK_DIR/get-config-value.sh"
-    cat > "$MOCK_DIR/claude" <<'MOCK'
-#!/bin/bash
-for arg in "$@"; do
-    case "$arg" in
-        --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
-        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
-        --plugin-dir) echo "FLAG_PLUGIN_DIR=1" >> "$CLAUDE_CALL_LOG" ;;
-    esac
-done
-exit 0
-MOCK
-    chmod +x "$MOCK_DIR/claude"
+@test "permission-mode: always passes --permission-mode auto, never --dangerously-skip-permissions" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
     ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
-}
-
-@test "permission-mode: bypass uses --dangerously-skip-permissions" {
-    run bash "$SCRIPT" 123
-    [ "$status" -eq 0 ]
-    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "guard: prompt contains HEADLESS SKILL EXECUTION guard text" {
