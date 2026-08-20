@@ -56,7 +56,7 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-if ! [[ "$THRESHOLD" =~ ^[0-9]+$ ]] || [ "$THRESHOLD" -le 0 ]; then
+if ! [[ "$THRESHOLD" =~ ^[0-9]{1,15}$ ]] || [ "$THRESHOLD" -le 0 ]; then
     echo "Error: --threshold must be a positive integer (got: '${THRESHOLD}')" >&2
     exit 1
 fi
@@ -86,7 +86,7 @@ DISPATCH_SET="$(printf '%s\n' "$ROTATED" | head -n "$THRESHOLD")"
 
 if [ -n "$DISPATCH_SET" ]; then
     NEW_CURSOR="$(printf '%s\n' "$DISPATCH_SET" | tail -n 1)"
-    if ! mkdir -p "$(dirname "$CURSOR_FILE")" 2>/dev/null || ! printf '%s\n' "$NEW_CURSOR" > "$CURSOR_FILE" 2>/dev/null; then
+    if ! { mkdir -p "$(dirname "$CURSOR_FILE")" && printf '%s\n' "$NEW_CURSOR" > "$CURSOR_FILE"; } 2>/dev/null; then
         echo "Warning: rotate-observation-dispatch.sh: failed to write cursor file '$CURSOR_FILE' — continuing without persisting cursor" >&2
     fi
 fi
