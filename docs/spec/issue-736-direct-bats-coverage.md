@@ -99,3 +99,12 @@
 
 ### Improvement Proposals
 - N/A
+
+### 2026-08-21 再確認 (/auto --batch セッション、#1406 修正後の dispatch)
+
+`#1406` (ラウンドロビン回転方式) 後の `Event-based observation scan` で dispatch。Post-merge observation AC (`event=auto-run`) の実質初回評価。
+
+`scripts/get-auto-session-report.sh` は #1007/#1279/#1300/#1312 等で複数回 "fix: ... + regression coverage" 形式の変更を受けており (#731/#732 の shallow doc-test とは異なり実際の script 動作を検証する direct test)、regression-detection サイクルの蓋然性自体は高い。しかし #1300 の Code Retrospective では Rework=N/A (手戻りなし、実装は1回で完了) と記録されており、新規テストが修正前コードに対して実際に FAIL した直接証跡は見つからなかった。AC の保守的規定に従い SKIPPED を維持。
+
+#### Improvement Proposals (再評価分)
+- N/A — ただし、このパターン (テスト新設 Issue の post-merge observation AC が、後続の "fix + regression test" 型変更でも FAIL 証跡を得られず恒常的に SKIPPED のまま推移する) が #731/#732/#736 の3件で共通して観測されており、AC 設計自体が「テストファースト開発では FAIL が commit 履歴に残らない」という構造的制約を持つ可能性がある。再発性は認識したが、単体では Tier 1 の multi-file ripple/SSoT 基準を満たさないため見送り。3件目以降さらに同型が続く場合は改めて評価する。
