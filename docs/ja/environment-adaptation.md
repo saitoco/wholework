@@ -23,7 +23,6 @@ copilot-review: true          # GitHub Copilot review 連携
 coderabbit-review: true       # CodeRabbit AI review 連携
 opportunistic-verify: true    # Opportunistic 検証（マージ後条件の自動実行）
 skill-proposals: true         # スキル提案機能
-permission-mode: auto         # /auto サブプロセスの permission mode（デフォルト: auto、legacy は bypass）
 spec-path: custom/specs       # Spec ファイル保存先（デフォルト: docs/spec）
 steering-docs-path: custom/docs  # Steering Documents ディレクトリ（デフォルト: docs）
 capabilities:

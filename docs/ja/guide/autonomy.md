@@ -37,7 +37,7 @@ L2 を使うべき場合:
 
 ### L3 Unattended
 
-スキルは GitHub state (ラベル遷移、close/reopen、コメント) を完全に無人で書き込みます。`CronCreate` は L2→L1 パス (B) として利用可能ですが、セッションスコープかつインメモリです — ディスクには何も書き込まれず、登録済みジョブは 7 日で自動失効し、`permission-mode: auto` 下では無人でのセルフ登録が Claude Code の auto mode classifier によってブロックされます。したがって `CronCreate` スケジュールの登録には attended セッションが必要であり、無人の L3 実行が単独で行えるものではありません。
+スキルは GitHub state (ラベル遷移、close/reopen、コメント) を完全に無人で書き込みます。`CronCreate` は L2→L1 パス (B) として利用可能ですが、セッションスコープかつインメモリです — ディスクには何も書き込まれず、登録済みジョブは 7 日で自動失効し、無人でのセルフ登録は Claude Code の auto mode classifier によってブロックされます。したがって `CronCreate` スケジュールの登録には attended セッションが必要であり、無人の L3 実行が単独で行えるものではありません。
 
 L3 を使うべき場合:
 - L2 がプロジェクトでうまく機能することを確認済み
@@ -64,9 +64,9 @@ autonomy: L2   # L1 | L2 | L3
 - **必須依存** (そのパスなしではスキルが動作しない) : スキルは起動を拒否し、どのティアを設定すべきかを示すエラーを表示します。
 - **degradable** (そのパスなしでもスキルが動作する) : スキルは警告を表示し、パス A (advisory — 推奨事項を表示し、ユーザーがアクションを取る) にフォールバックします。
 
-## ティアと `permission-mode` の関係
+## ティアと `--permission-mode` の関係
 
-`permission-mode` は Claude Code サブプロセスの権限 (どの `gh` コマンドやシェルコマンドを自動承認するか、それとも確認を求めるか) を制御します。autonomy tier は **Wholework がどの GitHub state を書き込めるか、どのループを発火できるか** を制御します。両者は直交しており、`permission-mode: bypass` と `autonomy: L1` を同時に設定できます。
+Claude Code の `--permission-mode` フラグは、サブプロセスの権限 (どの `gh` コマンドやシェルコマンドを自動承認するか、それとも確認を求めるか) を制御します。autonomy tier は **Wholework がどの GitHub state を書き込めるか、どのループを発火できるか** を制御します。両者は直交しており、サブプロセスの権限設定と `autonomy: L1` は独立して設定できます。
 
 ティア × パスの完全な権限マトリクスと L0 の書き込みルールについては、[`modules/autonomy-tier.md`](../../../modules/autonomy-tier.md) を参照してください。
 

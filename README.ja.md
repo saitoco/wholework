@@ -52,12 +52,12 @@ Wholework は `.wholework.yml` (フィーチャーフラグとパス)、`.wholew
 
 ## 🔒 セキュリティ
 
-Wholework のスキルは、リポジトリに対して `gh`、`git`、ファイル書き込みの各操作を実行します。`/auto` はデフォルトで `--permission-mode auto` を使用し、`.wholework.yml` で `permission-mode: bypass` を設定した場合は `--dangerously-skip-permissions` を使用します。副作用、必要な権限、permission mode オプションの全容は [SECURITY.md](SECURITY.md) を参照してください。
+Wholework のスキルは、リポジトリに対して `gh`、`git`、ファイル書き込みの各操作を実行します。`/auto` は常に `--permission-mode auto` を使用します。副作用、必要な権限、allow rules テンプレートの全容は [SECURITY.md](SECURITY.md) を参照してください。
 
 ## 💬 サポート
 
 - **バグ報告 / 機能要望** — [GitHub Issues](https://github.com/saitoco/wholework/issues/new/choose) から Issue を立ててください。バグ報告と機能要望のテンプレートが用意されています。
-- **セキュリティに関する懸念** — 副作用、必要な権限、permission バイパスの挙動の詳細は [SECURITY.md](SECURITY.md) を参照してください。
+- **セキュリティに関する懸念** — 副作用、必要な権限、auto mode classifier の挙動の詳細は [SECURITY.md](SECURITY.md) を参照してください。
 
 ## 🌱 コントリビュート
 

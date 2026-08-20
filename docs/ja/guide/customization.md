@@ -58,11 +58,6 @@ verify-ignore-paths:
   - vault/**
   - vault/.obsidian/**
 
-# /auto サブプロセスの permission mode（デフォルト: auto）
-# "auto" は --permission-mode auto を allow rules テンプレートと共に使用（docs/guide/auto-mode-template.json 参照）
-# "bypass" は --dangerously-skip-permissions を使用（レガシー / オプトアウト）
-permission-mode: auto
-
 # XL sub-issue 並列実行の同時実行数キャップ（デフォルト: 5）
 # auto-max-concurrent: 5
 
@@ -120,8 +115,8 @@ capabilities:
 | `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
-| `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (解決の呼び出し箇所は `run-review.sh` の `pr-preview` ゲート内にある)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行をカバー) のみが参照する — `/review` を skill として直接呼ぶ経路では参照されない。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`permission-mode` と同じ信頼レベル)。 |
-| `preview-basic-auth-command` | string | `""` | `preview-url-command` が `PREVIEW_URL` を解決するのと同じ仕組みで、プロジェクト側スクリプトが `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`preview-url-command` と同じゲート)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートのみが参照する。コマンド標準出力の 1 行目は `username:password` 形式である必要がある (最初の `:` で分割) — それ以外の結果 (非 0 終了、空出力、2048 文字超の出力、1 行目に `:` が無い) の場合は両変数を未設定のまま維持し、既存の非認証フォールバックを保持する。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`preview-url-command`/`permission-mode` と同じ信頼レベル)。 |
+| `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (解決の呼び出し箇所は `run-review.sh` の `pr-preview` ゲート内にある)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行をカバー) のみが参照する — `/review` を skill として直接呼ぶ経路では参照されない。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (このファイル内の他の実行コマンド系キーと同じ信頼レベル)。 |
+| `preview-basic-auth-command` | string | `""` | `preview-url-command` が `PREVIEW_URL` を解決するのと同じ仕組みで、プロジェクト側スクリプトが `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`preview-url-command` と同じゲート)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートのみが参照する。コマンド標準出力の 1 行目は `username:password` 形式である必要がある (最初の `:` で分割) — それ以外の結果 (非 0 終了、空出力、2048 文字超の出力、1 行目に `:` が無い) の場合は両変数を未設定のまま維持し、既存の非認証フォールバックを保持する。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`preview-url-command` と同じ信頼レベル)。 |
 | `spec-path` | string | `docs/spec` | spec の保存先 |
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
@@ -137,7 +132,6 @@ capabilities:
 | `watchdog-timeout-merge-seconds` | integer | `""` (フォールバック: `600`) | `/merge` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `600`。 |
 | `watchdog-timeout-issue-seconds` | integer | `""` (フォールバック: `1200`) | `/issue` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `1200`。 |
 | `patch-lock-timeout` | integer | `300` | `git merge --ff-only` + `git push origin main` の lock 取得タイムアウト秒数。lock 保持は数秒のためデフォルトは余裕値。push 取得が常時失敗する場合のみ増やす。0 以下または非数値の場合は `300` にフォールバック。ファイルを編集せずに per-run で上書きする (緊急用) には `WHOLEWORK_PATCH_LOCK_TIMEOUT` env var を設定する。優先順位: env var > このキー > `300`。 |
-| `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 | `auto-max-concurrent` | integer | `5` | XL 並列ルートで同時実行できる sub-issue の最大数。依存グラフの各レベルに適用。0 以下または非数値の場合は `5` にフォールバック。 |
 | `observation-dispatch-threshold` | integer | `5` | `/auto` の Event-based observation scan 実行 (single-issue route・batch route 双方、`event=auto-run` のみ) につき `/verify` を dispatch する Issue 数の上限。上限を超えた matched Issue は引き続きコメント通知される (`observation-trigger.sh` の既存の挙動、ただし冪等性ガードの対象。`modules/observation-trigger.md` 参照) が、次回の `auto-run` イベントスキャンで再評価される。0 以下または非数値の場合は `5` にフォールバック。 |
@@ -152,7 +146,7 @@ capabilities:
 | `recoveries-auto-fire.threshold` | integer | `3` | 自動起票のトリガーとなる symptom 発生回数の閾値。0 以下または非数値の場合は `3` にフォールバック。 |
 | `always-pr` | boolean | `false` | Size に関わらず PR route (branch + PR) を強制する。通常 main に直接 commit する XS/S Issues も PR 経由になる。`--patch` と同時指定した場合は `--patch` を無視して PR route を使用する。`autonomy:` tier と直交（パイプラインのルートを制御し、意思決定自律度には影響しない）。 |
 | `auto-stop-at` | string | `"verify"` | `/auto` が停止するフェーズを宣言する。有効値: `spec`、`code`、`review`、`merge`、`verify`。デフォルト `verify` はフルパイプライン実行（現状の動作）。merge = 公開になる website 系プロジェクトでは `review` を推奨（人間が gate した後 `/merge` を手動実行）。per-invocation override: `--stop-at=<phase>`。`autonomy:` tier と直交。 |
-| `themes` | block mapping | `{}` | `scripts/setup-labels.sh` が読み込むプロジェクト固有の `theme/*` ラベルカタログ (`{name}: {description}`)。未設定の場合 `theme/*` ラベルは一切作成されない — 既定/フォールバックのカタログは存在しない (wholework 自身のドッグフーディング用テーマは、組み込みの既定値ではなく本リポジトリ自身の `.wholework.yml` に存在する)。色は全テーマ共通で `006B75` 固定、テーマごとの指定は不可。`/triage` Step 6a の分類ロジックは生成された `theme/*` ラベルを `gh label list` で動的取得するのみで、このキーの影響を直接受けない。使用可能な名前の文字は `A-Z a-z 0-9 . _ -` のみで、それ以外の文字を含む行は無視される。description は ` #` 以降が (クォートされていても) 除去されるため、description に `#` を含めない。テーマ名は `.wholework.yml` の他のトップレベル設定キー名 (例: `autonomy`, `permission-mode`) と衝突させないこと — 衝突すると `scripts/get-config-value.sh` のフラットキー検索がそのキー本来の値ではなくテーマの description を返してしまう。 |
+| `themes` | block mapping | `{}` | `scripts/setup-labels.sh` が読み込むプロジェクト固有の `theme/*` ラベルカタログ (`{name}: {description}`)。未設定の場合 `theme/*` ラベルは一切作成されない — 既定/フォールバックのカタログは存在しない (wholework 自身のドッグフーディング用テーマは、組み込みの既定値ではなく本リポジトリ自身の `.wholework.yml` に存在する)。色は全テーマ共通で `006B75` 固定、テーマごとの指定は不可。`/triage` Step 6a の分類ロジックは生成された `theme/*` ラベルを `gh label list` で動的取得するのみで、このキーの影響を直接受けない。使用可能な名前の文字は `A-Z a-z 0-9 . _ -` のみで、それ以外の文字を含む行は無視される。description は ` #` 以降が (クォートされていても) 除去されるため、description に `#` を含めない。テーマ名は `.wholework.yml` の他のトップレベル設定キー名 (例: `autonomy`, `spec-path`) と衝突させないこと — 衝突すると `scripts/get-config-value.sh` のフラットキー検索がそのキー本来の値ではなくテーマの description を返してしまう。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 

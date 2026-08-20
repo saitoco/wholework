@@ -187,7 +187,7 @@ wholework/
 - `scripts/collect-verify-retention-stats.sh` — verify-type ごとに `phase/verify` の滞留を測定する (マージ後 AC がどれだけ待機中か、その待機がどれだけ古いか)。比較ウィンドウの日付フィルタはオプション。`/audit stats --retention` 用
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/html-selector-match.py` — 標準ライブラリのみを使う Python の CSS セレクタマッチャ (複合セレクタ + descendant/`>`/`+`/`~` コンビネータチェーン)。`modules/verify-executor.md` の `html_check` verify command で使用される。`curl | python3 html-selector-match.py "selector"` で stdin から HTML を読み、マッチ件数を出力する
-- `scripts/handle-permission-mode-failure.sh` — `permission-mode: auto` の失敗を診断し、修復ヒントを stderr に出力する (ヒューリスティック: exit!=0 かつ elapsed<=30s)
+- `scripts/handle-permission-mode-failure.sh` — `--permission-mode auto` classifier の失敗の可能性を診断し、修復ヒントを stderr に出力する (ヒューリスティック: exit!=0 かつ elapsed<=30s)
 - `scripts/get-verify-permission.sh` — verify command ハンドラファイルから権限値を抽出
 - `scripts/get-issue-size.sh` — issue の size ラベルを取得
 - `scripts/get-issue-type.sh` — issue の type ラベルを取得

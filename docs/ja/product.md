@@ -68,7 +68,7 @@ Wholework が機能するために必須なのは以下のみである。
 ## 今後の方向性
 
 - **ガバナンスと検証の深化**: コーディングエージェントがより自律的になるにつれ、価値はオーケストレーションからガバナンスへとシフトする — 要件の捕捉、変更のゲーティング、成果の検証、監査証跡の維持。Wholework のロードマップは、モデルの自律性が高まるにつれてハーネスの各層を深化させることを優先する。
-- **自律性階層 (autonomy-tiered) ガバナンス**: 4 つの層 — L0 (GitHub 状態: Issues、Labels、PRs、blockedBy) / L1 (Claude Code プリミティブ: `/loop`、`ScheduleWakeup`、`CronCreate`) / L2 (Wholework skill 内部: Spec、retro、`auto-events.jsonl`) / L3 (OS スケジューラ) — は `permission-mode` と直交する。`permission-mode` はサブプロセスの権限を統制するものであり、GitHub 状態のスコープを統制するものではない。`.wholework.yml` の `autonomy:` フィールドは、skill がどこまで L0 を書き込み、L2→L1 経路を発火できるかを宣言する。SSoT: `modules/autonomy-tier.md`。
+- **自律性階層 (autonomy-tiered) ガバナンス**: 4 つの層 — L0 (GitHub 状態: Issues、Labels、PRs、blockedBy) / L1 (Claude Code プリミティブ: `/loop`、`ScheduleWakeup`、`CronCreate`) / L2 (Wholework skill 内部: Spec、retro、`auto-events.jsonl`) / L3 (OS スケジューラ) — は Claude Code の `--permission-mode` サブプロセスフラグと直交する。このフラグはサブプロセスの権限を統制するものであり、GitHub 状態のスコープを統制するものではない。`.wholework.yml` の `autonomy:` フィールドは、skill がどこまで L0 を書き込み、L2→L1 経路を発火できるかを宣言する。SSoT: `modules/autonomy-tier.md`。
 - **設定サーフェスの拡張**: `.wholework.yml` を通じて公開される Skill の挙動の範囲を広げ、Skill にパッチを当てることなくプロジェクトが Wholework を適応できるようにする。新しい設定可能な挙動は、Skill が汎用化されるにつれて追加される。
 - **ワークフロー最適化 (3 軸)**: Model 選択、Adaptive Thinking (`--effort`)、Advisor 戦略のチューニングによって品質・速度・コストのバランスを取る。`docs/tech.md` (`ssot_for: model-effort-matrix`) のフェーズ別マトリクスは、新しいモデルや利用データが得られるたびに再調整される。
 - **第一級制約としてのコンテキスト分離**: 実行フェーズの Skill を fork context に保ち、Spec をフェーズ横断のメモリとして維持することで、新しい Skill が以前のフェーズのコンテキスト劣化を引き継ぐことなく合成できるようにする。
@@ -160,7 +160,7 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Ambiguity point (曖昧ポイント) | Issue 本文における、複数の解釈が可能な要件・制約・条件。`/issue` と `/spec` が ambiguity-detector のパターン表を通じて検出し、ユーザーによる明確化または既存コードベースのパターンに基づく自動解決によって解消される | /issue, /spec | 曖昧ポイント |
 | Auto-resolution (自動解決) | モデルの判断による曖昧ポイントの非対話的な解決 (リスクが最小で既存パターンに沿った選択肢を優先)。選ばれた選択肢と理由は Auto-Resolve Log として retrospective に記録される。skip (高リスクの延期) や hard-error (前提条件) の階層とは区別される | /issue, /spec, non-interactive mode | 自動解決 |
 | auto-verify (自動検証) | `/verify` によって実行される自動検証プロセス。各受入条件に対して verify command を実行し、通過した条件をチェックし、失敗時は Issue を再オープンする | /verify Skill | 自動検証 |
-| Autonomy tier | skill がどこまで L0 の GitHub 状態を書き込み、L2→L1 経路を発火できるかを宣言する `autonomy:` フィールド (`L1` / `L2` / `L3`)。SSoT: `modules/autonomy-tier.md`。`permission-mode` とは直交する | Skill development, configuration | Autonomy tier |
+| Autonomy tier | skill がどこまで L0 の GitHub 状態を書き込み、L2→L1 経路を発火できるかを宣言する `autonomy:` フィールド (`L1` / `L2` / `L3`)。SSoT: `modules/autonomy-tier.md`。Claude Code の `--permission-mode` サブプロセスフラグとは直交する | Skill development, configuration | Autonomy tier |
 | Capability | `.wholework.yml` の `capabilities.*` 下で宣言される機能可用性フラグ (例: `capabilities.browser: true`)。環境変数 (`HAS_{NAME}_CAPABILITY`) に変換され、Skill が補助ファイルの読み込みやアダプタの呼び出し前にチェックする。実行環境に応じた progressive disclosure を可能にする | Skill development, configuration | Capability |
 | Checkpoint (チェックポイント) | `/auto` が verify のイテレーションカウンタと code フェーズのマイルストーンヒントを中断をまたいで持ち運ぶために書き込む、レジューム用のヒント状態ファイル (単一 Issue 用の `.tmp/auto-state-N.json`、バッチ実行用の `.tmp/auto-batch-state*.json`)。`scripts/auto-checkpoint.sh` によって管理される。フェーズ状態の権威は GitHub ラベルのままである (reconciler-first 設計) — 古いチェックポイントは、実際のラベルと矛盾した場合は信頼されず破棄される | /auto, --resume, --batch --resume | チェックポイント |
 | Config marker (コンフィグマーカー) | `modules/detect-config-markers.md` がランタイムフラグ (`HAS_BROWSER_CAPABILITY`) に変換する `.wholework.yml` のキー (例: `capabilities.browser`)。Skill は補助的な domain file の読み込みやアダプタの呼び出し前にこれらのフラグをチェックする | Skill development | コンフィグマーカー |
@@ -169,7 +169,7 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Drift (ドリフト) | ドキュメント化された仕様 (Steering Documents または Specs) と実際のコード実装との意味的な乖離。`/audit drift` によって検出される | /audit Skill | ドリフト |
 | Fork context (fork コンテキスト) | メインの会話に影響を与えない Skill 実行モード | Claude Code | fork コンテキスト |
 | Issue triage | メインワークフロー開始前に Type/Priority/Size/Value/Theme を割り当てる初期評価フェーズ。`/triage` skill として実装される。Issue に `phase/*` ラベルがない場合、`/auto` は自動的に triage を連鎖実行する | /triage, /auto | Issue triage |
-| Non-interactive mode (非対話モード) | `AskUserQuestion` が使用できない `claude -p --dangerously-skip-permissions` を伴う `run-*.sh` 経由で呼び出される Skill 実行。決定ポイントで 3 段階のポリシー (auto-resolve / skip / hard-error) をトリガーする。`ARGUMENTS` 内の `--non-interactive` によってシグナルされる | run-*.sh, /auto | 非対話モード |
+| Non-interactive mode (非対話モード) | `AskUserQuestion` が使用できない `claude -p --permission-mode auto` を伴う `run-*.sh` 経由で呼び出される Skill 実行。決定ポイントで 3 段階のポリシー (auto-resolve / skip / hard-error) をトリガーする。`ARGUMENTS` 内の `--non-interactive` によってシグナルされる | run-*.sh, /auto | 非対話モード |
 | Orchestration recovery (オーケストレーション復旧) | `/auto` オーケストレーション失敗に対する 3 段階の復旧メカニズム: (1) `reconcile-phase-state.sh` の完了チェック、(2) `apply-fallback.sh` の既知パターン復旧、(3) `spawn-recovery-subagent.sh` の Tier 3 サブエージェント診断 | /auto, orchestration | オーケストレーション復旧 |
 | Operate route (Operate 経路) | diff を伴わない operational Issue (CMS 編集、インフラ操作) 向けのワークフロー経路。コミットや Pull Request を作成せず外部の MCP/CLI/API 操作を直接実行し、git diff の代わりに `## Execution Log` の Issue コメントを記録する。Spec から判定される (空の `## Changed Files` + 外部操作のみの Implementation Steps)。Size とは直交する | Development workflow | Operate 経路 |
 | Patch route (パッチ経路) | XS/S サイズの Issue 向けのワークフロー経路。Pull Request を作成せず main ブランチへ直接コミットする | Development workflow | パッチ経路 |
