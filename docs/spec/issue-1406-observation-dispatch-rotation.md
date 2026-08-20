@@ -112,26 +112,15 @@ Issue 本文は3つの想定アプローチ (N 回連続 SKIPPED/UNCERTAIN で�
 - N/A — Pre-merge AC は rubric 1件のみで、Issue 本文と git diff から明確に判定可能だった。UNCERTAIN や verify command の不備は発生しなかった。`tests/rotate-observation-dispatch.bats` の 8ケース PASS が客観的な補強証跡として機能した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 12 で SHOULD 指摘2件 (`scripts/rotate-observation-dispatch.sh` の `--threshold` 極端値処理、`--cursor-file` ディレクトリ指定時の stderr リーク) を修正。いずれも fail-open/hard-error の実質的な安全性には影響しない stderr/エラーメッセージの整形の問題だったため、MUST 昇格せず SHOULD のまま修正して完了させた。
-- Parser/Validator Edge Case Pre-check (新規スクリプトが外部入力を正規表現で検証するため発火) を実行し、専用サブエージェントによる実行ベースの edge case 検証と `review-light` の Perspective 2 の両方から独立に類似の指摘を得た。
+- mergeable=true (clean) だったためコンフリクト解消は不要。pre-merge AC ゲートは unchecked_count=0、review_incomplete_fallback なしで通過し、そのままスカッシュマージを実行した。
+- Base branch は `main` のため `closes #1406` により Issue は自動クローズされる想定。
 
 ### Deferred Items
-- Post-merge AC (`/auto --batch` で #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認) は opportunistic 検証のまま、`/merge` 以降の運用サイクルに委ねる。
+- Post-merge AC (`/auto --batch` で #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認) は opportunistic 検証のまま、後続の運用サイクルに委ねる。
 
 ### Notes for Next Phase
-- Pre-merge AC (rubric) は PASS 判定・チェック済み。post-merge AC は未チェックのまま (意図通り)。
-- `/merge` 実行前提: CI 全11ジョブ SUCCESS、MUST issue なし (review event は COMMENTED)。修正コミット (`28e7dcb4`) は fix-cycle 後も bats 8/8 PASS・validate-skill-syntax 0 error を確認済み。
-
-### Key Decisions
-- Spec の指定どおりラウンドロビン方式を実装。カーソルは `.tmp/observation-dispatch-cursor`（グローバル・非ロック・fail-open）に永続化し、`scripts/rotate-observation-dispatch.sh` が回転 + cap 適用 + カーソル書き込みを一手に担う設計とした。
-- `skills/auto/SKILL.md` の single-issue route と batch route の両方を、同一の置き換えパターン（`FILTERED_MATCHES` → `rotate-observation-dispatch.sh` → `DISPATCH_SET`）で更新し、ルート間の記述の非対称を避けた。
-
-### Deferred Items
-- Post-merge AC（次回 `/auto --batch` 実行時に #478/#562/#589/#590/#724 以外の Issue が dispatch されることの確認）は opportunistic 検証のため、実際の `/auto --batch` 運用サイクルでの自然な確認を待つ。
-
-### Notes for Next Phase
-- Pre-merge AC（rubric）はチェック済み。post-merge AC は未チェックのまま残っている（意図通り、opportunistic 検証待ち）。
-- `docs/structure.md`/`docs/ja/structure.md` のファイル数コメント更新は Spec の Changed Files に含まれていなかった追加変更（Implementation Step 5 として Spec に事後追記済み）。今後同種の変更（scripts/ 配下への新規ファイル追加）を伴う Issue では、`docs/structure.md` の Maintenance rule 適用を Changed Files の段階で織り込むと手戻りが減る。
+- `/verify` は post-merge AC (opportunistic) の確認を担う。次回 `/auto --batch` 実行時の dispatch 対象を確認すること。
+- pre-merge AC (rubric) はチェック済み。post-merge AC は未チェックのまま (意図通り)。
