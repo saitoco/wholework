@@ -171,30 +171,26 @@ Issue 本文の pre-merge AC 11 項目は代表サンプルであり、Changed F
 本 Spec は `--non-interactive` で作成されたため、`AskUserQuestion` を使わず全曖昧点をモデル判断で解決した。解決内容は Issue の retrospective コメントとして投稿する Auto-Resolve Log に記録する。
 
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- `scripts/handle-permission-mode-failure.sh` は 3 引数から 2 引数へ縮小する。第 3 引数 `permission_mode` は撤去後 `auto` 以外の値を取り得ず、`[ "$permission_mode" = "auto" ]` というガードは恒真になる。これ自体が Issue の言う「bypass 分岐を前提にした記述」であるため、スクリプトを維持しつつ引数だけ落とす。bash は余分な位置引数を無視するので呼び出し側の更新漏れがあっても壊れない (ただし本 Issue 内で 5 箇所すべて揃える)
-- `modules/verify-patterns.md` と `skills/review/SKILL.md` の shell quoting 例文は、`get-config-value.sh permission-mode auto` という本 Issue で消滅する呼び出しを引用している。現存する同形の `"$SCRIPT_DIR/get-config-value.sh" autonomy L1` (`scripts/run-code.sh`) に差し替え、例文が実在コードを指す状態を保つ。両ファイルは同一例文の複製なので必ず同時に更新する
-- `SECURITY.md` のプラン要件記述は公式ドキュメント実査で更新する。現行の「Max plan required」は誤りで、実際は全プラン対応・Team/Enterprise は管理者が `permissions.disableAutoMode` で無効化可能・モデル要件あり。bypass 削除のついでに事実誤りも正す
-- bats テストでは mock `claude` の `--dangerously-skip-permissions)` 分岐を**削除せず維持**する。`! grep -q "FLAG_SKIP_PERMS=1"` という否定アサーションを成立させる回帰ガードとして機能するため、mock 側から消すとガードが空振りする
-- pre-merge AC は Issue 本文の 11 項目を逐語のまま維持し、独自追加しない。simplicity 上限 (10) を 1 件超えるが、verify command 同期規則と件数整合チェックを優先した
+- `--patch --non-interactive` で明示実行されたため、Size L でも flag precedence により patch route を採用した (Spec は pr route を前提に AC #11 を書いていた)。`github_check "gh pr checks" "Run bats tests"` を `github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` へ Step 10 のルールに従い自動修正し、Issue 本文と Spec の両方に同期した
+- `--workflow=` の対象は `.github/workflows/` に複数ファイル (`dco.yml` / `kanban-automation.yml` / `test.yml`) があるため `test.yml` (bats を実行する workflow) を選択した
+- Spec の Notes に列挙された「AC が捕捉しない残留リスク」(SECURITY.md の `permission-mode: bypass` 設定値表記、README.md の「permission-bypass behavior」表現) はすべて Notes 記載通りに対応した — 見落としなし
+- `tests/*.bats` の一括置換は Edit ツールの `replace_all` で機械的に行った (`permission-mode) echo "bypass" ;;` 行の全削除、`permission-mode: bypass\nauto-retry-on-fail:...` フィクスチャブロックの全削除)。各ファイル編集後に個別 bats 実行 → 最終的に `bats --jobs 18 tests/` で全 1879 件 PASS を確認した
 
 ### Deferred Items
 
-- `docs/ja/*` と `README.ja.md` の同期は Step 10 (`/doc translate ja`) に集約し、個別 verify command は付与しない (Issue 本文の指示)。post-merge AC で確認する
-- `/auto` 実行時に classifier ブロック起因の hang が起きないことの確認は post-merge の opportunistic AC に委ねる。撤去自体の pre-merge 検証は静的な `file_not_contains` と bats のみ
-- `#398` (plan 別 `permission-mode: auto` 互換性の preflight probe、Icebox) は本 Issue の対象外のまま。今回の実査で「Plan: All plans」が確認できたため、#398 の前提が弱まった可能性がある — 再評価は別 Issue で
+- `docs/ja/*` と `README.ja.md` の同期は本 Code フェーズ内で `/doc translate ja` 相当の手動同期として実施済み (Step 10 として)。`scripts/check-translation-sync.sh` で対象 8 ファイルすべて IN_SYNC を確認した (既存の無関係な `docs/guide/xl-decomposition.md` の drift は対象外のまま残存)
+- `/auto` 実行時に classifier ブロック起因の hang が起きないことの確認は post-merge の opportunistic AC のまま — この Code フェーズでは検証していない
+- `#398` (plan 別 `permission-mode: auto` 互換性の preflight probe、Icebox) は本 Issue の対象外のまま。再評価は別 Issue で
 
 ### Notes for Next Phase
 
-- **AC の `file_not_contains` はコメント行も検出する**。`scripts/run-code.sh` 280 行目と `scripts/run-review.sh` 342 行目の `# --dangerously-skip-permissions from propagating to the fork sub-agent (#284)` は分岐ではなくコメントだが、文言を変えないと受入条件 A / D が FAIL する。最も見落としやすい箇所
-- `docs/guide/customization.md` の AC は全出現の除去を要求する。サンプル YAML (68-70) と Available Keys 表 (151) だけでは不足で、134 / 135 行目 (信頼レベルの類比) と 166 行目 (`themes` のキー衝突例) も言い換えが必要
-- `.wholework.yml` (本リポジトリ自身の 3 行目) は Issue 本文の Scope 一覧に無いが Purpose には含まれる。Changed Files に追加済みなので削除を忘れないこと
-- `SECURITY.md` の `permission-mode: bypass` という設定値表記 (51 / 96 / 101 行目) は AC 対象外 (`dangerously-skip-permissions` 文字列を含まない)。AC が PASS しても残留しうるので明示的に除去する
-- SKILL.md 4 ファイルを編集するため `scripts/validate-skill-syntax.py` の制約に注意 — 本文への半角感嘆符と三連バッククォートを持ち込まない
-- `tests/run-review.bats` の fixture `permission-mode: bypass` は約 20 箇所ある。一括置換後に残存がないか `grep -rn 'permission-mode' tests/` で確認すること
+- patch route のため PR は存在しない。`/verify` は post-merge に、この commit 群 (11 commits) の `gh run list` 結果を評価すること
+- Issue 本文の AC #11 (旧 `gh pr checks`) は `gh run list` 形式に書き換え済み。`/verify` フェーズはこの新形式を前提に評価する
+- チェックボックスは AC 1-10 のみ `[x]` 済み。AC #11 (CI) は CI verification AC exclusion ルールによりこの Code フェーズでは意図的に未チェックのまま — post-merge の `/verify` で評価される
 
 ## spec retrospective
 
@@ -216,3 +212,18 @@ Issue 本文の pre-merge AC 11 項目は代表サンプルであり、Changed F
 - 「Claude Code 側の `bypassPermissions` mode 自体が廃止されたのか」— 廃止されていない。公式ドキュメントに `bypassPermissions` は現役のモードとして記載がある。本 Issue は wholework が提供していた opt-out 経路を消すだけ、という位置づけを Overview に明記した
 - 「`spawn-recovery-subagent.sh` が使う `claude-sonnet-4-6` は auto mode 対応モデルか」— 対応する (Sonnet 4.6 以降が要件)。撤去によって recovery subagent が起動不能になるリスクはない
 - 新規テストケース要件チェックは非該当と判定した (分岐の追加ではなく削除のため)。ただし bypass テスト削除後に「auto しか渡らない」ことを保証する否定アサーションが消えると回帰検知が空くため、`! grep -q "FLAG_SKIP_PERMS=1"` の維持を Step 9 の必須事項として明記した
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Issue 本文の `## Acceptance Criteria > Pre-merge` 最終項目は `github_check "gh pr checks" "Run bats tests"` (PR route 前提) だったが、本 Issue は Size L でも `/code 1418 --patch --non-interactive` として明示的に patch route で実行された。`--patch` フラグは Size ベースの自動判定より優先されるため (`skills/code/SKILL.md` Flag precedence)、PR は作られず `gh pr checks` は解決不能。Step 10 の「Patch route verify command check」ルールに従い `github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` へ自動修正し、Issue 本文と Spec の両方に同期した。Spec 側は Size L → pr route を前提に書かれていたため、これは Spec の誤りではなく実行時のルート選択 (呼び出し引数) に起因する差分
+- `--workflow=` の対象ファイルは Spec に明記されていなかった (複数 workflow file 環境での要否は `modules/verify-classifier.md` の一般規則のみ規定)。`.github/workflows/` に `dco.yml` / `kanban-automation.yml` / `test.yml` の 3 ファイルが存在するため `--workflow=test.yml` を採用した
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の行番号付き Changed Files が実装時点の実ファイルと完全に一致しており、Implementation Steps の記載通りに実装できた
+
+### Rework
+
+- N/A — 手戻りなし。Spec Notes に記載された「AC が捕捉しない残留リスク」(SECURITY.md の `permission-mode: bypass` 設定値表記、README.md の「permission-bypass behavior」表現) は事前に列挙されていたため、実装時に見落としなく一度で反映できた
