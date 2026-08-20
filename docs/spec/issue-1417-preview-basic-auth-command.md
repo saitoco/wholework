@@ -222,3 +222,36 @@ Issue 本文 Background 末尾の 3 件の open question は、Issue Retrospecti
 | Author | Association | Trust tier | Summary | URL |
 |--------|-------------|------------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Background 事実確認 (grep 裏付け済み)、Post-merge AC の `verify-type` タグ修正 (`opportunistic event=review-run` → `manual`、`event=` は `observation` 専用のため)、Background 末尾の曖昧点 3 件は AC 文言に非影響のため Auto-resolution 条件を満たすと判定・現状維持、blocked-by オープンなし、Size M (sub-issue 分割対象外) を記録。 | https://github.com/saitoco/wholework/issues/1417#issuecomment-5353381634 |
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を記載順どおりに実装した。`_resolve_preview_basic_auth_command()` の実装・呼び出し箇所・一時ファイル規約 (`mktemp .tmp/preview-basic-auth-command-output-XXXXXX`) はいずれも Spec の擬似コードと一致する。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Notes 節(設計判断・Fail-safe critical script 該当性・allowed-tools impact chain check)が実装時の疑問をあらかじめ解消済みだった。
+
+### Rework
+
+N/A — 手戻りなし。
+
+### Test Verification Note
+
+新規追加した 7 bats テストのうち 6 件について、実装前コミット (`ff96a0c0~1`) の `scripts/run-review.sh` に対して FAIL することを確認した (`git checkout ff96a0c0~1 -- scripts/run-review.sh` で一時的に実装前状態へ戻し再実行 → 復元)。残り 1 件 (「exported PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS take precedence over preview-basic-auth-command」) は「新機能が呼ばれないこと」を検証するテストのため、実装前状態でも意味的に PASS するのが正しい挙動であり、FAIL しないことを確認した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1〜5 を記載順どおりに実装し、擬似コード・関数シグネチャ・一時ファイル規約をそのまま採用した (`_resolve_preview_url_command()` との対称性を優先)
+- 新規 bats テスト 7 件は既存の `preview-url-command` テストブロック (518〜765行目) の直後、`preview-url-command` 関連テストと `no-op` テストの間に挿入し、既存のモックハーネス (`get-config-value.sh` の `case` 文モック) をそのまま再利用した
+- `setup()` の `unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID PREVIEW_URL` に `PREVIEW_BASIC_USER PREVIEW_BASIC_PASS` を追加し、親プロセス環境からの汚染を防止した (既存の `PREVIEW_URL` 分離と同じ意図の最小拡張)
+
+### Deferred Items
+- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの `/auto` 実行観察) は `verify-type: manual` のため未チェックのまま — `/verify` フェーズで human follow-up として扱われる
+
+### Notes for Next Phase
+- Pre-merge AC7 (`github_check "gh pr checks" "Run bats tests"`) は Step 10 の CI verification AC exclusion (route-agnostic) によりこのフェーズでは未チェック — `/review` が PR の CI 結果を見て検証する
+- Spec に `## Spec Retrospective` セクションが存在しなかったため、`## Code Retrospective` は `## Consumed Comments` の直後に追記した (通常の配置規約と異なる点に注意)
