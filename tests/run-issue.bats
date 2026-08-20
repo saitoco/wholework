@@ -8,7 +8,7 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-issue.sh"
 
 setup() {
     # Isolate test from repo .wholework.yml
-    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    : > "$BATS_TEST_TMPDIR/.wholework.yml"
     cd "$BATS_TEST_TMPDIR"
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
@@ -19,12 +19,11 @@ setup() {
     CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
     export CLAUDE_CALL_LOG
 
-    # Mock get-config-value.sh: return "bypass" by default
+    # Mock get-config-value.sh: return the caller-supplied default for any key
     cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     *) echo "$DEFAULT" ;;
 esac
 exit 0
@@ -160,7 +159,7 @@ teardown() {
 
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_MODEL=1" "$CLAUDE_CALL_LOG"
-    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_PLUGIN_DIR=1" "$CLAUDE_CALL_LOG"
 }
 
@@ -192,7 +191,7 @@ teardown() {
     [[ "$output" == *"Starting /issue for issue #456"* ]]
     [[ "$output" == *"Finished /issue for issue #456"* ]]
     [[ "$output" == *"Model: sonnet"* ]]
-    [[ "$output" == *"Permissions: skip (autonomous mode)"* ]]
+    [[ "$output" == *"Permissions: permission-mode auto (with allow rules template)"* ]]
 }
 
 @test "error: claude command fails with non-zero exit code" {
@@ -211,38 +210,11 @@ MOCK
     [[ "$output" == *"Exit code: 42"* ]]
 }
 
-@test "permission-mode: auto config passes --permission-mode auto" {
-    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
-#!/bin/bash
-KEY="$1"; DEFAULT="${2:-}"
-case "$KEY" in
-    permission-mode) echo "auto" ;;
-    *) echo "$DEFAULT" ;;
-esac
-MOCK
-    chmod +x "$MOCK_DIR/get-config-value.sh"
-    cat > "$MOCK_DIR/claude" <<'MOCK'
-#!/bin/bash
-for arg in "$@"; do
-    case "$arg" in
-        --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
-        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
-        --plugin-dir) echo "FLAG_PLUGIN_DIR=1" >> "$CLAUDE_CALL_LOG" ;;
-    esac
-done
-exit 0
-MOCK
-    chmod +x "$MOCK_DIR/claude"
+@test "permission-mode: always passes --permission-mode auto, never --dangerously-skip-permissions" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
     ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
-}
-
-@test "permission-mode: bypass uses --dangerously-skip-permissions" {
-    run bash "$SCRIPT" 123
-    [ "$status" -eq 0 ]
-    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "guard: prompt contains HEADLESS SKILL EXECUTION guard text" {
