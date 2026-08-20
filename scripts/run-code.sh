@@ -404,7 +404,7 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
       fi
       # See modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire
       _write_code_retry_recovery "$ISSUE_NUMBER" "$CODE_RETRY_COUNT"
-      exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"
+      exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]+"${_TRAILING_ARGS[@]}"}"
     else
       if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
          [[ "$AUTO_RETRY_ENABLED" == "true" ]]; then
