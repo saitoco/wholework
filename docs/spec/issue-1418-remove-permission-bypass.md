@@ -227,3 +227,44 @@ Issue 本文の pre-merge AC 11 項目は代表サンプルであり、Changed F
 ### Rework
 
 - N/A — 手戻りなし。Spec Notes に記載された「AC が捕捉しない残留リスク」(SECURITY.md の `permission-mode: bypass` 設定値表記、README.md の「permission-bypass behavior」表現) は事前に列挙されていたため、実装時に見落としなく一度で反映できた
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `## Scope` の grep 結果との不一致 (`.wholework.yml` / `docs/guide/auto-mode-template.json` 欠落) を自己検出し補正済み。Level 1 (Steering Docs 有) の Alignment 評価が機能した好例。
+
+#### design
+- Code Retrospective が記録した `--patch` 実行の deviation は、Spec 自体の誤りではなく **`run-auto-sub.sh` のオーケストレーション層の誤判定に起因する** ことが Verify で判明した (下記 verify 節参照)。Spec は Size L → pr route を正しく前提に書かれていた。
+
+#### code
+- 実装は Spec の Changed Files/Implementation Steps に忠実。手戻りなし。AC のコメント行検出 (`file_not_contains`) を含め、想定される落とし穴 (#284 コメント2箇所) を正しく処理。
+
+#### review
+- **`/review` フェーズが実行されなかった** (下記参照)。
+
+#### merge
+- **`/merge` フェーズが実行されなかった** (下記参照)。`closes #1418` を含む commit の直接 push により Issue は自動クローズされた。
+
+#### verify
+- Pre-merge 11件中 10件 SKIPPED (already checked)、AC K (CI) は本 verify 実行で PASS 確定。FAIL/UNCERTAIN なし。Post-merge 2件は未チェックのまま (manual: `/doc translate ja` 未実行、opportunistic: 未到達)。
+
+### Orchestration Anomaly (P0 — root cause identified)
+
+`scripts/run-auto-sub.sh` の `_spec_is_diffless()` 関数 (628-651行目) が本 Issue の Spec を **operate route (diff-less) と誤判定**し、Size L (本来 pr route + full review 必須) の Issue が **`/code --patch` で直接 main にコミットされ、`/review`・`/merge` を完全にスキップした**。
+
+**再現手順:**
+```bash
+awk '/^## Changed Files/{flag=1; next} /^#/{flag=0} flag' docs/spec/issue-1418-remove-permission-bypass.md
+# → 空文字列を返す (実際には 40+ ファイルが列挙されているにも関わらず)
+```
+
+**根本原因**: `_spec_is_diffless()` の awk パターン `/^#/{flag=0}` は `## Changed Files` セクションの終端を「任意レベルの `#` 見出し行」で判定している。しかし本 Spec は `## Changed Files` 配下を `### scripts (bash 3.2+ 互換)` / `### config / modules` 等の `### ` サブ見出しで整理する一般的な Markdown 構成を採っていたため、最初のサブ見出し行で即座に `flag=0` となり、実際のファイルパス列挙 (`- \`scripts/run-code.sh\`: ...` 等) に到達する前にセクション抽出が終了していた。結果、`changed_files` 変数が空になり `_spec_is_diffless()` が `true` を返し、operate route と誤判定された。
+
+**影響範囲**: `## Changed Files` セクション内で `### ` サブ見出しによるファイル分類を行う Spec を持つ、あらゆる Size (S/M/L/XL) の Issue が同じ誤判定を受けうる。特に Size M/L (本来 pr route + review 必須) で発生した場合、コードレビューを一切経ずに直接 main へ変更が入るため影響が大きい。`docs/spec/issue-1418-remove-permission-bypass.md` はこの構成 (`### scripts` / `### config / modules` / ...) を採用した最初の観測ケースと思われる。
+
+**この Issue 自体への影響**: 実装内容を `/verify` が代替的に精査した結果 (diff 全体確認・spot check・残存参照の repo 全体検索・CI green 確認)、実装品質そのものに問題は見つからなかった。ただし第三者的なコードレビュー (MUST 指摘の検出機会) が構造的に欠落した点はプロセス上の欠陥であり、たまたま実害が無かっただけと捉えるべき。
+
+### Improvement Proposals
+- `scripts/run-auto-sub.sh` の `_spec_is_diffless()` (628-651行目) の awk パターンを `/^#/{flag=0}` から `/^## /{flag=0}` (またはそれ以上位のレベルの見出しのみで終端する形) に修正し、`## Changed Files` セクション配下の `### ` サブ見出しを正しく内包したままファイルパスを抽出できるようにする。同時に、単体テスト (`tests/run-auto-sub.bats` 等) に「`### ` サブ見出しでファイルを分類した Spec が diff-less と誤判定されない」回帰テストを追加する。影響範囲がオーケストレーション層のコア分岐 (pr/patch/operate route の選択そのもの) であり、review スキップという重大な副作用を伴うため、優先度は高い。
