@@ -7,7 +7,7 @@
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-code.sh"
 
 setup() {
-    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    : > "$BATS_TEST_TMPDIR/.wholework.yml"
     cd "$BATS_TEST_TMPDIR"
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
@@ -21,7 +21,6 @@ setup() {
 #!/bin/bash
 KEY="$1"; DEFAULT="${2:-}"
 case "$KEY" in
-    permission-mode) echo "bypass" ;;
     *) echo "$DEFAULT" ;;
 esac
 exit 0
