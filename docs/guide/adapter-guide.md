@@ -63,6 +63,16 @@ file the way skills do — it is a plain script path declared directly in the co
 See [`docs/guide/customization.md`](customization.md) § "Resolving `PREVIEW_URL`" for the
 full contract (fallback behavior, `{pr}` substitution, coverage scope).
 
+**`preview-basic-auth-command`** — the same mechanism as `preview-url-command` above, for
+resolving `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` instead of `PREVIEW_URL`. Place the script
+under `.wholework/adapters/` alongside your other adapters and declare it with
+`preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"` in
+`.wholework.yml`. Like `preview-url-command`, this does **not** go through the 3-layer Adapter
+Resolution below — it is a plain script path declared directly in the config key, invoked by
+`scripts/run-review.sh` via `bash -c`. See [`docs/guide/customization.md`](customization.md) §
+"Automating Basic Auth credential resolution with `preview-basic-auth-command`" for the full
+contract.
+
 ---
 
 ## Adapter Resolution
