@@ -106,3 +106,10 @@
 
 ### Improvement Proposals
 - N/A
+
+### 2026-08-21 再確認 (/auto --batch セッション、#1406 修正後の dispatch)
+
+`#1406` 後の `Event-based observation scan` で dispatch。post-merge observation AC (`event=auto-run`) を評価したが、`git log -- scripts/get-sub-issue-progress.sh` の結果、本 Issue merge 後このスクリプトはまだ一度も変更されておらず、AC が要求する「次回変更する Issue」という前提自体が未成立。SKIPPED を維持。
+
+#### Improvement Proposals (再評価分)
+- N/A
