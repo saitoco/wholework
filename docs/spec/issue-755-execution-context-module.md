@@ -61,6 +61,20 @@
 
 - saito / MEMBER / first-class / Issue Retrospective コメント (2026-06-26T02:59:33Z): Auto-Resolve Log (3 点) と AC 変更サマリーを含む。判断根拠を Spec の Notes セクションと Implementation Steps に反映済み。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/755#issuecomment-4806179419
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5200982324
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5212261042
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5225314642
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5229258423
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5235401090
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5246554895
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5255742915
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5296376926
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5304271943
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5310545031
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5327721470
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5341228985
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/755#issuecomment-5354365639
 ## Code Retrospective
 
 ### Deviations from Design
