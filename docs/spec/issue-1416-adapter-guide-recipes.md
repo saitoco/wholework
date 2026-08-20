@@ -31,3 +31,6 @@ Background の `scripts/run-review.sh` に関する記述 (`preview-url-command`
 ### Consumed Comments
 
 - saito / MEMBER / first-class / 2026-08-20 のスコープ拡大 (`#1417` 着地を受け `preview-basic-auth-command` レシピを追加対象に含める決定) を伝える内容。内容は既に Issue 本文の Background "2026-08-20 追記" セクションへ反映済みだったため、本文への追加変更は不要と判断した / https://github.com/saitoco/wholework/issues/1416#issuecomment-5356338255
+
+## Consumed Comments
+No new comments since last phase.
