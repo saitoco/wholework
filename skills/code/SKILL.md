@@ -767,7 +767,7 @@ Run the Bash tool call above with `timeout: 600000` (the tool's 10-minute ceilin
 
 Rows 3–4 bound the wait to **4 wait calls** (counter values 0, 1, 2, 3) — 4 × 540s = 2160s (36 minutes), matching the estimate in `docs/spec/issue-1066-code-preview-build-gate.md`. When changing the counter bound, update that estimate in the same commit.
 
-**Fix loop (maximum 3 iterations, mirrors the `verify-max-iterations` / `auto-retry-on-fail.max_iterations` default of 3):**
+**Fix loop (maximum 3 iterations — a fixed cap, coincidentally equal to the `verify-max-iterations` / `auto-retry-on-fail.max_iterations` default but not derived from either; changing those config values does not change this loop's bound):**
 
 1. Run `gh pr checks $PR_NUMBER --json name,state,bucket,link` and collect the name and link of every check whose bucket is `fail`.
 2. Diagnose the failure. If the link points to `github.com/.../actions/runs/` (a GitHub Actions check), run `gh run view --log-failed` on that run to read the failure log. If the link points to an external provider console (Amplify / Vercel / Netlify, etc.), no log can be fetched directly — reproduce the project's build command locally when possible (e.g. `scripts.build` in `package.json`), otherwise use the check's `description` text as the only available signal.
