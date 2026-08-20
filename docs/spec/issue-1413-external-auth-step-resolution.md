@@ -55,3 +55,6 @@
 - **スコープ判断**: Issue #1413 の Proposal は `skills/issue/SKILL.md` / `skills/spec/SKILL.md` の2ファイルに明示的にスコープされている。`docs/product.md` の Terms 表 (Deferral Protocol / Spec approval marker と同様の形式で `external-auth-required` の用語定義を追加する余地はあるが、Acceptance Criteria には含まれておらず、light-depth Spec の Simplicity Rule に従い今回は見送り、将来的な用語整備の候補として記録するに留める。同様に `modules/ambiguity-detector.md` の Skip tier 「exhaustive list」への新規マーカー追加も、`/code` 側の Consumer 挙動は Issue #1413 の対象外 (Issue Notes 「本 Issue が最初の導入になる」との記述と整合) であるためスコープ外として見送った。
 - **セキュリティ方針との整合確認**: `SECURITY.md` に "Wholework does not store or transmit credentials" と明記されている。本設計の機構 (a) (事前撮影セッション) は人間同席の対話セッションでの既存認証済みブラウザセッション/手動ログインを前提としており、Wholework 側で認証情報を保存・送信する設計にはなっていない。方針との矛盾なし。
 - **Consumed Comments**: No new comments since last phase. (cutoff: 2026-08-20T13:15:27Z, phase/spec ラベル付与時点。Issue #1413 へのコメントは現時点で0件。)
+
+## Consumed Comments
+No new comments since last phase.
