@@ -101,7 +101,7 @@ No new comments since last phase. (cutoff: 2026-08-20T02:13:21Z — 直近の `p
 - <!-- verify: file_not_contains "docs/guide/customization.md" "permission-mode" --> `docs/guide/customization.md` の Available Keys 表とサンプル YAML から `.wholework.yml` の `permission-mode` キーの説明が削除される
 - <!-- verify: file_not_contains "SECURITY.md" "dangerously-skip-permissions" --> `SECURITY.md` から `--dangerously-skip-permissions` の記述が削除され、`--permission-mode auto` の単一経路のみが記載される
 - <!-- verify: file_not_contains "README.md" "dangerously-skip-permissions" --> `README.md` から `--dangerously-skip-permissions` の記述が削除される
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> 全 bats テストが pass する (更新後の `tests/run-*.bats` を含む、PR route)
+- <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> 全 bats テストが pass する (更新後の `tests/run-*.bats` を含む、patch route)
 
 ### Post-merge
 
