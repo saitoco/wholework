@@ -217,11 +217,8 @@ Issue 本文 Background 末尾の 3 件の open question は、Issue Retrospecti
 
 `modules/detect-config-markers.md` を Read する SKILL.md は 10 件 (`skills/{audit,doc,code,auto,issue,spec,merge,review,triage,verify}/SKILL.md`)。追加する行・箇条書きに `scripts/run-review.sh` / `scripts/get-config-value.sh` への言及が含まれる (lightweight gate 該当) が、これは「どのスクリプトがこの config 値を消費するか」を示す説明文であり、`detect-config-markers.md` を読む Skill 自身に `scripts/run-review.sh` の呼び出しを指示するものではない (`run-review.sh` は Skill を起動する側のラッパースクリプトであり、Skill から呼ばれる側ではない)。既存の `preview-url-command` 行も同型の言及を含み allowed-tools 追加は発生していない。10 readers を個別確認した結果、いずれも新規 `allowed-tools` 追加は不要と判定した。
 
-### Consumed Comments
+## Consumed Comments
 
 | Author | Association | Trust tier | Summary | URL |
 |--------|-------------|------------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Background 事実確認 (grep 裏付け済み)、Post-merge AC の `verify-type` タグ修正 (`opportunistic event=review-run` → `manual`、`event=` は `observation` 専用のため)、Background 末尾の曖昧点 3 件は AC 文言に非影響のため Auto-resolution 条件を満たすと判定・現状維持、blocked-by オープンなし、Size M (sub-issue 分割対象外) を記録。 | https://github.com/saitoco/wholework/issues/1417#issuecomment-5353381634 |
-
-## Consumed Comments
-No new comments since last phase.
