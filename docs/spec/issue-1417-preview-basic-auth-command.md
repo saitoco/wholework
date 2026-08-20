@@ -222,3 +222,6 @@ Issue 本文 Background 末尾の 3 件の open question は、Issue Retrospecti
 | Author | Association | Trust tier | Summary | URL |
 |--------|-------------|------------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Background 事実確認 (grep 裏付け済み)、Post-merge AC の `verify-type` タグ修正 (`opportunistic event=review-run` → `manual`、`event=` は `observation` 専用のため)、Background 末尾の曖昧点 3 件は AC 文言に非影響のため Auto-resolution 条件を満たすと判定・現状維持、blocked-by オープンなし、Size M (sub-issue 分割対象外) を記録。 | https://github.com/saitoco/wholework/issues/1417#issuecomment-5353381634 |
+
+## Consumed Comments
+No new comments since last phase.
