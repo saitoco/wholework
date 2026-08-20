@@ -10,6 +10,21 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: auto-resolved 3 ambiguity points (AC展開方針、markdown module interpretation、post-merge checkbox format) — [issue comment](https://github.com/saitoco/wholework/issues/731#issuecomment-2994706014)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/731#issuecomment-4804969803
+- saito / MEMBER / first-class / ## Acceptance Test Results (Re-run) / https://github.com/saitoco/wholework/issues/731#issuecomment-4805225553
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5200981473
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5212260419
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5225314292
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5229258108
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5235400540
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5246553942
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5255741271
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5296375814
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5304271445
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5310544496
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5327720109
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5341227346
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/731#issuecomment-5354364338
 ## Changed Files
 
 - `tests/test-runner.bats`: new file — shallow documentation tests for `modules/test-runner.md` (bash 3.2+ compatible)
