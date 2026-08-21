@@ -214,24 +214,37 @@ Uncertainty の 3 項目はいずれも Spec 作成時に解決済みで、解�
 ### Rework
 - N/A — single-pass implementation. Pre-implementation FAIL check (stashing `skills/review/SKILL.md`/`modules/orchestration-fallbacks.md`) confirmed all 5 new `tests/review.bats` assertions FAIL against the pre-implementation state as required, then PASS after restoring the changes — no assertion needed pattern narrowing.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec は Step 9 単体の記述要件 (背景・適用範囲・判定表・fail-closed 根拠・non-blocking 時処理) を網羅していたが、Step 9 が新設した「non-blocking 時に CONSIDER エントリを追加する」という副作用を、実際に `review-comments-$NUMBER.json`/Review body を組み立てる Step 10.0/10.2 の injection 指示に配線する必要がある、という依存関係までは明示していなかった。実装は Step 9 単体としては Spec 通り完成していたが、Step 10 側の配線漏れは review フェーズの review-spec エージェントが初めて検出した (`skills/review/SKILL.md:397/408` 該当)。Step 8 の FAIL Blocking も同様に Step 10 への配線が必要な設計だが、Step 8 は既存パターン (MUST 注入のみ) の踏襲で済んだため配線漏れが起きず、Step 9 は「MUST に加えて CONSIDER も注入する」という新しい分岐が増えた分だけ配線漏れのリスクが高かった。
+
+### Recurring issues
+
+Non-blocking outcome handling の文言が `PRE_EXISTING`/`FIXED`/`CLEAN` の 3 分類を区別せず「inherited violation」という同一の説明を適用していた点は、review-bug の 2 エージェント (diff scan / security scan) が独立に同じ行を指摘し、検証エージェントも両方を PASS と判定した — 複数の独立したレビュー観点が同一の欠陥に収束したことで、検出の信頼度が高いことを確認できた。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC 8件は `rubric`/`section_contains`/`file_contains`/`command` のいずれも一発 PASS で、UNCERTAIN は発生しなかった。`section_contains "Step 9" "..."` のような見出し記号を含まない第2引数指定 (Issue #1139 自身の Triage 指摘で既に修正済み) が、後続の AC 作成時のテンプレートとして有効であることを再確認した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Step 9 の新サブセクション名は `### Pre-existing failure exception (baseline attribution)` (level 3 見出し) とした。`step9_section()` の抽出範囲 (`## Step 9` 〜 `## Step 10` 直前) に収まる必要があるため level 2 は不可。
-- exit code 判定表を含む本文は Spec の指定要素 (背景・適用範囲 exhaustive・実行コマンド・4分類判定表・fail-closed 根拠・non-blocking 時処理) を全て満たしつつ、文面は Spec のドラフト文をそのまま転記せず独自に整えた。AC の `section_contains`/`file_contains` は文字列一致のみを要求するため、意味を保ったまま書き直しても AC・新規テスト双方を満たせることを確認済み。
-- Step 12.2 の追記は「severity に関わらず out-of-scope エントリは Fix Work で修正しない」ことを明記した (Spec 通り)。
+- review-bug 2 系統 + 検証サブエージェントで 6 件中 4 件を PASS と判定 (2 件は「到達不能なコードパス」「実測 8 秒で timeout 対象外」として REJECT)。review-spec の 5 件は検証なしで直接反映するルールどおり統合。
+- SHOULD 3 件 (`skills/review/SKILL.md` Non-blocking outcome handling の誤記述+配線漏れ、`docs/workflow.md`、`docs/structure.md`) を Fix Work で修正。CONSIDER 3 件 (`CLEAN` の merge-ref 未検出エッジケース、`orchestration-fallbacks.md` の step 番号誤り、CI Status テンプレート例不足) は severity 相応として意図的にスキップし 12.4 に記録。
+- `docs/workflow.md`/`docs/structure.md` の修正は `docs/translation-workflow.md` の同期義務に従い `docs/ja/workflow.md`/`docs/ja/structure.md` も同一コミットで更新した。
 
 ### Deferred Items
 
+- CONSIDER 3 件 (前述) は本 PR では未対応のまま。実害が顕在化した場合に別 Issue で再検討する。
 - PRE_EXISTING 検出時のフォローアップ Issue 自動起票は実装しない (Spec の Deferred Items を維持)。
-- `scripts/run-merge.sh` の pre-screen は変更していない。
-- Post-merge AC (`session=next` observation) は本 PR のスコープ外 — 次回 `/review` 実行時に自然観察される。
+- Post-merge AC (`session=next` observation) は `/verify` フェーズで評価される。
 
 ### Notes for Next Phase
 
-- 実装は Spec の Implementation Steps 1-7 を全て完了し、逸脱なし (Code Retrospective 参照)。
-- `tests/review.bats` フルスイート24件PASS (新規5件含む)、`tests/pre-merge-check.bats` 8件PASS、`validate-skill-syntax.py`・`check-forbidden-expressions.sh` 両方PASS。behavioral change 判定により `bats --jobs 18 tests/` (全1922件) も実行し PASS 確認済み。
-- Pre-merge AC 8件全て PASS のため Issue body のチェックボックスは全て `[x]` 済み。Post-merge observation AC (1件) は `/verify` フェーズで評価される。
-- PR #1431 作成済み (base: main)。`/review` はこの PR 自身の Step 9 変更をテストする形になる — レビュー時に「pre-merge-check.sh の allowed-tools 追加漏れ」等の CI 検証観点で自己言及的にならないか注意。
+- `/merge` 前に CI が全 15 件 SUCCESS であることを確認済み (`Forbidden Expressions check` も含め本 PR 自体は pre-existing 違反を持たない状態)。
+- Fix Work で `skills/review/SKILL.md` を変更したため、`/merge` 後に再度 `bats tests/review.bats` が CI で通ることを確認すること (worktree 内では 24/24 PASS 確認済み)。
+- 本 PR は `/review` Step 9 自身を変更する自己言及的な PR — 次回同種の Issue (Step 9/Step 10 の配線を伴う変更) では、Spec Implementation Steps に「Step 10 の injection 指示も更新対象に含める」ことを明記すると review フェーズでの手戻りを避けられる。
