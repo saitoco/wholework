@@ -47,6 +47,18 @@ followup_issue_section() {
     [[ "$output" == *"gh issue list"* ]]
 }
 
+# Extract Step 8 section: from "### Step 8:" to the next "### " heading
+step8_section() {
+    awk '/^### Step 8:/{found=1} found && /^### / && !/^### Step 8:/{exit} found{print}' "$1"
+}
+
+@test "Step 8 section describes patch route final-step commit deferral and pr route exclusion" {
+    run step8_section "$SKILL_FILE"
+    [[ "$output" == *"patch route"* ]]
+    [[ "$output" == *"final Implementation Step"* ]]
+    [[ "$output" == *"does not apply to pr route"* ]]
+}
+
 # Extract Step 11 section: from "### Step 11:" to the next "### " heading
 step11_section() {
     awk '/^### Step 11:/{found=1} found && /^### / && !/^### Step 11:/{exit} found{print}' "$1"
@@ -60,6 +72,19 @@ step11_section() {
 @test "Step 11 patch route includes commit subject issue-number guard" {
     run step11_section "$SKILL_FILE"
     [[ "$output" == *'missing #$NUMBER reference'* ]]
+}
+
+@test "Step 11 patch route documents closes as reconcile-phase-state.sh completion signal" {
+    run step11_section "$SKILL_FILE"
+    [[ "$output" == *"reconcile-phase-state.sh"* ]]
+    [[ "$output" == *"_completion_code_patch"* ]]
+    [[ "$output" == *"silent no-op"* ]]
+}
+
+@test "Step 11 patch route documents push-state-dependent closes fallback (amend vs empty commit)" {
+    run step11_section "$SKILL_FILE"
+    [[ "$output" == *"--amend"* ]]
+    [[ "$output" == *"--allow-empty"* ]]
 }
 
 # Extract Step 9 section: from "### Step 9:" to the next "### " heading

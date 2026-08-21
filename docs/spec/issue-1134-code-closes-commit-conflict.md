@@ -66,3 +66,39 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (判断根拠・Auto-Resolve Log・Consumed Comments の記録)。#1226 の 2 例目観測により衝突条件が「Implementation Steps 2 つ以上」に広がったことの報告を含む。本 Spec の設計判断に直接の追加アクションは無いが、Background の文脈として活用した / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372147483
 - saito / MEMBER / first-class / `/issue` Step 15 の AC audit: Pre-merge AC 3 の rubric テキストに常時 PASS リスク (`modules/phase-state.md` の既存記述だけで満たされてしまう懸念) を指摘。本 Spec で AC 3 の rubric テキストを `skills/code/SKILL.md` 限定に修正し、Issue 本文にも反映済み / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372198272
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps 1–3 は 1 コミットにまとめてコミットした (Step 8 が要求する都度コミットではなく)。pr route には Step 8/Step 11 の closes-commit 衝突自体が存在しない (衝突は patch route 限定) ため、本 Issue 自身の実装ではステップ単位のコミット粒度は必須ではなかった。
+
+### Design Gaps/Ambiguities
+- なし。Issue が提示した 3 案 (A/B/C) は Spec 時点で解決済みで、採用したハイブリッド (B 主・A 従) は既存の Step 8 / Step 11 の 2 箇所にそのまま対応付けられ、実装中に新たな曖昧さは発生しなかった。
+
+### Rework
+- なし。New Verification-Test Pre-implementation FAIL Check により、新規 4 件のテストがすべて実装前の SKILL.md に対して FAIL することを確認済み (Confirmed pre-implementation FAIL for 4 new test(s))。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. PR diff は Spec の Implementation Steps 1–3 (Step 8 例外文、"Step 8/Step 11 Commit Boundary" 小節の新設位置、closes #N / reconcile-phase-state.sh への言及追加、Fallback セクションの配置、`tests/code.bats` の3ケース追加) と正確に一致していた。
+
+### Recurring issues
+- `review-light` の Edge Cases/Robustness 観点が、Step 11 の新設 Fallback セクションに対して2件の関連する欠落 (ガードチェックとの実行順序が未定義、`BASE_BRANCH == main` によるガーティング漏れ) を検出した。どちらも「新しい分岐ロジックを SKILL.md に追加する際、既存の隣接ロジック (ガードチェック、BASE_BRANCH 条件分岐) との相互作用を明示的に記述し忘れる」という共通パターン。手続き文書に新しい分岐を挿入する際は、既存の隣接する条件分岐/ガードとの実行順序・適用条件を明示する習慣が有効と考えられる。
+
+### Acceptance criteria verification difficulty
+- Nothing to note. 4件すべて rubric 型の verify command で、PR diff から明確に PASS 判定でき UNCERTAIN は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 10.0 (lightweight integrated review, Size M) で検出された3件の SHOULD 指摘 (すべて `skills/code/SKILL.md` の新設 Fallback セクション周辺) はいずれも実装として埋める価値があると判断し、`/review` フェーズ内で修正した: (1) ガードチェックを Fallback の後ろに移動し常に最終 HEAD を検証、(2) Fallback の closes #N 付与を `BASE_BRANCH == main` でガーティング、(3) 空コミット例のインラインコードスパンをフェンスコードブロックに変更。
+- 3件とも MUST ではなく SHOULD だったが、いずれも本 Issue が対象とする残余ケース (`Step 8 leaves no new diff`) 自体の正確性に関わるため修正を選択。CONSIDER 相当の軽微な指摘であれば見送っていた。
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- 修正後、`bats tests/code.bats` 25/25 PASS、`validate-skill-syntax.py` 0 errors/0 warnings、`check-forbidden-expressions.sh` clean を再確認済み。`/merge` はこの再検証結果を前提に進めてよい。
+- Post-merge AC (opportunistic: 「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」) は未検証のまま。今回の `/review` 修正はまさにこの残余ケースのロジックを変更したため、実際に patch route Issue で踏まれるタイミングで重点的に確認する価値がある。
