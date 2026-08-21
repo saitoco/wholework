@@ -9,7 +9,8 @@
 # Global index definition: 1-based count of every line matching ^- \[[ xX]\] across the
 # entire issue body (same awk pattern as scripts/gh-issue-edit.sh), so indices returned
 # here are directly usable with gh-issue-edit.sh --checkbox and the modules/l0-surfaces.md
-# ac= marker attribute.
+# ac= marker attribute. Fenced code block lines are excluded from this count — see
+# modules/l0-surfaces.md § AC Enumeration Convention (SSoT for this exclusion rule).
 #
 # Pre-merge subsection range: from the line after a heading matching ^### Pre-merge up to
 # (but excluding) the next line matching ^## or ^### .
@@ -55,7 +56,9 @@ fi
 # Emit "<global_index>\t<checked:0|1>\t<text>" for every checkbox line that falls
 # inside the ### Pre-merge subsection (the heading line itself is excluded).
 RECORDS=$(printf '%s\n' "$BODY" | awk '
-  BEGIN { idx = 0; in_section = 0 }
+  BEGIN { idx = 0; in_section = 0; in_fence = 0 }
+  /^[ \t]*```/ { in_fence = !in_fence; next }
+  in_fence { next }
   /^### Pre-merge/ { in_section = 1; next }
   /^## / || /^### / {
     in_section = 0
