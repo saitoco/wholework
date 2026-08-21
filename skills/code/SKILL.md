@@ -151,25 +151,26 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Cons
 
 **Skip this check if Size is XS** (XS does not require Spec — skip this entire step and proceed to Step 4).
 
-For sizes other than XS: run `gh issue view $NUMBER --json labels -q '.labels[].name'` to get labels, then check if `phase/ready` is present.
-
-- `phase/ready` label present: proceed to the next step
-- `phase/ready` label absent:
-  - Confirm via AskUserQuestion (non-interactive mode: auto-resolve — proceed without Spec; read requirements from Issue body directly and continue; record the decision in the Spec's `## Autonomous Auto-Resolve Log` subsection)
-    - "Continue": proceed with execution
-    - "Abort": stop processing and guide "run `/spec $NUMBER`", then exit
-
-**Spec precondition check (run after `phase/ready` passes, skip if Size is XS):**
+For sizes other than XS: run the precondition check once and branch on its `diagnosis`, rather than treating every `matches_expected: false` as the same cause — `_precondition_code_common()` (`scripts/reconcile-phase-state.sh`) reports `phase/ready` label absence and Spec absence as two distinct `diagnosis` strings, not one:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh --check-precondition code-patch $NUMBER
+${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-precondition
 # pr route: replace code-patch with code-pr
 ```
 
-Parse the JSON output. If `matches_expected` is `false` (Spec missing and Size is not XS):
-- Output: "Spec が見つかりません。`/spec $NUMBER` を実行してください"
-- **In non-interactive mode**: warn and continue (consistent with `--warn-only` default; Step 5 handles missing Spec by reading Issue body)
-- **In interactive mode**: abort recommended — guide user to run `/spec $NUMBER` first
+**Capture the observation immediately** — record the JSON output's `labels` array and `diagnosis` string as `OBSERVED_LABELS` / `OBSERVED_DIAGNOSIS`. When Step 12 writes the `## Autonomous Auto-Resolve Log` / Phase Handoff entry for this step's decision, transcribe `OBSERVED_LABELS` / `OBSERVED_DIAGNOSIS` verbatim — do not re-query `gh issue view` for labels at that point. Step 4 (immediately after this step) transitions the label to `phase/code`, so a fresh query made later in the run (e.g. at Step 12) observes the *post*-transition state and, if written up as "the state Step 3 saw", misattributes Step 4's own label change to a stale precondition — the exact retroactive-misattribution pattern observed three times in Issues #1053, #1102, and #1108.
+
+Parse `matches_expected`:
+
+- `true`: proceed to the next step
+- `false` and `OBSERVED_DIAGNOSIS` reports the `phase/ready` label is absent (e.g. `"... does not have phase/ready label ..."`):
+  - Confirm via AskUserQuestion (non-interactive mode: auto-resolve — proceed without Spec; read requirements from Issue body directly and continue; record the decision, using `OBSERVED_LABELS`/`OBSERVED_DIAGNOSIS` as captured above, in the Spec's `## Autonomous Auto-Resolve Log` subsection)
+    - "Continue": proceed with execution
+    - "Abort": stop processing and guide "run `/spec $NUMBER`", then exit
+- `false` and `OBSERVED_DIAGNOSIS` reports the Spec file is missing (e.g. `"Spec missing and Size != XS"`):
+  - Output: "Spec が見つかりません。`/spec $NUMBER` を実行してください"
+  - **In non-interactive mode**: warn and continue (consistent with `--warn-only` default; Step 5 handles missing Spec by reading Issue body)
+  - **In interactive mode**: abort recommended — guide user to run `/spec $NUMBER` first
 
 ### Step 4: Create Branch & Label Transition
 

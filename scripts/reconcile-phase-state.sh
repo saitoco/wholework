@@ -478,6 +478,10 @@ _precondition_spec() {
   fi
 }
 
+# Two distinct mismatch causes are reported as two distinct diagnosis strings, not a
+# single generic "precondition not met" message: "does not have phase/ready label" (label
+# absent) vs. "Spec missing and Size != XS" (Spec file absent). Callers must branch on this
+# string rather than assuming any matches_expected:false means the Spec is missing.
 _precondition_code_common() {
   local labels
   labels=$(gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' 2>/dev/null) || \
