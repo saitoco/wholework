@@ -296,6 +296,7 @@ After codebase investigation, identify uncertainty items.
 2. Incorporate WebFetch/WebSearch-resolved items into the design
 3. Note unresolved items in an "Uncertainty" section (with verification method and impact scope)
 4. Confirm with user via AskUserQuestion if needed
+5. Self-check consistency between the Uncertainty section and `## Implementation Steps`: for each item resolved in the Uncertainty section, confirm it is transcribed into `## Implementation Steps` without omission. When a resolution spans multiple target files or multiple change points, confirm that every one of them is individually enumerated as its own Implementation Step — a partial transcription is not acceptable. If an inconsistency is found, resolve it in one of two directions: (a) add the missing item(s) to `## Implementation Steps`, or (b) correct the Uncertainty section's resolution text to match the actual implementation scope. Record whichever direction was chosen in the Spec's `## Notes` section.
 
 ### Step 9: UI Design Phase (if applicable)
 
