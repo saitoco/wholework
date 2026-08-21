@@ -323,10 +323,13 @@ When `BASE_BRANCH` is `main`:
    ```
 2. Expected state: `state=CLOSED` and the `phase/verify` label present.
 3. If the actual state matches the expected state: proceed to Step 7 (Worktree Exit).
-4. If it does not match (e.g., `state=OPEN` and/or `phase/verify` missing), apply the フォールバック (fallback):
-   - If `phase/verify` is missing: re-run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify`
-   - If `state` is still `OPEN`: run `gh issue close "$ISSUE_NUMBER"`
-   - Output: "Warning: Issue #$ISSUE_NUMBER did not reach the expected post-merge state after `closes #N`/label transition. Applied フォールバック: manual label transition and/or issue close."
+4. If it does not match (e.g., `state=OPEN` and/or `phase/verify` missing), first retry before applying the フォールバック (fallback) — `closes #N` auto-close can lag the merge API response by a few seconds (GitHub-side eventual consistency for the linked-issue auto-close, distinct from the `mergeable`/`mergeStateStatus` sync delay `scripts/gh-pr-merge-status.sh` already retries on):
+   - Wait 5 seconds (`sleep 5`), then re-fetch `gh issue view "$ISSUE_NUMBER" --json state,labels`. If it now matches the expected state: proceed to Step 7 (Worktree Exit) — skip the フォールバック below.
+   - If still mismatched, wait 10 seconds (`sleep 10`), then re-fetch once more. If it now matches: proceed to Step 7 (Worktree Exit) — skip the フォールバック below.
+   - If still mismatched after both retries, apply the フォールバック:
+     - If `phase/verify` is missing: re-run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify`
+     - If `state` is still `OPEN`: run `gh issue close "$ISSUE_NUMBER"`
+     - Output: "Warning: Issue #$ISSUE_NUMBER did not reach the expected post-merge state after `closes #N`/label transition (checked immediately, then after 5s and 10s retries). Applied フォールバック: manual label transition and/or issue close."
 5. Re-check once with `gh issue view "$ISSUE_NUMBER" --json state,labels` after applying the フォールバック. If the state is still mismatched, keep the warning visible in the completion report but do not block Step 7 — this requires manual follow-up.
 
 ### Step 7: Worktree Exit (push-and-remove)
