@@ -92,19 +92,17 @@ Issue の Purpose・Out of Scope は「既存 1000 件の可視化のみ」を�
 - None. The pre-implementation FAIL check (5/5 new bats tests confirmed FAIL against the pre-implementation state) and the immediate post-fix full-suite run (1893/1893 PASS) meant the `-H` gap above was the only correction needed, caught and fixed within the same implementation step before any commit.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Reused a stale worktree (`review+pr-1424`) left over from an interrupted prior `/review` run on this same PR (owning process confirmed dead; no uncommitted changes) — that prior run had already posted the review (0 MUST, 1 SHOULD, 1 CONSIDER) and already committed/pushed the SHOULD fix. This run verified the fix and completed Steps 12.3–14 and Retrospective that the interrupted run never reached.
-- No policy change detected in Step 13 — the SHOULD fix (a continuation-line lookahead for `[[ ... ]] \` + `|| false` on the next line) is an implementation-only correctness fix within the already-passing rubric ACs, so the Issue's Acceptance Criteria text and verify commands were left unchanged.
-- The sole CONSIDER finding (cwd-dependent `tests/*.bats` glob expansion) was left unfixed per its own rationale: it matches the existing `check-forbidden-expressions.sh` precedent, and repo-root invocation is already the documented contract (CI job + `/code` Additional validation both run from repo root).
+- Squash-merged PR #1424 cleanly (`mergeable=true`, `reason=clean`, CI success, review approved) — no conflict resolution or rebase needed.
+- Pre-merge AC gate: all 3 pre-merge acceptance conditions were already checked (`unchecked_count=0`) and the review-incomplete-fallback check confirmed organic (non-fallback) review completion, so no override marker was needed.
 
 ### Deferred Items
-- Post-merge AC (bash version reproduction on CI, `verify-type: manual`) remains unchecked — carried over unchanged from `/code`'s handoff; still `- [ ]` in the current Issue body. To be resolved by `/verify` after merge by reading the `bare-bracket-assertions` CI job's `REPRO-CHECK:` log line.
-- Bulk rewrite of the ~987 existing bare-bracket assertions in `tests/*.bats` remains explicitly Out of Scope (unchanged from `/code`'s handoff).
+- Post-merge AC (bash version reproduction on CI, `verify-type: manual`) remains unchecked — carried over unchanged from `/review`'s handoff. To be resolved by `/verify` by reading the `bare-bracket-assertions` CI job's `REPRO-CHECK:` log line and recording the result as an Issue comment.
+- Bulk rewrite of the ~987 existing bare-bracket assertions in `tests/*.bats` remains explicitly Out of Scope (unchanged from prior handoffs).
 
 ### Notes for Next Phase
-- `/merge`: 0 MUST issues, all CI jobs SUCCESS (including this PR's own new `bare-bracket-assertions` job), all 3 Pre-merge AC PASS — no blockers found.
 - `/verify` (post-merge): resolve the Post-merge manual AC per the Deferred Items note above.
 
 ## review retrospective
