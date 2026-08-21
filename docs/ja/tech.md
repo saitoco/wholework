@@ -213,6 +213,16 @@ Spec retrospective セクション (`## Code Retrospective`、`## Spec Retrospec
 - **記述的な表現**: 用語自体を引用せずに記述する (例: 用語そのものの代わりに「N 個の非推奨用語」)
 - **`旧称:` 接頭辞**: `旧称: <term>` と書く (例: `旧称: verify hint`) — CI の除外フィルタは `旧称` を含む行をスキップする
 
+## Config Schema Validation
+
+`scripts/check-config-schema.sh` は、`.wholework.yml` のトップレベルキーが `modules/detect-config-markers.md` の Marker Definition Table (既知キーの SSoT) に見つからない場合に警告する — これにより、警告なしに既定値へ静かにフォールバックしてしまう typo (例: `autonomy:` を `autonomy-tier:` と誤記) を検出できる。
+
+**検証タイミング**: CI 上で、`.github/workflows/test.yml` の `check-config-schema` ジョブが push/PR ごとに実行する (`check-forbidden-expressions.sh`/`check-bare-bracket-assertions.sh` と同じパターン)。
+
+**検証スコープ**: トップレベルキーのみ。ネストされた子キー (例: `capabilities.browser`) は範囲外。
+
+**警告メッセージの形式**: `Unknown key '<key>' in <config-file> (not found in modules/detect-config-markers.md's Marker Definition Table). Check for a typo, or add it to the table if intentional.` 1件以上検出した場合、スクリプトは非ゼロで終了する。
+
 ## 用語移行スコープルール
 
 非推奨用語を Terms の 'Formerly called' に追加する Issue (段階的な用語移行) を作成する際は、同じファイル内の非推奨用語の置き換えがスコープに含まれるかどうかを明示すること。
