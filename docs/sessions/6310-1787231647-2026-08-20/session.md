@@ -114,7 +114,7 @@ Filter hit rate: 50% (1+0/2)
 ## Findings
 
 - `run-auto-sub.sh` の operate route 誤判定 (`### ` サブ見出しで Changed Files 空判定してしまうバグ) を `#1418` の verify 時に発見・調査し、Tier 1 分類で自動起票された。 [Filed: #1421]
-- `#1418` は post-merge AC 2件 (翻訳同期の手動確認、次回 `/auto` 実行での classifier hang 非発生の観察) が残存し `phase/verify` のまま。いずれも設計上のマニュアル/opportunistic 条件であり、異常ではない。 [No action: 設計通りの post-merge 残存 — 翻訳同期は人手確認待ち、opportunistic 条件は次回イベント待ち]
+- `#1418` の post-merge AC 2件 (翻訳同期の手動確認、次回 `/auto` 実行での classifier hang 非発生の観察) は、バッチ完了後のユーザ指示によりフォローアップで確認した。翻訳同期は `d5d50648` で `docs/translation-workflow.md` の Sync Procedure に従い完全実施済みと確認 (残存参照ゼロ)、opportunistic 条件も同一セッション内の後続8件以上の `/auto` 実行 (`--permission-mode auto` のみ) が classifier hang なしで完走したことを直接観測して確認した。両 AC を PASS 確定し `#1418` は `phase/done` に遷移済み。 [Resolved directly: #1418 の AC12/AC13 を PASS 確定・`phase/done` 遷移・コメント投稿済み]
 - `#1413` の AC grep ヒントが Spec 記載の実装文言と大文字小文字不一致だった一時的な欠陥は、同一セッション内で自己修正され実害なし。Tier 2 (memory proposal) として分類済み。 [No action: 実害なし・同一セッション内で自己修正済み、Tier 2 分類は post-#1159 のデフォルト方針通り]
 - 観測ディスパッチで評価した `#731`/`#732`/`#736` の post-merge observation AC (「次回変更時に regression 検出 (FAIL→green) することを確認」) は、いずれも git history 上に FAIL→green の直接証跡がなく SKIPPED を維持した。3件共通して「テストファースト実装では FAIL が commit 履歴に残らない」という構造的パターンが観測されたが、`#736` の Verify Retrospective で既に「再発性は認識したが Tier 1 基準未達」と判断済み。 [No action: 既に #736 Verify Retrospective に記録済み、Tier 1 未達と判断済み]
 - `#755` の post-merge observation AC (execution-context.md の参照標準化) は `#1123`/`#1213`/`#1233` での実際の参照拡大により PASS と判定できた — Issue 作成後の実際の採用実績を run-fact/observation ベースで確認できた好例。 [Resolved directly: #755 の checkbox を PASS 確定・コメント投稿済み]
