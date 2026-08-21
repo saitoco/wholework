@@ -112,3 +112,25 @@ Implementation Steps はいずれも `modules/size-workflow-table.md`・`skills/
 ### Notes for Next Phase
 - `/verify` は Pre-merge 4 件が既にチェック済みであることを踏まえ、Post-merge の observation AC のみが未判定である点に注意する。
 - AC4 の rubric スコープ gap は次回同様の rubric AC を書く際の参考情報として `modules/verify-executor.md` § "Primary evidence outside git diff / Issue body" と合わせて参照するとよい。
+
+## Issue Retrospective
+
+### 判断根拠
+
+- **verify command の Pattern 2 (常時 PASS) 修正**: 2026-08-07 の triage AC audit コメントで、Pre-merge AC 1・2 の `grep` verify command が main 時点で既に該当文字列 (`XL`, `XL route`) を含むため常時 PASS になると指摘された。コメントの修復案 (specific string への変更 / rubric 統合) を踏襲し、両 AC を `rubric` + `section_contains` の組み合わせへ変更した。verify command の記法自体も `grep -n "..." path` という非対応構文だったため、あわせてサポート済みコマンド形式に修正した。
+- **スコープ拡張 (#1270 型の取り込み)**: 2026-08-09 のコメントで、本 Issue が対象とする欠落パターンが #1270 で異なる現れ方 (fan-out 前の前提作業が必要で、事後に回復不可能) をすることが報告された。当初の Background/対応方針/AC は #1158 型 (fan-out 後の集約のみ) を前提としていたため、以下を反映した:
+  - Background に「実例 2 (#1270)」を追加し、#1158 型との違い (回復可否) を対比表で明記
+  - 対応方針に「方針 A'」(Implementation Steps を fan-out 前後に分割) と「方針 C」(前提作業を level-0 sub-issue化) を追加
+  - Pre-merge AC 2・4 の文言を「選択した方針が #1158 型・#1270 型のどちらに対応するか」を要求する形に拡張
+- **Post-merge AC への `session=next` 付与**: 本 Issue の AC が `skills/auto/SKILL.md` を参照しており、かつ Post-merge 条件が `verify-type: observation` だったため、`check-skill-change-observation-ac.sh` の指摘に従い `session=next` を付与した (スキル変更は次回会話セッションでロードされるまで観測できないため)。
+
+### Q&A で確認した主要な方針判断
+
+非対話モードのため AskUserQuestion は使用せず、上記はすべて Auto-Resolve (least-risk・コメントで既に示唆されていた修正案の踏襲) として判断した。
+
+## Autonomous Auto-Resolve Log
+
+- **verify command を rubric + section_contains へ変更** — reason: audit コメントが常時 PASS を指摘済みで、修復方向性 (specific string または rubric 統合) も提示されていた。方針 A/A'/B/C いずれが選ばれても記述内容の細部は変わりうるため、実装後にのみ現れる特定文字列を先読みするより rubric による意味的検証の方が頑健と判断
+  - Other candidates: 実装が確定してから特定の固有文字列 (`run-code.sh` 呼び出し等) を指定する案 — 方針未決定の現時点では過度に先読みするリスクがあるため採用しなかった
+- **対応方針に A'/C を追加し、AC を #1158 型・#1270 型双方への対応可否を問う形に拡張** — reason: #1270 の実コメントが「方針 A 単独では fan-out 前の回復不可能な欠落を救えない」と明示しており、これを踏まえず AC を据え置くと再度同型の欠落を見逃すリスクがある
+  - Other candidates: Background の実例追加のみに留め AC は変更しない案 — /spec が Issue 本文を読む際に「両パターンへの対応要否」が AC レベルで要求されていないと、#1158 型のみへの対応で AC を PASS させてしまう可能性があるため採用しなかった
