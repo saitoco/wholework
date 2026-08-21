@@ -134,3 +134,28 @@ Implementation Steps はいずれも `modules/size-workflow-table.md`・`skills/
   - Other candidates: 実装が確定してから特定の固有文字列 (`run-code.sh` 呼び出し等) を指定する案 — 方針未決定の現時点では過度に先読みするリスクがあるため採用しなかった
 - **対応方針に A'/C を追加し、AC を #1158 型・#1270 型双方への対応可否を問う形に拡張** — reason: #1270 の実コメントが「方針 A 単独では fan-out 前の回復不可能な欠落を救えない」と明示しており、これを踏まえず AC を据え置くと再度同型の欠落を見逃すリスクがある
   - Other candidates: Background の実例追加のみに留め AC は変更しない案 — /spec が Issue 本文を読む際に「両パターンへの対応要否」が AC レベルで要求されていないと、#1158 型のみへの対応で AC を PASS させてしまう可能性があるため採用しなかった
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。方針 A/A'/B/C の比較検討は `## Notes` に十分な粒度で記録されており、#1158 型・#1270 型双方への対応可否も明記されている。
+
+#### design
+- (spec と統合、上記参照)
+
+#### code
+- **Code Retrospective に記録済みの rubric AC verify command のスコープ gap**: AC4 (方針比較の記録) の rubric verify command が Spec ファイルパスを明示的に名指ししていない。`modules/verify-executor.md` § "Primary evidence outside git diff / Issue body" が求める明示的なファイル名指しを欠くため、rubric grader が独立実行された場合 (Issue 本文 + git diff + 名指しファイルのみが可視) には UNCERTAIN になりうる。本フェーズでは Spec 内容を直接確認した上で PASS と判定済みで、実害は出ていない。既に Code Retrospective の Design Gaps/Ambiguities と Phase Handoff の両方に記録されており、本 Issue の scope 外として意図的に据え置かれている — 追加のアクションは不要と判断した。
+
+#### review
+- 該当なし (patch route のため `/review` フェーズなし)。
+
+#### merge
+- 該当なし (patch route のため PR マージなし。`(closes #1241)` により直接コミットで自動クローズ)。
+
+#### verify
+- FAIL・UNCERTAIN なし。Pre-merge 4件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は未発火のため SKIPPED。
+
+### Improvement Proposals
+- N/A — Code Retrospective が記録した rubric AC4 のファイルパス指名不足は、既に同フェーズで意図的に scope 外と判断・記録済みであり、新たな Issue 起票や追加のメモリ提案を要する新規の観察ではない。
