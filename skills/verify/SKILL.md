@@ -161,7 +161,7 @@ Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 gh issue view "$NUMBER" --json body
 ```
 
-Parse acceptance condition checkboxes:
+Parse acceptance condition checkboxes (1-based, fenced code block lines excluded — see `modules/l0-surfaces.md` § AC Enumeration Convention):
 
 **Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, `AUTO_RETRY_BUDGET_TOKENS`, `RECOVERIES_AUTO_FIRE_ENABLED`, `RECOVERIES_AUTO_FIRE_THRESHOLD`, and `AUTO_RETRY_ROUTE_OVERRIDE` for use in subsequent steps.
 
@@ -307,7 +307,7 @@ The following cannot be auto-verified:
 
 **Scope**: Update checkboxes for **pre-merge PASS conditions only**. This step executes before post-merge processing (Steps 7–8), ensuring pre-merge results are locked into the GitHub Issue body regardless of post-merge outcomes. Post-merge PASS conditions are updated at the end of Step 8.
 
-Identify the checkbox indices (1-based) of **pre-merge** conditions that PASSed and pass to the script:
+Identify the checkbox indices (1-based, fenced code block lines excluded — see `modules/l0-surfaces.md` § AC Enumeration Convention) of **pre-merge** conditions that PASSed and pass to the script:
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <pass-indices> --check
 # Example: if 1st and 3rd acceptance conditions PASS
@@ -375,7 +375,7 @@ Evaluate whether Claude can directly execute the verification based on the condi
 
 **1b. Record the judgment (both branches)**
 
-For every condition judged in step 1, immediately record `(ac_index, executable, reason, capability)` into `EXECUTABILITY_RECORDS` — a list carried forward to Step 9 — before proceeding to 2a/2b. `ac_index` uses the same 1-based index convention as `gh-issue-edit.sh --checkbox`, counted across the Issue body's full Acceptance Criteria enumeration.
+For every condition judged in step 1, immediately record `(ac_index, executable, reason, capability)` into `EXECUTABILITY_RECORDS` — a list carried forward to Step 9 — before proceeding to 2a/2b. `ac_index` uses the same 1-based index convention as `gh-issue-edit.sh --checkbox`, counted across the Issue body's full Acceptance Criteria enumeration (fenced code block lines excluded — see `modules/l0-surfaces.md` § AC Enumeration Convention).
 
 - `executable=true`: no `reason`/`capability` needed.
 - `executable=false`: choose `reason` from the vocabulary defined in `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` § Machine-Readable Event Marker (`type=verify-executability`) — the vocabulary is not duplicated here. If the sole obstacle is an unset project capability (e.g. `HAS_BROWSER_CAPABILITY` / `HAS_VISUAL_DIFF_CAPABILITY`, fetched via `detect-config-markers.md` in Step 4, evaluating to false), use `reason=capability-unavailable` with `capability=capabilities.<key>` naming the `.wholework.yml` key. Otherwise pick the closest match from the vocabulary; use `reason=other` with `detail=` only when none of the other reasons fit.
