@@ -123,3 +123,6 @@ Issue 本文 Purpose は `modules/l0-surfaces.md` を「既存の『1-based AC e
 ### Issue retrospective / spec retrospective の扱い
 
 SPEC_DEPTH=light のため Step 13 (Spec Retrospective、issue retrospective 転記を含む) は skip する。`/issue` フェーズの Autonomous Auto-Resolve Log 全文は Issue #1071 のコメント (上記 Consumed Comments 参照) に記録済みであり、要点は本 Notes の各節 (Scope expansion / Step 番号の表記ゆれ / SSoT の扱い) に反映済みのため、本 Spec 内での重複転記はしない。
+
+## Consumed Comments
+No new comments since last phase.
