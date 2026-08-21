@@ -317,24 +317,50 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessme
 When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`), files under `modules/` (e.g., `modules/verify-executor.md`), or files under `scripts/`, run a recursive `grep -rn` cross-search across `docs/`, `tests/`, `scripts/`, and `modules/` to find files that reference the changed skill/module/script name, or any config key / marker name / function name this Issue introduces or changes. List found files as sync candidates in the Changed Files section.
 
 Steps:
-1. Extract target keywords from each changed file:
-   - `skills/{name}/SKILL.md` → keyword: `{name}` (e.g., `auto`, `spec`)
-   - `modules/{name}.md` → keyword: `{name}.md` (e.g., `verify-executor.md`)
-   - `scripts/{script-name}.sh` → keyword: `{script-name}.sh` (e.g., `run-code.sh`)
-   - Also extract any config key, marker name (`type=...`), or function name this Issue introduces or changes (e.g., `capabilities.pr-preview`, `type=preview-ac-unverified`) — these are often more specific sync-relevant terms than the skill/script name alone
-2. For each keyword, run:
+1. Extract target keywords from each changed file, in this priority order:
+   - **Highest**: any config key, marker name (`type=...`), or function name this Issue
+     introduces or changes (e.g., `capabilities.pr-preview`, `type=preview-ac-unverified`)
+   - **Medium**: `scripts/{script-name}.sh` → keyword: `{script-name}.sh`;
+     `modules/{name}.md` → keyword: `{name}.md`
+   - **Lowest**: `skills/{name}/SKILL.md` → keyword: `{name}`
+
+   A bare skill name is the weakest keyword class — it collides with prose usage of the
+   same English word throughout `docs/`. When a higher-priority keyword is available for
+   the same changed file, use it instead of the skill name.
+2. **Discriminating-power filter** — before running the full `grep -rn`, count matching files:
+
+   ```bash
+   grep -rl "<keyword>" docs/ tests/ scripts/ modules/ 2>/dev/null | wc -l
+   ```
+
+   If the count exceeds **8**, the keyword has no discriminating power for this Issue.
+   Skip it and record a single line in the Changed Files section:
+
+   `- [Steering Docs sync candidate] keyword "<keyword>" skipped: matched N files (no discriminating power)`
+
+   Do not enumerate or evaluate the individual hits. Bare skill names (`code`, `auto`,
+   `spec`, `issue`, `review`, `merge`, `verify`, `doc`) are almost always in this class.
+
+   If **every** extracted keyword is skipped by this filter, record one line stating that
+   and end the check — do not fall back to a broader search.
+3. For each keyword that was not skipped by the filter above, run:
    ```bash
    grep -rn "<keyword>" docs/ tests/ scripts/ modules/ 2>/dev/null
    ```
    Unlike a `docs/*.md`-style non-recursive glob (which misses second-level files such as `docs/guide/customization.md`), this reaches every file under the four directories. The `-n` output shows each matching line's content, not just the filename, so a prose bullet and a table cell are both visible in one pass.
-3. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section, checking category-specific patterns:
+4. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section, checking category-specific patterns:
    - **docs/**: check ALL occurrence formats (prose bullets, config-reference tables, variable tables, code blocks) — a table cell can go stale independently of a prose paragraph describing the same key elsewhere in the same file
    - **tests/**: check whether another `.bats` file targets the same script/behavior (e.g., both `tests/run-verify.bats` and `tests/verify.bats` may need the same update)
    - **scripts/**: check whether a helper script called by the changed script also references the keyword
    - **modules/**: check whether another module file describes the same spec/behavior under a different filename (e.g., both `modules/verify-executor.md` and `modules/observation-trigger.md` may describe the same verify-type semantics)
+   - **`docs/migration-notes.md` (scope rule)**: this file records interface changes at the
+     private→public migration point. Treat it as a sync candidate **only when this Issue
+     changes a CLI signature, flag, or argument order** of a script it lists. Otherwise
+     exclude it without inspecting occurrences — a keyword match against a historical
+     record is expected and is not drift.
 
    e.g., `docs/guide/customization.md`: [Steering Docs sync candidate] verify `<keyword>` description is current across prose and config-reference table occurrences; update if needed
-4. The `/code` phase makes the final include/exclude decision by reading each candidate; listing them here prevents silent omission at implementation time
+5. The `/code` phase makes the final include/exclude decision by reading each candidate; listing them here prevents silent omission at implementation time
 
 **Skip** if Changed Files does not include SKILL.md files, files under `modules/`, or files under `scripts/`.
 

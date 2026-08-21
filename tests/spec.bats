@@ -36,6 +36,27 @@ setup() {
     grep -q 'grep -rn "<keyword>" docs/ tests/ scripts/ modules/' "$SKILL_FILE"
 }
 
+# Content-assertion tests for the Steering Docs sync candidate check discriminating-power
+# filter, keyword priority ordering, and docs/migration-notes.md scope rule (added for
+# #1327). Guards the tightened Step 10 gate against reverting to the pre-#1327 96% no-op
+# behavior.
+
+@test "spec skill Steering Docs sync candidate check orders keywords by priority" {
+    grep -q 'weakest keyword class' "$SKILL_FILE"
+}
+
+@test "spec skill Steering Docs sync candidate check applies a discriminating-power filter" {
+    grep -q 'Discriminating-power filter' "$SKILL_FILE"
+}
+
+@test "spec skill Steering Docs sync candidate check does not fall back when all keywords are skipped" {
+    grep -q 'do not fall back to a broader search' "$SKILL_FILE"
+}
+
+@test "spec skill Steering Docs sync candidate check scopes docs/migration-notes.md to CLI signature changes" {
+    grep -q 'private→public migration point' "$SKILL_FILE"
+}
+
 # Content-assertion tests for the New test case requirement for new branch logic check
 # (added for #1096). Guards the new Step 10 procedure against accidental removal or drift.
 
