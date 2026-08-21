@@ -42,3 +42,32 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective コメント。`/triage 1155` 実行時の申し送り (テスト隔離必須・`orchestration-recoveries.md` 未作成時の早期 return による false-pass リスク・H2 見出し timestamp を固定文字列で assert しないこと) を記録済みであることを確認する内容。Issue 本文にも要点は転記済みのため、本 Spec への追加反映は不要と判断した。 / https://github.com/saitoco/wholework/issues/1155#issuecomment-5373708352
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1・2 をそのまま実施した。
+
+### Design Gaps/Ambiguities
+
+- Notes の「終了ステータスは `[ "$status" -eq 143 ]` を assert すること」という指示は、実装コード (`run_phase_with_recovery` が `_write_wrapper_retry_recovery` 呼び出し後に元の exit code をそのまま `return` し、呼び出し元が戻り値を捕捉しないため `set -euo pipefail` でスクリプト全体が exit 143 する) と一致することを実行確認した。事前に運用への影響を懸念する余地はなかった。
+
+### Rework
+
+N/A — 手戻りなし。テスト単体実行 (`bats --filter`) で 1 回目から意図した分岐 (escalated) を検証できた。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 既存の success 分岐テスト (2564 行目) の直後に新規 `@test` を追加し、`run-code.sh` モックのみ両呼び出しとも `exit 143` を返すよう変更した。それ以外の隔離パターン (`git`/`gh` モック、`orchestration-recoveries.md` 事前作成) は転用した。
+- 成功分岐テストの `[ "$status" -eq 0 ]` は転用せず、Spec Notes の指示通り `[ "$status" -eq 143 ]` を assert した。
+- H2 の 5 セクション構成 (Context/Diagnosis/Recovery Applied/Outcome/Improvement Candidate) をそれぞれ個別に `grep -q "^### {section}$"` で検証し、rubric AC3 (H2 形式の 5 セクション構成の検証) を機械的にも担保した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `bats tests/run-auto-sub.bats` フルスイート (98 tests) が PASS 済み。新規テストは `retry-on-kill: wrapper-retry-on-kill recovery writes escalated Outcome on retry-also-killed` という名前で 89 番目。
+- 実装コード (`scripts/run-auto-sub.sh`, `scripts/retry-on-kill.sh`) の変更は伴わない。テストファイル1点のみの変更。
