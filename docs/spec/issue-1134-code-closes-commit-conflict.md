@@ -90,15 +90,14 @@
 - Nothing to note. 4件すべて rubric 型の verify command で、PR diff から明確に PASS 判定でき UNCERTAIN は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 10.0 (lightweight integrated review, Size M) で検出された3件の SHOULD 指摘 (すべて `skills/code/SKILL.md` の新設 Fallback セクション周辺) はいずれも実装として埋める価値があると判断し、`/review` フェーズ内で修正した: (1) ガードチェックを Fallback の後ろに移動し常に最終 HEAD を検証、(2) Fallback の closes #N 付与を `BASE_BRANCH == main` でガーティング、(3) 空コミット例のインラインコードスパンをフェンスコードブロックに変更。
-- 3件とも MUST ではなく SHOULD だったが、いずれも本 Issue が対象とする残余ケース (`Step 8 leaves no new diff`) 自体の正確性に関わるため修正を選択。CONSIDER 相当の軽微な指摘であれば見送っていた。
+- Pre-merge AC 4件すべてチェック済み、review-incomplete-fallback 該当なしを確認した上で squash merge を実行した。
+- PR #1430 は mergeable=true (clean, CI success, review approved) だったため conflict resolution ステップは不要だった。
 
 ### Deferred Items
-- None.
+- Post-merge AC (opportunistic: 「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」) は未検証のまま。`/verify` フェーズで重点的に確認する価値がある。
 
 ### Notes for Next Phase
-- 修正後、`bats tests/code.bats` 25/25 PASS、`validate-skill-syntax.py` 0 errors/0 warnings、`check-forbidden-expressions.sh` clean を再確認済み。`/merge` はこの再検証結果を前提に進めてよい。
-- Post-merge AC (opportunistic: 「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」) は未検証のまま。今回の `/review` 修正はまさにこの残余ケースのロジックを変更したため、実際に patch route Issue で踏まれるタイミングで重点的に確認する価値がある。
+- `/verify` は上記 post-merge AC の検証を担当する。今回の `/review` 修正 (Fallback セクションのガーティング等) がまさにこの残余ケースのロジックを変更したため、実際に patch route Issue で踏まれるタイミングでの挙動確認が重要。
