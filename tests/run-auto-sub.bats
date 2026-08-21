@@ -303,6 +303,33 @@ SPEC
     [ ! -f "$RUN_MERGE_LOG" ]
 }
 
+@test "Size M + Spec with ### subheadings in Changed Files: operate route not triggered, code-pr dispatched as usual (issue #1421)" {
+    mkdir -p docs/spec
+    cat > docs/spec/issue-42-subheadings.md <<'SPEC'
+# Issue #42: test spec
+
+## Changed Files
+
+### scripts (bash 3.2+ compatible)
+
+- `scripts/example.sh`: add new option
+
+### tests
+
+- `tests/example.bats`: add regression test
+
+## Implementation Steps
+
+1. Edit scripts/example.sh.
+SPEC
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ -f "$RUN_MERGE_LOG" ]
+}
+
 @test "Size M + Spec with real Changed Files: operate route not triggered, code-pr dispatched as usual" {
     mkdir -p docs/spec
     cat > docs/spec/issue-42-normal.md <<'SPEC'

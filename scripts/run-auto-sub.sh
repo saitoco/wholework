@@ -649,7 +649,7 @@ _spec_is_diffless() {
   grep -q '^## Changed Files' "$spec_file" 2>/dev/null || return 1
 
   local changed_files
-  changed_files="$(awk '/^## Changed Files/{flag=1; next} /^#/{flag=0} flag' "$spec_file" \
+  changed_files="$(awk '/^## Changed Files/{flag=1; next} /^## /{flag=0} flag' "$spec_file" \
     | sed -nE 's/^[[:space:]]*-[[:space:]]+.*`([^`]+)`.*/\1/p' || true)"
   [[ -z "$changed_files" ]]
 }
