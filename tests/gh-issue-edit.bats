@@ -263,3 +263,47 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"checkbox"* ]]
 }
+
+# --- fenced code block exclusion tests (issue #1071) ---
+
+@test "checkbox: fenced sample checkbox is excluded from index counting" {
+    MOCK_DIR_CB="$BATS_TEST_TMPDIR/mocks_cb_fence"
+    EDIT_LOG="$BATS_TEST_TMPDIR/edited_body_fence.txt"
+    ISSUE_BODY="## Acceptance criteria
+- [ ] real item one
+
+\`\`\`markdown
+- [ ] fenced sample checkbox
+\`\`\`
+
+- [ ] real item two"
+    setup_checkbox_mock "$MOCK_DIR_CB" "$ISSUE_BODY" "$EDIT_LOG"
+    # index 2 must resolve to "real item two" (the fenced sample at index-position
+    # 2 in a naive full-text scan must not be counted)
+    run env PATH="$MOCK_DIR_CB:$PATH" bash "$SCRIPT" 123 --checkbox 2 --check
+    [ "$status" -eq 0 ]
+    result=$(cat "$EDIT_LOG")
+    [[ "$result" == *"- [ ] real item one"* ]]
+    [[ "$result" == *"- [ ] fenced sample checkbox"* ]]
+    [[ "$result" == *"- [x] real item two"* ]]
+}
+
+@test "checkbox: real AC outside fence is still indexed normally (non-excluded case)" {
+    MOCK_DIR_CB="$BATS_TEST_TMPDIR/mocks_cb_fence_normal"
+    EDIT_LOG="$BATS_TEST_TMPDIR/edited_body_fence_normal.txt"
+    ISSUE_BODY="## Acceptance criteria
+- [ ] real item one
+
+\`\`\`markdown
+- [ ] fenced sample checkbox
+\`\`\`
+
+- [ ] real item two"
+    setup_checkbox_mock "$MOCK_DIR_CB" "$ISSUE_BODY" "$EDIT_LOG"
+    run env PATH="$MOCK_DIR_CB:$PATH" bash "$SCRIPT" 123 --checkbox 1 --check
+    [ "$status" -eq 0 ]
+    result=$(cat "$EDIT_LOG")
+    [[ "$result" == *"- [x] real item one"* ]]
+    [[ "$result" == *"- [ ] fenced sample checkbox"* ]]
+    [[ "$result" == *"- [ ] real item two"* ]]
+}
