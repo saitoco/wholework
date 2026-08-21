@@ -57,3 +57,6 @@
 - **新規テストケース要件チェック**: 本修正は既存 awk パターンの終端条件を厳密化するものであり、新しい `case`/`if` 分岐や新イベント種別を追加するものではないため、`modules/spec/SKILL.md` の「新規分岐ロジックへの新規テストケース要求」チェックには厳密には該当しない。ただし Issue 自身の Proposal で回帰テスト追加が明示的に要求されており、Implementation Step 2 で対応する。
 - **Doc-checker Impact Assessment**: ワークフローフェーズ変更・プロジェクト構造変更のいずれにも該当しない内部バグ修正のため、doc-checker 対象文書 (README.md/CLAUDE.md/docs/workflow.md/`$STEERING_DOCS_PATH/structure.md`) の変更は不要と判断した。
 - **Patch route verify command check**: 本 Issue の Verification > Pre-merge に `github_check "gh pr checks"` 系の verify command は含まれていない (grep/rubric/command のみ) ため、patch route (Size S, ALWAYS_PR=false, PR無し) への自動置換対象なし。
+
+## Consumed Comments
+No new comments since last phase.
