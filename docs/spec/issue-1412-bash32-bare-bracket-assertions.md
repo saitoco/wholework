@@ -77,3 +77,32 @@ Issue の Purpose・Out of Scope は「既存 1000 件の可視化のみ」を�
 
 ## Consumed Comments
 - saito / MEMBER / first-class / Issue Retrospective posted by `/issue 1412 --non-interactive` (records Auto-Resolve rationale; already reflected in Issue body, no new decision needed for `/spec`) / https://github.com/saitoco/wholework/issues/1412#issuecomment-5364163591
+- No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- `scripts/check-bare-bracket-assertions.sh`'s `grep` call needed an explicit `-H` flag, not specified by the Spec's proposed `grep -nE '^[[:space:]]*\[\[ "\$(output|status)"' tests/*.bats` form. When the glob expands to exactly one matching file, `grep` omits the filename prefix by default, which broke both the self-exclusion check (comparing the extracted `file` field against `tests/check-bare-bracket-assertions.bats`) and the human-readable output format. Caught immediately by the pre-implementation FAIL check's bats tests (3 of 5 new tests failed against the `-H`-less version before the fix), not discovered later.
+- Two files outside the Spec's `## Changed Files` list were also touched: `docs/ja/structure.md` (Step 9's `docs/ja/` sync check detected a translation gap after `docs/structure.md` was edited) and the `test.yml` CI-job enumeration comment inside `docs/structure.md`'s Directory Layout tree (kept in sync with the newly added `bare-bracket-assertions` CI job, following the same prose-enumeration pattern the existing `check-forbidden-expressions` job already used there).
+
+### Design Gaps/Ambiguities
+- None beyond the `-H` flag gap above — the Spec's regex, exclusion rules, and integration points (SKILL.md Step 9, CI job placement) were otherwise directly implementable as written.
+
+### Rework
+- None. The pre-implementation FAIL check (5/5 new bats tests confirmed FAIL against the pre-implementation state) and the immediate post-fix full-suite run (1893/1893 PASS) meant the `-H` gap above was the only correction needed, caught and fixed within the same implementation step before any commit.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's proposed design as-is: dedicated new script (not folded into `validate-skill-syntax.py`), dual CI + `/code` integration mirroring `check-forbidden-expressions.sh`'s existing pattern, always-exit-0 (informational only).
+- Verified locally on real macOS bash 3.2.57(1)-release that the CI diagnostic step's `REPRO-CHECK:` line correctly reports "did NOT propagate" (bug reproduced) — confirms the diagnostic step's branching logic works before it ever runs in CI.
+- Ran the real script against this repo's actual `tests/*.bats` and confirmed it detects 987 bare assertions (close to the Issue's ~1000 estimate), giving confidence the regex and exclusion logic behave correctly at full scale, not just on synthetic fixtures.
+
+### Deferred Items
+- Post-merge AC ("CI ランナーの bash バージョンでこの問題が再現するかどうかの調査結果が Issue コメントとして記録されている", `verify-type: manual`) is intentionally not checked — it requires reading the `bare-bracket-assertions` CI job's `REPRO-CHECK:` log line from an actual GitHub Actions run after this PR merges, which does not exist yet at code-phase time.
+- Bulk rewrite of the ~987 existing bare-bracket assertions in `tests/*.bats` remains explicitly Out of Scope per the Issue body — not deferred by this phase, but worth restating so `/review` does not mistake the large `check-bare-bracket-assertions.sh` warning-count output for an unaddressed AC.
+
+### Notes for Next Phase
+- `/review`/`/merge`: the `bare-bracket-assertions` CI job is expected to be green regardless of how many bare assertions exist in `tests/*.bats`, since the script always exits 0 — a red job on this workflow run would indicate a script bug (e.g. a `set -e`-style failure inside the script itself), not detection findings.
+- `/verify` (post-merge): resolve the Post-merge manual AC by reading the merged PR's `bare-bracket-assertions` job log for the `REPRO-CHECK:` line and posting the result (propagated vs. did-not-propagate) as an Issue comment.
