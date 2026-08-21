@@ -43,3 +43,29 @@
 2. [2026-08-21T09:02:31Z](https://github.com/saitoco/wholework/issues/1154#issuecomment-5367823953) — Step 15 audit で発見した自己生成 rubric 補助チェック (`section_contains` の heading 引数) の `###` 除去修正。内容は Issue 本文に反映済み (現行 AC は修正後の形式)。
 
 いずれも Issue 本文更新として既に反映済みのため、本 Spec 作成にあたり追加のアクションは不要。
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps の記載どおり、`skills/spec/SKILL.md` Step 8 の `**Response:**` 番号付きリストに `5.` を追記した。
+
+### Design Gaps/Ambiguities
+N/A
+
+### Rework
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implementation Steps の指示どおり、`skills/spec/SKILL.md` Step 8 の `**Response:**` 番号付きリスト (1-4) に `5.` として自己チェック手順を追記した。既存フォーマット (番号付き手順) との整合を優先し、Step 6 の個別パターン群のような独立見出しは採用しなかった (Issue 本文の Auto-Resolved Ambiguity Points の推奨どおり)。
+- 新規 bats テストケースは追加していない — Spec Notes の判断 (`scripts/run-spec.sh` 本体を変更しないプローズのみの追記であるため) をそのまま踏襲した。
+- behavioral change 判定 (`tests/check-file-overlap.bats` / `tests/operate-route.bats` が `skills/spec/SKILL.md` を参照) によりフルテストスイートを並列実行し、1908件全て PASS を確認した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 4件の Pre-merge AC (rubric x2, section_contains, command) は `/code` フェーズ内で全て PASS 済みでチェック済み。`/review` では追加の逸脱がないことの確認で足りる想定。
+- Post-merge の observation AC (`event=auto-run session=next`) は次回 Uncertainty 節を持つ Issue の `/spec` 実行時に観察されるべき項目 — `/verify` 実行時点ではまだ発火していない可能性が高い。
