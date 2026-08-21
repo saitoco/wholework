@@ -76,4 +76,4 @@ Issue 本文に bash 3.2.57(1)-release と bats 1.13.0 での実機再現が既�
 Issue の Purpose・Out of Scope は「既存 1000 件の可視化のみ」を明示しており、一括修正や新規追加分の強制 (ratchet) は本 Issue の対象外。既存違反がある状態で CI を fail させると全 PR がブロックされるため、`scripts/check-bare-bracket-assertions.sh` は検出件数に関わらず常に `exit 0` とし、警告出力のみを行う設計とした。
 
 ## Consumed Comments
-No new comments since last phase.
+- saito / MEMBER / first-class / Issue Retrospective posted by `/issue 1412 --non-interactive` (records Auto-Resolve rationale; already reflected in Issue body, no new decision needed for `/spec`) / https://github.com/saitoco/wholework/issues/1412#issuecomment-5364163591
