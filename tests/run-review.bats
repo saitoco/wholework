@@ -110,6 +110,14 @@ MOCK
     # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
 
+    # Real resolve-preview-env.sh (Issue #1428): run-review.sh's
+    # _resolve_preview_url_command() is now a thin wrapper delegating to this
+    # shared script, so the real implementation must be present under
+    # WHOLEWORK_SCRIPT_DIR for the preview-url-command tests below to exercise
+    # actual guard logic rather than a missing-binary failure.
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/resolve-preview-env.sh" "$MOCK_DIR/resolve-preview-env.sh"
+    chmod +x "$MOCK_DIR/resolve-preview-env.sh"
+
     # Mock wait-ci-checks.sh: emit expected output lines
     cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
 #!/bin/bash
