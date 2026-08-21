@@ -166,19 +166,36 @@ No new comments since last phase.
 
 - `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式 (Deployments API 経路・preview-url-command 経路の両方) の相互作用は、コードベース調査で新たに発見した未解決の疑問点。既存 (Deployments API) 経路にも同じ特性があり #1428 固有の新規欠陥ではないと判断し、Pre-merge AC には含めず Uncertainty として記録した。`/code` 実装後に実地確認し Code Retrospective に記録する運用とした
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-10 は Spec の記述どおりに実装した (インターフェース・挿入位置・ゲート条件を含め設計からの逸脱なし)
+
+### Design Gaps/Ambiguities
+- なし。Spec の Alternatives Considered / Notes が事前に判断根拠を記録済みだったため、実装中に新たな曖昧点は発生しなかった
+
+### Rework
+- `tests/resolve-preview-env.bats` の 2048 文字超テストで、`mock_config_value()` ヘルパーが未クオートの heredoc (`<<MOCK`) 内で `echo "$1"` の形にコマンド文字列を直接展開していたため、`$1` に二重引用符 (`python3 -c "print(...)"`) が含まれるケースで生成されるモックスクリプトのクオートが壊れて構文的に破綻した。値を別ファイルへ `printf '%s' "$1" > file` で書き出し、heredoc 側は `<<'MOCK'` (クオート済み) にして `cat` で読み込む方式に変更して解消した — bats のモック生成で「呼び出し元の任意文字列をそのまま heredoc に埋め込む」パターンは、値に `"` を含むケースで一般に壊れる点に注意
+
+### Uncertainty resolution (`--when="test -n \"$PREVIEW_URL\""` との相互作用)
+- Spec Uncertainty 節の疑問点をコードベース調査で確認した (実プロジェクトでの実地確認ではなく、静的な契約の突き合わせによる確認 — 本 Issue の non-interactive 実行では `capabilities.pr-preview: true` を宣言した実プロジェクトが手元になく、実地確認は実施できなかったため best-effort で代替した)
+- `modules/verify-executor.md` は `--when` 条件を実際の Bash サブプロセスで評価する。Step 8.0 の Deployments API 経路 (既存) と本 Issue が追加した preview-url-command 経路は、いずれも解決した URL を `{{base_url}}` へ**リテラル文字列として代入**するのみで、実際に `PREVIEW_URL` を shell に `export` するわけではない
+- そのため `--when` 評価用のサブプロセスには `$PREVIEW_URL` は存在せず、`test -n "$PREVIEW_URL"` は偽と評価され、`--when` ガード付き AC は「Fast path (env 既存)」以外の2経路 (Deployments API・preview-url-command) では SKIP される
+- Spec の想定どおり、これは Deployments API 経路に既に (#1428 以前から) 存在していた特性であり、preview-url-command 経路固有の新規欠陥ではない。本 Issue のスコープでは修正しない (Spec の Uncertainty 節・Out of Scope の判断を踏襲)
+- 修正が必要と判断された場合は別 Issue とする (Spec の判断をそのまま維持)
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- `_resolve_preview_url_command()` を薄いラッパー化する際、既存コメント文言に `preview-url-command` の文字列を意図的に保持し、#1410 の既存 verify command (`grep "preview-url-command" "scripts/run-review.sh"`) を壊さない設計にした
-- 共有スクリプトは呼び出し元 CWD に依存せず `git worktree list --porcelain` で MAIN_REPO_ROOT を自前解決する設計にした — worktree 内で動く `/review` 直接実行と main repo root で動く `run-review.sh` の信頼境界を揃えるため
-- インターフェースを `--key` フラグなしの `url` サブコマンド固定に簡略化した (Basic Auth は #1429 が別サブコマンドで追加する設計のため)
+- Spec の設計をそのまま実装 (`url` サブコマンド固定・MAIN_REPO_ROOT 自前解決・薄いラッパー化) し、逸脱なし
+- `docs/guide/customization.md` の "Coverage" 段落 (L221 付近、Spec の Implementation Step には明記されていなかった箇所) も同じ矛盾を含んでいたため、L129/L219 と合わせて更新した — Spec の行番号指定より広く、同一セクション内の事実矛盾を解消する範囲まで踏み込んだ
 
 ### Deferred Items
-- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用の実地確認 (Uncertainty 節参照) — `/code` が実装後に確認し Code Retrospective に記録する
-- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` での Basic Auth 解決は `#1429` の Known Gap として既に対象外 (本 Issue はそもそも Basic Auth を扱わない)
+- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用は、実プロジェクトでの実地確認ではなく静的な契約突き合わせで確認した (上記 Uncertainty resolution 参照)。実プロジェクトでの実地確認自体は Spec の Post-merge AC (`--auto` なしの `/review` 実行観察) の一部として引き続き未実施
+- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` での Basic Auth 解決は `#1429` の Known Gap として対象外 (据え置き)
 
 ### Notes for Next Phase
-- `tests/run-review.bats` の既存13テスト (L511-741付近) が薄いラッパー化後も同じ出力文言・exit code で PASS することを必ず確認すること — メッセージ文言を1文字でも変えると壊れる
-- `scripts/resolve-preview-env.sh` は fail-safe critical (fail-open設計) — 依存コマンド失敗時に fail-closed 化しないこと
-- `docs/ja/guide/customization.md` / `docs/ja/guide/adapter-guide.md` / `docs/ja/structure.md` の ja ミラー更新を忘れないこと (`docs/translation-workflow.md` の同期手順に従う)
+- `tests/run-review.bats` の既存 preview-url-command 関連テスト (6件、旧 L511-742 相当) は薄いラッパー化後も同じ出力文言・exit code で PASS を確認済み (`setup()` に `resolve-preview-env.sh` の実体コピーを追加して対応)
+- 全 bats スイート (1942 tests, `--jobs 18`) PASS。`validate-skill-syntax.py` / `check-forbidden-expressions.sh` / `check-bare-bracket-assertions.sh` (新規追加分に違反なし、既存 1007 件の bare bracket 警告は本 Issue 起因ではない) / `check-translation-sync.sh` (本 Issue が触れた ja ミラーは全て IN_SYNC。`docs/guide/xl-decomposition.md` の既存 OUTDATED は本 Issue のスコープ外) を確認済み
+- Issue #1429 (Basic Auth 解決) は本 PR のマージ後に着手可能 (blocked-by 解消)
