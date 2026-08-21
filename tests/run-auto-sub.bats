@@ -2623,6 +2623,73 @@ MOCK
     ! grep -q -- "### wrapper-retry-on-kill (" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
+@test "retry-on-kill: wrapper-retry-on-kill recovery writes escalated Outcome on retry-also-killed" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    # XS route: only code-patch phase, shortest path
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+    # Counter mock: both 1st and 2nd call exit 143 (SIGTERM) — retry also killed
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+exit 143
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 143 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+    grep -qE "^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: wrapper-retry-on-kill$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "Wrapper: run-code.sh, exit code: 143" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^### Context$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^### Diagnosis$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^### Recovery Applied$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^### Outcome$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^### Improvement Candidate$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -A1 "^### Outcome$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" | grep -q "escalated (retry also killed)"
+    ! grep -q -- "### wrapper-retry-on-kill (" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
 @test "session-isolation: exit 1 causes abort with error" {
     cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
 #!/bin/bash
