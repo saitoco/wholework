@@ -71,3 +71,22 @@ N/A — 手戻りなし。テスト単体実行 (`bats --filter`) で 1 回目�
 ### Notes for Next Phase
 - `bats tests/run-auto-sub.bats` フルスイート (98 tests) が PASS 済み。新規テストは `retry-on-kill: wrapper-retry-on-kill recovery writes escalated Outcome on retry-also-killed` という名前で 89 番目。
 - 実装コード (`scripts/run-auto-sub.sh`, `scripts/retry-on-kill.sh`) の変更は伴わない。テストファイル1点のみの変更。
+
+## Issue Retrospective
+
+### 実施内容
+
+- Background の事実主張 (`_write_wrapper_retry_recovery()` の exit code 分岐、既存 success テストの有無、`escalated` 文字列 0 件、`orchestration-recoveries.md` への該当エントリ 0 件) をコードベース照合で確認 — すべて裏付けあり
+- Steering Documents (`docs/product.md` / `docs/tech.md`) を参照し、用語 (`wrapper-retry-on-kill`, `orchestration recovery`) と Forbidden Expressions を確認 — 抵触なし、追加対応不要
+- 曖昧性検出: 本 Issue は Size M (検出上限 3) だが、AC 本文がすでに具体的で曖昧点は検出されなかった (0 件)
+- AC 分類・verify command 見直し:
+  - AC1 の rubric に対する補助チェックとして `<!-- verify: file_contains "tests/run-auto-sub.bats" "escalated (retry also killed)" -->` を追加 (rubric + supplementary file_contains のガイドラインに従い、rubric の判定対象に固定文字列定数が含まれるため機械的な安全網を追加)
+  - `### Post-merge` セクションが存在しなかったため `なし` で追加し、標準フォーマットに揃えた
+- Background の 2 箇所 (「`escalated` 文字列は 0 件」「recoveries-auto-fire 対象エントリ 0 件」) に `<!-- premise: grep_count ... -->` マーカーを付与 — 本 Issue の実装によってこれらの前提は変化する (「テストが存在しない」状態を埋めるのが本 Issue の目的そのもののため)、`/audit premise` による再評価対象として明示した
+- チェックボックス書式・observation 型 AC の `session=next` 整合性を機械チェック — いずれも問題なし
+- Blocked-by 依存関係チェック — オープンなブロッカーなし
+- サブ Issue 分割評価 — non-interactive mode のためスキップ (Size M・単一ファイル変更のため元々不要)
+
+### Consumed Comments
+
+- saito / MEMBER / first-class / `/triage 1155` 実行時の申し送りコメント。テスト隔離の必須要件 (未隔離だと本番の `orchestration-recoveries.md` に commit + push されてしまう)、`orchestration-recoveries.md` 未作成時の早期 return による false-pass リスク、H2 見出し timestamp を固定値で assert しないこと、の 3 点を記録。Issue 本文にも要点を転記済み / https://github.com/saitoco/wholework/issues/1155#issuecomment-5182722378
