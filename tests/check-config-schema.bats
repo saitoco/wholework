@@ -54,3 +54,33 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" != *"Unknown key"* ]]
 }
+
+@test "whitespace before colon: known key still recognized, exits 0" {
+  cat > .wholework.yml << 'EOF'
+autonomy   :   L3
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Unknown key"* ]]
+}
+
+@test "whitespace before colon on typo key: exits 1 and reports the typo" {
+  cat > .wholework.yml << 'EOF'
+autonomy-tier   :   L2
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unknown key"* ]]
+  [[ "$output" == *"autonomy-tier"* ]]
+}
+
+@test "malformed top-level key syntax (metacharacters): exits 1 and reports unrecognized syntax" {
+  cat > .wholework.yml << 'EOF'
+spec-path: docs/spec
+capabilities[browser]: true
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Unrecognized top-level key syntax"* ]]
+  [[ "$output" == *"capabilities[browser]"* ]]
+}

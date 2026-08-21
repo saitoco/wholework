@@ -33,9 +33,10 @@ KNOWN_KEYS=$(awk '
   | sort -u)
 
 # Extract actual top-level keys from .wholework.yml: unindented "key:" lines.
-# Comment lines and indented (nested) child key lines are excluded by the
-# anchored regex.
-ACTUAL_KEYS=$(grep -E '^[A-Za-z0-9_-]+:' "$CONFIG_FILE" | sed -E 's/^([A-Za-z0-9_-]+):.*/\1/' || true)
+# Whitespace between the key name and the colon (e.g. "autonomy   : L3") is
+# tolerated so incidental formatting doesn't defeat extraction. Comment lines
+# and indented (nested) child key lines are excluded by the anchored regex.
+ACTUAL_KEYS=$(grep -E '^[A-Za-z0-9_-]+[[:space:]]*:' "$CONFIG_FILE" | sed -E 's/^([A-Za-z0-9_-]+)[[:space:]]*:.*/\1/' || true)
 
 VIOLATIONS=0
 
@@ -45,6 +46,18 @@ for KEY in $ACTUAL_KEYS; do
     VIOLATIONS=1
   fi
 done
+
+# Catch unindented, non-comment lines that look like a "key: value" entry but
+# weren't recognized as a plain key name above (e.g. quoted/backticked keys,
+# keys with metacharacters). These can't be matched against the known-key
+# list, but must still surface a warning instead of silently passing through.
+UNRECOGNIZED_LINES=$(grep -E '^[^#[:space:]].*:' "$CONFIG_FILE" | grep -vE '^[A-Za-z0-9_-]+[[:space:]]*:' || true)
+if [ -n "$UNRECOGNIZED_LINES" ]; then
+  while IFS= read -r LINE; do
+    echo "Unrecognized top-level key syntax in $CONFIG_FILE: '$LINE' (expected a plain key name like 'key: value'; cannot be checked against modules/detect-config-markers.md's Marker Definition Table)."
+    VIOLATIONS=1
+  done <<< "$UNRECOGNIZED_LINES"
+fi
 
 if [ "$VIOLATIONS" -gt 0 ]; then
   exit 1
