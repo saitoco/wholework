@@ -134,3 +134,40 @@ Implementation Step 1-3 は `skills/spec/SKILL.md` の既存ステップ列挙�
 ### Steering Docs sync candidate check 自己適用の結果
 
 本 Spec の Changed Files に `skills/spec/SKILL.md` 自身が含まれるため、現行 (本 Issue 適用前) の Steering Docs sync candidate check を Step 10 の指示どおり自己適用した。キーワード `spec` (skill 名、本 Issue が定義する優先順位では Lowest) は `docs/ tests/ scripts/ modules/` の 4 ディレクトリで 1184 ファイルにヒットし、新設予定の閾値 8 を大幅に超過する。個別列挙・評価は行わず「識別力なし」としてスキップした。Changed Files 節に記録済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-4 のとおり実装した (現行 Step 1 の書き換え、新 Step 2 挿入、旧 Step 2→3・旧 Step 3→4 の繰り下げと migration-notes.md スコープ規則追加、`tests/spec.bats` への `@test` 4 件追加)。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+### Pre-implementation FAIL Confirmation
+
+新規追加した 4 件の `@test` すべてについて、実装前の `skills/spec/SKILL.md` (コミット前の `HEAD`) を対象に `grep -c` を実行し、いずれも 0 件 (FAIL) であることを確認した。Confirmed pre-implementation FAIL for 4 new test(s).
+
+### Full Suite Result
+
+`bats --jobs 18 tests/` (behavioral change を検出したためフルスイートを実行): 1912/1912 PASS, 0 FAIL。新規 4 件を含む。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の対応方針 (案) A/B/C をそのまま `skills/spec/SKILL.md` Steps 1-5 (旧 Steps 1-4 から番号繰り下げ) へ落とし込み、独自の言い換えは行わなかった — Issue 側で Auto-Resolved 済みの確定案のため
+- `docs/migration-notes.md` のスコープ規則は「CLI シグネチャ・フラグ・引数順の変更を伴う場合のみ」の条件文をそのまま採用し、条件を緩めたり広げたりしなかった
+
+### Deferred Items
+- Post-merge AC (no-op 率低下の観測) は `verify-type: observation event=auto-run session=next` — 次回セッションで着地後に作成される Spec を対象に効果測定する
+- 閾値 8 の再較正は Issue Notes に明記のとおり本 Issue の対象外 (着地後の no-op 率で再評価)
+
+### Notes for Next Phase
+- Pre-merge AC 5 件はすべて実装内でチェック済み (grep/rubric 相当の自己検証で PASS を確認し、Issue body の該当 5 行を `[x]` に更新済み)。`/review` は追加の意味検証として再確認する形になる
+- Steering Docs sync candidate check の自己適用結果 (キーワード `spec` は識別力なしでスキップ) が Spec Notes に記録済み — 本 Issue が解消しようとしている no-op 問題の実例であり、新フィルタが妥当に機能する設計であることの傍証
