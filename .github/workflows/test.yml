@@ -70,6 +70,16 @@ jobs:
       - name: Check for forbidden expressions
         run: bash scripts/check-forbidden-expressions.sh
 
+  check-config-schema:
+    name: Config Schema check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .wholework.yml for unknown/typo keys
+        run: bash scripts/check-config-schema.sh
+
   bare-bracket-assertions:
     name: Bare Bracket Assertions check
     runs-on: ubuntu-latest

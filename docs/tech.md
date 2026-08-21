@@ -222,6 +222,16 @@ When citing deprecated terms in Spec retrospective sections (e.g., `## Code Retr
 - **Descriptive language**: describe without quoting the term (e.g., "N deprecated terms" instead of the term itself)
 - **`旧称:` prefix**: write `旧称: <term>` (e.g., `旧称: verify hint`) — the CI exclusion filter skips lines containing `旧称`
 
+## Config Schema Validation
+
+`scripts/check-config-schema.sh` warns when `.wholework.yml` contains a top-level key not found in `modules/detect-config-markers.md`'s Marker Definition Table (the SSoT for known config keys) — catching typos (e.g. `autonomy-tier:` instead of `autonomy:`) that would otherwise silently fall back to a default with no warning.
+
+**Trigger point**: CI, via the `check-config-schema` job in `.github/workflows/test.yml`, on every push/PR (same pattern as `check-forbidden-expressions.sh` / `check-bare-bracket-assertions.sh`).
+
+**Scope**: top-level keys only. Nested child keys (e.g. `capabilities.browser`) are out of scope.
+
+**Warning format**: `Unknown key '<key>' in <config-file> (not found in modules/detect-config-markers.md's Marker Definition Table). Check for a typo, or add it to the table if intentional.` One or more unknown keys causes the script to exit non-zero.
+
 ## Terminology Migration Scope Rule
 
 When creating an Issue that adds deprecated terms to Terms 'Formerly called' (gradual terminology migration), explicitly state whether replacing deprecated terms within the same file is included in scope.

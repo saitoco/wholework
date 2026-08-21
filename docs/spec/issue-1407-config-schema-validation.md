@@ -24,7 +24,7 @@
 1. `scripts/check-config-schema.sh` を新規作成する (→ acceptance criteria AC1)。
    - `SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"` で自スクリプトの位置を解決する (`apply-run-fact-match.sh` 等と同じ規約)。`modules/detect-config-markers.md` は `$SCRIPT_DIR/../modules/detect-config-markers.md` として常に実ファイルを参照する (CWD に依存しない)。`.wholework.yml` は `${WHOLEWORK_CONFIG_PATH:-.wholework.yml}` (CWD 相対、`get-config-value.sh` と同じ override 規約) を読む。
    - `.wholework.yml` が存在しない場合、または `modules/detect-config-markers.md` が見つからない場合は exit 0 (何もチェックせず正常終了)。
-   - 既知キー集合の抽出: `modules/detect-config-markers.md` の `### Marker Definition Table` 見出し以降、`| \`` で始まる行が途切れるまでを awk で抽出し、各行の先頭バッククォート内の文字列を sed で取り出し、`.` 以降を除去してトップレベルキー名に正規化 (例: `capabilities.browser` → `capabilities`、`auto-retry-on-fail.enabled` → `auto-retry-on-fail`) した上で `sort -u` により重複排除する。
+   - 既知キー集合の抽出: `modules/detect-config-markers.md` の `### Marker Definition Table` 見出し以降を awk の2状態 (見出し検出後、表本体 (`intable`) に入るまでは `|` で始まらない行 (見出し直後の空行など) を無視してスキップし、`intable` に入ってから `|` で始まらない行が現れたら終了) で走査し、`| \`` で始まる行のみを抽出する。各行の先頭バッククォート内の文字列を sed で取り出し、`.` 以降を除去してトップレベルキー名に正規化 (例: `capabilities.browser` → `capabilities`、`auto-retry-on-fail.enabled` → `auto-retry-on-fail`) した上で `sort -u` により重複排除する。
    - 実キー集合の抽出: `.wholework.yml` から行頭 (インデントなし) が `^[A-Za-z0-9_-]+:` にマッチする行のみを `grep`/`sed` で抽出する (コメント行 `#...` とネストされた子キー行 (インデントあり) は正規表現の性質上自然に除外される)。
    - 実キーを既知キー集合と突き合わせ (`grep -Fxq`)、集合に含まれないキーごとに次の形式で標準出力へ警告する: `Unknown key '<key>' in <config-file> (not found in modules/detect-config-markers.md's Marker Definition Table). Check for a typo, or add it to the table if intentional.` 1件以上検出した場合は exit 1。
    - 連想配列・`mapfile` 等の bash 4+ 専用機能は使用しない (bash 3.2 互換)。
@@ -63,3 +63,41 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- Step 1 の awk 抽出ロジックを Spec 記述から修正した。「`### Marker Definition Table` 見出し以降、`\| \`` で始まる行が途切れるまで抽出」という記述を単純な単一状態 awk (見出し検出後、`\| \`` で始まらない行が出たら即終了) で実装すると、見出し直後の空行 (テーブル本体の前) で即座に終了してしまい、実際のテーブル行に到達できなかった。見出し検出 → 表本体 (`intable`) 突入検出 → `intable` 突入後に `\|` で始まらない行が出たら終了、という2状態の awk に変更して解決した。Spec Implementation Steps 側もこの実装に合わせて更新した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Both pre-merge rubric AC judged PASS in Step 8, with direct execution verification (ran `scripts/check-config-schema.sh` against the repo's own `.wholework.yml` and against an injected typo fixture) rather than relying solely on the grader's diff reading.
+- Fired the Parser/Validator Edge Case Pre-check (new script parses external `.wholework.yml` content) and had a sub-agent actually execute the script against 14 fixtures across the 5 standard input axes — this is what surfaced the one real finding (see Deferred Items → now Resolved).
+- Fixed the 1 SHOULD finding (key-extraction regex silently skipping whitespace-before-colon and metacharacter/quoted top-level keys) directly in this review pass rather than deferring, since it was a small, well-scoped, high-confidence fix with 3 new regression tests (8/8 bats PASS) and a clean CI re-run (15/15 SUCCESS).
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — left unchecked for post-merge opportunistic verification, as specified. Still open (unchecked in Issue body) as of this review.
+- Nested child key typo detection (e.g. `capabilities.browsr`) remains explicitly out of scope per the Issue's AC1 rubric wording ("top-level keys actually present") — not a gap to revisit unless a follow-up Issue requests it.
+
+### Notes for Next Phase
+- `/merge` can proceed directly — no MUST issues, CI green (15/15), fix commit `fade4fea` pushed and CI re-verified green after the fix.
+- `scripts/check-config-schema.sh` now also emits a generic "Unrecognized top-level key syntax" warning for lines that don't match the plain key-name pattern (quoted/backticked/metachar keys) — if `/verify`'s post-merge opportunistic check for the typo'd key exercises a plain key name (as the Issue's example `autonomy-tier:` does), it will still hit the original "Unknown key" message path, not the new catch-all.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note. The implementation matched the Spec's Implementation Steps precisely (2-state awk table-boundary detection, extraction regex, warning message format, CI job insertion point, docs section placement) — no structural divergence found.
+
+### Recurring issues
+Nothing to note as a recurring pattern, but worth recording as a positive signal: the Parser/Validator Edge Case Pre-check (fired because this PR adds a new script that parses/validates external config content) actually executed the new `scripts/check-config-schema.sh` against 14 fixtures covering the 5 standard input axes and found a genuine gap — the key-extraction regex `^[A-Za-z0-9_-]+:` silently failed to recognize colon-whitespace variants and metacharacter/quoted keys, letting malformed top-level key syntax pass through with no warning. Static reading of the diff alone would likely not have surfaced this, since the code reads as correct at a glance; only actual execution against adversarial fixtures caught it. Fixed in this review pass (regex loosened + catch-all unrecognized-syntax warning added, 3 new bats tests, 8/8 PASS).
+
+### Acceptance criteria verification difficulty
+Nothing to note. Both pre-merge AC are `rubric`-type; both graded cleanly to PASS with direct evidence in the diff (new script + CI wiring for AC1, `docs/tech.md` § Config Schema Validation + `modules/detect-config-markers.md` pointer for AC2). No UNCERTAIN, no verify command staleness, no Issue AC gaps.

@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (91 files)
+├── scripts/             # Utility scripts used by skills and agents (92 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -38,11 +38,11 @@ wholework/
 │   │   ├── feature_request.yml  # Feature request Issue Form
 │   │   └── config.yml           # Disables blank (templateless) issues
 │   └── workflows/
-│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, bare bracket assertions check, language convention check, and macOS shell compatibility test
+│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, config schema check, bare bracket assertions check, language convention check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (127 files)
+├── tests/               # Bats test files for scripts (128 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -264,6 +264,7 @@ Key modules:
 - `scripts/check-premise-expiry.sh` — re-evaluates `<!-- premise: ... -->` markers (`grep_count`/`file_exists`/`file_not_exists`) from an Issue body against the current work tree; exit 2 + `EXPIRED:` stdout lines on expiry, exit 0 otherwise (fail-open `UNEVALUABLE:` lines to stderr do not affect the exit code); called from `/audit premise` Step 2 Layer 1
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
+- `scripts/check-config-schema.sh` — detect unknown/typo'd top-level keys in `.wholework.yml` against `modules/detect-config-markers.md`'s Marker Definition Table; run by the `check-config-schema` CI job
 - `scripts/check-bare-bracket-assertions.sh` — detect bare `[[ "$output"/"$status"` bats assertions without `|| false` (informational; does not fail the build)
 - `scripts/check-known-events-firing.sh` — verify every `KNOWN_EVENTS` entry in `scripts/opportunistic-search.sh` has a real `--event <name>` invocation site (excluding comment lines and echo/printf usage strings)
 - `scripts/check-language-convention.py` — detect CJK characters transcribed into English-only paths (skills/, modules/, scripts/) from a unified diff; run by the `language-convention` CI job
