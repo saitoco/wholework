@@ -110,3 +110,29 @@ Issue body の Post-merge AC (`verify-type: observation event=auto-run`) が「�
 - Post-merge AC は observation 型 (`event=auto-run`) であり、次回 `/auto --batch` または `/auto N` の code-patch route 実行で `concurrent_commit_detected` が誤検知されないことを実運用で観察する必要がある。`/verify` はこの観察が既に発生しているかを `.tmp/auto-events.jsonl` または L3 session retrospective で確認すること。
 - Pre-merge AC 2件は本フェーズで rubric 判定により PASS 済みで Issue body のチェックボックスも更新済み。`/review` は追加の rubric 再実行は不要だが、diff (scripts/run-auto-sub.sh, tests/run-auto-sub.bats) の一致を確認すると良い。
 - 全 bats スイート (1913 tests) が本変更後も PASS していることを確認済み (behavioral change detection によりフルスイート実行)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。Notes セクションで #996 との関係 (Option A/B 再検討) を明示的に検討済みで、設計判断の妥当性は十分に裏付けられている。
+
+#### design
+- (spec と統合、上記参照)
+
+#### code
+- Post-merge AC の observation は本 `/verify` 実行時点では未発火 (`event=auto-run` 待ち) — 想定通り。SKIPPED として処理。
+- **Code Retrospective の Process Note が示す構造的な観察**: 本 Issue 自身の code フェーズが、単一の中間 commit に全変更をまとめた結果、`/code` SKILL.md Step 11 が要求する commit subject への `(closes #N)` 参照が一時的に欠落する状態を作った (push 前に `git commit --amend -s` で解消済み、実害なし)。皮肉なことに、本 Issue が修正対象とする「issue 番号を含まない中間 commit」という状況そのものを、この実行自身が一時的に再現した。`/code` SKILL.md の Step 8 (「commit after each step completes」) と Step 11 (最終 commit subject への `(closes #N)` 要求) の関係が、実装が単一コミットに収まる小規模 Issue の場合にどう適用されるべきか明示的に整理されていない。
+
+#### review
+- 該当なし (patch route のため `/review` フェーズなし)。
+
+#### merge
+- 該当なし (patch route のため PR マージなし。`(closes #1427)` により直接コミットで自動クローズ)。
+
+#### verify
+- FAIL なし。Pre-merge 2件は already-checked で SKIPPED、Post-merge 1件は event 未発火で SKIPPED。1回目の `/verify` 実行で完了 (retry なし)。
+
+### Improvement Proposals
+- `/code` SKILL.md の Step 8 (ステップ完了ごとの commit) と Step 11 (最終 commit subject への `(closes #N)` 要求) の関係を、実装が単一 commit に収まる小規模 Issue (Size XS/S 相当) の場合について明示的に整理する。現状は Step 8 の「都度 commit」原則と Step 11 の「最終 commit に issue 番号を含める」要求が単一コミットの場合にどちらを優先するか曖昧で、今回のように一時的な commit subject の欠落 (後で `--amend` により無害に解消) を招きうる。本 Issue (#1427) が扱う「issue 番号なし中間 commit」の誤検知バグを、この実行自身の code フェーズが一時的に再現したという事実がこの曖昧さの実例。
