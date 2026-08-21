@@ -562,25 +562,30 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 # Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
+**Fallback when Step 8 leaves no new diff (residual case):** if the `git commit` above reports nothing to commit, first check push state:
+
+```bash
+git log origin/main..HEAD --oneline
+```
+
+- **Non-empty (not yet pushed)**: amend the most recent commit with `git commit -s --amend`. When `BASE_BRANCH` is `main`, append `(closes #$NUMBER)` to the subject (preserve the body/trailers; skip if the subject already contains it): `git commit -s --amend -m "$(git log -1 --format=%s) (closes #$NUMBER)" -m "$(git log -1 --format=%b)"`. When `BASE_BRANCH` is not `main`, amend only to re-sign if needed — do not append the suffix.
+- **Empty (already pushed)**: do not amend — that would rewrite already-pushed history. Instead create an empty commit reusing the same `{prefix} <summary>` construction as the normal flow above, applying the same `BASE_BRANCH == main` gating on the `(closes #$NUMBER)` suffix:
+  ```bash
+  # When BASE_BRANCH is main:
+  git commit -s --allow-empty -m "{prefix} <summary> (closes #$NUMBER)
+
+  Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+  # When BASE_BRANCH is not main, omit the "(closes #$NUMBER)" suffix instead
+  ```
+
+Whichever path produced the final commit (normal, amended, or empty), then run the guard checks below against HEAD:
+
 ```bash
 git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
 if [[ "$BASE_BRANCH" == "main" ]]; then
   git log -1 --format='%s' | grep -q "#$NUMBER" || { echo "ERROR: commit subject missing #$NUMBER reference (required when BASE_BRANCH is main)"; exit 1; }
 fi
 ```
-
-**Fallback when Step 8 leaves no new diff (residual case):**
-
-First check push state:
-
-```bash
-git log origin/main..HEAD --oneline
-```
-
-- **Non-empty (not yet pushed)**: amend the most recent commit with `git commit -s --amend`, appending `(closes #$NUMBER)` to the subject (preserve the body/trailers; skip if the subject already contains it). Example: `git commit -s --amend -m "$(git log -1 --format=%s) (closes #$NUMBER)" -m "$(git log -1 --format=%b)"`.
-- **Empty (already pushed)**: do not amend — that would rewrite already-pushed history. Instead create an empty commit reusing the same `{prefix} <summary>` construction as the normal flow above: `git commit -s --allow-empty -m "{prefix} <summary> (closes #$NUMBER)
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"`.
 
 Push is done in Step 14 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 14).
 
