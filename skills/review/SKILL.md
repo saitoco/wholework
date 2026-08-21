@@ -277,7 +277,8 @@ Verify each condition:
 
 **Preview-tier unverified marker (defense in depth):** After classification, collect the
 1-based indices (counted across the full Issue body AC enumeration, same convention as
-`gh-issue-edit.sh --checkbox`) of every Pre-merge condition tagged `<!-- ac-tier: preview -->`
+`gh-issue-edit.sh --checkbox` — fenced code block lines excluded, see `modules/l0-surfaces.md`
+§ AC Enumeration Convention) of every Pre-merge condition tagged `<!-- ac-tier: preview -->`
 that was classified UNCERTAIN in this step. When the Pre-merge section contains one or more
 `ac-tier: preview` conditions, post this marker on every run of this step, regardless of
 whether the collected set is empty — only skip the comment entirely when the Pre-merge section

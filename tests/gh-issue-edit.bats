@@ -274,17 +274,19 @@ MOCK
 
 \`\`\`markdown
 - [ ] fenced sample checkbox
+- [x] fenced sample checkbox (checked)
 \`\`\`
 
 - [ ] real item two"
     setup_checkbox_mock "$MOCK_DIR_CB" "$ISSUE_BODY" "$EDIT_LOG"
-    # index 2 must resolve to "real item two" (the fenced sample at index-position
-    # 2 in a naive full-text scan must not be counted)
+    # index 2 must resolve to "real item two" (both the unchecked and checked
+    # fenced sample lines must not consume an index in a naive full-text scan)
     run env PATH="$MOCK_DIR_CB:$PATH" bash "$SCRIPT" 123 --checkbox 2 --check
     [ "$status" -eq 0 ]
     result=$(cat "$EDIT_LOG")
     [[ "$result" == *"- [ ] real item one"* ]]
     [[ "$result" == *"- [ ] fenced sample checkbox"* ]]
+    [[ "$result" == *"- [x] fenced sample checkbox (checked)"* ]]
     [[ "$result" == *"- [x] real item two"* ]]
 }
 

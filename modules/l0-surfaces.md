@@ -66,6 +66,10 @@ being miscounted as real AC. Only triple-backtick fences are recognized;
 `~~~`-style fences and indented code blocks are out of scope (not observed
 in this repository's Issue bodies or documentation as of this writing).
 Callers reset `in_fence` to `false` at the start of each Issue body scan.
+Section-boundary detection is likewise suppressed inside a fence — a
+heading line (e.g. `### Pre-merge`, `## Post-merge`) appearing within a
+fenced block neither opens nor closes a section, since the fenced line is
+skipped outright rather than evaluated against the heading pattern.
 
 **Reference implementation**: `scripts/rank-verify-backlog.sh` (added in
 #1349 as a regression guard for #709) already implements both (a) and (b)
