@@ -1703,7 +1703,7 @@ MOCK_EOF
 
     run bash "$SCRIPT" code-pr 42 --check-precondition --strict
     [ "$status" -eq 0 ]
-    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"matches_expected":true'* ]] || false
 }
 
 @test "code-pr precondition: Spec missing and Size != XS -> mismatch" {
