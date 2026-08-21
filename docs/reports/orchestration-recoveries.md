@@ -85,6 +85,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ## 2026-08-21 08:47 UTC: manual-recovery-respawn
 
 ### Context
+- Issue #1071, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 137
+
+### Diagnosis
+- notification: indeterminate
+- was stopped (no numeric exit code in notification text)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+## 2026-08-21 08:47 UTC: manual-recovery-respawn
+
+### Context
 - Issue #1071, phase: code
 - Source: parent-session-manual-recovery
 - Wrapper: run-auto-sub.sh, exit code: 137
