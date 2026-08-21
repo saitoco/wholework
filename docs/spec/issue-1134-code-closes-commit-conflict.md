@@ -64,9 +64,5 @@
 
 ## Consumed Comments
 
-| login | authorAssociation | trust tier | 意図の要約 | URL |
-|-------|-------------------|-----------|-----------|-----|
-| saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective (判断根拠・Auto-Resolve Log・Consumed Comments の記録)。#1226 の 2 例目観測により衝突条件が「Implementation Steps 2 つ以上」に広がったことの報告を含む。本 Spec の設計判断に直接の追加アクションは無いが、Background の文脈として活用した | https://github.com/saitoco/wholework/issues/1134#issuecomment-5372147483 |
-| saito | MEMBER | first-class | `/issue` Step 15 の AC audit: Pre-merge AC 3 の rubric テキストに常時 PASS リスク (`modules/phase-state.md` の既存記述だけで満たされてしまう懸念) を指摘。本 Spec で AC 3 の rubric テキストを `skills/code/SKILL.md` 限定に修正し、Issue 本文にも反映済み | https://github.com/saitoco/wholework/issues/1134#issuecomment-5372198272 |
-- saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372147483
-- saito / MEMBER / first-class / ⚠️ `/issue` Step 15 AC audit: verify command に問題があります / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372198272
+- saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (判断根拠・Auto-Resolve Log・Consumed Comments の記録)。#1226 の 2 例目観測により衝突条件が「Implementation Steps 2 つ以上」に広がったことの報告を含む。本 Spec の設計判断に直接の追加アクションは無いが、Background の文脈として活用した / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372147483
+- saito / MEMBER / first-class / `/issue` Step 15 の AC audit: Pre-merge AC 3 の rubric テキストに常時 PASS リスク (`modules/phase-state.md` の既存記述だけで満たされてしまう懸念) を指摘。本 Spec で AC 3 の rubric テキストを `skills/code/SKILL.md` 限定に修正し、Issue 本文にも反映済み / https://github.com/saitoco/wholework/issues/1134#issuecomment-5372198272
