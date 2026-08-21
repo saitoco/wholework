@@ -717,6 +717,15 @@ run_phase_with_recovery() {
   # For review/merge phases, `issue` holds the PR number, but self-commits (squash
   # merge, phase handoffs) reference the originating Issue number instead — callers
   # set _EXTRA_SELF_ISSUE to that Issue number so both are excluded (issue #974).
+  #
+  # Per-commit classification is 3-way (issue #1427): a self-issue-number match is
+  # always self (a); a commit whose subject references some *other* issue number is a
+  # true concurrent commit (b); a commit whose subject references no issue number at
+  # all is assumed to be this phase's own free-form intermediate commit (c) — e.g. the
+  # Step 8 "commit after each step completes" WIP commits `/code` patch route makes,
+  # which carry no #N reference until the final Step 11 commit. (c) trades detection of
+  # genuinely concurrent no-issue-number commits (rare, and indistinguishable from a
+  # same-phase WIP commit by subject alone) for eliminating this false-positive class.
   local _commits
   _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
   if [[ -n "$_commits" ]]; then
@@ -726,12 +735,16 @@ run_phase_with_recovery() {
     if [[ -n "${_EXTRA_SELF_ISSUE:-}" ]] && [[ "${_EXTRA_SELF_ISSUE}" != "${issue}" ]]; then
       _self_issue_pattern="#(${issue}|${_EXTRA_SELF_ISSUE})([^0-9]|$)"
     fi
+    local _any_issue_pattern="#[0-9]+([^0-9]|$)"
     while IFS= read -r _commit_line; do
       [[ -z "$_commit_line" ]] && continue
       local _sha="${_commit_line%% *}"
       local _author="${_commit_line#* }"
       local _subject; _subject=$(git log -1 --format="%s" "$_sha" 2>/dev/null || true)
       if [[ "$_subject" =~ $_self_issue_pattern ]]; then
+        continue
+      fi
+      if [[ ! "$_subject" =~ $_any_issue_pattern ]]; then
         continue
       fi
       emit_event "concurrent_commit_detected" "phase=${phase}" \

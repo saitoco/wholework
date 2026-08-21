@@ -1381,7 +1381,10 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/get-issue-size.sh"
 
-    # Mock git to return a concurrent commit
+    # Mock git to return a concurrent commit. The subject explicitly references a
+    # different issue number (#99) so it remains a true positive under the 3-way
+    # classification introduced in issue #1427 (a commit with no issue-number
+    # reference at all is now treated as this phase's own intermediate commit).
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
@@ -1390,6 +1393,10 @@ if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
 fi
 if [[ "$*" == *"log origin/main"* ]]; then
   echo "abc1234 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"abc1234"* ]]; then
+  echo "chore: fix (closes #99)"
   exit 0
 fi
 exit 0
@@ -1434,6 +1441,51 @@ if [[ "$*" == *"log origin/main"* ]]; then
 fi
 if [[ "$*" == *"log -1"* && "$*" == *"aaa1111"* ]]; then
   echo "chore: patch (closes #42)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    ! grep -q "concurrent_commit_detected" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null
+}
+
+@test "concurrent_commit_detected: intermediate commit with no issue number reference is not emitted (issue #1427)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Mock git: origin/main has one commit from this run's own phase — a Step 8
+    # "commit after each step completes" WIP commit whose subject references no
+    # issue number at all. Must not be treated as concurrent (regression guard for
+    # the #895 recurrence reported in issue #1427).
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "ddd4444 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"ddd4444"* ]]; then
+  echo "Fix bare bracket assertion in new precondition test"
   exit 0
 fi
 exit 0
