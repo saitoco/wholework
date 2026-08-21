@@ -12,6 +12,21 @@ migration / rename / path 変更を伴う Issue では、SKILL.md (markdown 記�
 
 - saito (MEMBER, first-class): Issue Retrospective — 自動解決した曖昧ポイント3件を記録。AC1 verify command の実装前 PASS 問題を `rubric + grep "Migration"` 組み合わせに変更、実装ターゲットを `modules/verify-patterns.md` に決定、専用テンプレートファイル不作成の方針を確認。[link](https://github.com/saitoco/wholework/issues/778#issuecomment-4820838956)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/778#issuecomment-4821044892
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5200984416
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5212262529
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5225315329
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5229258899
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5235401757
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5246555926
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5255744465
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5296378104
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5304272357
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5310545532
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5327722836
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5341230729
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5354366841
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/778#issuecomment-5369685522
 ## Changed Files
 
 - `modules/verify-patterns.md`: add §16 "Migration / Rename / Path-change Issues — Apply file_not_contains to Both SKILL.md and Script Layers" section — bash 3.2+ compatible (no bash-specific features used; pure markdown addition)
