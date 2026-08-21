@@ -24,7 +24,7 @@
 1. `scripts/check-config-schema.sh` を新規作成する (→ acceptance criteria AC1)。
    - `SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"` で自スクリプトの位置を解決する (`apply-run-fact-match.sh` 等と同じ規約)。`modules/detect-config-markers.md` は `$SCRIPT_DIR/../modules/detect-config-markers.md` として常に実ファイルを参照する (CWD に依存しない)。`.wholework.yml` は `${WHOLEWORK_CONFIG_PATH:-.wholework.yml}` (CWD 相対、`get-config-value.sh` と同じ override 規約) を読む。
    - `.wholework.yml` が存在しない場合、または `modules/detect-config-markers.md` が見つからない場合は exit 0 (何もチェックせず正常終了)。
-   - 既知キー集合の抽出: `modules/detect-config-markers.md` の `### Marker Definition Table` 見出し以降、`| \`` で始まる行が途切れるまでを awk で抽出し、各行の先頭バッククォート内の文字列を sed で取り出し、`.` 以降を除去してトップレベルキー名に正規化 (例: `capabilities.browser` → `capabilities`、`auto-retry-on-fail.enabled` → `auto-retry-on-fail`) した上で `sort -u` により重複排除する。
+   - 既知キー集合の抽出: `modules/detect-config-markers.md` の `### Marker Definition Table` 見出し以降を awk の2状態 (見出し検出後、表本体 (`intable`) に入るまでは `|` で始まらない行 (見出し直後の空行など) を無視してスキップし、`intable` に入ってから `|` で始まらない行が現れたら終了) で走査し、`| \`` で始まる行のみを抽出する。各行の先頭バッククォート内の文字列を sed で取り出し、`.` 以降を除去してトップレベルキー名に正規化 (例: `capabilities.browser` → `capabilities`、`auto-retry-on-fail.enabled` → `auto-retry-on-fail`) した上で `sort -u` により重複排除する。
    - 実キー集合の抽出: `.wholework.yml` から行頭 (インデントなし) が `^[A-Za-z0-9_-]+:` にマッチする行のみを `grep`/`sed` で抽出する (コメント行 `#...` とネストされた子キー行 (インデントあり) は正規表現の性質上自然に除外される)。
    - 実キーを既知キー集合と突き合わせ (`grep -Fxq`)、集合に含まれないキーごとに次の形式で標準出力へ警告する: `Unknown key '<key>' in <config-file> (not found in modules/detect-config-markers.md's Marker Definition Table). Check for a typo, or add it to the table if intentional.` 1件以上検出した場合は exit 1。
    - 連想配列・`mapfile` 等の bash 4+ 専用機能は使用しない (bash 3.2 互換)。
@@ -63,3 +63,30 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- Step 1 の awk 抽出ロジックを Spec 記述から修正した。「`### Marker Definition Table` 見出し以降、`\| \`` で始まる行が途切れるまで抽出」という記述を単純な単一状態 awk (見出し検出後、`\| \`` で始まらない行が出たら即終了) で実装すると、見出し直後の空行 (テーブル本体の前) で即座に終了してしまい、実際のテーブル行に到達できなかった。見出し検出 → 表本体 (`intable`) 突入検出 → `intable` 突入後に `\|` で始まらない行が出たら終了、という2状態の awk に変更して解決した。Spec Implementation Steps 側もこの実装に合わせて更新した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's 2 auto-resolved ambiguity points as-is: CI-triggered independent script (not skill-flow opt-in) and dynamic parsing of `modules/detect-config-markers.md`'s Marker Definition Table (no hardcoded key list) as SSoT.
+- Fixed the awk table-boundary detection to a 2-state scan (see Deviations from Design) — the Spec's literal single-condition description would have exited at the blank line right after the `### Marker Definition Table` heading, before ever reaching the table rows.
+- Confirmed both pre-merge rubric AC as PASS directly (mechanism exists + visibly warns via CI; documented reachably from `modules/detect-config-markers.md`/`docs/tech.md`) before creating the PR.
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — left unchecked for post-merge opportunistic verification, as specified.
+- Nested child key typo detection (e.g. `capabilities.browsr`) is explicitly out of scope per the Issue's AC1 rubric wording ("top-level keys actually present") — noted in Spec Notes, not a gap to revisit unless a follow-up Issue requests it.
+
+### Notes for Next Phase
+- `scripts/check-config-schema.sh`'s known-key extraction is a dynamic parse of `modules/detect-config-markers.md`'s Marker Definition Table — any future review touching that table's row format should re-run `bats tests/check-config-schema.bats` to confirm the awk pattern still matches.
+- No verify command staleness or Issue AC gaps were found in Step 10 — both pre-merge AC are `rubric`-type and unaffected by the implementation's awk-logic refinement.
