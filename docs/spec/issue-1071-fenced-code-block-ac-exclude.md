@@ -148,20 +148,18 @@ No new comments since last phase.
 - Full bats suite (`bats --jobs 18 tests/`) run in parallel per the Behavioral Change Detection rule: `scripts/scan-pending-ac.sh` is referenced by two test files (`tests/scan-pending-ac.bats`, `tests/run-fact-matching.bats`) beyond a single direct counterpart, and the three modified SKILL.md files are each referenced by several test files (auto/audit/verify's own step-content assertion suites) — 1908/1908 PASS.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran the static Task fan-out (review-spec + review-bug×2) rather than the Workflow pipeline, despite `capabilities.workflow: true`, because this run is headless/non-interactive with no re-invocation guarantee — `skills/review/workflow-guidance.md`'s own fallback rule applies.
-- Fixed all 4 SHOULD-level findings that directly extend this Issue's own purpose (2 remaining prose sites still describing the pre-#1071 convention, 1 SSoT under-specification, 1 missing Spec-required test branch); left 4 CONSIDER-level findings unfixed (out-of-scope files, stylistic regex divergence, stale cross-references with no functional impact).
-- Rejected 3 review-bug findings after adversarial verification: a migration-note request for stale markers (zero real instances across repo history), an additional `skills/verify/SKILL.md:212` annotation (no functional risk — the fallback script does no index computation), and a `collect-verify-retention-stats.sh` fence-tracking gap (out of scope — file untouched by this PR and outside the Spec's own scope criterion).
+- Proceeded with squash merge under the normal pre-merge AC gate (no override marker) — all 6 pre-merge acceptance conditions were already checked and the review-incomplete-fallback check found no fallback-origin review completion.
+- Merged with no rebase/conflict resolution needed — PR was `mergeable=true`, `ci_status=success`, `review_status=approved` at the time of the merge attempt.
 
 ### Deferred Items
-- The Post-merge AC (manual `/verify` run against a live fenced-sample Issue) remains unchecked — unchanged from the code phase, still requires an actual post-merge run.
-- 4 CONSIDER-level findings deferred to follow-up (not blocking): `scripts/gh-issue-edit.sh:87` regex-broadening note, `docs/structure.md`/`docs/workflow.md` SSoT one-line description staleness, `modules/phase-handoff.md:81` cross-reference, and `scripts/check-ac-checkbox-format.sh`/`scripts/collect-verify-retention-stats.sh` fence-tracking gaps in files this PR does not touch.
+- The Post-merge AC (manual `/verify` run against a live fenced-sample Issue) remains unchecked — carried over unchanged from code/review phases; requires an actual post-merge `/verify` run.
 
 ### Notes for Next Phase
-- Post-fix full bats suite (1908/1908) and CI (15/15) both re-confirmed green after the review-fix commit (`76944acb`) — `/merge` does not need to re-run verification from scratch on this basis.
-- No MUST findings and no policy changes occurred, so `/merge` should proceed via the normal pre-merge AC gate without an override marker.
+- `/verify` should execute the deferred Post-merge AC by running `/verify` against an Issue containing a fenced notation sample and confirming checkbox updates land at the correct index.
+- No unresolved review findings or overrides to account for at merge time.
 
 ## review retrospective
 
