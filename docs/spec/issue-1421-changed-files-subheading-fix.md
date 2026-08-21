@@ -59,4 +59,5 @@
 - **Patch route verify command check**: 本 Issue の Verification > Pre-merge に `github_check "gh pr checks"` 系の verify command は含まれていない (grep/rubric/command のみ) ため、patch route (Size S, ALWAYS_PR=false, PR無し) への自動置換対象なし。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: `/issue` retrospective — corrected Pre-merge AC 1's verify command (from an undiscriminating pattern to `grep "## /\{flag=0\}" ...`, anchored on a contiguous substring unique to the fixed code per `modules/verify-patterns.md` §23) and the Background line numbers (628-651 → 638-655); already reflected in the current Issue body, which this Spec's Verification section transcribes verbatim / url: https://github.com/saitoco/wholework/issues/1421#issuecomment-5363823935
