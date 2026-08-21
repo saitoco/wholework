@@ -25,6 +25,20 @@ if [ -n "$matches" ]; then
     case "$line" in
       *'|| false'*) continue ;;
     esac
+    # Backslash line continuation: "|| false" may appear on the next
+    # physical line (e.g. `[[ ... ]] \` followed by `  || false`), which
+    # is bash-equivalent to a single-line `[[ ... ]] || false` and
+    # propagates correctly. Treat it as safe too.
+    case "$line" in
+      *'\')
+        rest="${line#*:}"
+        lineno="${rest%%:*}"
+        next_line=$(sed -n "$((lineno + 1))p" "$file" 2>/dev/null)
+        if printf '%s\n' "$next_line" | grep -qE '^[[:space:]]*\|\| false'; then
+          continue
+        fi
+        ;;
+    esac
     echo "$line"
     count=$((count + 1))
   done <<BAREBRACKET

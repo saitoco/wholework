@@ -75,6 +75,40 @@ EOF
   esac
 }
 
+@test "clean: backslash-continued || false on next line produces no detection" {
+  cat > tests/clean3.bats <<'EOF'
+#!/usr/bin/env bats
+@test "clean example with continuation" {
+  run echo "hi"
+  [[ "$output" == "hi" ]] \
+    || false
+}
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  case "$output" in
+    *"No bare"*) ;;
+    *) echo "unexpected output: $output" >&2; return 1 ;;
+  esac
+}
+
+@test "detection: backslash continuation without || false on next line is still flagged" {
+  cat > tests/bad_continuation.bats <<'EOF'
+#!/usr/bin/env bats
+@test "bad example with continuation" {
+  run echo "hi"
+  [[ "$output" == "hi" ]] \
+    && echo "matched"
+}
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  case "$output" in
+    *"tests/bad_continuation.bats"*) ;;
+    *) echo "expected detection of tests/bad_continuation.bats, got: $output" >&2; return 1 ;;
+  esac
+}
+
 @test "self-exclusion: check-bare-bracket-assertions.bats fixture is excluded" {
   cat > tests/check-bare-bracket-assertions.bats <<'EOF'
 #!/usr/bin/env bats
