@@ -246,3 +246,31 @@ Pre-merge AC 8件は `rubric`/`section_contains`/`file_contains`/`command` の�
 
 - `/verify` では、次回 main に pre-existing な禁止表現違反が存在する状態で無関係な PR の `/review` を実行した際、当該違反が MUST 化されないことを観察すること (post-merge AC)。
 - Fix Work で変更された `skills/review/SKILL.md` は squash merge 後の main に含まれている。`bats tests/review.bats` が CI で通ることを確認すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Uncertainty セクションの事前解決 (worktree 実行可否、ref 分岐、allowed-tools 検出) がいずれも実装時に有効だったことを確認。新規の gap は発生しなかった。
+
+#### design
+- (spec と統合、上記参照)
+
+#### code
+- 特筆事項なし。7 Implementation Steps をそのまま実装、pre-implementation FAIL check も想定通り機能した。
+
+#### review
+- **review retrospective の「Spec vs. implementation divergence patterns」に記録された観察が本 Verify Retrospective でも特筆に値する**: Spec は Step 9 単体の記述要件 (背景・適用範囲・判定表・fail-closed 根拠) を網羅していたが、Step 9 が新設した「non-blocking 時に CONSIDER エントリを追加する」という副作用を、実際に review body を組み立てる Step 10.0/10.2 の injection 指示に配線する必要がある、という下流依存関係までは明示していなかった。review フェーズの review-spec エージェントが初めて検出し、Fix Work で解消済み。
+  - キーワード `配線漏れ`/`wiring` で `docs/spec/` を grep すると3件の他 Spec (#1305, #1407, #660) がヒットしたが、内容確認の結果いずれも別文脈 (CI wiring, emit wiring 等) であり、本 Issue が指摘する「Spec が新設した分岐の副作用を下流消費ステップへの配線まで明示していない」という同種のパターンの再発ではなかった (誤検知)。
+  - `### Recurring issues` に記録された「PRE_EXISTING/FIXED/CLEAN の3分類を区別しない説明文」の欠陥は、review-bug の2エージェントが独立に検出し review フェーズ内で解消済みであり、追加のフォローアップは不要と判断した。
+
+#### merge
+- 特筆事項なし。squash merge は clean・CI success・review approved で conflict resolution 不要だった。
+
+#### verify
+- FAIL・UNCERTAIN なし。Pre-merge 8件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は未発火のため SKIPPED。
+- **External kill recovery (別件)**: review フェーズで external kill が発生し respawn で復旧した (`docs/reports/orchestration-recoveries.md` に既に記録済み — Issue #1139, phase: review)。検証結果には影響していない。
+
+### Improvement Proposals
+- Skill (`/spec`) が新しい分岐ロジックを既存ステップに追加する際、その分岐の副作用 (例: 新設した非ブロッキング outcome が CONSIDER エントリとして追加される) が下流の別ステップ (例: review body を組み立てる Step 10) への配線を要する場合、Spec 側でその下流依存関係を明示するよう心がけると、今回のような review フェーズでの配線漏れ検出コストを spec フェーズ側に前倒しできる可能性がある。単発の観察であり (再発性の grep 確認は誤検知に終わった)、具体的な複数ファイルにまたがる変更提案ではないため Tier 2 (memory proposal) 相当。
