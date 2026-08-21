@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, git merge-tree:*, git merge-base:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, git merge-tree:*, git merge-base:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
 ---
 
 # PR Review
@@ -110,7 +110,7 @@ Determine the review mode using ARGUMENTS and the linked Issue's Size, and store
 
 **Exclusivity check:** if both `--light` and `--full` are specified, display error and exit.
 
-**Load `ALWAYS_PR` (before Size branching):** read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` for use in the Size mapping below.
+**Load `ALWAYS_PR` (before Size branching):** read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` and `HAS_PR_PREVIEW_CAPABILITY` for use below.
 
 **Detection priority:**
 
@@ -231,6 +231,14 @@ If any verify command contains `{{base_url}}`, resolve the Preview URL before pa
 **Fast path — `PREVIEW_URL` env variable already set:**
 
 If the `PREVIEW_URL` environment variable is already exported (set by CI or a project-side script before invoking `/review`), use its value directly as the preview base URL and skip the GitHub Deployments API lookup (steps 1–4 below). Replace `{{base_url}}` with `$PREVIEW_URL` and proceed to step 5. `ac-tier: preview` ACs guarded with `--when="test -n \"$PREVIEW_URL\""` are executed via this path. If `PREVIEW_URL` is not set, fall through to the Deployments API path below.
+
+**preview-url-command resolution — `PREVIEW_URL` unset but declared via config:**
+
+If `PREVIEW_URL` is not exported, `HAS_PR_PREVIEW_CAPABILITY` is `true`, and `.wholework.yml` declares `preview-url-command`, resolve it in a single Bash tool call:
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh url "$NUMBER"
+```
+If the command produces non-empty stdout, treat it as the resolved preview URL: replace `{{base_url}}` with this **literal value** (not a `$PREVIEW_URL` shell reference — Bash tool calls do not persist exported env vars across invocations) and proceed to step 5, skipping the Deployments API lookup below — mirroring how the Deployments API path itself substitutes its resolved `environment_url` literally. If stdout is empty, fall through to the Deployments API path below unchanged.
 
 1. Get the PR branch name:
    ```bash
