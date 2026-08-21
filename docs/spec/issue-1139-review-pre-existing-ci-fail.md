@@ -161,3 +161,69 @@ Step 9 の新サブセクションのロジックは `/review` のみが使用�
 ### Uncertainty セクションと Implementation Steps の整合
 
 Uncertainty の 3 項目はいずれも Spec 作成時に解決済みで、解決内容が新たな実装作業を生むのは 3 件目 (`allowed-tools` 追加) のみ。これは実装ステップ 1 として明示的に転記済みで、転記漏れはない。1 件目・2 件目は「現行設計のままで問題ない」ことの確認であり、対応する実装ステップは存在しない (方向 (b): Uncertainty 側の記述を実際の実装スコープに一致させた)。
+
+## issue retrospective
+
+### Non-Interactive Mode
+
+`--non-interactive` で実行。ambiguity 解決はすべて Auto-resolve tier で処理 (High-Stakes Decision 該当なし)。
+
+### Auto-Resolve Log
+
+- **技術方針: 新規 diff スコープ限定モードの追加ではなく既存 `scripts/pre-merge-check.sh` の再利用** — 起票時原案 (`check-forbidden-expressions.sh` に diff スコープ限定モードを CLI フラグ/環境変数で追加) を Background 事実確認の過程で調査した結果、同等の判定 (baseline vs head 比較による `NEW_FAILURE`/`PRE_EXISTING`/`FIXED`/`CLEAN` 分類) を行う `scripts/pre-merge-check.sh` (#719 で追加) が既に存在し、`forbidden-expressions` が check の dispatch table に登録済みであることが判明した。現状は `/merge` の pre-screen (`run-merge.sh`) でのみ使用されており、`/review` Step 9 では未使用だった (#719 のスコープは起点インシデント #702 = merge phase に限定しただけで、review phase を明示的に除外した設計判断ではなかった)。同じ判定ロジックを別モードとして再実装すると、判定基準が「diff に含まれるファイルかどうか」(原案) と「baseline 実行結果の比較」(既存) の 2 系統に分岐し、将来的な不整合リスクを招くため、既存スクリプトの再利用に方針を変更した。
+  - 他の候補: `check-forbidden-expressions.sh` へのファイル単位 diff スコープモード追加 (起票時原案)。却下理由: `pre-merge-check.sh` の baseline 実行結果比較より判定粒度が粗く、`tests/pre-merge-check.bats` に `PRE_EXISTING: both FAIL exits 0` の negative case が既にカバー済みのため新規テストの必要性も低い。
+
+### Acceptance Criteria 変更
+
+上記の方針転換に伴い Pre-merge AC を全面的に差し替えた。Post-merge AC (observation) は維持しつつ `session=next` を付与。
+
+### Title Drift
+
+方針転換により変更対象コンポーネントが `check-forbidden-expressions.sh` から `skills/review/SKILL.md` に変わったため、タイトルを `check-forbidden-expressions: diff スコープ限定モードを追加し無関係 PR のブロックを解消` から `review: Step 9 の CI Blocking から pre-existing 失敗を除外` へ更新した。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue body の AC2 が `section_contains "skills/review/SKILL.md" "## Step 9" "pre-merge-check.sh"` と見出し記号込みで書かれており、`/triage` の AC audit コメントが恒久 UNCERTAIN になると事前警告していた。`/spec` の Consumed Comments で拾って修正できたため実害はなかったが、これは `/issue` フェーズで verify command を組み立てる時点の `modules/verify-patterns.md` 参照が甘かったことの現れ。`section_contains` の heading 引数は「先頭の `#` と空白を除去したうえで部分一致」であり、見出し記号を含めると必ず外れる。
+- `.claude/settings.json.template` に `pre-merge-check.sh` の個別エントリを追加すべきか迷ったが、`wait-ci-checks.sh` が個別列挙なしで `/review` から使われている先行事例を grep で確認して不要と判断できた。「no change needed」を書く前の grep 確認ルールが実際に判断根拠を与えた事例。
+- `grep -rl "pre-merge-check.sh"` は 18 ファイルにヒットし discriminating-power filter (閾値 8) で skip 対象になったが、そのうち 13 件は `docs/spec/` と `docs/reports/` の履歴記録だった。このリポジトリでは Spec が蓄積するほど filter が発火しやすくなるため、filter に頼らず outbound pointer 経由で `modules/orchestration-fallbacks.md` を独立に発見できたことが Changed Files の欠落を防いだ。
+
+### Judgment rationale
+
+- **exit 1 を fail-closed にした理由**: AC は exit 2 と exit 0 のみを規定しており exit 1 が未定義だった。`run-merge.sh` は同じ exit 1 を fail-open (警告のみで続行) で扱っているため、素朴に揃えると `/review` でも「分類器が落ちたらブロックしない」となり、ゲートを緩める方向に倒れる。両者を貫く原則は「分類器が判定不能なら分類器導入前の挙動に戻す」であり、merge では分類器がゲートを足すだけなので戻す = 通す、review では既存ゲートを緩めるだけなので戻す = 止める、と方向が反転するのが正しい。表面的な「揃える」判断が安全側とは限らない一例。
+- **Step 12.2 にも 1 文追加した理由**: #1136 の実害は「MUST 化された」ことではなく「その結果 inline 修正された」こと。Step 9 で非ブロッキング化しても、Step 12.2 の「Claude decides whether to fix SHOULD/CONSIDER issues」が残っている限り Claude が親切心で直してしまう経路が閉じない。ゲートの緩和と実行側の抑止はセットで初めて効く。
+- **フォローアップ Issue を自動起票しない判断**: `/review` には Issue 自動起票ステップが存在せず、`gh issue create` は allowed-tools にあるものの手順化されていない。既存パターンに存在しない L0 write を新設するより、既存 open Issue の検索と引用に留めて起票判断を人間 (または後続フェーズ) に残す方が、Issue 発散を招かない。
+- **`modules/` へ抽出しなかった理由**: 帰属判定ロジックの消費者は現時点で `/review` のみ (`/merge` は `run-merge.sh` のシェル側で完結)。`modules/skill-dev-checks.md` の「2 箇所以上で使うなら抽出」基準に照らして単一利用と判定した。
+
+### Uncertainty resolution
+
+- **worktree 内からの `git worktree add`**: `hooks/hooks.json` の PreToolUse matcher が `Edit|Write|NotebookEdit|Read` のみで Bash を含まないことを確認し、`hook-worktree-path-guard.sh` が発火しないと確定した。SKILL.md 本文の記述 (「worktree isolation guard が `$(...)` を拒否する」) から Bash 全般が制約されると誤読しかけたが、実物の hooks.json を読んで解消した。
+- **CI の判定 ref と分類器の判定 ref の乖離**: `.github/workflows/test.yml` が `on: push` と `on: pull_request` の両方をトリガーとするため、同名ジョブの rollup エントリが 2 つ現れうる点と、`pull_request` では merge ref が checkout される点を確認。4 分類すべてについて帰属判定としての結論が正しいことを机上検証し、CI と ref を揃える必要はないと確定した。
+- **`allowed-tools` 追加漏れの検出可否**: `scripts/validate-skill-syntax.py` が本文の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` 参照と `allowed-tools` を突合してエラーを出す実装 (`本文中に参照されたスクリプトが allowed-tools の Bash(...) パターンに含まれていません`) を確認。CI の "Validate skill syntax" ジョブで実行されるため、実装漏れは PR 段階で機械的に検出される。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 新規スクリプトを書かず既存 `scripts/pre-merge-check.sh` を `/review` Step 9 から再利用する。帰属判定ロジックを 1 系統に保つため。
+- 分類器の exit 1 (env error) は **fail-closed** (MUST 化を維持)。`run-merge.sh` の fail-open とは方向が逆だが、「判定不能なら分類器導入前の挙動に戻す」という同一原則の適用結果。
+- 例外の適用対象は `Forbidden Expressions check` ジョブのみ (check dispatch table の唯一のエントリ `forbidden-expressions` に対応)。他の FAILURE ジョブは無条件ブロックを維持。
+- Step 9 の非ブロッキング化だけでなく Step 12.2 にも「out of scope for this PR と明記されたエントリは修正しない」を追加する。#1136 の実害は inline 修正そのものだったため。
+- 帰属判定ロジックは `modules/` へ抽出せず SKILL.md に直接記述する (現時点の消費者が `/review` のみのため)。
+
+### Deferred Items
+
+- PRE_EXISTING 検出時のフォローアップ Issue **自動起票**は行わない。既存 open Issue の検索と引用、および起票の推奨に留める。
+- `scripts/run-merge.sh` の pre-screen は本 Issue では変更しない。結果として `/review` と `/merge` で同じ分類器が独立に 2 回走るが、副作用のない冪等な読み取り専用スクリプトのため許容する。
+- `pre-merge-check.sh` の check dispatch table へのエントリ追加 (`forbidden-expressions` 以外の check への例外拡大) は本 Issue のスコープ外。
+- `skills/review/skill-dev-recheck.md` の `## Step 8: Additional Suggestions on CI Failure` に `Forbidden Expressions check` の行を追加することは意図的に見送った (分類ロジックの二重記載を避けるため)。
+
+### Notes for Next Phase
+
+- 実装ステップ 1 (`allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*` 追加) を飛ばすと CI の "Validate skill syntax" ジョブが落ちる。ワイルドカードでは通らずリテラル追加が必須。
+- `tests/review.bats` の新規テスト名は Pre-merge AC の `file_contains` パターンと 1 文字単位で一致させること (`Step 9: pre-existing CI failure exception` / `Step 12.2: out-of-scope entries`)。
+- `docs/spec/` は `scripts/check-forbidden-expressions.sh` の走査対象 (`docs/sessions/` と `docs/reports/` のみ除外)。Spec や実装本文で `Dispatch` (大文字始まり)・`Issue Spec`・`verify hint` 系の旧称を書かないこと。
+- `step9_section()` は `## Step 9: CI Status Check` から `## Step 10` までを抽出する。新サブセクションは level 3 (`### `) にすること — level 2 にすると抽出範囲から外れてテストが落ちる。
+- コミット前に `bats tests/review.bats` / `bats tests/pre-merge-check.bats` / `python3 scripts/validate-skill-syntax.py skills/` / `bash scripts/check-forbidden-expressions.sh` の 4 つを前景で実行すること。
