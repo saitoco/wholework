@@ -32,3 +32,17 @@
 | #441 | サンプル UI 再現プロジェクトで `visual_diff` を実装し、検出結果が期待通り (差分あり→FAIL、なし→PASS) | D1 区分の典型例。実ブラウザによる実ページのレンダリング・スクリーンショット取得・pixel-diff 判定の一連の流れが前提で、`pixelmatch` の数値計算のみを固定 fixture でテストしても「実環境で正しく検出できるか」という AC の主旨を代替できない |
 
 これら 5 件は `docs/stats/2026-08-05.md` の棚卸し方針表でも「manual のまま維持 (正当)」と分類されており、本記録はその判断根拠を Issue 単位で明文化したものである。Issue 本文の post-merge AC 行自体は変更しないため、`phase/verify` の Manual waiting 集計には引き続き残り続けるのが意図した挙動である。
+
+## #708 / #719 の残余 3 AC 処理 (#1245)
+
+親 Issue #1158 を 2026-08-05 に 5 本の sub-issue へ分割した際、区分 C (故障注入型) の 3 AC 行 (`#708` 条件1・2、`#719` 条件1) がどの sub-issue の Acceptance Criteria にも含まれないまま残った (#1163 の全件精査で区分 A 対象外と判定され「#1167 の領域」と記録されたが、#1167 の Issue 本文自体はこの 3 行に触れていなかった)。上記の区分 C 2 件 (`#1066`・`#1060`) が採用した「bats テスト化 → `verify-type: auto` 再型付け」ではなく、この 3 行は **retire (条件取り下げ + `phase/done` 遷移)** を採用した。
+
+理由: Issue #1245 の Pre-merge AC5 が `#708`・`#719` の `phase/done` ラベルをこの実装サイクル内で即時に要求している。「auto AC 変更」方式は verify command を付与するのみでチェックボックス自体はその場では変わらず、実際に `/verify` が再実行されて該当条件を PASS 判定するまで `phase/done` へは遷移しない (実際 `#1066`・`#1060` は #1167 のマージ後、別セッションの `/verify` 実行を経て `phase/done` に到達した)。AC5 の即時遷移要求を満たすため、3 行すべてに retire を採用した。
+
+| Issue | 条件 | 処理 | 判断根拠 |
+|---|---|---|---|
+| `#719` | Post-merge 条件1: 「別 PR で意図的に Forbidden Expressions FAIL を作り、`pre-merge-check.sh` が新規 FAILURE として正しく abort することを観察」(`verify-type: manual`) | retire (行削除 + `phase/done` 遷移) | `tests/pre-merge-check.bats:111` の既存 `@test "NEW_FAILURE: base PASS / head FAIL exits 2"` が、FORBIDDEN content を含む feature ブランチに対し `pre-merge-check.sh` が exit 2 かつ出力に `NEW_FAILURE` を含むことを既に決定的に検証しており、追加実装なしでこの manual AC が確認しようとしていたシナリオを実質的に担保している |
+| `#708` 条件1 | Post-merge 条件1: 「`phase/ready` のみ付与・Spec 無しの M Issue に対して `reconcile-phase-state.sh --check-precondition code-pr N` を実行すると `matches_expected: false` を返すことを観察」 | retire (行削除 + `phase/done` 遷移) | `scripts/reconcile-phase-state.sh` の `_precondition_code_patch()` / `_precondition_code_pr()` はいずれも `_precondition_code_common()` への同一の 1 行委譲であり、phase 引数 (`code-patch` / `code-pr`) を条件分岐に使うロジックはこの関数内に存在しない。既存の `code-patch`×Size=M (`tests/reconcile-phase-state.bats:1636`) と `code-pr`×Size=S (同 1685 行目) の 2 テストが同一の共有ロジック分岐 (`Size != XS` → mismatch) を実質的に二重検証しており、`code-pr`×Size=M を明示的に固定した新規テストを追加しなくても十分な根拠と判断した |
+| `#708` 条件2 | Post-merge 条件2: 「XS Issue (Spec 無し) に対して同コマンドを実行すると `matches_expected: true` を返すことを観察」 | retire (行削除 + `phase/done` 遷移) | 本 Issue (#1245) Implementation Step 1 で `tests/reconcile-phase-state.bats` に新規 `@test "code-pr precondition: Spec missing but Size XS -> matches_expected true"` を追加し、`code-pr`×Size=XS の `matches_expected: true` シナリオを直接カバーした |
+
+3 行とも、Issue 本文側には個別の breadcrumb を残さない方針を採用した (Post-merge 条件の行を完全に削除)。処理の監査証跡は本セクションと Issue #1245 自身の PR・コメント履歴に集約する。
