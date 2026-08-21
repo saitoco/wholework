@@ -45,3 +45,30 @@ GitHub 公式ドキュメント・`gh` cli/cli や GitHub Community Discussions 
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective コメント。非対話モードでの 2 件のあいまいさ自動解決 (調査着手タイミングの現状維持判断、AC1 rubric 文言の「単一要因」読み取れる表現の微修正) を記録したもの。本 Spec の設計判断に影響する新規指示は含まれない / URL: https://github.com/saitoco/wholework/issues/1100#issuecomment-5368853136
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 通りに実装。Spec の Implementation Steps 更新は不要)
+
+### Design Gaps/Ambiguities
+- AC1 の rubric grader は Issue body・git diff・rubric text で明示されたファイルのみを入力範囲とし (`modules/verify-executor.md` "Grader input scope")、Spec や Issue コメントはデフォルトでは対象外。今回の切り分け結果は Spec の `## Notes` と Design Complete コメント (Issue コメント) にのみ記録されており、rubric text 側でファイルパスを明示していなかった。今回は `/code` Step 10 実行者自身が既読内容 (Design Complete コメント本文・Spec Notes) をもとに直接判定したため実害はなかったが、独立した grader セッションで再評価される場合は評価対象が見えない可能性がある。将来 rubric FAIL/UNCERTAIN が観測されたら、AC1 の rubric text に `docs/spec/issue-1100-merge-autoclose-investigation.md` の `## Notes` セクションを明示的に含める修正を検討する
+
+### Rework
+- N/A (手戻りなし)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `/merge` Step 6 のリトライは `scripts/gh-pr-merge-status.sh` の GitHub metadata sync delay リトライパターン (`RETRY_DELAYS=(30 60)` 相当) と同じ設計思想 (5 秒 → 10 秒の 2 段階バックオフ) を踏襲し、新規パターンを作らなかった
+- 既存のフォールバック (`gh issue close`) はそのまま維持し、リトライはその手前に挿入する形にとどめた (フォールバック自体の削除・置き換えはしない)
+- 原因切り分けは (a) 状態検証のタイミング + (c) API 伝播遅延の組み合わせを主要因、(b) squash merge の commit message 整形は除外、と判断し Spec Notes と Issue コメント (Design Complete) の両方に記録した
+
+### Deferred Items
+- Post-merge AC (フォールバックに依存せず自動クローズが発火することの確認) は opportunistic 観測待ち — 本フェーズでは検証していない
+- リトライ幅 (5 秒 / 10 秒) は暫定値。Post-merge 観測で効果不十分と分かった場合は値の見直しが必要
+
+### Notes for Next Phase
+- `/review`/`/merge` フェーズでは、今回の Step 6 編集が既存のフォールバック分岐 (Step 4-5 相当) を壊していないか、SKILL.md の実装ステップ順序を確認すると良い
+- 本 Issue の post-merge AC は opportunistic verify-type のため、`/verify` で即座に FAIL とはならない — フォールバックへの依存頻度低下は今後の `/merge` 実行の観測で確認する運用
