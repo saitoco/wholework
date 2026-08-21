@@ -23,7 +23,7 @@
 
 ## Implementation Steps
 
-1. `skills/code/SKILL.md` Step 3 を書き換える: `reconcile-phase-state.sh --check-precondition` 実行後、JSON の `diagnosis` を分岐条件として (a) `phase/ready` ラベル欠如時、(b) Spec ファイル欠如時、で異なる出力文言を出すようにする。あわせて、ラベルリストと `diagnosis`/`actual` を `OBSERVED_LABELS` / `OBSERVED_DIAGNOSIS` としてその場で保持し、Step 12 での Auto-Resolve Log / Phase Handoff 記述時にはこれらの値をそのまま転記する (GitHub state を再クエリしない) ことを明記する。(→ acceptance criteria AC1, AC2, AC4)
+1. `skills/code/SKILL.md` Step 3 を書き換える: 旧 Step 3 の 2 段構成 (`gh issue view` によるアドホックなラベル確認 → 独立した「Spec precondition check」ブロックでの `reconcile-phase-state.sh --check-precondition` 呼び出し) を、単一の `reconcile-phase-state.sh code-patch $NUMBER --check-precondition` 呼び出し (実引数順序をスクリプトの実際の usage に合わせて修正) + `diagnosis` 分岐に統合する。JSON の `diagnosis` を分岐条件として (a) `phase/ready` ラベル欠如時、(b) Spec ファイル欠如時、で異なる出力文言を出すようにする。あわせて、ラベルリストと `diagnosis`/`actual` を `OBSERVED_LABELS` / `OBSERVED_DIAGNOSIS` としてその場で保持し、Step 12 での Auto-Resolve Log / Phase Handoff 記述時にはこれらの値をそのまま転記する (GitHub state を再クエリしない) ことを明記する。(→ acceptance criteria AC1, AC2, AC4)
 2. `scripts/reconcile-phase-state.sh` の `_precondition_code_common()` 直上に、2 つの diagnosis 文言が区別される旨のヘッダコメントを追加する。(→ acceptance criteria AC3) (parallel with 1)
 
 ## Verification
@@ -54,3 +54,39 @@
 |-------|-------------------|-----------|-----------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。実装調査 (`_precondition_code_common()`) の結果、当初 Background の「Spec ファイル存在は判定に使われていない」という記述が不正確と判明し対応方針を更新したこと、および 2 回目・3 回目の再発から Purpose/AC に案 D (観測値のその場キャプチャ) を追加したことを報告 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5369204332 |
 | saito | MEMBER | first-class | AC Verify Command Integrity Audit — Pre-merge AC3 の rubric が `modules/phase-state.md` の既存記述で常時 PASS してしまう懸念を指摘し、絞り込みまたは AC1/AC2 への統合を提案 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5369246125 |
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の Implementation Steps は「Step 3 を書き換える」「ヘッダコメントを追加する」の 2 項目のみを列挙していたが、実装時に旧 Step 3 の構造 (ラベル存在をアドホックに `gh issue view` で確認する前段ブロックと、その後で `reconcile-phase-state.sh --check-precondition` を呼ぶ独立した「Spec precondition check」ブロックの 2 段構成) 自体が齟齬の温床と判断し、`reconcile-phase-state.sh` の呼び出しを 1 回に統合して `diagnosis` で分岐する単一フローに再構成した。理由: 旧 2 段構成では、1 段目で `phase/ready` 欠如を検出・処理した後でも 2 段目が独立に再実行され、その 2 段目の説明文が「`matches_expected: false` は常に Spec 欠如」と誤って決め打ちしていた — これは Issue #1112 の Root Cause そのものであり、2 段構成を維持したまま 2 段目の文言だけ直しても、`phase/ready` 欠如がまだ解消されていない状態で 2 段目に到達した場合に同じ齟齬が再現しうる。1 回の呼び出し + `diagnosis` 分岐に統合することで構造的に解消した。
+- Step 3 のコマンド例 `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh --check-precondition code-patch $NUMBER` は、実際のスクリプト引数順序 (`<phase> <issue_number> [--check-precondition|--check-completion] ...`、`scripts/reconcile-phase-state.sh` 実行時の usage エラーで確認) と一致しておらず、書かれた通りに実行すると `unknown option: 1112` で失敗する状態だった。本 Issue の対応範囲外だが、同じ行を書き換える機会に `code-patch $NUMBER --check-precondition` へ修正した。Root Cause 分析やレビューでは指摘されていなかった実行時エラーであり、実装時に発見した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+
+- 旧 Step 3 の 2 段構成 (アドホックな `gh issue view` ラベル確認 → 独立した `reconcile-phase-state.sh --check-precondition` 呼び出し) を、1 回の呼び出し + `diagnosis` 分岐へ統合した。2 段構成のままだと 1 段目で `phase/ready` 欠如を検出しても 2 段目が独立に再実行され、2 段目の説明文だけを直しても再発しうる構造的な脆弱性があったため。
+- `OBSERVED_LABELS` / `OBSERVED_DIAGNOSIS` という命名で、Step 3 で観測した値を Step 12 まで持ち越して転記する、という指示を Step 3 内に明記した (Step 12 側の書き換えは行っていない — 転記元である Step 3 に「その場でキャプチャして後で使う」ことを書くだけで十分と判断)。
+- `_precondition_code_common()` へのヘッダコメント追加は、`code-patch` と `code-pr` 双方の precondition (`_precondition_code_patch()` / `_precondition_code_pr()` がいずれも `_precondition_code_common()` を呼ぶ) に自動的に適用される。個別に 2 箇所へコメントを追加する必要はなかった。
+
+### Deferred Items
+
+- Post-merge の 2 件目 AC (`verify-type: observation event=auto-run session=next`) — 本修正後、次回 `/code` が Auto-Resolve Log / Phase Handoff へ Step 3 の判定結果を記録する際に遡及誤記が再発しないことの確認は、次回発生時まで検証できない。次回の `/code` 実行 (Step 3 で `matches_expected: false` が発生するケース) で観測すること。
+- Post-merge の 1 件目 AC (`opportunistic` 検証) — `phase/ready` が無い状態で `/code` を実行した際の出力文言確認は、実運用中の自然発生を待つ opportunistic 検証であり、本フェーズでは未実施。
+
+### Notes for Next Phase
+
+- 本 Issue の変更は SKILL.md の prose 修正とスクリプトへのヘッダコメント追加のみで、`_precondition_code_common()` の分岐ロジック自体 (ラベル欠如/Spec欠如の 2 分岐) は変更していない。挙動を変えたのは「LLM がどちらの分岐かを正しく解釈できるようにする」説明面のみ。
+- `/review` は、新しい Step 3 の記述が実際に `reconcile-phase-state.sh` の usage/diagnosis 文言と一致しているか (特にコマンドの引数順序 `code-patch $NUMBER --check-precondition`) を確認すること。
+- Post-merge observation AC (次回 `/code` 実行時の遡及誤記チェック) は `/verify` が担当する — 次回発生時まで PASS/FAIL を判定できないことに留意。
