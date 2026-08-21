@@ -1682,6 +1682,30 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":true'* ]]
 }
 
+@test "code-pr precondition: Spec missing but Size XS -> matches_expected true" {
+    export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-xs-pr"
+    mkdir -p "$BATS_TEST_TMPDIR/empty-spec-xs-pr"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" code-pr 42 --check-precondition --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
 @test "code-pr precondition: Spec missing and Size != XS -> mismatch" {
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-pr"
     mkdir -p "$BATS_TEST_TMPDIR/empty-spec-pr"
