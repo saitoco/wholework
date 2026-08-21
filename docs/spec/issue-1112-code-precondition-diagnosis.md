@@ -90,3 +90,21 @@ N/A
 - 本 Issue の変更は SKILL.md の prose 修正とスクリプトへのヘッダコメント追加のみで、`_precondition_code_common()` の分岐ロジック自体 (ラベル欠如/Spec欠如の 2 分岐) は変更していない。挙動を変えたのは「LLM がどちらの分岐かを正しく解釈できるようにする」説明面のみ。
 - `/review` は、新しい Step 3 の記述が実際に `reconcile-phase-state.sh` の usage/diagnosis 文言と一致しているか (特にコマンドの引数順序 `code-patch $NUMBER --check-precondition`) を確認すること。
 - Post-merge observation AC (次回 `/code` 実行時の遡及誤記チェック) は `/verify` が担当する — 次回発生時まで PASS/FAIL を判定できないことに留意。
+
+## Issue Retrospective
+
+### 実施内容
+
+- Step 1 のコメント消費手続きで、本 Issue に投稿済みの 2 件のコメント (2026-08-06 #1102 再発報告、2026-08-07 #1108 再発報告) を一級ソースとして消費した。いずれも `authorAssociation: MEMBER` (first-class)。
+- 実装調査 (`scripts/reconcile-phase-state.sh` `_precondition_code_common()` L481-514) の結果、当初 Background が「Spec ファイルの存在は判定に使われていない」としていた記述は不正確と判明した。実際には `phase/ready` ラベル欠如と Spec ファイル欠如を**別々の診断文言で区別している**実装だった (対応方針の案 C は既に実装済み)。この事実を Background に追記し、対応方針を「SKILL.md 側の説明修正が主軸」という結論に更新した。
+- コメントで報告された 2 回目 (#1102) ・3 回目 (#1108) の再発は、いずれも「Step 4 (ラベル遷移) 後の状態を Step 3 開始時点の状態として遡及的に誤記する」という共通パターンを示していた。これは説明・実装の軸ずれ (元々の Issue スコープ) とは別次元の問題であり、SKILL.md の説明を修正するだけでは再発を防げないと判断し、Purpose と Acceptance Criteria に「Step 3 で実際に観測した値をその場で Auto-Resolve Log / Phase Handoff に転記し、フェーズ終盤の再クエリによる遡及記述を避ける」という要件 (案 D) を追加した。3 回連続で同型の記述が観測されている実測を踏まえた判断であり、コメントで「別 Issue は起票せず本 Issue に集約する」と明示されていたため、新規 Issue は起票せず本 Issue の Background / 対応方針 / AC を拡張する形で反映した。
+- Pre-merge AC を 3 件から 4 件に拡張 (観測値のその場キャプチャに関する rubric AC を追加)。Post-merge AC に、再発監視用の `verify-type: observation event=auto-run session=next` AC を追加した (skill 自己更新の反映は次回 `/code` 実行セッションでしか観測できないため)。
+- タイトルドリフトチェック: Purpose が 2 点に増えたが、いずれも Step 3 の precondition 説明・記録精度という同一スコープ内であり、drift なしと判断してタイトルは変更しなかった。
+- 自動起票時チェック (`check-skill-change-observation-ac.sh`, `check-ac-checkbox-format.sh`) はいずれも exit 0 (問題なし)。
+
+### Consumed Comments
+
+| login | authorAssociation | trust tier | 意図の要約 | URL |
+|-------|-------------------|-----------|-----------|-----|
+| saito | MEMBER | first-class | #1102 での 2 回目の再発を報告し、timeline 実測との矛盾・Phase Handoff への伝播を記録。フェーズ開始時点の値を保持して retrospective に渡す観点を提起 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5205213361 |
+| saito | MEMBER | first-class | #1108 での 3 回目の再発を報告し、ラベル読み取り結果自体が記録されていたことから「ラベル付与とラベル読み取りの順序が逆転している」可能性を指摘 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5213033471 |
