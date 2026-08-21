@@ -105,3 +105,20 @@
 
 - **boundary-aware test の AC 明記パターン**: 閾値や境界条件を扱う新機能 Issue では、AC に「boundary 双方 (例: threshold-1 と threshold) を bats でテスト」と明記することを推奨する。これにより /review での graft 介入が減り、Spec 段階で測定可能性が高まる。Tier 2 (convention)。
 - **awk regex `in_section && /threshold:/` 精度向上**: Phase Handoff Deferred Items に記録された 1 行 awk マッチが、想定しないネスト構造 (例: `recoveries-auto-fire: { threshold: ... }` のインラインハッシュ) で false match する可能性。本 Issue のスコープ外だが、将来 .wholework.yml のフォーマットが拡張された際に再評価。Tier 3 (one-time memo)。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/760#issuecomment-4814312147
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5200983053
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5212261514
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5225314802
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5229258574
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5235401344
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5246555398
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5255743699
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5296377515
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5304272155
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5310545277
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5327722166
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5341229942
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5354366213
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/760#issuecomment-5369684954
