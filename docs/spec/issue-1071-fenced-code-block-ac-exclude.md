@@ -123,3 +123,43 @@ SPEC_DEPTH=light のため Step 13 (Spec Retrospective、issue retrospective 転
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: `/issue` フェーズの Issue Retrospective コメント (Autonomous Auto-Resolve Log)。3 件の曖昧点 (SSoT 定義先を `modules/l0-surfaces.md` に決定、`check-pre-merge-ac.sh` を Pre-merge AC に追加、`skills/verify/SKILL.md` の checkbox 列挙処理を Pre-merge AC に追加) を自動解決し、既に Issue 本文へ反映済み。本 Spec はこの反映済み本文をそのまま設計のベースラインとして使用した (追加のアクションなし) / url: https://github.com/saitoco/wholework/issues/1071#issuecomment-5366096314
+
+### code phase (cutoff: 2026-08-21T06:58:56Z, most recent `phase/ready` label assignment)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — all 5 Implementation Steps executed as designed, in order, with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+
+- N/A — no new ambiguity surfaced during implementation. The Spec's own Notes (Step 番号の表記ゆれ, Scope expansion beyond Issue body) already anticipated and resolved the two points that could otherwise have caused rework (Step 4/6/8b vs. the Issue body's "Step 3" reference; `scan-pending-ac.sh`/`rank-verify-backlog.sh` inclusion despite not being named in the Issue's Pre-merge AC).
+
+### Rework
+
+- N/A — no rework occurred. Each of the 4 target scripts' `in_fence` tracking pattern was implemented directly from `scripts/rank-verify-backlog.sh`'s existing reference implementation with no trial-and-error.
+
+### Test Verification (Step 9 pre-implementation FAIL check)
+
+- Confirmed pre-implementation FAIL for 3 new test(s): `tests/gh-issue-edit.bats` "checkbox: fenced sample checkbox is excluded from index counting", `tests/check-pre-merge-ac.bats` "(g) fenced code block sample checkbox is excluded from index (issue #1071)", and `tests/run-fact-matching.bats` "scan-pending-ac: fenced sample checkbox lines are excluded from candidates (#709 pattern, issue #1071)" — each stashed the target script's change, ran the test to confirm FAIL, then restored and confirmed PASS.
+- Full bats suite (`bats --jobs 18 tests/`) run in parallel per the Behavioral Change Detection rule: `scripts/scan-pending-ac.sh` is referenced by two test files (`tests/scan-pending-ac.bats`, `tests/run-fact-matching.bats`) beyond a single direct counterpart, and the three modified SKILL.md files are each referenced by several test files (auto/audit/verify's own step-content assertion suites) — 1908/1908 PASS.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed `scripts/rank-verify-backlog.sh`'s existing `in_fence` toggle pattern verbatim for the other 3 scripts, rather than devising a new implementation — it was already a proven regression guard for the same class of bug (#709), so reusing it minimized review risk.
+- Reused `tests/rank-verify-backlog.bats`'s exact `#709`-regression body string for the new `scan-pending-ac:` test in `tests/run-fact-matching.bats`, per the Spec's own guidance, to keep the two scripts' fence-handling test fixtures directly comparable.
+- All 6 Pre-merge acceptance conditions were verified PASS via self-review against the diff (rubric-style adversarial check) plus an actual full bats run, and checked off on the Issue before PR creation.
+
+### Deferred Items
+- The Post-merge AC ("run `/verify` against an Issue containing a fenced notation sample and confirm checkboxes update at the correct index") is `verify-type: manual` and left unchecked — it requires an actual post-merge `/verify` run against a live Issue with this exact shape, which cannot be exercised pre-merge.
+- None else — no `spec-approval-needed` deferrals, no scope-out remediations identified during implementation.
+
+### Notes for Next Phase
+- No refactor occurred, so no Issue/Spec verify command sync was needed in Step 10 — all 6 Pre-merge conditions matched the implementation as designed.
+- `scripts/rank-verify-backlog.sh` itself has no logic change (comment-only), so its own existing `tests/rank-verify-backlog.bats` fence tests continue to serve as the reference-implementation regression guard; no new test was added for it.
+- Full bats suite (1908/1908) already confirms no regression across the wider `verify`/`auto`/`audit` SKILL.md test coverage that the Behavioral Change Detection rule flagged — `/review` does not need to re-run the full suite from scratch on this basis alone.
