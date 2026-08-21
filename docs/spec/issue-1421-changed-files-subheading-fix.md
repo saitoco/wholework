@@ -61,3 +61,38 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: `/issue` retrospective — corrected Pre-merge AC 1's verify command (from an undiscriminating pattern to `grep "## /\{flag=0\}" ...`, anchored on a contiguous substring unique to the fixed code per `modules/verify-patterns.md` §23) and the Background line numbers (628-651 → 638-655); already reflected in the current Issue body, which this Spec's Verification section transcribes verbatim / url: https://github.com/saitoco/wholework/issues/1421#issuecomment-5363823935
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — 実装は Implementation Steps 通りに完了した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+### Additional Notes
+
+- **Pre-implementation FAIL confirmation**: `scripts/run-auto-sub.sh` の awk パターン変更のみを `git stash` で退避し、新規追加した回帰テスト (`tests/run-auto-sub.bats` の `issue #1421` テスト) を修正前コードに対して実行し FAIL することを確認した (`grep -q "42 --pr" "$RUN_CODE_LOG"` で失敗)。Confirmed pre-implementation FAIL for 1 new test(s)。
+- **Fix 適用後の検証**: 同一 fixture (`### scripts` / `### tests` サブ見出しを持つ `## Changed Files`) で `docs/spec/issue-1418-remove-permission-bypass.md` に対し修正後の awk パターンを実行し、59 行分のセクション本文 (Spec Reproduction Steps 記載の「修正後パターンでは 59 行分のセクション本文が抽出される」と一致) が抽出されることを確認した。
+- **Behavioral Change Detection**: `scripts/run-auto-sub.sh` は `tests/run-auto-sub.bats` に加え `tests/auto-sub-observability.bats` からも参照されているため behavioral change と判定し、`bats --jobs 18 tests/` でフルスイート (1888 tests) を実行、全 pass を確認した。
+- **Stale Test Assertion Check**: `git diff HEAD -- scripts/ modules/ skills/` で検出された削除リテラル (`/^#/{flag=0}` を含む行) について `tests/` を検索したが残存する言及は無かった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- awk 終端パターンを `/^#/{flag=0}` から `/^## /{flag=0}` に変更 (Issue Proposal / Spec Implementation Step 1 通り)。修正スコープはこの1行に限定し、`_spec_is_diffless()` の他の既存境界動作 (fail-closed 判定など) は変更していない。
+- 回帰テストは `tests/run-auto-sub.bats` の既存 2 テスト (284行目・306行目) と同型の fixture 構成を採用し、`### scripts` / `### tests` の 2 つのサブ見出しでファイルをグルーピングして境界条件を再現した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 本 Issue は Size S / patch route のため `/review`・`/merge` はスキップされる。Pre-merge AC 3 (`bats tests/run-auto-sub.bats`) 用の verify-executor 実行に加え、behavioral change 判定によりフルスイート (`bats tests/`, 1888 tests) も実行し全 pass を確認済み。
+- Patch route の CI verification AC exclusion (`github_check "gh run list"`) はこの Issue の Pre-merge AC には存在しないため対象外。`/verify` はこの Spec の 3 件の Pre-merge AC (grep / rubric / command) をそのまま再評価すればよい。
