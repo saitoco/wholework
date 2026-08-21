@@ -76,17 +76,28 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Followed the Spec's 2 auto-resolved ambiguity points as-is: CI-triggered independent script (not skill-flow opt-in) and dynamic parsing of `modules/detect-config-markers.md`'s Marker Definition Table (no hardcoded key list) as SSoT.
-- Fixed the awk table-boundary detection to a 2-state scan (see Deviations from Design) — the Spec's literal single-condition description would have exited at the blank line right after the `### Marker Definition Table` heading, before ever reaching the table rows.
-- Confirmed both pre-merge rubric AC as PASS directly (mechanism exists + visibly warns via CI; documented reachably from `modules/detect-config-markers.md`/`docs/tech.md`) before creating the PR.
+- Both pre-merge rubric AC judged PASS in Step 8, with direct execution verification (ran `scripts/check-config-schema.sh` against the repo's own `.wholework.yml` and against an injected typo fixture) rather than relying solely on the grader's diff reading.
+- Fired the Parser/Validator Edge Case Pre-check (new script parses external `.wholework.yml` content) and had a sub-agent actually execute the script against 14 fixtures across the 5 standard input axes — this is what surfaced the one real finding (see Deferred Items → now Resolved).
+- Fixed the 1 SHOULD finding (key-extraction regex silently skipping whitespace-before-colon and metacharacter/quoted top-level keys) directly in this review pass rather than deferring, since it was a small, well-scoped, high-confidence fix with 3 new regression tests (8/8 bats PASS) and a clean CI re-run (15/15 SUCCESS).
 
 ### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — left unchecked for post-merge opportunistic verification, as specified.
-- Nested child key typo detection (e.g. `capabilities.browsr`) is explicitly out of scope per the Issue's AC1 rubric wording ("top-level keys actually present") — noted in Spec Notes, not a gap to revisit unless a follow-up Issue requests it.
+- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — left unchecked for post-merge opportunistic verification, as specified. Still open (unchecked in Issue body) as of this review.
+- Nested child key typo detection (e.g. `capabilities.browsr`) remains explicitly out of scope per the Issue's AC1 rubric wording ("top-level keys actually present") — not a gap to revisit unless a follow-up Issue requests it.
 
 ### Notes for Next Phase
-- `scripts/check-config-schema.sh`'s known-key extraction is a dynamic parse of `modules/detect-config-markers.md`'s Marker Definition Table — any future review touching that table's row format should re-run `bats tests/check-config-schema.bats` to confirm the awk pattern still matches.
-- No verify command staleness or Issue AC gaps were found in Step 10 — both pre-merge AC are `rubric`-type and unaffected by the implementation's awk-logic refinement.
+- `/merge` can proceed directly — no MUST issues, CI green (15/15), fix commit `fade4fea` pushed and CI re-verified green after the fix.
+- `scripts/check-config-schema.sh` now also emits a generic "Unrecognized top-level key syntax" warning for lines that don't match the plain key-name pattern (quoted/backticked/metachar keys) — if `/verify`'s post-merge opportunistic check for the typo'd key exercises a plain key name (as the Issue's example `autonomy-tier:` does), it will still hit the original "Unknown key" message path, not the new catch-all.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note. The implementation matched the Spec's Implementation Steps precisely (2-state awk table-boundary detection, extraction regex, warning message format, CI job insertion point, docs section placement) — no structural divergence found.
+
+### Recurring issues
+Nothing to note as a recurring pattern, but worth recording as a positive signal: the Parser/Validator Edge Case Pre-check (fired because this PR adds a new script that parses/validates external config content) actually executed the new `scripts/check-config-schema.sh` against 14 fixtures covering the 5 standard input axes and found a genuine gap — the key-extraction regex `^[A-Za-z0-9_-]+:` silently failed to recognize colon-whitespace variants and metacharacter/quoted keys, letting malformed top-level key syntax pass through with no warning. Static reading of the diff alone would likely not have surfaced this, since the code reads as correct at a glance; only actual execution against adversarial fixtures caught it. Fixed in this review pass (regex loosened + catch-all unrecognized-syntax warning added, 3 new bats tests, 8/8 PASS).
+
+### Acceptance criteria verification difficulty
+Nothing to note. Both pre-merge AC are `rubric`-type; both graded cleanly to PASS with direct evidence in the diff (new script + CI wiring for AC1, `docs/tech.md` § Config Schema Validation + `modules/detect-config-markers.md` pointer for AC2). No UNCERTAIN, no verify command staleness, no Issue AC gaps.
