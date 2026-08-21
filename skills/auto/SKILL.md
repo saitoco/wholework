@@ -644,6 +644,8 @@ This runs verify in the parent context, enabling AskUserQuestion for manual AC c
 
 Continue to the next issue even if one verify invocation ends in FAIL or MAX_ITERATIONS_REACHED — the close flow in Step 4c will assess the final state.
 
+**Parent (親) cross-cutting artifacts**: the parent Issue's own verify call above (last in this step's list) assumes the parent stays tracking-only, per `modules/size-workflow-table.md`'s XL row (empty `## Changed Files`, Verify: "—"). If the parent's Pre-merge acceptance criteria include a condition needing an aggregate artifact (集約成果物), that artifact must come from a dedicated sub-issue in the dependency graph — not a parent-level code phase, which this route does not have (see `modules/size-workflow-table.md` § "XL Parent Aggregate Deliverables" for the full pattern): a sub-issue `blocked_by` every contributing sub-issue for post-fan-out aggregation (#1158-type), or a level-0 sub-issue that every domain sub-issue is `blocked_by`, for a pre-fan-out prerequisite (#1270-type). Both shapes run through this same level-ordered loop (Step 4) with no XL route changes — by the time this step's parent (親) verify call runs, any aggregation sub-issue has already completed in an earlier level.
+
 ### Step 4c: XL Parent Issue Close Flow (XL route only)
 
 **Skip this step for all routes other than XL.**
