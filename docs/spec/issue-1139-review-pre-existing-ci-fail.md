@@ -28,6 +28,7 @@ Step 9 の「Blocking by default」段落が、CI FAILURE の**帰属** (この 
 
 - saito / MEMBER / first-class / Issue Retrospective — 起票時原案から既存 `pre-merge-check.sh` 再利用への方針転換、AC 全面差し替え、タイトル更新の記録 (本 Spec の Overview・Root Cause に反映済み) / https://github.com/saitoco/wholework/issues/1139#issuecomment-5374156795
 - saito / MEMBER / first-class / Triage AC audit 警告 — AC2 の `section_contains` 第2引数に見出し記号を含めており恒久的 UNCERTAIN になるとの指摘。修復案どおり `"## Step 9"` を `"Step 9"` に修正して Issue body に反映済み / https://github.com/saitoco/wholework/issues/1139#issuecomment-5374190752
+- (review phase) No new comments since last phase.
 
 ## Changed Files
 
