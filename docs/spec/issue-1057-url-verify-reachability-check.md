@@ -36,3 +36,31 @@ URL を引数に取る verify command (`http_status`/`html_check`/`api_check`/`h
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。実行順序の補足 (ラベル遷移が Comment Consumption Procedure より先に実行された旨) と、`html_check` の実装が既に `pup` から `scripts/html-selector-match.py` (#1056) へ置き換わっている事実確認 (Issue 本文のコードスニペットは現行実装に更新済み)、AC3 (`grep "http_status"` → `grep "reachability"`) の修正根拠、AC1/AC2 への `section_contains` 補助チェック追加根拠を記録している。 (https://github.com/saitoco/wholework/issues/1057#issuecomment-5365701169)
 - saito (MEMBER, first-class): Triage AC audit コメント。AC2/AC4 の `section_contains` heading 引数に残っていた `###` が常時 UNCERTAIN を引き起こすパターン (Pattern 6-1) を指摘。`modules/verify-executor.md` の仕様と照合のうえ、Issue 本文の AC2/AC4 を修正済み (詳細は本 Notes 冒頭の項目を参照)。 (https://github.com/saitoco/wholework/issues/1057#issuecomment-5365729524)
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps に記載された挿入位置・内容の通りに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted the "URL reachability check" section exactly at the position specified in the Spec's Implementation Steps (between the "String-matching verify command existence check" block and "Notes and verify command consistency"), matching the Spec verbatim with no adjustment.
+- Enumerated the exact command set from `modules/verify-executor.md`'s translation table (`http_status`/`html_check`/`api_check`/`http_header`/`lighthouse_check`/`browser_check`/`browser_screenshot`) rather than paraphrasing, so the AC3 rubric check ("target commands are enumerated") can match unambiguously.
+
+### Deferred Items
+- Post-merge AC (manual) — creating a Spec with a trailing-slash URL and confirming the warning + redirect candidate appear — is left for post-merge manual verification, per the Issue's own AC classification.
+
+### Notes for Next Phase
+- This is a patch route (direct commit to main, no `/review`/`/merge` phase) — `/verify` is the next phase and should focus on the post-merge manual AC.
+- Full `bats tests/` suite (1904 tests) was run and passed due to Behavioral Change Detection matching `tests/check-file-overlap.bats`, `tests/run-spec.bats`, and `tests/operate-route.bats` (all reference `skills/spec/SKILL.md` outside the direct `tests/spec.bats` counterpart) — no action needed, just informational for `/verify`.
