@@ -229,22 +229,20 @@ Non-blocking outcome handling の文言が `PRE_EXISTING`/`FIXED`/`CLEAN` の 3 
 Pre-merge AC 8件は `rubric`/`section_contains`/`file_contains`/`command` のいずれも一発 PASS で、UNCERTAIN は発生しなかった。`section_contains "Step 9" "..."` のような見出し記号を含まない第2引数指定 (Issue #1139 自身の Triage 指摘で既に修正済み) が、後続の AC 作成時のテンプレートとして有効であることを再確認した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- review-bug 2 系統 + 検証サブエージェントで 6 件中 4 件を PASS と判定 (2 件は「到達不能なコードパス」「実測 8 秒で timeout 対象外」として REJECT)。review-spec の 5 件は検証なしで直接反映するルールどおり統合。
-- SHOULD 3 件 (`skills/review/SKILL.md` Non-blocking outcome handling の誤記述+配線漏れ、`docs/workflow.md`、`docs/structure.md`) を Fix Work で修正。CONSIDER 3 件 (`CLEAN` の merge-ref 未検出エッジケース、`orchestration-fallbacks.md` の step 番号誤り、CI Status テンプレート例不足) は severity 相応として意図的にスキップし 12.4 に記録。
-- `docs/workflow.md`/`docs/structure.md` の修正は `docs/translation-workflow.md` の同期義務に従い `docs/ja/workflow.md`/`docs/ja/structure.md` も同一コミットで更新した。
+- pre-merge AC gate: `check-pre-merge-ac.sh` で 8 件全て checked、`reconcile-phase-state.sh review --check-completion` で review completion は organic (fallback 起源ではない) と確認した上でゲートを通過。
+- `gh-pr-merge-status.sh` で `mergeable=true, reason=clean, ci_status=success, review_status=approved` を確認し、conflict 解消フローは不要と判断。
+- squash merge (`gh pr merge --squash --delete-branch`) を実行し、`origin/main` へ ff-only で追従。
 
 ### Deferred Items
 
-- CONSIDER 3 件 (前述) は本 PR では未対応のまま。実害が顕在化した場合に別 Issue で再検討する。
-- PRE_EXISTING 検出時のフォローアップ Issue 自動起票は実装しない (Spec の Deferred Items を維持)。
+- CONSIDER 3 件 (review phase から引き継ぎ、前 Phase Handoff 参照) は本 PR では未対応のまま。
 - Post-merge AC (`session=next` observation) は `/verify` フェーズで評価される。
 
 ### Notes for Next Phase
 
-- `/merge` 前に CI が全 15 件 SUCCESS であることを確認済み (`Forbidden Expressions check` も含め本 PR 自体は pre-existing 違反を持たない状態)。
-- Fix Work で `skills/review/SKILL.md` を変更したため、`/merge` 後に再度 `bats tests/review.bats` が CI で通ることを確認すること (worktree 内では 24/24 PASS 確認済み)。
-- 本 PR は `/review` Step 9 自身を変更する自己言及的な PR — 次回同種の Issue (Step 9/Step 10 の配線を伴う変更) では、Spec Implementation Steps に「Step 10 の injection 指示も更新対象に含める」ことを明記すると review フェーズでの手戻りを避けられる。
+- `/verify` では、次回 main に pre-existing な禁止表現違反が存在する状態で無関係な PR の `/review` を実行した際、当該違反が MUST 化されないことを観察すること (post-merge AC)。
+- Fix Work で変更された `skills/review/SKILL.md` は squash merge 後の main に含まれている。`bats tests/review.bats` が CI で通ることを確認すること。
