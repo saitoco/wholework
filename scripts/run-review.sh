@@ -130,69 +130,11 @@ _gh_api_bounded() {
 }
 
 # Resolve PREVIEW_URL from a project-declared preview-url-command (Issue #1410),
-# when PREVIEW_URL is not already exported. Bounded to 30s (same 3-stage
-# timeout/gtimeout/plain fallback as _gh_api_bounded above). Any failure mode
-# (non-zero exit, empty output, output over 2048 chars, non-http(s) output)
-# falls back to the existing Deployments API polling path unchanged.
+# delegating guard logic to the shared resolver (scripts/resolve-preview-env.sh, Issue #1428).
 _resolve_preview_url_command() {
-  local _cmd
-  _cmd=$("$SCRIPT_DIR/get-config-value.sh" preview-url-command "" 2>/dev/null || echo "")
-  [[ -z "$_cmd" ]] && return 0
-
-  _cmd="${_cmd//\{pr\}/$PR_NUMBER}"
-
-  local _resolved _resolved_status
-  if command -v timeout >/dev/null 2>&1; then
-    _resolved=$(timeout --kill-after=10 30 bash -c "$_cmd" 2>/dev/null)
-    _resolved_status=$?
-  elif command -v gtimeout >/dev/null 2>&1; then
-    _resolved=$(gtimeout 30 bash -c "$_cmd" 2>/dev/null)
-    _resolved_status=$?
-  else
-    # No timeout/gtimeout available (e.g. stock macOS without coreutils):
-    # bound the command manually via a background watchdog, since an
-    # unbounded arbitrary project script would otherwise stall this gate
-    # indefinitely (WHOLEWORK_PREVIEW_TIMEOUT_SEC does not cover this call).
-    mkdir -p .tmp 2>/dev/null || true
-    local _tmpout=".tmp/preview-url-command-output.$$"
-    bash -c "$_cmd" >"$_tmpout" 2>/dev/null &
-    local _cmd_pid=$!
-    ( sleep 30; kill -0 "$_cmd_pid" 2>/dev/null && kill -9 "$_cmd_pid" 2>/dev/null ) &
-    local _watchdog_pid=$!
-    wait "$_cmd_pid" 2>/dev/null
-    _resolved_status=$?
-    kill "$_watchdog_pid" 2>/dev/null
-    wait "$_watchdog_pid" 2>/dev/null
-    _resolved=$(cat "$_tmpout" 2>/dev/null)
-    rm -f "$_tmpout"
-  fi
-
-  if [[ "$_resolved_status" -ne 0 ]]; then
-    echo "Warning: preview-url-command exited non-zero (status=${_resolved_status}); falling back to Deployments API polling" >&2
-    return 0
-  fi
-
-  _resolved=$(printf '%s' "$_resolved" | head -n 1 | tr -d '\r')
-  local _resolved_trimmed
-  _resolved_trimmed="${_resolved#"${_resolved%%[![:space:]]*}"}"
-  _resolved_trimmed="${_resolved_trimmed%"${_resolved_trimmed##*[![:space:]]}"}"
-
-  if [[ -z "$_resolved_trimmed" ]]; then
-    echo "Warning: preview-url-command produced empty output; falling back to Deployments API polling" >&2
-    return 0
-  fi
-  if [[ "${#_resolved_trimmed}" -gt 2048 ]]; then
-    echo "Warning: preview-url-command output exceeds 2048 chars; falling back to Deployments API polling" >&2
-    return 0
-  fi
-  if ! [[ "$_resolved_trimmed" =~ ^https?://[^[:space:]/]+ ]]; then
-    echo "Warning: preview-url-command output is not an http(s) URL; falling back to Deployments API polling" >&2
-    return 0
-  fi
-
-  PREVIEW_URL="$_resolved_trimmed"
-  export PREVIEW_URL
-  echo "Resolved PREVIEW_URL via preview-url-command for PR #${PR_NUMBER}" >&2
+  local _resolved
+  _resolved=$("$SCRIPT_DIR/resolve-preview-env.sh" url "$PR_NUMBER") || return 0
+  [[ -n "$_resolved" ]] && { PREVIEW_URL="$_resolved"; export PREVIEW_URL; }
 }
 
 # Resolve PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS from a project-declared
