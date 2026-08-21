@@ -78,17 +78,27 @@
 ### Rework
 - なし。New Verification-Test Pre-implementation FAIL Check により、新規 4 件のテストがすべて実装前の SKILL.md に対して FAIL することを確認済み (Confirmed pre-implementation FAIL for 4 new test(s))。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. PR diff は Spec の Implementation Steps 1–3 (Step 8 例外文、"Step 8/Step 11 Commit Boundary" 小節の新設位置、closes #N / reconcile-phase-state.sh への言及追加、Fallback セクションの配置、`tests/code.bats` の3ケース追加) と正確に一致していた。
+
+### Recurring issues
+- `review-light` の Edge Cases/Robustness 観点が、Step 11 の新設 Fallback セクションに対して2件の関連する欠落 (ガードチェックとの実行順序が未定義、`BASE_BRANCH == main` によるガーティング漏れ) を検出した。どちらも「新しい分岐ロジックを SKILL.md に追加する際、既存の隣接ロジック (ガードチェック、BASE_BRANCH 条件分岐) との相互作用を明示的に記述し忘れる」という共通パターン。手続き文書に新しい分岐を挿入する際は、既存の隣接する条件分岐/ガードとの実行順序・適用条件を明示する習慣が有効と考えられる。
+
+### Acceptance criteria verification difficulty
+- Nothing to note. 4件すべて rubric 型の verify command で、PR diff から明確に PASS 判定でき UNCERTAIN は発生しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec のハイブリッド案 (B 主・A 従) をそのまま採用: Step 8 に patch route 限定の最終ステップ commit deferral 例外を追加し、Step 11 に push 前後で分岐する fallback (`--amend` / `--allow-empty`) を追加した。
-- pr route は closes-commit 衝突が存在しないため Step 8 の変更対象から明示的に除外し、そのことを Step 8 の例外文と新設小節の両方に明記した。
-- `tests/code.bats` に `step8_section()` を新設し、既存の `step11_section()` と同じ awk 抽出パターンを踏襲した。
+- Step 10.0 (lightweight integrated review, Size M) で検出された3件の SHOULD 指摘 (すべて `skills/code/SKILL.md` の新設 Fallback セクション周辺) はいずれも実装として埋める価値があると判断し、`/review` フェーズ内で修正した: (1) ガードチェックを Fallback の後ろに移動し常に最終 HEAD を検証、(2) Fallback の closes #N 付与を `BASE_BRANCH == main` でガーティング、(3) 空コミット例のインラインコードスパンをフェンスコードブロックに変更。
+- 3件とも MUST ではなく SHOULD だったが、いずれも本 Issue が対象とする残余ケース (`Step 8 leaves no new diff`) 自体の正確性に関わるため修正を選択。CONSIDER 相当の軽微な指摘であれば見送っていた。
 
 ### Deferred Items
 - None.
 
 ### Notes for Next Phase
-- Post-merge AC (opportunistic) は「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」。今回の実装自体は pr route のため、この AC は本 PR のマージ後、別の patch route Issue での日常実行を待って自然に検証される。
-- 4 件の pre-merge AC (すべて rubric) は Issue #1134 上で `- [x]` 済み。`/review` は通常どおり safe mode で再評価する。
+- 修正後、`bats tests/code.bats` 25/25 PASS、`validate-skill-syntax.py` 0 errors/0 warnings、`check-forbidden-expressions.sh` clean を再確認済み。`/merge` はこの再検証結果を前提に進めてよい。
+- Post-merge AC (opportunistic: 「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」) は未検証のまま。今回の `/review` 修正はまさにこの残余ケースのロジックを変更したため、実際に patch route Issue で踏まれるタイミングで重点的に確認する価値がある。
