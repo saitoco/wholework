@@ -84,3 +84,31 @@ Implementation Steps はいずれも `modules/size-workflow-table.md`・`skills/
 
 - saito / MEMBER / first-class / Issue Retrospective: 方針 A'/C の追加と verify command (rubric + section_contains) 修正の判断根拠 / https://github.com/saitoco/wholework/issues/1241#issuecomment-5373035513
 - saito / MEMBER / first-class / Triage AC audit: `section_contains` の heading 引数から先頭 `###` を除去する修復案 (AC1・AC2 に適用済み、Notes 参照) / https://github.com/saitoco/wholework/issues/1241#issuecomment-5373071696
+- No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1・2 とも Spec 記載の挿入位置・見出しレベル (`####`)・本文をそのまま実装した。手順の並べ替え・省略・別方式への変更は発生していない。
+
+### Design Gaps/Ambiguities
+- AC4 (方針比較の記録) の rubric verify command は Spec ファイルへの言及のみで、`modules/verify-executor.md` § "Primary evidence outside git diff / Issue body" が求める明示的なファイルパス指名を欠く。rubric grader の既定スコープ (Issue 本文 + git diff + 名指しされたファイル) には Spec が含まれないため、独立した grader 呼び出しでは UNCERTAIN になり得る。本フェーズでは Spec 内容 (`## Notes` の方針比較) を直接確認した上で PASS と判定したが、AC 自体の verify command 品質としては改善余地がある。Step 10 の AC 整合性チェックは refactor 起因の乖離修正のみを対象とするため、本 Issue の scope 外として記録に留めた。
+
+### Rework
+- N/A — 手戻りは発生していない。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1・2 を修正なしでそのまま実装した (方針 C: 前提作業・集約作業を通常の sub-issue として `blocked_by` でモデル化)。
+- `modules/size-workflow-table.md` の `### Size-to-Workflow Mapping Table` 節に `####` レベルで新セクションを追加し、`section_contains` の検証スコープが `### ALWAYS_PR Override` (次の `###` 見出し) で正しく終端されることを確認した。
+- Pre-merge AC 4 件 (rubric + section_contains) を Step 10 で全て PASS と判定し、Issue チェックボックスを更新した。post-merge AC (observation event=auto-run session=next) は次回 XL Issue 実行時の確認待ちのまま残した。
+
+### Deferred Items
+- Post-merge AC「次回 XL Issue の `/auto` 実行で、親が成果物を持つ場合に手動介入なく完走することを確認する」は `verify-type: observation event=auto-run session=next` のため未評価のまま — 次回該当パターンの XL Issue が `/auto` で走るまで判定不可。
+- AC4 の rubric verify command が Spec ファイルパスを明示的に名指ししていない点 (Design Gaps/Ambiguities 参照) — 本 Issue の scope 外として未修正。
+
+### Notes for Next Phase
+- `/verify` は Pre-merge 4 件が既にチェック済みであることを踏まえ、Post-merge の observation AC のみが未判定である点に注意する。
+- AC4 の rubric スコープ gap は次回同様の rubric AC を書く際の参考情報として `modules/verify-executor.md` § "Primary evidence outside git diff / Issue body" と合わせて参照するとよい。
