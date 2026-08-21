@@ -183,3 +183,65 @@ export -f emit_event
 ```
 
 This reproduces the observable side effect required by the assertions while keeping mock output controlled and deterministic.
+
+## Bash 3.2: Bare `[[ ]]` Assertions Do Not Propagate `set -e`
+
+macOS ships bash 3.2.57(1)-release as `/bin/bash` (the last GPLv2 release; Apple has not updated the system bash since). Under this version, when a `[[ ... ]]` compound command is written as a standalone statement inside a bats `@test` body, `set -e` (errexit) does not propagate its failure. If the condition is false, the test function still returns normally and bats reports "ok" (PASS) — even though the assertion should have FAILed. This is a known bash 3.2 limitation; bash 4.x and later propagate the failure correctly.
+
+Because bats runs each `@test` body under `set -e`-equivalent semantics, this pitfall silently defeats content assertions (`$output` / `$status` checks) on macOS local runs, while CI (typically a newer bash on the Ubuntu runner) may not reproduce it — giving a false sense that the suite fully validates content when it may not, depending on where it runs.
+
+### Principle
+
+> Never write a bare `[[ ... ]]` as a standalone statement to assert `$output` or `$status` in a bats test body. Use a form whose failure reliably propagates regardless of the bash version running it.
+
+### Unsafe
+
+```bash
+@test "example" {
+  run echo "hi"
+  [[ "$output" == "hi" ]]
+}
+```
+
+On bash 3.2, if `$output` is not `"hi"`, this line evaluates false but the test still reports "ok".
+
+### Safe
+
+Single-bracket (POSIX `test`) form:
+
+```bash
+@test "example" {
+  run echo "hi"
+  [ "$output" = "hi" ]
+}
+```
+
+`grep -q` form:
+
+```bash
+@test "example" {
+  run echo "hi there"
+  echo "$output" | grep -q "hi"
+}
+```
+
+Explicit propagation with `|| false`:
+
+```bash
+@test "example" {
+  run echo "hi"
+  [[ "$output" == "hi" ]] || false
+}
+```
+
+Any of these three forms fails reliably on bash 3.2 as well as bash 4.x+.
+
+### Detection
+
+`scripts/check-bare-bracket-assertions.sh` scans `tests/*.bats` for bare `[[ "$output"` / `[[ "$status"` assertions without a trailing `|| false`, and lists them as a warning (always exits 0 — informational visualization only, does not fail the build; see Issue #1412). Run it locally with:
+
+```bash
+bash scripts/check-bare-bracket-assertions.sh
+```
+
+This is equivalent to the CI `bare-bracket-assertions` job. Existing detected instances are not required to be fixed as part of an unrelated change — bulk rewrite of pre-existing occurrences is tracked separately from new-test hygiene.
