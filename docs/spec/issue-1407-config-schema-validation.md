@@ -76,20 +76,19 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Both pre-merge rubric AC judged PASS in Step 8, with direct execution verification (ran `scripts/check-config-schema.sh` against the repo's own `.wholework.yml` and against an injected typo fixture) rather than relying solely on the grader's diff reading.
-- Fired the Parser/Validator Edge Case Pre-check (new script parses external `.wholework.yml` content) and had a sub-agent actually execute the script against 14 fixtures across the 5 standard input axes — this is what surfaced the one real finding (see Deferred Items → now Resolved).
-- Fixed the 1 SHOULD finding (key-extraction regex silently skipping whitespace-before-colon and metacharacter/quoted top-level keys) directly in this review pass rather than deferring, since it was a small, well-scoped, high-confidence fix with 3 new regression tests (8/8 bats PASS) and a clean CI re-run (15/15 SUCCESS).
+- Squash-merged PR #1425 directly under `mergeable=true`/`ci_status=success`/`review_status=approved`, with pre-merge AC gate confirming 0 unchecked conditions and no review-incomplete-fallback flag — no override marker needed.
+- No rebase/conflict resolution was required (mergeable=clean).
 
 ### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — left unchecked for post-merge opportunistic verification, as specified. Still open (unchecked in Issue body) as of this review.
-- Nested child key typo detection (e.g. `capabilities.browsr`) remains explicitly out of scope per the Issue's AC1 rubric wording ("top-level keys actually present") — not a gap to revisit unless a follow-up Issue requests it.
+- Post-merge AC (`verify-type: opportunistic`): confirming an intentionally typo'd key (e.g. `autonomy-tier:`) actually produces a CI warning — still unchecked, carried forward for `/verify`.
+- Nested child key typo detection (e.g. `capabilities.browsr`) remains explicitly out of scope per the Issue's AC1 rubric wording — not a gap to revisit unless a follow-up Issue requests it.
 
 ### Notes for Next Phase
-- `/merge` can proceed directly — no MUST issues, CI green (15/15), fix commit `fade4fea` pushed and CI re-verified green after the fix.
-- `scripts/check-config-schema.sh` now also emits a generic "Unrecognized top-level key syntax" warning for lines that don't match the plain key-name pattern (quoted/backticked/metachar keys) — if `/verify`'s post-merge opportunistic check for the typo'd key exercises a plain key name (as the Issue's example `autonomy-tier:` does), it will still hit the original "Unknown key" message path, not the new catch-all.
+- `/verify` should exercise the opportunistic post-merge check: inject a typo'd top-level key (e.g. `autonomy-tier:`) into a test `.wholework.yml` and confirm `scripts/check-config-schema.sh` / the CI job emits a warning.
+- Note the catch-all "Unrecognized top-level key syntax" warning path exists for quoted/backticked/metachar keys, separate from the plain "Unknown key" path — a plain key name like `autonomy-tier:` will hit the original path.
 
 ## review retrospective
 
