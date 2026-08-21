@@ -78,11 +78,7 @@ Issue 本文のチェックボックス列挙 (1-based AC enumeration convention
 
 ### Pre-merge 検証項目数について (Simplicity rule との関係)
 
-Issue 本文の Pre-merge acceptance criteria は 6 件 (light 深度の目安 5 件をわずかに超過)。これは `/issue` フェーズの Autonomous Auto-Resolve Log で 4 件 → 6 件へ意図的に拡張された結果であり (Consumed Comments 参照)、Verify command sync rule (Issue 本文の Pre-merge を Spec へ verbatim コピーし、独自に書き換えない) を優先し、6 件のまま維持した。件数削減のための統合・省略は行っていない。
-
-### Consumed Comments
-
-- saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective コメント (前フェーズ = `/issue` の Autonomous Auto-Resolve Log)。3 件の曖昧点 (SSoT 定義先を `modules/l0-surfaces.md` に決定、`check-pre-merge-ac.sh` を Pre-merge AC に追加、`skills/verify/SKILL.md` の checkbox 列挙処理を Pre-merge AC に追加) を自動解決し、既に Issue 本文へ反映済み。本 Spec はこの反映済み本文をそのまま設計のベースラインとして使用した (追加のアクションなし)。/ https://github.com/saitoco/wholework/issues/1071#issuecomment-5366096314
+Issue 本文の Pre-merge acceptance criteria は 6 件 (light 深度の目安 5 件をわずかに超過)。これは `/issue` フェーズの Autonomous Auto-Resolve Log で 4 件 → 6 件へ意図的に拡張された結果であり (`## Consumed Comments` 参照)、Verify command sync rule (Issue 本文の Pre-merge を Spec へ verbatim コピーし、独自に書き換えない) を優先し、6 件のまま維持した。件数削減のための統合・省略は行っていない。
 
 ### Scope expansion beyond Issue body (`scan-pending-ac.sh` / `rank-verify-backlog.sh`)
 
@@ -122,7 +118,8 @@ Issue 本文 Purpose は `modules/l0-surfaces.md` を「既存の『1-based AC e
 
 ### Issue retrospective / spec retrospective の扱い
 
-SPEC_DEPTH=light のため Step 13 (Spec Retrospective、issue retrospective 転記を含む) は skip する。`/issue` フェーズの Autonomous Auto-Resolve Log 全文は Issue #1071 のコメント (上記 Consumed Comments 参照) に記録済みであり、要点は本 Notes の各節 (Scope expansion / Step 番号の表記ゆれ / SSoT の扱い) に反映済みのため、本 Spec 内での重複転記はしない。
+SPEC_DEPTH=light のため Step 13 (Spec Retrospective、issue retrospective 転記を含む) は skip する。`/issue` フェーズの Autonomous Auto-Resolve Log 全文は Issue #1071 のコメント (`## Consumed Comments` セクション参照) に記録済みであり、要点は本 Notes の各節 (Scope expansion / Step 番号の表記ゆれ / SSoT の扱い) に反映済みのため、本 Spec 内での重複転記はしない。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: `/issue` フェーズの Issue Retrospective コメント (Autonomous Auto-Resolve Log)。3 件の曖昧点 (SSoT 定義先を `modules/l0-surfaces.md` に決定、`check-pre-merge-ac.sh` を Pre-merge AC に追加、`skills/verify/SKILL.md` の checkbox 列挙処理を Pre-merge AC に追加) を自動解決し、既に Issue 本文へ反映済み。本 Spec はこの反映済み本文をそのまま設計のベースラインとして使用した (追加のアクションなし) / url: https://github.com/saitoco/wholework/issues/1071#issuecomment-5366096314
