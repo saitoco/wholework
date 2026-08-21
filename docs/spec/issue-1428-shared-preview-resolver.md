@@ -150,3 +150,35 @@ Precedent 調査 (`/issue` Step 12a) が発見した `#1053` の先例 (`skills/
 ## Consumed Comments
 
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` 起票時点の Proposal 例示 (`resolve-preview-env.sh url --key preview-url-command`) は「How」レベルの実装詳細を含んでいたが、Basic Auth モード (`#1429`) が別サブコマンドとして拡張する設計を踏まえると `--key` フラグは不要と判明した。`/issue` の Proposal 記述はあくまで「共有スクリプト化」という方向性の例示であり、正確なインターフェースは `/spec` が決めるべき — `/issue` (What) vs `/spec` (How) の責任境界どおりに機能した一例
+
+### Judgment rationale
+
+- インターフェース簡略化 (`--key` フラグ削除) は自動解決。Basic Auth 用の別サブコマンドが `#1429` で追加される設計のため `url` サブコマンドの汎用性は不要、かつ AC 本文への影響もないため
+- Fast path 拡張の挿入順序 (env既存 → preview-url-command → Deployments API) は Issue 本文の Proposal item 4 が明記する優先順位から一意に確定できた
+
+### Uncertainty resolution
+
+- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式 (Deployments API 経路・preview-url-command 経路の両方) の相互作用は、コードベース調査で新たに発見した未解決の疑問点。既存 (Deployments API) 経路にも同じ特性があり #1428 固有の新規欠陥ではないと判断し、Pre-merge AC には含めず Uncertainty として記録した。`/code` 実装後に実地確認し Code Retrospective に記録する運用とした
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- `_resolve_preview_url_command()` を薄いラッパー化する際、既存コメント文言に `preview-url-command` の文字列を意図的に保持し、#1410 の既存 verify command (`grep "preview-url-command" "scripts/run-review.sh"`) を壊さない設計にした
+- 共有スクリプトは呼び出し元 CWD に依存せず `git worktree list --porcelain` で MAIN_REPO_ROOT を自前解決する設計にした — worktree 内で動く `/review` 直接実行と main repo root で動く `run-review.sh` の信頼境界を揃えるため
+- インターフェースを `--key` フラグなしの `url` サブコマンド固定に簡略化した (Basic Auth は #1429 が別サブコマンドで追加する設計のため)
+
+### Deferred Items
+- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用の実地確認 (Uncertainty 節参照) — `/code` が実装後に確認し Code Retrospective に記録する
+- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` での Basic Auth 解決は `#1429` の Known Gap として既に対象外 (本 Issue はそもそも Basic Auth を扱わない)
+
+### Notes for Next Phase
+- `tests/run-review.bats` の既存13テスト (L511-741付近) が薄いラッパー化後も同じ出力文言・exit code で PASS することを必ず確認すること — メッセージ文言を1文字でも変えると壊れる
+- `scripts/resolve-preview-env.sh` は fail-safe critical (fail-open設計) — 依存コマンド失敗時に fail-closed 化しないこと
+- `docs/ja/guide/customization.md` / `docs/ja/guide/adapter-guide.md` / `docs/ja/structure.md` の ja ミラー更新を忘れないこと (`docs/translation-workflow.md` の同期手順に従う)
