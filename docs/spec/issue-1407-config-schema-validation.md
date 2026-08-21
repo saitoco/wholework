@@ -60,3 +60,6 @@
 - **`verify-type: opportunistic` の整合性 (軽微な観察)**: Post-merge AC の `verify-type: opportunistic` タグは `modules/verify-classifier.md` の厳密な定義 ("verify X when `/skill-name` is run" パターン) と完全一致はしない (実態は「CI 実行時に」観測される一度きりの確認に近い) が、Issue 本文で既に確定済みのタグであり AC 文言自体は不変のため、そのまま踏襲した。
 - **Steering Docs sync candidate 調査結果**: `modules/detect-config-markers.md` への参照は23件以上の既存ファイルに及ぶが、本 Issue の変更はキー一覧/変数セマンティクスを変更せず、ファイル冒頭への1行ポインタ追加のみのため、上記 Changed Files 以外の追加更新は不要と判断した。`docs/versioning.md` Gate 4b (リリース時の手動チェックリスト、`docs/guide/customization.md` § Available Keys と `modules/detect-config-markers.md` の突き合わせ) は本 Issue とは別目的 (2ドキュメント間の整合性、本 Issue は `.wholework.yml` 実体とドキュメントの整合性) のため変更不要と判断した。
 - **Consumed Comments**: `/spec` フェーズ開始時点で新規コメントなし (Issue Retrospective コメント1件のみで、Issue 本文の Auto-Resolved Ambiguity Points と同内容のため新規指示なし)。詳細は本ファイル末尾の `## Consumed Comments` セクションを参照。
+
+## Consumed Comments
+No new comments since last phase.
