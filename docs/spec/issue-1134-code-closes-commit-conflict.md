@@ -99,5 +99,31 @@
 ### Deferred Items
 - Post-merge AC (opportunistic: 「Implementation Steps が 2 つ以上の patch route Issue で `/code` を実行し closes #N が決定的に付与されることを確認する」) は未検証のまま。`/verify` フェーズで重点的に確認する価値がある。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。Issue が提示した A/B/C 案から B 主・A 従のハイブリッドを spec フェーズで確定させており、code フェーズで新たな曖昧さは生じていない。
+
+#### design
+- (spec と統合、上記参照)
+
+#### code
+- 特筆事項なし。Rework なし、Design Gaps/Ambiguities もなし。本 Issue 自身の実装は pr route のため Step 8/Step 11 の衝突対象外だった旨が明記されている。
+
+#### review
+- **Recurring issues に記録された再発パターンが本 Verify Retrospective でも特筆に値する**: `review-light` が Step 11 の新設 Fallback セクションについて「既存の隣接ロジック (ガードチェック、`BASE_BRANCH == main` 条件分岐) との相互作用の記述漏れ」を2件検出した。これは「手続き文書 (SKILL.md) に新しい分岐ロジックを追加する際、既存の隣接する条件分岐/ガードとの実行順序・適用条件を明示し忘れる」という一般化可能なパターンであり、review retrospective 自身が「習慣として有効」と述べている。本 Issue の対象がまさに SKILL.md の commit タイミング規約の明文化であったため、このメタ的な教訓 (手続き文書編集時のレビュー観点) は Issue の中身と独立した価値を持つ。
+
+#### merge
+- 特筆事項なし。PR #1430 は mergeable=true (CI success, review approved) で conflict resolution 不要だった。
+
+#### verify
+- FAIL・UNCERTAIN なし。Pre-merge 4件は already-checked で SKIPPED。Post-merge opportunistic 1件は本 Issue 自身の `/verify` では判定対象外 (他 Issue 処理時のスイープで解決)。
+- **External kill recovery (別件)**: review フェーズで external kill が発生し respawn で復旧した (`docs/reports/orchestration-recoveries.md` に既に記録済み — Issue #1134, phase: review)。これは検証結果 (Pre-merge/Post-merge AC の PASS/FAIL) には影響しておらず、`docs/reports/orchestration-recoveries.md` が SSoT のため本セクションでの重複記録はしない。
+
+### Improvement Proposals
+- `/review` (特に `review-light`) が SKILL.md 等の手続き文書への分岐ロジック追加を検査する際、「新設ロジックが既存の隣接する条件分岐/ガードとの実行順序・適用条件を明示しているか」を明示的なチェック観点として持つと、同種の欠落 (今回2件) を review フェーズでより確実に検出できる可能性がある。単発の観測だが、`/code` SKILL.md 自身の Step 8/Step 11 関係 (Issue #1427 の Verify Retrospective で記録した別の教訓) とも「手続き文書の分岐条件の明文化不足」というテーマで緩やかに関連する。
+
 ### Notes for Next Phase
 - `/verify` は上記 post-merge AC の検証を担当する。今回の `/review` 修正 (Fallback セクションのガーティング等) がまさにこの残余ケースのロジックを変更したため、実際に patch route Issue で踏まれるタイミングでの挙動確認が重要。
