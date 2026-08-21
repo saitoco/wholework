@@ -425,6 +425,8 @@ If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills
 
 If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/forbidden-expressions-check.md` and follow the "Processing Steps" section.
 
+If `scripts/check-bare-bracket-assertions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/bare-bracket-assertions-check.md` and follow the "Processing Steps" section.
+
 **Documentation consistency check (run after validation):**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact assessment criteria" section to determine whether documentation sync updates are needed for files changed during implementation.

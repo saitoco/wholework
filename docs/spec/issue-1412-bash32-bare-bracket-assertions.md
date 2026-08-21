@@ -77,3 +77,43 @@ Issue の Purpose・Out of Scope は「既存 1000 件の可視化のみ」を�
 
 ## Consumed Comments
 - saito / MEMBER / first-class / Issue Retrospective posted by `/issue 1412 --non-interactive` (records Auto-Resolve rationale; already reflected in Issue body, no new decision needed for `/spec`) / https://github.com/saitoco/wholework/issues/1412#issuecomment-5364163591
+- No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- `scripts/check-bare-bracket-assertions.sh`'s `grep` call needed an explicit `-H` flag, not specified by the Spec's proposed `grep -nE '^[[:space:]]*\[\[ "\$(output|status)"' tests/*.bats` form. When the glob expands to exactly one matching file, `grep` omits the filename prefix by default, which broke both the self-exclusion check (comparing the extracted `file` field against `tests/check-bare-bracket-assertions.bats`) and the human-readable output format. Caught immediately by the pre-implementation FAIL check's bats tests (3 of 5 new tests failed against the `-H`-less version before the fix), not discovered later.
+- Two files outside the Spec's `## Changed Files` list were also touched: `docs/ja/structure.md` (Step 9's `docs/ja/` sync check detected a translation gap after `docs/structure.md` was edited) and the `test.yml` CI-job enumeration comment inside `docs/structure.md`'s Directory Layout tree (kept in sync with the newly added `bare-bracket-assertions` CI job, following the same prose-enumeration pattern the existing `check-forbidden-expressions` job already used there).
+
+### Design Gaps/Ambiguities
+- None beyond the `-H` flag gap above — the Spec's regex, exclusion rules, and integration points (SKILL.md Step 9, CI job placement) were otherwise directly implementable as written.
+
+### Rework
+- None. The pre-implementation FAIL check (5/5 new bats tests confirmed FAIL against the pre-implementation state) and the immediate post-fix full-suite run (1893/1893 PASS) meant the `-H` gap above was the only correction needed, caught and fixed within the same implementation step before any commit.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Reused a stale worktree (`review+pr-1424`) left over from an interrupted prior `/review` run on this same PR (owning process confirmed dead; no uncommitted changes) — that prior run had already posted the review (0 MUST, 1 SHOULD, 1 CONSIDER) and already committed/pushed the SHOULD fix. This run verified the fix and completed Steps 12.3–14 and Retrospective that the interrupted run never reached.
+- No policy change detected in Step 13 — the SHOULD fix (a continuation-line lookahead for `[[ ... ]] \` + `|| false` on the next line) is an implementation-only correctness fix within the already-passing rubric ACs, so the Issue's Acceptance Criteria text and verify commands were left unchanged.
+- The sole CONSIDER finding (cwd-dependent `tests/*.bats` glob expansion) was left unfixed per its own rationale: it matches the existing `check-forbidden-expressions.sh` precedent, and repo-root invocation is already the documented contract (CI job + `/code` Additional validation both run from repo root).
+
+### Deferred Items
+- Post-merge AC (bash version reproduction on CI, `verify-type: manual`) remains unchecked — carried over unchanged from `/code`'s handoff; still `- [ ]` in the current Issue body. To be resolved by `/verify` after merge by reading the `bare-bracket-assertions` CI job's `REPRO-CHECK:` log line.
+- Bulk rewrite of the ~987 existing bare-bracket assertions in `tests/*.bats` remains explicitly Out of Scope (unchanged from `/code`'s handoff).
+
+### Notes for Next Phase
+- `/merge`: 0 MUST issues, all CI jobs SUCCESS (including this PR's own new `bare-bracket-assertions` job), all 3 Pre-merge AC PASS — no blockers found.
+- `/verify` (post-merge): resolve the Post-merge manual AC per the Deferred Items note above.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+Nothing to note.
+
+### Recurring Issues
+The Parser/Validator Edge Case Pre-check's execution sub-agent caught a genuine edge case (backslash-continued `|| false` on the next physical line not recognized as safe, producing a false positive) in this PR's own new `check-bare-bracket-assertions.sh` detection script. This confirms the pre-check mechanism (introduced after #1055 / PR #1120) continues to generalize to new parser/validator changes beyond its originating case, rather than being a one-off catch.
+
+### Acceptance Criteria Verification Difficulty
+Nothing to note — all 3 Pre-merge conditions (2 rubric, 1 file_contains) resolved cleanly to PASS with no verify command ambiguity.

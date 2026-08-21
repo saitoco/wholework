@@ -70,6 +70,25 @@ jobs:
       - name: Check for forbidden expressions
         run: bash scripts/check-forbidden-expressions.sh
 
+  bare-bracket-assertions:
+    name: Bare Bracket Assertions check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Diagnose bash bare [[ ]] set -e propagation
+        run: |
+          bash --version
+          if bash -c 'set -e; [[ "1" == "2" ]]; echo UNREACHABLE'; then
+            echo "REPRO-CHECK: bare [[ ]] failure did NOT propagate through set -e (issue #1412 bug reproduced on this runner)"
+          else
+            echo "REPRO-CHECK: bare [[ ]] failure propagated through set -e correctly (issue #1412 bug not reproduced on this runner)"
+          fi
+
+      - name: Check for bare bracket assertions
+        run: bash scripts/check-bare-bracket-assertions.sh
+
   language-convention:
     name: Language Convention check
     runs-on: ubuntu-latest
