@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (91 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (92 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -31,11 +31,11 @@ wholework/
 │   │   ├── feature_request.yml  # Feature request Issue Form
 │   │   └── config.yml           # ブランク (テンプレートなし) Issue を無効化
 │   └── workflows/
-│       ├── test.yml             # CI: bats テスト、skill 構文検証、禁止表現チェック、裸括弧アサーションチェック、言語規約チェック、macOS シェル互換性テスト
+│       ├── test.yml             # CI: bats テスト、skill 構文検証、禁止表現チェック、config schema チェック、裸括弧アサーションチェック、言語規約チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (127 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (128 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -257,6 +257,7 @@ wholework/
 - `scripts/check-premise-expiry.sh` — Issue 本文の `<!-- premise: ... -->` マーカー (`grep_count`/`file_exists`/`file_not_exists`) を現在の作業ツリーに対して再評価する。失効時は exit 2 + stdout に `EXPIRED:` 行。それ以外は exit 0 (fail-open な `UNEVALUABLE:` 行は stderr に出力され exit code には影響しない)。`/audit premise` Step 2 Layer 1 から呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* の docs/* に対する翻訳同期状態をチェック
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms から非推奨用語を検出
+- `scripts/check-config-schema.sh` — `.wholework.yml` の未知/typo したトップレベルキーを `modules/detect-config-markers.md` の Marker Definition Table と突き合わせて検出する。`check-config-schema` CI ジョブから実行される
 - `scripts/check-bare-bracket-assertions.sh` — `|| false` を伴わない裸の `[[ "$output"/"$status"` bats アサーションを検出する (informational; ビルドを失敗させない)
 - `scripts/check-known-events-firing.sh` — `scripts/opportunistic-search.sh` の `KNOWN_EVENTS` の各エントリに実際の `--event <name>` 呼び出しサイトがあることを検証する (コメント行と echo/printf の使用文字列は除外)
 - `scripts/check-language-convention.py` — unified diff から skills/、modules/、scripts/ の英語専用パスに転記された CJK 文字を検出する。`language-convention` CI ジョブから実行される
