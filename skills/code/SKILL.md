@@ -267,7 +267,13 @@ The acceptance criteria associated with a deferred step **must not be checked of
 
 - Use TaskCreate/TaskUpdate to manage tasks while working
 - **DCO: always use `git commit -s` (--signoff)** — applies to all commits throughout this skill: Step 8 intermediate commits, Step 11 final commit, and Step 12 retrospective commit
-- Commit after each step completes
+- Commit after each step completes, with one exception: for **patch route**, do not commit the diff from the final Implementation Step here — leave it uncommitted and carry it into Step 11's required commit instead. This exception does not apply to pr route, since Step 11 there creates no independent summary commit and `closes #N` is written into the PR body instead (pr route commits every step here as before)
+
+#### Step 8/Step 11 Commit Boundary (patch route)
+
+Step 11's patch route commit is required to carry `closes #N`. If Step 8 committed every Implementation Step as it completed, no new diff would remain by the time Step 11 runs, leaving `closes #N` with nothing to attach to — this is exactly why the exception above deliberately leaves the final Implementation Step's diff uncommitted.
+
+Even so, residual cases can still leave Step 11 with a clean working tree — e.g. a `spec-approval-needed` deferral landing on the final step, or a resumed session where that diff was already committed and pushed. See Step 11's fallback (below, in the patch route commit block) for how to handle those cases.
 
 #### Allowed-tools Pre-commit Check
 
@@ -540,7 +546,7 @@ When a `## Smoke Test` section is present:
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and get the returned Type name (`Bug`/`Feature`/`Task`)
 2. If none are set (empty string): use `patch:` prefix
 
-Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch). This suffix is mandatory (not optional) whenever `BASE_BRANCH` is `main` — its absence from the actual implementation commit (rather than just the surrounding comment) caused a `concurrent_commit_detected` false-positive in the self-exclusion logic (Issue #996), since that logic matches on the `#N` pattern in the commit subject.
+Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch). This suffix is mandatory (not optional) whenever `BASE_BRANCH` is `main` — its absence from the actual implementation commit (rather than just the surrounding comment) caused a `concurrent_commit_detected` false-positive in the self-exclusion logic (Issue #996), since that logic matches on the `#N` pattern in the commit subject. `closes #N` is also a first-class signal that `reconcile-phase-state.sh`'s `_completion_code_patch()` uses to judge phase completion (see `modules/phase-state.md` § Phase Table, `code-patch` row) — failing to attach it causes an already-implemented Issue to be misjudged as a silent no-op (#1106, #1226).
 
 **DCO compliance: use `git commit -s` to add `Signed-off-by:`. Do NOT use the global HEREDOC pattern from `~/.claude/CLAUDE.md` — it omits `-s`.**
 
@@ -562,6 +568,19 @@ if [[ "$BASE_BRANCH" == "main" ]]; then
   git log -1 --format='%s' | grep -q "#$NUMBER" || { echo "ERROR: commit subject missing #$NUMBER reference (required when BASE_BRANCH is main)"; exit 1; }
 fi
 ```
+
+**Fallback when Step 8 leaves no new diff (residual case):**
+
+First check push state:
+
+```bash
+git log origin/main..HEAD --oneline
+```
+
+- **Non-empty (not yet pushed)**: amend the most recent commit with `git commit -s --amend`, appending `(closes #$NUMBER)` to the subject (preserve the body/trailers; skip if the subject already contains it). Example: `git commit -s --amend -m "$(git log -1 --format=%s) (closes #$NUMBER)" -m "$(git log -1 --format=%b)"`.
+- **Empty (already pushed)**: do not amend — that would rewrite already-pushed history. Instead create an empty commit reusing the same `{prefix} <summary>` construction as the normal flow above: `git commit -s --allow-empty -m "{prefix} <summary> (closes #$NUMBER)
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"`.
 
 Push is done in Step 14 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 14).
 
