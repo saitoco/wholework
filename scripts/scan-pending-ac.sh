@@ -36,7 +36,9 @@
 # Global 1-based checkbox index: counted over every `^- \[[ xX]\]` line in the
 # full Issue body (same convention as scripts/gh-issue-edit.sh --checkbox and
 # scripts/check-pre-merge-ac.sh), so returned ac_index values are directly
-# usable with gh-issue-edit.sh --checkbox.
+# usable with gh-issue-edit.sh --checkbox. Fenced code block lines are
+# excluded from this count — see modules/l0-surfaces.md § AC Enumeration
+# Convention (SSoT for this exclusion rule).
 #
 # Post-merge section range: from the line after a heading matching
 # `^### Post-merge` or `^## Post-merge` up to (but excluding) the next line
@@ -161,7 +163,9 @@ if [ "$ISSUE_COUNT" -eq "$LIMIT" ]; then
 fi
 
 AWK_PROGRAM='
-  BEGIN { idx = 0; in_section = 0 }
+  BEGIN { idx = 0; in_section = 0; in_fence = 0 }
+  /^[ \t]*```/ { in_fence = !in_fence; next }
+  in_fence { next }
   /^### Post-merge/ || /^## Post-merge/ { in_section = 1; next }
   /^## / || /^### / {
     in_section = 0

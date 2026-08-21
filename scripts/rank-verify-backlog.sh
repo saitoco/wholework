@@ -23,12 +23,11 @@
 # `^### Post-merge` or `^## Post-merge` up to (but excluding) the next line
 # matching `^## ` or `^### ` (same range convention as scan-pending-ac.sh).
 #
-# Code fence exclusion: a line matching `^[ \t]*```` toggles an in_fence flag,
-# independent of section tracking. While in_fence is true, no line is judged
-# as a checkbox line (in or out of the Post-merge section) — this excludes
-# sample/example checkbox text embedded in a fenced code block from both
-# auto_count and manual_count (regression guard for the false-positive
-# pattern hit in #709).
+# Code fence exclusion: see modules/l0-surfaces.md § AC Enumeration
+# Convention (SSoT for the in_fence exclusion rule this script pioneered as
+# a regression guard for the false-positive pattern hit in #709; #1071
+# applied the same pattern to gh-issue-edit.sh, check-pre-merge-ac.sh, and
+# scan-pending-ac.sh).
 #
 # Scoring: within the Post-merge section and outside any fence, each
 # unchecked `^- \[ \]` line is classified by whether it contains

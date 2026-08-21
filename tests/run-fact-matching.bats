@@ -509,6 +509,40 @@ MOCK
     [ "$count" = "1" ]
 }
 
+@test "scan-pending-ac: fenced sample checkbox lines are excluded from candidates (#709 pattern, issue #1071)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+  cat <<'JSON'
+[{"number": 702, "body": "### Post-merge\n\n- [ ] <!-- verify: rubric \"real\" --> real auto condition\n\n```\n- [ ] <!-- verify: rubric \"fake\" --> fenced sample checkbox\n- [ ] fenced manual sample\n```\n\n- [ ] manual after fence\n"}]
+JSON
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCAN_SCRIPT"
+    [ "$status" -eq 0 ]
+
+    count=$(echo "$output" | jq 'length')
+    [ "$count" = "2" ]
+
+    first_idx=$(echo "$output" | jq -r '.[0].ac_index')
+    [ "$first_idx" = "1" ]
+    first_cond=$(echo "$output" | jq -r '.[0].condition')
+    [ "$first_cond" = "real auto condition" ]
+
+    second_idx=$(echo "$output" | jq -r '.[1].ac_index')
+    [ "$second_idx" = "2" ]
+    second_cond=$(echo "$output" | jq -r '.[1].condition')
+    [ "$second_cond" = "manual after fence" ]
+
+    # neither fenced sample line's text must appear anywhere in the output
+    [[ "$output" != *"fenced sample checkbox"* ]]
+    [[ "$output" != *"fenced manual sample"* ]]
+}
+
 @test "scan-pending-ac: gh failure fails open with empty array" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
