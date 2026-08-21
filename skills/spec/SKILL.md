@@ -545,6 +545,17 @@ For string-matching verify commands (`grep`, `file_contains`, `file_not_contains
 
 If a pattern cannot be confirmed at Spec creation time, record the uncertainty explicitly (file path, section, pattern) in the Spec's "Uncertainties" section so `/code` can verify it before implementation.
 
+**URL reachability check:**
+
+For verify commands that take a URL argument (`http_status`, `html_check`, `api_check`, `http_header`, `lighthouse_check`, `browser_check`, `browser_screenshot`), confirm the URL is reachable before finalizing the Spec. `http_redirect` is out of scope — it expects a 3xx response by design, so a redirect is not a failure signal for that command.
+
+1. Extract the URL argument from each in-scope verify command.
+2. If the URL contains a variable that cannot be resolved at Spec creation time (e.g. `$PREVIEW_URL`), substitute `PRODUCTION_URL` (the `production-url` key in `.wholework.yml`) in its place — the redirect behavior for the same path on the same app is expected to match. If `PRODUCTION_URL` is not configured, skip this check for that URL and record a note in the Spec's "Uncertainties" section that the check was skipped for lack of a configured `production-url`.
+3. Run `curl -s --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "$URL"`.
+4. If the response is not 2xx: output a warning and, using `curl -s --connect-timeout 5 --max-time 10 -o /dev/null -w "%{redirect_url}" "$URL"`, present the redirect destination as a candidate replacement URL.
+5. If the URL is unreachable (DNS resolution failure, timeout, etc.): output a warning and continue — the target may not be deployed yet at Spec creation time.
+6. None of the above outcomes block Spec creation. Record any warning in the Spec's "Uncertainties" section and continue, following the same non-blocking pattern as the "String-matching verify command existence check" above.
+
 **Notes and verify command consistency (immediately after creating verify commands):**
 
 If Notes contain implementation direction statements, verify they do not contradict the corresponding verify commands. Correct discrepancies immediately.
