@@ -68,7 +68,7 @@ Details: [`skills/code/SKILL.md`](../skills/code/SKILL.md)
 
 ### 4. `/review` — Review
 
-Integrates PR acceptance criteria verification, multi-perspective code review, and issue resolution. MUST findings are auto-fixed before proceeding to `/merge`. Details: [`skills/review/SKILL.md`](../skills/review/SKILL.md)
+Integrates PR acceptance criteria verification, multi-perspective code review, and issue resolution. MUST findings are auto-fixed before proceeding to `/merge`, except an entry explicitly marked out of scope for this PR (see `skills/review/SKILL.md` Step 12.2). Details: [`skills/review/SKILL.md`](../skills/review/SKILL.md)
 
 **Review mode**: Auto-determined based on Size (Project field preferred → label fallback). Can also be explicitly specified with `--light`/`--full`.
 

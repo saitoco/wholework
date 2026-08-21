@@ -61,7 +61,7 @@ Spec に基づいて設計を実装します。サイズベースのルーティ
 
 ### 4. `/review` — レビュー
 
-PR の受入条件検証、多観点コードレビュー、issue 解決を統合します。MUST 指摘は `/merge` 前に自動修正されます。詳細: [`skills/review/SKILL.md`](../../skills/review/SKILL.md)
+PR の受入条件検証、多観点コードレビュー、issue 解決を統合します。MUST 指摘は `/merge` 前に自動修正されます (ただし本 PR のスコープ外と明記されたエントリを除く — `skills/review/SKILL.md` Step 12.2 参照)。詳細: [`skills/review/SKILL.md`](../../skills/review/SKILL.md)
 
 **Review モード**: Size に基づいて自動判定（Project フィールド優先 → label フォールバック）。`--light`/`--full` で明示指定も可能です。
 
