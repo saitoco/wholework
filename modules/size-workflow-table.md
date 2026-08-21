@@ -65,6 +65,17 @@ Note: This override is additive — if Axes 1–2 already produce L or XL, that 
 | L    | pr        | Branch + PR, full review | Required | Yes |
 | XL   | split guidance | Guide to split into sub-issues | Required | — |
 
+#### XL Parent Aggregate Deliverables (集約成果物)
+
+The XL row's Verify column ("—") assumes the parent Issue stays tracking-only, with an empty `## Changed Files`. A design that gives the XL parent its own cross-cutting `rubric` Pre-merge acceptance condition — one that needs an aggregate artifact (集約成果物), such as a report synthesizing sibling sub-issue outputs, or a baseline measurement that must predate the fan-out — breaks that assumption, since the XL route has no parent-level code phase to produce the artifact (see Issue #1158, #1270).
+
+Do not add the artifact to the parent's own Changed Files. Instead, model the artifact-producing work as an ordinary sub-issue placed in the dependency graph via `blocked_by` (`docs/guide/xl-decomposition.md`), and move the corresponding acceptance condition — including its `rubric`/`file_*` verify command, naming the sub-issue's own output file per `modules/verify-executor.md` § "Primary evidence outside git diff / Issue body" — onto that sub-issue's own Issue body:
+
+- **Post-fan-out aggregation** (#1158-type: the artifact synthesizes sibling sub-issue outputs, needed only after they land): create a sub-issue `blocked_by` every domain sub-issue it aggregates, so it runs in the dependency graph's last level.
+- **Pre-fan-out prerequisite** (#1270-type: the artifact must exist, unmodified, before any domain sub-issue starts): create a sub-issue with no `blocked_by` (level 0), and make every domain sub-issue `blocked_by` it, so it completes first.
+
+Both shapes execute through the XL route's existing level-ordered `blocked_by` resolution (`skills/auto/SKILL.md`) with no change to that route's mechanics — they are ordinary sub-issues, not a new parent-level phase. This keeps the parent's `## Changed Files` empty and its Verify column ("—") accurate for every XL parent, including ones with cross-cutting acceptance conditions.
+
 ### ALWAYS_PR Override
 
 When `.wholework.yml` sets `always-pr: true` (`modules/detect-config-markers.md` provides this as `ALWAYS_PR=true`), a Size-derived `patch` route is promoted to `pr` regardless of Size. Only `patch` is promoted — `pr` and `split guidance` (XL) are unaffected, since their result already matches or is orthogonal to the override.
