@@ -249,6 +249,36 @@ BODY
     [ "$(echo "$result" | jq -r '.unchecked_items[0].text')" = "" ]
 }
 
+@test "(g) fenced code block sample checkbox is excluded from index (issue #1071)" {
+    make_gh_mock_body <<'BODY'
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+
+- [ ] pre item one
+
+```markdown
+- [ ] <!-- ac-tier: preview --> <!-- verify-type: manual --> notation sample, not a real AC
+```
+
+- [x] pre item two
+- [ ] pre item three
+
+### Post-merge
+
+- [ ] post item
+BODY
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    # pre_merge_total must be 3 (the fenced sample line must not be counted)
+    [ "$(echo "$result" | jq -r '.pre_merge_total')" = "3" ]
+    [ "$(echo "$result" | jq -r '.unchecked_count')" = "2" ]
+    [ "$(echo "$result" | jq -r '.unchecked_indices')" = "1,3" ]
+    [ "$(echo "$result" | jq -r '.unchecked_items[0].text')" = "pre item one" ]
+    [ "$(echo "$result" | jq -r '.unchecked_items[1].text')" = "pre item three" ]
+}
+
 @test "CRLF body does not leave trailing carriage return in text" {
     printf '## Acceptance Criteria\r\n\r\n### Pre-merge (auto-verified)\r\n\r\n- [ ] item one\r\n' > "$BATS_TEST_TMPDIR/body.txt"
     cat > "$MOCK_DIR/gh" <<MOCK

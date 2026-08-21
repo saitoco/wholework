@@ -80,8 +80,15 @@ if [ $# -ge 2 ] && [ "$2" = "--checkbox" ]; then
     # Fetch issue body
     BODY=$(gh issue view "$ISSUE_NUMBER" --json body -q .body)
 
-    # Count checkboxes
-    CB_COUNT=$(echo "$BODY" | awk '/^- \[[ xX]\]/ { count++ } END { print count+0 }')
+    # Count checkboxes (fenced code block lines excluded — see
+    # modules/l0-surfaces.md § AC Enumeration Convention)
+    CB_COUNT=$(echo "$BODY" | awk '
+    BEGIN { in_fence = 0 }
+    /^[ \t]*```/ { in_fence = !in_fence; next }
+    in_fence { next }
+    /^- \[[ xX]\]/ { count++ }
+    END { print count+0 }
+    ')
 
     # Validate index range
     IFS=',' read -ra IDX_LIST <<< "$INDICES"
@@ -92,7 +99,8 @@ if [ $# -ge 2 ] && [ "$2" = "--checkbox" ]; then
         fi
     done
 
-    # Update checkboxes with awk
+    # Update checkboxes with awk (fenced code block lines excluded from
+    # index counting — see modules/l0-surfaces.md § AC Enumeration Convention)
     UPDATED_BODY=$(echo "$BODY" | awk -v action="$ACTION" -v indices="$INDICES" '
     BEGIN {
         n = split(indices, idx_arr, ",")
@@ -100,8 +108,10 @@ if [ $# -ge 2 ] && [ "$2" = "--checkbox" ]; then
             target_set[idx_arr[i]+0] = 1
         }
         cb_count = 0
+        in_fence = 0
     }
-    /^- \[[ xX]\]/ {
+    /^[ \t]*```/ { in_fence = !in_fence; print; next }
+    !in_fence && /^- \[[ xX]\]/ {
         cb_count++
         if (cb_count in target_set) {
             if (action == "--check") {

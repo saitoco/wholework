@@ -123,3 +123,87 @@ SPEC_DEPTH=light のため Step 13 (Spec Retrospective、issue retrospective 転
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: `/issue` フェーズの Issue Retrospective コメント (Autonomous Auto-Resolve Log)。3 件の曖昧点 (SSoT 定義先を `modules/l0-surfaces.md` に決定、`check-pre-merge-ac.sh` を Pre-merge AC に追加、`skills/verify/SKILL.md` の checkbox 列挙処理を Pre-merge AC に追加) を自動解決し、既に Issue 本文へ反映済み。本 Spec はこの反映済み本文をそのまま設計のベースラインとして使用した (追加のアクションなし) / url: https://github.com/saitoco/wholework/issues/1071#issuecomment-5366096314
+
+### code phase (cutoff: 2026-08-21T06:58:56Z, most recent `phase/ready` label assignment)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — all 5 Implementation Steps executed as designed, in order, with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+
+- N/A — no new ambiguity surfaced during implementation. The Spec's own Notes (Step 番号の表記ゆれ, Scope expansion beyond Issue body) already anticipated and resolved the two points that could otherwise have caused rework (Step 4/6/8b vs. the Issue body's "Step 3" reference; `scan-pending-ac.sh`/`rank-verify-backlog.sh` inclusion despite not being named in the Issue's Pre-merge AC).
+
+### Rework
+
+- N/A — no rework occurred. Each of the 4 target scripts' `in_fence` tracking pattern was implemented directly from `scripts/rank-verify-backlog.sh`'s existing reference implementation with no trial-and-error.
+
+### Test Verification (Step 9 pre-implementation FAIL check)
+
+- Confirmed pre-implementation FAIL for 3 new test(s): `tests/gh-issue-edit.bats` "checkbox: fenced sample checkbox is excluded from index counting", `tests/check-pre-merge-ac.bats` "(g) fenced code block sample checkbox is excluded from index (issue #1071)", and `tests/run-fact-matching.bats` "scan-pending-ac: fenced sample checkbox lines are excluded from candidates (#709 pattern, issue #1071)" — each stashed the target script's change, ran the test to confirm FAIL, then restored and confirmed PASS.
+- Full bats suite (`bats --jobs 18 tests/`) run in parallel per the Behavioral Change Detection rule: `scripts/scan-pending-ac.sh` is referenced by two test files (`tests/scan-pending-ac.bats`, `tests/run-fact-matching.bats`) beyond a single direct counterpart, and the three modified SKILL.md files are each referenced by several test files (auto/audit/verify's own step-content assertion suites) — 1908/1908 PASS.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran the static Task fan-out (review-spec + review-bug×2) rather than the Workflow pipeline, despite `capabilities.workflow: true`, because this run is headless/non-interactive with no re-invocation guarantee — `skills/review/workflow-guidance.md`'s own fallback rule applies.
+- Fixed all 4 SHOULD-level findings that directly extend this Issue's own purpose (2 remaining prose sites still describing the pre-#1071 convention, 1 SSoT under-specification, 1 missing Spec-required test branch); left 4 CONSIDER-level findings unfixed (out-of-scope files, stylistic regex divergence, stale cross-references with no functional impact).
+- Rejected 3 review-bug findings after adversarial verification: a migration-note request for stale markers (zero real instances across repo history), an additional `skills/verify/SKILL.md:212` annotation (no functional risk — the fallback script does no index computation), and a `collect-verify-retention-stats.sh` fence-tracking gap (out of scope — file untouched by this PR and outside the Spec's own scope criterion).
+
+### Deferred Items
+- The Post-merge AC (manual `/verify` run against a live fenced-sample Issue) remains unchecked — unchanged from the code phase, still requires an actual post-merge run.
+- 4 CONSIDER-level findings deferred to follow-up (not blocking): `scripts/gh-issue-edit.sh:87` regex-broadening note, `docs/structure.md`/`docs/workflow.md` SSoT one-line description staleness, `modules/phase-handoff.md:81` cross-reference, and `scripts/check-ac-checkbox-format.sh`/`scripts/collect-verify-retention-stats.sh` fence-tracking gaps in files this PR does not touch.
+
+### Notes for Next Phase
+- Post-fix full bats suite (1908/1908) and CI (15/15) both re-confirmed green after the review-fix commit (`76944acb`) — `/merge` does not need to re-run verification from scratch on this basis.
+- No MUST findings and no policy changes occurred, so `/merge` should proceed via the normal pre-merge AC gate without an override marker.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The Spec's "Changed Files" list (verify/auto/audit SKILL.md + 4 scripts) was accurate for
+the Issue-scoped propagation targets, but `/review`'s multi-perspective agents found two
+additional prose sites carrying the pre-#1071 convention verbatim without any fence-exclusion
+note: `modules/opportunistic-verify.md:88` (an `ac_index` definition that explicitly states
+"the same global-index convention ... Determine it by counting `^- \[[ xX]\]` lines", now false
+for fenced bodies) and `skills/review/SKILL.md:279-280` (the actual *producer* of the `ac=`
+marker attribute the new SSoT claims to define, left un-annotated while its 3 consumers were
+updated). Neither file was named in the Issue body, the Spec's Changed Files, or the Spec's own
+"Scope expansion" Notes section — the Spec's grep sweep (Step 6, documented in the Scope
+expansion Notes) covered the 3 named scripts + `rank-verify-backlog.sh` but did not extend to
+prose sites describing the same convention outside the 3 named SKILL.md files. Both gaps were
+fixed in `/review` Step 12 (SHOULD severity, confirmed by adversarial verification) rather than
+deferred, since they directly extend this Issue's own stated purpose (closing convention-drift
+across cross-referencing sites) with low fix risk.
+
+A related, smaller finding: Spec Implementation Step 2 explicitly required the new
+`tests/gh-issue-edit.bats` test to cover both a checked (`[x]`) and unchecked (`- [ ]`) fenced
+sample checkbox, but the implemented test only covered the unchecked case. This was a literal,
+verifiable Spec requirement that a routine self-review against the diff missed — the Code
+Retrospective's "Deviations from Design: N/A" was not accurate on this point. Fixed in Step 12.
+
+### Recurring issues
+
+The two prose-site gaps above share one shape: when a new SSoT paragraph is introduced for an
+*already-existing, cross-referenced* convention, the propagation sweep needs to search the whole
+repository for the convention's prior phrasing (e.g. "same convention as `gh-issue-edit.sh
+--checkbox`" or "counting `^- \[[ xX]\]` lines"), not just the files the triggering Issue happened
+to name. This is the second Issue in this convention's history (after #709/#1349's
+`rank-verify-backlog.sh` regression guard) where a partial propagation left at least one sibling
+site behind. If a third instance surfaces, a repo-wide grep-based completeness check (e.g. as an
+explicit Spec/Implementation Step for any Issue that introduces or amends a documented SSoT)
+would be worth considering as a standing practice, rather than relying on `/review`'s
+multi-perspective fan-out to catch it after the fact each time.
+
+### Acceptance criteria verification difficulty
+
+None to note. All 5 rubric-tagged Pre-merge conditions resolved cleanly against the diff and
+Issue body with no ambiguity, and the `command "bats tests/*.bats"` condition resolved via CI
+reference fallback (`Run bats tests` job, identity confirmed by exact job name match) without
+needing local execution in safe mode.
