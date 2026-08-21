@@ -38,6 +38,42 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 
 Note: label namespace rules and bare-namespace exceptions (e.g., `triaged`) are defined in [`modules/label-conventions.md`](label-conventions.md).
 
+## AC Enumeration Convention
+
+SSoT for the 1-based acceptance-condition (AC) checkbox enumeration shared by
+`scripts/gh-issue-edit.sh --checkbox`, `scripts/check-pre-merge-ac.sh`'s
+`unchecked_indices`, `scripts/scan-pending-ac.sh`'s `ac_index`, and every
+`ac=` marker attribute in this document. Prior to this section, callers only
+cross-referenced each other ("same convention as `gh-issue-edit.sh
+--checkbox`") with no single primary definition of the enumeration algorithm
+itself — this section is that primary definition (see Issue #1071).
+
+**(a) Enumeration algorithm**: scan the Issue body top to bottom and count,
+1-based, every line matching `^- \[[ xX]\]` — a single flat count across the
+entire document, not reset at section boundaries (`## Pre-merge`, `##
+Post-merge`, or any other heading). A tool that only needs indices within one
+section (e.g. `check-pre-merge-ac.sh`'s Pre-merge-only output) still counts
+every matching line document-wide and only *reports* the subset that also
+falls inside the target section — the index values themselves are never
+renumbered per-section.
+
+**(b) Fenced code block exclusion**: a line matching `` ^[ \t]*``` `` (three
+or more backticks, with or without a language tag) toggles an `in_fence`
+flag. While `in_fence` is true, no `- [ ]`/`- [x]` line is counted toward the
+enumeration in (a) — this excludes notation samples embedded in a fenced
+code block (e.g. an Issue body illustrating verify-command syntax) from
+being miscounted as real AC. Only triple-backtick fences are recognized;
+`~~~`-style fences and indented code blocks are out of scope (not observed
+in this repository's Issue bodies or documentation as of this writing).
+Callers reset `in_fence` to `false` at the start of each Issue body scan.
+
+**Reference implementation**: `scripts/rank-verify-backlog.sh` (added in
+#1349 as a regression guard for #709) already implements both (a) and (b)
+for its own Post-merge auto/manual counts. `gh-issue-edit.sh`,
+`check-pre-merge-ac.sh`, and `scan-pending-ac.sh` apply the same `in_fence`
+tracking pattern (#1071) to bring their own enumeration into alignment with
+this SSoT.
+
 ## Trust Boundary
 
 When consuming comments, classify each by the comment author's `author.association` field.
