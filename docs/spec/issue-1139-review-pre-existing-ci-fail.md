@@ -202,28 +202,35 @@ Uncertainty の 3 項目はいずれも Spec 作成時に解決済みで、解�
 - **CI の判定 ref と分類器の判定 ref の乖離**: `.github/workflows/test.yml` が `on: push` と `on: pull_request` の両方をトリガーとするため、同名ジョブの rollup エントリが 2 つ現れうる点と、`pull_request` では merge ref が checkout される点を確認。4 分類すべてについて帰属判定としての結論が正しいことを机上検証し、CI と ref を揃える必要はないと確定した。
 - **`allowed-tools` 追加漏れの検出可否**: `scripts/validate-skill-syntax.py` が本文の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` 参照と `allowed-tools` を突合してエラーを出す実装 (`本文中に参照されたスクリプトが allowed-tools の Bash(...) パターンに含まれていません`) を確認。CI の "Validate skill syntax" ジョブで実行されるため、実装漏れは PR 段階で機械的に検出される。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed all 7 Implementation Steps as written, including the exact test names specified in Step 5.
+
+### Design Gaps/Ambiguities
+- N/A — the Uncertainty section's pre-resolutions (worktree `git worktree add` viability, ref divergence, `allowed-tools` detection) all held during implementation with no new gaps surfacing.
+
+### Rework
+- N/A — single-pass implementation. Pre-implementation FAIL check (stashing `skills/review/SKILL.md`/`modules/orchestration-fallbacks.md`) confirmed all 5 new `tests/review.bats` assertions FAIL against the pre-implementation state as required, then PASS after restoring the changes — no assertion needed pattern narrowing.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 新規スクリプトを書かず既存 `scripts/pre-merge-check.sh` を `/review` Step 9 から再利用する。帰属判定ロジックを 1 系統に保つため。
-- 分類器の exit 1 (env error) は **fail-closed** (MUST 化を維持)。`run-merge.sh` の fail-open とは方向が逆だが、「判定不能なら分類器導入前の挙動に戻す」という同一原則の適用結果。
-- 例外の適用対象は `Forbidden Expressions check` ジョブのみ (check dispatch table の唯一のエントリ `forbidden-expressions` に対応)。他の FAILURE ジョブは無条件ブロックを維持。
-- Step 9 の非ブロッキング化だけでなく Step 12.2 にも「out of scope for this PR と明記されたエントリは修正しない」を追加する。#1136 の実害は inline 修正そのものだったため。
-- 帰属判定ロジックは `modules/` へ抽出せず SKILL.md に直接記述する (現時点の消費者が `/review` のみのため)。
+- Step 9 の新サブセクション名は `### Pre-existing failure exception (baseline attribution)` (level 3 見出し) とした。`step9_section()` の抽出範囲 (`## Step 9` 〜 `## Step 10` 直前) に収まる必要があるため level 2 は不可。
+- exit code 判定表を含む本文は Spec の指定要素 (背景・適用範囲 exhaustive・実行コマンド・4分類判定表・fail-closed 根拠・non-blocking 時処理) を全て満たしつつ、文面は Spec のドラフト文をそのまま転記せず独自に整えた。AC の `section_contains`/`file_contains` は文字列一致のみを要求するため、意味を保ったまま書き直しても AC・新規テスト双方を満たせることを確認済み。
+- Step 12.2 の追記は「severity に関わらず out-of-scope エントリは Fix Work で修正しない」ことを明記した (Spec 通り)。
 
 ### Deferred Items
 
-- PRE_EXISTING 検出時のフォローアップ Issue **自動起票**は行わない。既存 open Issue の検索と引用、および起票の推奨に留める。
-- `scripts/run-merge.sh` の pre-screen は本 Issue では変更しない。結果として `/review` と `/merge` で同じ分類器が独立に 2 回走るが、副作用のない冪等な読み取り専用スクリプトのため許容する。
-- `pre-merge-check.sh` の check dispatch table へのエントリ追加 (`forbidden-expressions` 以外の check への例外拡大) は本 Issue のスコープ外。
-- `skills/review/skill-dev-recheck.md` の `## Step 8: Additional Suggestions on CI Failure` に `Forbidden Expressions check` の行を追加することは意図的に見送った (分類ロジックの二重記載を避けるため)。
+- PRE_EXISTING 検出時のフォローアップ Issue 自動起票は実装しない (Spec の Deferred Items を維持)。
+- `scripts/run-merge.sh` の pre-screen は変更していない。
+- Post-merge AC (`session=next` observation) は本 PR のスコープ外 — 次回 `/review` 実行時に自然観察される。
 
 ### Notes for Next Phase
 
-- 実装ステップ 1 (`allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*` 追加) を飛ばすと CI の "Validate skill syntax" ジョブが落ちる。ワイルドカードでは通らずリテラル追加が必須。
-- `tests/review.bats` の新規テスト名は Pre-merge AC の `file_contains` パターンと 1 文字単位で一致させること (`Step 9: pre-existing CI failure exception` / `Step 12.2: out-of-scope entries`)。
-- `docs/spec/` は `scripts/check-forbidden-expressions.sh` の走査対象 (`docs/sessions/` と `docs/reports/` のみ除外)。Spec や実装本文で `Dispatch` (大文字始まり)・`Issue Spec`・`verify hint` 系の旧称を書かないこと。
-- `step9_section()` は `## Step 9: CI Status Check` から `## Step 10` までを抽出する。新サブセクションは level 3 (`### `) にすること — level 2 にすると抽出範囲から外れてテストが落ちる。
-- コミット前に `bats tests/review.bats` / `bats tests/pre-merge-check.bats` / `python3 scripts/validate-skill-syntax.py skills/` / `bash scripts/check-forbidden-expressions.sh` の 4 つを前景で実行すること。
+- 実装は Spec の Implementation Steps 1-7 を全て完了し、逸脱なし (Code Retrospective 参照)。
+- `tests/review.bats` フルスイート24件PASS (新規5件含む)、`tests/pre-merge-check.bats` 8件PASS、`validate-skill-syntax.py`・`check-forbidden-expressions.sh` 両方PASS。behavioral change 判定により `bats --jobs 18 tests/` (全1922件) も実行し PASS 確認済み。
+- Pre-merge AC 8件全て PASS のため Issue body のチェックボックスは全て `[x]` 済み。Post-merge observation AC (1件) は `/verify` フェーズで評価される。
+- PR #1431 作成済み (base: main)。`/review` はこの PR 自身の Step 9 変更をテストする形になる — レビュー時に「pre-merge-check.sh の allowed-tools 追加漏れ」等の CI 検証観点で自己言及的にならないか注意。
