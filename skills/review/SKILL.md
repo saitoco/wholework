@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, git merge-tree:*, git merge-base:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, git merge-tree:*, git merge-base:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
 ---
 
 # PR Review
@@ -359,9 +359,60 @@ gh pr view "$NUMBER" --json statusCheckRollup
 **Blocking by default**: CI FAILURE joins the same MUST-equivalent gate as
 Step 8's FAIL Blocking Behavior — Step 10 (10.0/10.2) MUST add one
 `"severity": "MUST"`, `"path": null` entry summarizing the failed job(s) so
-review cannot complete as `COMMENT` while CI is FAILURE. No built-in exception
-exists for known-flaky or unrelated-job failures; every FAILURE job blocks
-until a follow-up Issue defines an allowlist.
+review cannot complete as `COMMENT` while CI is FAILURE. No built-in
+known-flaky allowlist exists; every FAILURE job blocks unconditionally except
+for the single exception below.
+
+### Pre-existing failure exception (baseline attribution)
+
+A check that scans the entire repository unconditionally (e.g.
+`Forbidden Expressions check`) fails for every PR whenever `main` itself
+contains a violation, even when the PR's own diff never touches the
+offending file. Fixing the violation inline pollutes the PR's diff scope
+with an unrelated Issue's remediation, and blocking every unrelated PR until
+a follow-up Issue lands compounds the problem (see #1136 / PR #1138 for the
+incident this exception generalizes from).
+
+**Applicable scope (exhaustive)**: `Forbidden Expressions check` only — the
+sole entry (`forbidden-expressions`) currently registered in
+`scripts/pre-merge-check.sh`'s check dispatch table. Every other FAILURE job
+keeps the unconditional blocking behavior above. Because `push` and
+`pull_request` triggers can each produce a same-named rollup entry for this
+job, treat either one being FAILURE as sufficient to run the classifier
+below (run it once, not once per trigger).
+
+When `Forbidden Expressions check` is FAILURE, run the baseline classifier
+in the foreground before deciding whether to inject a MUST entry:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh "$NUMBER" forbidden-expressions
+```
+
+Branch on the exit code (exhaustive):
+
+| Exit code | Output prefix | Classification | Behavior |
+|-----------|---------------|-----------------|----------|
+| 2 | `NEW_FAILURE:` | this PR introduced the violation | **Blocking** — inject the MUST entry as before |
+| 0 | `PRE_EXISTING:` | violation predates this PR, inherited from base | **Non-blocking** |
+| 0 | `FIXED:` or `CLEAN:` | no violation attributable to this PR | **Non-blocking** |
+| 1 | (env error: missing args, ref resolution, fetch, or worktree-add failure) | classifier could not run | **Blocking** — the MUST entry body must state that baseline attribution could not be determined |
+
+Exit 1 is fail-closed rather than mirroring `run-merge.sh`'s fail-open
+handling of the same exit code: both directions follow the same underlying
+principle — when the classifier cannot produce a verdict, fall back to the
+behavior that existed before the classifier was introduced. In `run-merge.sh`
+the classifier only adds a gate, so falling back means letting the merge
+proceed; here the classifier only relaxes an existing gate, so falling back
+means keeping the block.
+
+**Non-blocking outcome handling**: record the classification name
+(`PRE_EXISTING` / `FIXED` / `CLEAN`) in the CI Status table's Notes column
+for this job, and add one `"severity": "CONSIDER"`, `"path": null` entry
+noting that the violation was inherited from the base branch and is **out of
+scope for this PR**. Search for an existing open follow-up Issue with
+`gh issue list --state open --search "check-forbidden-expressions in:title,body" --limit 10`
+and cite it by number if found. Do not create a new follow-up Issue from this
+step, and do not fix the violation inline in this PR.
 
 ---
 
@@ -701,6 +752,9 @@ Classify each issue:
 ### 12.2. Fix Work
 
 Fix all MUST issues. Claude decides whether to fix SHOULD/CONSIDER issues.
+An entry whose body explicitly states it is **out of scope for this PR** (see
+Step 9's Pre-existing failure exception) is never fixed here — record it in
+12.4's Skipped Issues instead, regardless of its severity.
 
 1. **Task management with TaskCreate/TaskUpdate**: create a task per issue to fix
 2. **Edit files using Edit tool**

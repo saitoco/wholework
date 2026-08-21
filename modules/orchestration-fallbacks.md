@@ -457,6 +457,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - `pre-merge-check.sh` runs both base and head branches in ephemeral worktrees and classifies the result (NEW_FAILURE / PRE_EXISTING / FIXED / CLEAN); only exit 2 (NEW_FAILURE) blocks the merge
 - env error (exit 1) is fail-open because blocking all merges due to check infrastructure failure is a worse outcome than proceeding with the existing GitHub merge-state gates and human review
 - See also: #702 (triggering incident — Forbidden Expressions pre-existing FAILURE auto-resolved in merge), #704 (autonomy tier matrix)
+- Since #1139, `/review` Step 9 also calls `pre-merge-check.sh`, but the symptom this entry addresses is specific to the merge-phase `run-merge.sh` abort; a `/review` Step 9 NEW_FAILURE is handled as a MUST review finding by Step 12, not by this fallback's steps.
 
 ---
 

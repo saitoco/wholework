@@ -36,6 +36,12 @@ step12_3_section() {
     awk '/^### 12.3. Lightweight Re-check/{found=1} /^### 12.4/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### 12.2. Fix Work" section from SKILL.md.
+# The section ends at the next level-3 (### ) heading (### 12.3. Lightweight Re-check).
+step12_2_section() {
+    awk '/^### 12.2. Fix Work/{found=1} /^### 12.3/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Opportunistic Verification: DESIGN_FILE_PATH resolution present" {
     opportunistic_verification_section | grep -q "DESIGN_FILE_PATH"
 }
@@ -122,4 +128,28 @@ step12_3_section() {
 
 @test "Step 12.3: parallel bats form is referenced for full-suite re-checks" {
     step12_3_section | grep -q -F "bats --jobs"
+}
+
+@test "Step 9: pre-existing CI failure exception invokes pre-merge-check.sh" {
+    step9_section | grep -q -F "pre-merge-check.sh \"\$NUMBER\" forbidden-expressions"
+}
+
+@test "Step 9: pre-existing CI failure exception enumerates all four classifications" {
+    step9_section | grep -q -F "NEW_FAILURE:"
+    step9_section | grep -q -F "PRE_EXISTING:"
+    step9_section | grep -q -F "FIXED:"
+    step9_section | grep -q -F "CLEAN:"
+}
+
+@test "Step 9: pre-existing CI failure exception is fail-closed on classifier env error" {
+    step9_section | grep -q -F "fail-closed"
+}
+
+@test "Step 9: pre-existing CI failure exception is scoped to the Forbidden Expressions check job" {
+    step9_section | grep -q -F "Applicable scope (exhaustive)"
+    step9_section | grep -q -F "Forbidden Expressions check"
+}
+
+@test "Step 12.2: out-of-scope entries are excluded from fix work" {
+    step12_2_section | grep -q -F "out of scope for this PR"
 }
