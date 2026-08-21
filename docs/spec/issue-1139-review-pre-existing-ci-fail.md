@@ -28,6 +28,7 @@ Step 9 の「Blocking by default」段落が、CI FAILURE の**帰属** (この 
 
 - saito / MEMBER / first-class / Issue Retrospective — 起票時原案から既存 `pre-merge-check.sh` 再利用への方針転換、AC 全面差し替え、タイトル更新の記録 (本 Spec の Overview・Root Cause に反映済み) / https://github.com/saitoco/wholework/issues/1139#issuecomment-5374156795
 - saito / MEMBER / first-class / Triage AC audit 警告 — AC2 の `section_contains` 第2引数に見出し記号を含めており恒久的 UNCERTAIN になるとの指摘。修復案どおり `"## Step 9"` を `"Step 9"` に修正して Issue body に反映済み / https://github.com/saitoco/wholework/issues/1139#issuecomment-5374190752
+- (review phase) No new comments since last phase.
 
 ## Changed Files
 
@@ -202,28 +203,48 @@ Uncertainty の 3 項目はいずれも Spec 作成時に解決済みで、解�
 - **CI の判定 ref と分類器の判定 ref の乖離**: `.github/workflows/test.yml` が `on: push` と `on: pull_request` の両方をトリガーとするため、同名ジョブの rollup エントリが 2 つ現れうる点と、`pull_request` では merge ref が checkout される点を確認。4 分類すべてについて帰属判定としての結論が正しいことを机上検証し、CI と ref を揃える必要はないと確定した。
 - **`allowed-tools` 追加漏れの検出可否**: `scripts/validate-skill-syntax.py` が本文の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` 参照と `allowed-tools` を突合してエラーを出す実装 (`本文中に参照されたスクリプトが allowed-tools の Bash(...) パターンに含まれていません`) を確認。CI の "Validate skill syntax" ジョブで実行されるため、実装漏れは PR 段階で機械的に検出される。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed all 7 Implementation Steps as written, including the exact test names specified in Step 5.
+
+### Design Gaps/Ambiguities
+- N/A — the Uncertainty section's pre-resolutions (worktree `git worktree add` viability, ref divergence, `allowed-tools` detection) all held during implementation with no new gaps surfacing.
+
+### Rework
+- N/A — single-pass implementation. Pre-implementation FAIL check (stashing `skills/review/SKILL.md`/`modules/orchestration-fallbacks.md`) confirmed all 5 new `tests/review.bats` assertions FAIL against the pre-implementation state as required, then PASS after restoring the changes — no assertion needed pattern narrowing.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec は Step 9 単体の記述要件 (背景・適用範囲・判定表・fail-closed 根拠・non-blocking 時処理) を網羅していたが、Step 9 が新設した「non-blocking 時に CONSIDER エントリを追加する」という副作用を、実際に `review-comments-$NUMBER.json`/Review body を組み立てる Step 10.0/10.2 の injection 指示に配線する必要がある、という依存関係までは明示していなかった。実装は Step 9 単体としては Spec 通り完成していたが、Step 10 側の配線漏れは review フェーズの review-spec エージェントが初めて検出した (`skills/review/SKILL.md:397/408` 該当)。Step 8 の FAIL Blocking も同様に Step 10 への配線が必要な設計だが、Step 8 は既存パターン (MUST 注入のみ) の踏襲で済んだため配線漏れが起きず、Step 9 は「MUST に加えて CONSIDER も注入する」という新しい分岐が増えた分だけ配線漏れのリスクが高かった。
+
+### Recurring issues
+
+Non-blocking outcome handling の文言が `PRE_EXISTING`/`FIXED`/`CLEAN` の 3 分類を区別せず「inherited violation」という同一の説明を適用していた点は、review-bug の 2 エージェント (diff scan / security scan) が独立に同じ行を指摘し、検証エージェントも両方を PASS と判定した — 複数の独立したレビュー観点が同一の欠陥に収束したことで、検出の信頼度が高いことを確認できた。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC 8件は `rubric`/`section_contains`/`file_contains`/`command` のいずれも一発 PASS で、UNCERTAIN は発生しなかった。`section_contains "Step 9" "..."` のような見出し記号を含まない第2引数指定 (Issue #1139 自身の Triage 指摘で既に修正済み) が、後続の AC 作成時のテンプレートとして有効であることを再確認した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 新規スクリプトを書かず既存 `scripts/pre-merge-check.sh` を `/review` Step 9 から再利用する。帰属判定ロジックを 1 系統に保つため。
-- 分類器の exit 1 (env error) は **fail-closed** (MUST 化を維持)。`run-merge.sh` の fail-open とは方向が逆だが、「判定不能なら分類器導入前の挙動に戻す」という同一原則の適用結果。
-- 例外の適用対象は `Forbidden Expressions check` ジョブのみ (check dispatch table の唯一のエントリ `forbidden-expressions` に対応)。他の FAILURE ジョブは無条件ブロックを維持。
-- Step 9 の非ブロッキング化だけでなく Step 12.2 にも「out of scope for this PR と明記されたエントリは修正しない」を追加する。#1136 の実害は inline 修正そのものだったため。
-- 帰属判定ロジックは `modules/` へ抽出せず SKILL.md に直接記述する (現時点の消費者が `/review` のみのため)。
+- review-bug 2 系統 + 検証サブエージェントで 6 件中 4 件を PASS と判定 (2 件は「到達不能なコードパス」「実測 8 秒で timeout 対象外」として REJECT)。review-spec の 5 件は検証なしで直接反映するルールどおり統合。
+- SHOULD 3 件 (`skills/review/SKILL.md` Non-blocking outcome handling の誤記述+配線漏れ、`docs/workflow.md`、`docs/structure.md`) を Fix Work で修正。CONSIDER 3 件 (`CLEAN` の merge-ref 未検出エッジケース、`orchestration-fallbacks.md` の step 番号誤り、CI Status テンプレート例不足) は severity 相応として意図的にスキップし 12.4 に記録。
+- `docs/workflow.md`/`docs/structure.md` の修正は `docs/translation-workflow.md` の同期義務に従い `docs/ja/workflow.md`/`docs/ja/structure.md` も同一コミットで更新した。
 
 ### Deferred Items
 
-- PRE_EXISTING 検出時のフォローアップ Issue **自動起票**は行わない。既存 open Issue の検索と引用、および起票の推奨に留める。
-- `scripts/run-merge.sh` の pre-screen は本 Issue では変更しない。結果として `/review` と `/merge` で同じ分類器が独立に 2 回走るが、副作用のない冪等な読み取り専用スクリプトのため許容する。
-- `pre-merge-check.sh` の check dispatch table へのエントリ追加 (`forbidden-expressions` 以外の check への例外拡大) は本 Issue のスコープ外。
-- `skills/review/skill-dev-recheck.md` の `## Step 8: Additional Suggestions on CI Failure` に `Forbidden Expressions check` の行を追加することは意図的に見送った (分類ロジックの二重記載を避けるため)。
+- CONSIDER 3 件 (前述) は本 PR では未対応のまま。実害が顕在化した場合に別 Issue で再検討する。
+- PRE_EXISTING 検出時のフォローアップ Issue 自動起票は実装しない (Spec の Deferred Items を維持)。
+- Post-merge AC (`session=next` observation) は `/verify` フェーズで評価される。
 
 ### Notes for Next Phase
 
-- 実装ステップ 1 (`allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*` 追加) を飛ばすと CI の "Validate skill syntax" ジョブが落ちる。ワイルドカードでは通らずリテラル追加が必須。
-- `tests/review.bats` の新規テスト名は Pre-merge AC の `file_contains` パターンと 1 文字単位で一致させること (`Step 9: pre-existing CI failure exception` / `Step 12.2: out-of-scope entries`)。
-- `docs/spec/` は `scripts/check-forbidden-expressions.sh` の走査対象 (`docs/sessions/` と `docs/reports/` のみ除外)。Spec や実装本文で `Dispatch` (大文字始まり)・`Issue Spec`・`verify hint` 系の旧称を書かないこと。
-- `step9_section()` は `## Step 9: CI Status Check` から `## Step 10` までを抽出する。新サブセクションは level 3 (`### `) にすること — level 2 にすると抽出範囲から外れてテストが落ちる。
-- コミット前に `bats tests/review.bats` / `bats tests/pre-merge-check.bats` / `python3 scripts/validate-skill-syntax.py skills/` / `bash scripts/check-forbidden-expressions.sh` の 4 つを前景で実行すること。
+- `/merge` 前に CI が全 15 件 SUCCESS であることを確認済み (`Forbidden Expressions check` も含め本 PR 自体は pre-existing 違反を持たない状態)。
+- Fix Work で `skills/review/SKILL.md` を変更したため、`/merge` 後に再度 `bats tests/review.bats` が CI で通ることを確認すること (worktree 内では 24/24 PASS 確認済み)。
+- 本 PR は `/review` Step 9 自身を変更する自己言及的な PR — 次回同種の Issue (Step 9/Step 10 の配線を伴う変更) では、Spec Implementation Steps に「Step 10 の injection 指示も更新対象に含める」ことを明記すると review フェーズでの手戻りを避けられる。
