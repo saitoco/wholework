@@ -96,3 +96,22 @@ N/A
 ### Notes for Next Phase
 - 本 Issue は Size S / patch route のため `/review`・`/merge` はスキップされる。Pre-merge AC 3 (`bats tests/run-auto-sub.bats`) 用の verify-executor 実行に加え、behavioral change 判定によりフルスイート (`bats tests/`, 1888 tests) も実行し全 pass を確認済み。
 - Patch route の CI verification AC exclusion (`github_check "gh run list"`) はこの Issue の Pre-merge AC には存在しないため対象外。`/verify` はこの Spec の 3 件の Pre-merge AC (grep / rubric / command) をそのまま再評価すればよい。
+
+## Issue Retrospective
+
+### Acceptance Criteria Changes
+
+- **Pre-merge AC 1 の verify command を修正**: 元の `<!-- verify: grep "flag=0.*## " "scripts/run-auto-sub.sh" --> ` は「`flag=0` の後に `## ` が出現する」パターンだったが、実際の修正後コード `/^## /{flag=0}` では `## ` が `flag=0` より**前**に出現するため、修正が正しく適用されても PASS しない (かつ現状の未修正コードでも `## Changed Files` の存在により偶発的に一致しない、という点で「修正前後を判別できない」verify command になっていた)。`modules/verify-patterns.md` §23 (Non-Contiguous Git Invocation — Prefer Contiguous Sub-strings) の原則に従い、修正後コードに一意に出現する連続部分文字列 `## /{flag=0}` を anchor とする `grep "## /\{flag=0\}" "scripts/run-auto-sub.sh"` に置き換えた。手元検証: 現行 (バグあり) コードでは不一致 (exit 1)、修正後コードのシミュレーションでは一致 (exit 0) することを確認済み。
+- **Background の行番号を修正**: `_spec_is_diffless()` の実際の関数本体は 638-655 行目 (Issue 起票時点の記載は 628-651 行目で、doc コメント開始行を関数本体開始行と混同していた)。
+
+### Steering Docs Alignment
+
+- `docs/product.md` § Terms の "Operate route" 定義 (`## Changed Files` が空 + 外部操作のみの Implementation Steps から判定) と "verify command" の正式名称を確認し、Background に `modules/size-workflow-table.md` § "Diff-less Axis (operate route)" への参照を追記した。Forbidden Expressions・Non-Goals には抵触なし。
+
+### No Ambiguity Points Raised
+
+Background/Purpose/Proposal の記述が具体的 (awk パターンの diff、行番号、再現コマンド) であり、`modules/ambiguity-detector.md` のパターン表に該当する曖昧表現は検出されなかった。
+
+### Consumed Comments
+
+No new comments since last phase.
