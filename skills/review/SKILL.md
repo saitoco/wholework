@@ -407,12 +407,21 @@ means keeping the block.
 
 **Non-blocking outcome handling**: record the classification name
 (`PRE_EXISTING` / `FIXED` / `CLEAN`) in the CI Status table's Notes column
-for this job, and add one `"severity": "CONSIDER"`, `"path": null` entry
-noting that the violation was inherited from the base branch and is **out of
-scope for this PR**. Search for an existing open follow-up Issue with
-`gh issue list --state open --search "check-forbidden-expressions in:title,body" --limit 10`
-and cite it by number if found. Do not create a new follow-up Issue from this
-step, and do not fix the violation inline in this PR.
+for this job, then add one `"severity": "CONSIDER"`, `"path": null` entry —
+Step 10 (10.0/10.2) MUST include this entry alongside its MUST-entry
+injection, using the wording below matched to the classification:
+
+- `PRE_EXISTING`: note that the violation was inherited from the base branch
+  and is **out of scope for this PR**. Search for an existing open follow-up
+  Issue with
+  `gh issue list --state open --search "check-forbidden-expressions in:title,body" --limit 10`
+  and cite it by number if found. Do not create a new follow-up Issue from
+  this step.
+- `FIXED` / `CLEAN`: note that the CI rollup FAILURE is not attributable to
+  this PR's refs (fixed on head, or passing on both base and head) and is
+  **out of scope for this PR**.
+
+In both cases, do not fix the violation inline in this PR.
 
 ---
 
@@ -501,7 +510,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    - Extract `path`, `line`, `body`, `severity` from `review-light` output
    - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
    - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
-   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules
+   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
    - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
@@ -576,7 +585,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
      - Determine severity from `Issue. Severity: MUST / SHOULD / CONSIDER`
      - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
      - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
-   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules
+   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
    - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
