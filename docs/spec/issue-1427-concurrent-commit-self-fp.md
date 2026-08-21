@@ -81,3 +81,32 @@
 ### 観測型 AC の 2-part 構造化
 
 Issue body の Post-merge AC (`verify-type: observation event=auto-run`) が「期待される出力構造」のサブ箇条書きを欠いていたため、`modules/verify-classifier.md` の Option A 形式で補記し、Issue body 側も `gh-issue-edit.sh` で同期した (要求内容自体の変更ではなく、既存の記述を構造化しただけ)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 をそのまま実施した。3-way 分類ロジック・新規回帰テスト・既存 true-positive テストの mock 更新・bats 全件実行のいずれも Spec の記述通り。
+
+### Design Gaps/Ambiguities
+- N/A — Notes セクションの Option A/B 再検討、Fail-safe critical 判定、Steering Docs sync candidate 判定がいずれも spec フェーズで既に完了しており、code フェーズで新たに判断が必要な曖昧点はなかった。
+
+### Rework
+- N/A — 実装は一度で Implementation Steps の記述通りに完了し、やり直しは発生しなかった。
+
+### Process Note (SKILL.md Step 8 / Step 11 の関係)
+- 本 Issue のスコープが小さく (2 ファイル、1 Implementation Step 群) 全変更を Step 8 の「commit after each step completes」で1つの中間コミットにまとめて commit したところ、Step 11 が要求する commit subject への `#$NUMBER` 参照 (`(closes #$NUMBER)`) が欠落した状態になった。push 前のローカル worktree コミットだったため `git commit --amend -s` で Step 11 のテンプレートに合わせて修正し、実際に commit 履歴を汚さずに解決できた。皮肉なことに、本 Issue が扱う「issue 番号を含まない中間 commit」という状況そのものを、この実行自身が (一時的に) 再現する形になった。Step 8 と Step 11 の commit タイミングの関係性は SKILL.md 上で明示的に整理されていないため、実装が単一コミットに収まる規模の場合の扱いとして今後の参考にする。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 3-way 分類を `_self_issue_pattern` (自 issue 参照) → `_any_issue_pattern` (他 issue 番号参照) → いずれにも不一致 (issue 番号参照なし = 自セッション中間 commit と推定) の順で判定する形で実装し、Spec Implementation Step 1 の設計をそのまま採用した。
+- 既存の true-positive テスト (`abc1234` mock) には明示的な別 issue 番号を含む subject を追加し、新分類のもとでも意味のある true-positive 検証であり続けるようにした。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Post-merge AC は observation 型 (`event=auto-run`) であり、次回 `/auto --batch` または `/auto N` の code-patch route 実行で `concurrent_commit_detected` が誤検知されないことを実運用で観察する必要がある。`/verify` はこの観察が既に発生しているかを `.tmp/auto-events.jsonl` または L3 session retrospective で確認すること。
+- Pre-merge AC 2件は本フェーズで rubric 判定により PASS 済みで Issue body のチェックボックスも更新済み。`/review` は追加の rubric 再実行は不要だが、diff (scripts/run-auto-sub.sh, tests/run-auto-sub.bats) の一致を確認すると良い。
+- 全 bats スイート (1913 tests) が本変更後も PASS していることを確認済み (behavioral change detection によりフルスイート実行)。
