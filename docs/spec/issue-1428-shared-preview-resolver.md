@@ -242,3 +242,22 @@ No new comments since last phase.
 
 1. **共有スクリプト化パターンの Spec 手順への反映**: 関数から独立スクリプトへの切り出しを伴う Issue では、Spec の Implementation Steps に「移行前後で `set -e`/errexit の有効/無効コンテキストが変わらないか」を明示的なチェック項目として含める。本 Issue の review で検出された SHOULD/CONSIDER 12 件中 5 件 (SIGPIPE 回帰・regex 末尾アンカー・PR 番号検証・`cat` ガード欠落・wrapper の暗黙 return 1) が共通してこの問題に起因していた
 2. **複数 SSoT への同一変更反映時のドキュメント列挙補強**: 本 Issue で `docs/guide/customization.md`/`docs/guide/adapter-guide.md` は正しく Changed Files に含めたが、同種の SSoT である `docs/tech.md`/`docs/structure.md` Key Files 本体が漏れた。Steering Docs sync candidate check の grep 範囲または Spec 作成者のドキュメント列挙プロセスに、同一トピックを扱う複数ドキュメントの網羅性チェックを補強する余地がある
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code | pr | SUCCESS | PR #1432 作成 |
+| review | pr | SUCCESS (Tier 3 リトライ後) | 1回目 exit 1 (host-sleep-network-loss)。Tier 3 recovery sub-agent が action=retry を判定、再実行で正常完了 |
+| merge | pr | SUCCESS | squash merge、PR #1432 MERGED |
+| verify | - | SUCCESS (一部保留) | Pre-merge 7件 PASS、Post-merge manual 1件保留、phase/verify 維持 |
+
+### Orchestration Anomalies
+
+- **review フェーズ 1回目失敗 (exit code 1)**: `run-review.sh` は CI 待機完了 (15/15 PASS) 後、`claude -p` 呼び出し内で watchdog silent window が 1500s 超に達した後 `API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)` で終了。ユーザーからホストマシンのスリープが原因と直接確認を得た (`host-sleep-network-loss`)。`detect-external-kill.sh` は no-match と判定 (exit code 1 + 正常な wrapper exit trailer あり、SIGKILL パターンではない)。CI platform failure pre-check も verdict=implementation (CI自体は15/15 PASS済み、失敗はレビュー呼び出し自身のネットワーク断)。Tier 1 (reconcile-phase-state.sh) は matches_expected: false を確認、Tier 2 (detect-wrapper-anomaly.sh) は既知パターン不一致、Tier 3 recovery sub-agent (`agents/orchestration-recovery`) を起動し action=retry, cause=host-sleep-network-loss の復旧プランを取得。`validate-recovery-plan.sh` で検証後、review フェーズを再実行し正常完了 (`Review Response Summary found in PR #1432 comments` を確認)
+
+### Improvement Proposals
+
+- N/A (Tier 3 recovery は正常に機能し新たな構造的問題は検出されなかった。root cause は wholework 側で修正不能なホスト環境要因)
