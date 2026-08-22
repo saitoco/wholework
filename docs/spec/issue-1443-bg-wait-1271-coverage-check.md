@@ -56,5 +56,32 @@ PR #1332 は `scripts/guard-prefix.sh` に background-notification-wait 禁止�
 - 未解決の不確実性 (light depth のため意図的に深追いしていない): Claude Code の `Task`/`Agent` sub-agent dispatch ツールが、非対話 `claude -p --non-interactive` セッション内で同期的 (呼び出し元ターンが全結果の返却をブロックして待つ) か、それとも通知ベースの完了を伴うバックグラウンド既定かは、本調査では一次情報から確認できていない。Root Cause の Step 10 仮説は構造分析に基づく尤もらしい候補であり、直接証拠による確認ではない — `agents/orchestration-recovery.md` の Tier 3 sub-agent が受け取るのは wrapper の stdout/stderr `log_tail` のみで、review セッション内部のツール呼び出しトレースは含まれないため、現状これを裏付け/反証できる証拠源がない。今後の再発診断で正確なステップが特定できた場合はこの Note を更新すること。
 - Steering Docs 同期: `docs/tech.md` は意図的に変更対象から外した。`modules/execution-context.md` § Wrapper-Level Constraint Injection が本件と同じ話題を扱う、より狭くスコープされた既存の SSoT であるため (`docs/tech.md` の Architecture Decisions は多数の無関係な話題を横断する広いリストである一方)、結論はそちらに一本化し、同一内容を 2 箇所に重複記載することを避けた。
 
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 4 said to record the root cause / Verdict conclusion in "the commit message and the Issue body (retrospective)". Interpreted this concretely as adding a `## Resolution` section to the Issue body (between `## Purpose` and `## Acceptance Conditions`) summarizing the root cause, quantitative background, and Verdict — since `modules/verify-executor.md`'s rubric grader input scope is Issue body + git diff + explicitly-named files (Spec is excluded), and the rubric AC text explicitly asks for "Issue本文またはコミットメッセージで" identification. Confirmed both Pre-merge rubric AC now have concrete, checkable evidence in the Issue body itself, not only in the diff.
+
+### Design Gaps/Ambiguities
+- N/A beyond what the Spec's Notes section already records (the Task/Agent sub-agent dispatch synchronicity question remains unresolved from first-party evidence; not re-investigated at this phase since it was explicitly scoped out at light depth).
+
+### Rework
+- N/A
+
 ## Consumed Comments
 No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Verdict: maintain — the existing three-tier detection/recovery (wrapper-level `guard-prefix.sh` injection + Tier 1-3 recovery) is treated as sufficient given a 1-in-51-PR recurrence rate, fully auto-recovered with no manual intervention. Recorded as a dated recurrence-check paragraph in `modules/execution-context.md` rather than opening a new SSoT section, since that module already owns this topic.
+- Added a narrow foreground-dispatch reminder to `skills/review/SKILL.md` Step 10 for the orchestrator's own `Task(...)` calls, distinct from the existing reminder that only covered commands run internally by review sub-agents.
+- Recorded the root cause and Verdict in a new `## Resolution` section in the Issue body (not just the commit message / diff), because the rubric grader's input scope (Issue body + git diff + explicitly-named files) needed concrete Issue-body evidence for both Pre-merge AC to be checkable independent of diff visibility.
+
+### Deferred Items
+- The Spec's Notes-recorded uncertainty (whether Claude Code's `Task`/`Agent` dispatch is synchronous or notification-based under `claude -p --non-interactive`) remains unresolved from first-party evidence — intentionally not re-investigated here (light depth, same reasoning as the Spec phase).
+- No follow-up Issue filed: the added Step 10 reminder is treated as closing the identified gap, and Post-merge AC (observation) covers ongoing monitoring.
+
+### Notes for Next Phase
+- Post-merge AC is an `observation` type (event=auto-run session=next) — no action needed from `/review`/`/merge`; `/verify` will pick it up in a later auto-run session.
+- Both Pre-merge rubric AC are self-graded PASS in this phase based on: (a) the diff to `modules/execution-context.md` / `skills/review/SKILL.md`, and (b) the Issue body `## Resolution` section added in this phase. If `/review` re-grades adversarially and disagrees, check whether it read the worktree-current Issue body (post-edit) rather than a stale cached version.
