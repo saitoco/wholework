@@ -36,3 +36,6 @@
 - **`docs/environment-adaptation.md` の capability extraction ガイドとの非該当確認**: 同ファイル 470 行目・486 行目に「新規 capability のガイダンスは `modules/verify-patterns.md` のような eager-load 共有モジュールに直接セクション追加せず、`load_when: capability: {name}` で gate した Domain file に分離すること」という記述がある。この規則は「Adding a new capability」という拡張ガイドの一部であり、`capabilities.{name}` ゲート付きの新機能固有のガイダンス (例: Figma, visual-diff) を対象にしたものである。本 Issue が追加する内容は特定の capability に紐づかない汎用的な AC 品質ガイドライン (既存の §1, §24, §31 等と同種) であり、この規則の対象外と判断した。
 - **§32 という番号付け (既存セクションのリナンバーなし)**: §25-31 を繰り下げて §24 の直後に挿入する案も検討したが、`modules/verify-executor.md` 側に `modules/verify-patterns.md` §24 への相互参照が既に存在し (Timeout Coverage Audit 内)、リナンバーはこの参照および将来のリナンバー対象範囲拡大のリスクを伴う。末尾追記 (§32) はこのリスクを避けつつ、`## Output` 直前という既存の一貫した挿入位置規約に従う。
 - **新規テストケース要否の判断**: `modules/verify-patterns.md` は LLM が Read して従うプレーンテキストのガイドラインであり、スクリプト/モジュールへの新規分岐ロジック追加ではないため、「新規ブランチロジックに対する新規テストケース要件」チェックの対象外と判断した (既存の `tests/verify-heuristics.bats` 等は `grep -q` による存在確認のみで、セクション数を数えるものではなく、本追加によって既存テストが失敗することはない)。
+
+## Consumed Comments
+No new comments since last phase.
