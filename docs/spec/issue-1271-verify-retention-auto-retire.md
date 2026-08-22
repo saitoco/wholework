@@ -319,3 +319,32 @@ N/A — Implementation Steps 1–9 を Spec の記述順どおりに実装した
 
 - `/verify` は Spec Notes for Next Phase (review handoff由来) が既に指摘している Post-merge 条件 3 件 (`verify-type: observation event=auto-run session=next`) を引き続き判定対象とする。実測基準は `/review` の最終コミット状態 (2 回の追加コミット: バグ修正 + ドキュメント同期) を含む
 - `scripts/collect-verify-retention-stats.sh --window 2026-05-07` を実行し、90 日超待機の合計・`phase/verify` 総件数の減少を確認すること (Issue #1271 Verification (post-merge) 節)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特になし。Pre-merge AC 7 件は起票時点で全件 [x] 済みで、rubric/section_contains/command のいずれも UNCERTAIN なし。
+
+#### design
+- Code Retrospective (Design Gaps) の指摘どおり、Spec の Implementation Steps は「fence 除外がどの計算箇所に適用されるか」を明示しておらず、Post-merge 節の残数判定で fenced sample の誤認が実装時に発覚した。fence 除外規約 (`modules/l0-surfaces.md` § AC Enumeration Convention (b)) を参照する Spec は、適用範囲を「AC 列挙」だけでなく「関連する残数・件数判定全般」まで明示すべき。
+
+#### code
+- MUST 相当の手戻りなし (fixup/amend パターンは fence 除外漏れの 1 件のみ、手動統合テストで発見・即修正)。
+
+#### review
+- MUST 2件: (1) body 構造前提 (`### Post-merge`/`### Retired Post-merge Conditions` の複数出現・逆順出現) への防御が Spec レベルで要求されていなかった、(2) `modules/verify-classifier.md` § Tag Extraction Rule が既に明記する canonical pattern (HTML コメントの閉じタグ `-->` まで検証) を初版実装が踏襲していなかった。(2) は既存ドキュメントに正解が書かれていたにもかかわらず参照されなかった再発パターンであり、実装時チェックリストでの明示参照が有効な対策候補。
+- CI FAILURE 1件 (Language Convention check): `check-language-convention.py` のシングルクォート日本語文字列除外パターン非対称性 (ダブルクォートのみ除外) に起因。本 PR 固有の欠陥ではなく、チェッカー自体の既知の非対称性。
+
+#### merge
+- 特になし。pre-merge AC 全チェック済み、`review_incomplete_fallback` なし、conflict なしで squash merge。
+
+#### verify
+- FAIL/UNCERTAIN なし。Post-merge 条件 3 件は `event=auto-run` 未発火のため SKIPPED (`session=next` の判定は次回発火時、かつ本セッションとは別セッションでの評価が必要)。
+- review phase で watchdog silent 5400s 超過 → Tier 3 recovery (`action=retry`) が発火し `run-review.sh` の再実行で回復。`docs/reports/orchestration-recoveries.md` (Issue #1271, phase: review) に既に記録済みのため、本セクションでは重複記録しない。
+
+### Improvement Proposals
+
+1. **HTML コメントタグ抽出の canonical pattern 参照チェックリスト化**: `modules/verify-classifier.md` § Tag Extraction Rule に既に「閉じタグ `-->` まで検証する」canonical pattern が明文化されているにもかかわらず、本 Issue の初版実装ではこれを踏襲せず bare-tag-value 形式のみでマッチしていた (review MUST で検出)。同種のタグ抽出スクリプトを新規実装する際、`modules/verify-classifier.md` の canonical pattern を明示的に参照するチェックリスト項目があれば同種の手戻りを防げる可能性がある。
+2. **`check-language-convention.py` のシングルクォート除外パターン非対称性の是正**: ダブルクォートで囲んだ日本語文字列は除外対象だが、シングルクォートは除外されないため、bash `printf` のシングルクォートリテラルが CI FAILURE になる。本 PR で初めて顕在化したものではなく、チェッカー自体の既知の非対称性。今後 Issue コメントや日本語プロースを含む新規スクリプトを書く機会が増える中で再発しうる。
