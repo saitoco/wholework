@@ -1130,6 +1130,23 @@ Use `-E`/`-o` for extraction, not `-P` (PCRE) — BSD `grep` on macOS does not s
 
 **Scope**: this pattern generalizes beyond `docs/structure.md`'s `(N files)` comment to any literal-numeric-pinning acceptance condition that counts files, lines, or entries in a document shared across concurrently-worked-on PRs.
 
+### 32. Multi-File `command` Verify Commands — Early Timeout-Risk Detection
+
+A `command` verify command whose argument targets more than one file — a single test-runner invocation given multiple space-separated file paths, or a shell glob matching two or more files — carries a structural timeout risk: `modules/verify-executor.md` § Timeout Coverage Audit fixes `command`'s execution timeout at 60s, and that budget does not scale with the number of matched files. As more files are added to the matched set (or a glob starts matching more files over time), the command's execution time grows unpredictably toward — and eventually past — that fixed timeout, with no signal at AC-authoring time that the risk exists. Detecting this at AC creation time (`/issue` Step 4/7, or `/spec`'s own AC creation step) avoids the two-phase rework observed in #1047, where a multi-file `command` first hit the 60s timeout during `/code` (worked around with `--jobs`, which only postpones the timeout) and was only converted to `github_check` later during `/review` once the Timeout Coverage Audit guidance was actually consulted.
+
+**Detection heuristic (either fires):**
+
+(a) The `command` argument passes a single test-runner invocation two or more space-separated file/path arguments (e.g. `command "bats tests/foo.bats tests/bar.bats"`).
+(b) The `command` argument contains a shell glob (`*`, `?`, `[...]`) in a path segment that can match two or more files (e.g. `command "pytest tests/test_*.py"`).
+
+**Detection action**: when either heuristic fires, warn that a multi-file `command` invocation is a timeout-risk pattern per `modules/verify-executor.md` § Timeout Coverage Audit — execution time grows unpredictably with the number of matched files/tests — and recommend rewriting it as the framework-appropriate `github_check` (CI reference) form from §24's table above.
+
+**Relationship to §24 (independent triggers — do not treat one as satisfying the other)**: this check is **syntactic** — it looks only at the text of the `command` argument itself, regardless of whether the files it targets are new or pre-existing. §24 is **semantic** — it looks at whether an *existing* file was modified and is referenced by tests outside the narrow set, regardless of how many files the verify command's own argument names. The two triggers are independent and either may fire without the other: a `command` that only adds brand-new test files is exempt from §24 (no existing file was modified) but still trips this check if its argument names multiple files; conversely, a `command` naming exactly one file can still trip §24 if that one file is a behavioral change with cross-file test coupling. A rubric grader must not conclude that satisfying one of these two sections' guidance already satisfies the other.
+
+**Example**:
+- ❌ `command "bats tests/new-foo.bats tests/new-bar.bats"` — both files are newly added (exempt from §24's purely-additive exclusion), but the argument names two files, so this check still fires.
+- ✅ `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"`
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
