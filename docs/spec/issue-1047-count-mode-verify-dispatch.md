@@ -219,6 +219,7 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective。Background の事実主張をコードベース照合済みであること、条件付き共通ヘルパー化 AC を #1044 の先例に合わせて維持したこと、blocked-by なし・タイトルドリフトなしを報告 / https://github.com/saitoco/wholework/issues/1047#issuecomment-5378149523
 - saito / MEMBER / first-class / Triage AC audit の警告。`section_contains` の heading 引数に先頭の `####` を含めており恒久 UNCERTAIN になるため `"Process Each Issue"` へ修正するよう指摘 (本フェーズで Issue 本文と Spec の両方に反映済み) / https://github.com/saitoco/wholework/issues/1047#issuecomment-5378164415
 
+- saito / MEMBER / first-class / ## Change Tracking (by /code) / https://github.com/saitoco/wholework/issues/1047#issuecomment-5378393718
 ## issue retrospective
 
 - Background に記載された事実主張 (Count mode に verify orchestration ステップが存在しないこと、List mode Step 7 との対比、stop-at 判定箇所が本 Issue の実装で合計 8 箇所に到達する見込み) をコードベース照合し、いずれも `skills/auto/SKILL.md` / `scripts/run-auto-sub.sh` の現状実装と整合していることを確認した (Step 5 advisory check)。
