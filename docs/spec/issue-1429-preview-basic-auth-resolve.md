@@ -170,3 +170,52 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の引用文字列 (`not by /review invoked directly as a skill`) が、兄弟 Sub-issue `#1428` のマージによって起票時点から実在しなくなっていた。親 Issue から分割された Sub-issue 群では「先行 Sub-issue のマージが後続 Sub-issue の Issue 本文を陳腐化させる」経路が構造的に存在する。`/spec` の String-matching verify command existence check がこれを捕捉したが、`file_not_contains` の「撤去対象が現在存在することを確認する」規則がなければ、常時 PASS の verify command のままマージまで到達していた
+- Issue 本文の行番号参照 (`run-review.sh` L207-266、`verify-executor.md` L275-285) が実際とずれていた (実際は L150-209 / L269-285)。起票から `/spec` までの間に別 PR がファイルを変更したため。Implementation Steps 側は行番号ではなく周辺コンテキストで位置を指定する `/spec` の既存規則がそのまま機能した
+- `modules/verify-executor.md` の既存 `mktemp .tmp/curl-auth-XXXXXX.cfg` が macOS の BSD `mktemp` で `X` を置換しないことは、静的読解では発見できず実測 (`mktemp` 実行 + `ls -l`) ではじめて判明した。`#1428` retrospective の「実コード実行によるエッジケース検証が有効だった」という記録が同じ形で再現した
+
+### Judgment rationale
+
+- **資格情報ファイルを 2 フォーマットにした理由**: 単一フォーマットに寄せると、消費側 (prose モジュール) のいずれかが必ず変換処理を持つことになる。curl のエスケープ規則を prose に書くのは `"` を含む password で壊れやすく、逆にシェルクオート規則を prose に書くのは `'` を含む password で壊れやすい。エスケープ知識をスクリプト 1 箇所に閉じ、消費側は「そのまま渡す」か「2 行読む」だけにするのが最も破損経路が少ない
+- **`capabilities.pr-preview` ゲートをスクリプト内に置かなかった理由**: 一見スクリプト内ゲートのほうが堅牢だが、`tests/run-review.bats` の `get-config-value.sh` モックが未知キーに既定値を返す設計のため、既存 8 テストが一斉に落ちる。既存テストを大量改修してまで得られる堅牢性の増分は小さく、`#1428` (`url` モード) との対称性も失う
+- **`skills/code` / `/verify` / `/auto` の `allowed-tools` を拡張しなかった理由**: `modules/verify-executor.md` の読者 7 skill のうち translation table を実行するのは 4 件だが、新規解決ステップは `HAS_PR_PREVIEW_CAPABILITY` をロード済みの呼び出し元でのみ発火する設計とした。前提が崩れても fail-open で非認証に落ちるだけで安全側に劣化するため、権限面の拡大より前提の明文化を選んだ
+
+### Uncertainty resolution
+
+- **curl config のエスケープ規則**: 公式 man page で 6 種のエスケープのみ有効と確認し、`curl --config <file> --libcurl` の `CURLOPT_USERPWD` 出力で往復を実測。設計時点で解決済み
+- **BSD `mktemp` の suffix 挙動**: macOS 上で実測し、末尾以外の `XXXXXX` は置換されないことを確認。新規実装 (Step 3) と既存記述の修正 (Step 6) の両方に反映
+- **verify-executor 読者の到達前提**: prose モジュールの LLM 実行挙動に依存するため機械的には固定できず、未解決のまま `## Uncertainty` に残した。前提崩壊時の影響 (fail-open で安全側に劣化) と検証方法 (マージ後の permission denied 監視) を併記している
+
+### 新規分岐ロジックに対する新規テストケース要件 (要約)
+
+`scripts/resolve-preview-env.sh` へ `basic-auth` という新規分岐を追加するため、AC7 (`github_check "gh pr checks" "Run bats tests"`) は既存スイートの PASS に加えて、`tests/resolve-preview-env.bats` への新規ケース追加を要求する。要求内訳は Implementation Step 10 の (a)-(g): `--format` 既定/明示/不正値、ガード 8 件の fail-open、`#1417` 非空性ガードの回帰テスト、特殊文字 (`"` / `\` / 複数 `:` / CRLF / 多バイト)、マスキング
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 資格情報は**値ではなくファイルパス**で伝搬する。`basic-auth` モードは `--format curl-config` (既定、curl `--config` 用にエスケープ済み 1 行) と `--format user-pass` (2 行: username / password、エスケープなし) の 2 形式を出力し、消費側はいずれもパース処理を持たない
+- `capabilities.pr-preview` ゲートは消費側 (モジュール本文) に置く。スクリプト内ゲートは `tests/run-review.bats` の `get-config-value.sh` モックと衝突し既存 8 テストを壊す
+- `scripts/run-review.sh` は `--format user-pass` を読み戻して `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` を export する契約を維持する (`claude` サブプロセスへの環境変数継承が目的のため)
+- `skills/code` / `/verify` / `/auto` の `allowed-tools` は拡張しない。新規解決ステップは `HAS_PR_PREVIEW_CAPABILITY` をロード済みの呼び出し元 (現状 `skills/review/SKILL.md` のみ) でのみ発火する
+- `modules/verify-executor.md` の既存 `mktemp .tmp/curl-auth-XXXXXX.cfg` を末尾 X 形式へ同時修正する (BSD `mktemp` が `X` を置換しない実測結果)
+
+### Deferred Items
+
+- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` の Basic Auth 解決は Issue 本文 `## Known Gap` によりスコープ外。必要になった時点で別 Issue
+- Playwright MCP 経路 (`extraHTTPHeaders`) は MCP tool 引数にリテラル値を要求するため、この経路では資格情報が会話に現れる露出を解消できない。既存挙動と同一のため本 Issue では注記に留める
+- verify-executor の読者のうち `skills/review/SKILL.md` 以外が解決ステップに到達しないという前提は機械検証していない (マージ後の permission denied 監視で確認する)
+
+### Notes for Next Phase
+
+- **`#1428` retrospective の 3 つの落とし穴を再発させないこと**: (a) `printf | head -n 1 | tr -d` のパイプは `set -euo pipefail` 配下で SIGPIPE 異常終了しうる → 純 bash パラメータ展開へ、(b) 検証条件は値全体に対して評価する (行単位・部分一致にしない)、(c) 「そのまま移植」は関数から独立 `set -e` スクリプトへという文脈変化と組み合わさると新規リグレッションを生む
+- **`#1417` の非空性ガード 3 条件** (`!= *:*` / `-z "${_resolved_trimmed%%:*}"` / `-z "${_resolved_trimmed#*:}"`) を 1 つも落とさないこと。AC4 はこの再発防止が主眼
+- `tests/run-review.bats` の既存 8 テストは stderr 文言を文字列一致で検証している。警告メッセージは逐語一致させること
+- bats のモック生成で値に `"` を含む場合、非クオート heredoc への直接展開は壊れる。別ファイルへ `printf '%s' "$1" > file` して クオート済み heredoc + `cat` で読む方式を使うこと
+- `docs/ja/*` ミラーは日本語表現でパターンを扱う (英語パターンをそのまま持ち込まない)。`docs/translation-workflow.md` のコードフェンス数一致チェックも実施すること
