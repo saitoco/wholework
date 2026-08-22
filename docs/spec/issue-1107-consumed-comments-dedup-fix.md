@@ -58,6 +58,32 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 
 - saito (MEMBER, first-class): `/issue 1107 --non-interactive` の Issue Retrospective。#1054 の opportunistic verification で、本 Issue の Pre-merge AC 2 番目 (不在検証型) に参照点が authoring 時点で未記録だったことを検出し、`## Notes` セクションに 2026-07-30 時点の参照点 (`scripts/append-consumed-comments-section.sh` L36 に該当コメントが存在) を追加した経緯を記録したもの。この追加は Issue 本文に既に反映済みで、本 Spec の `## Notes` に引き継ぎ済み。あわせて Type=Bug・Size=M・タイトル/AC分類/sub-issue分割は変更なしと確認。 (https://github.com/saitoco/wholework/issues/1107#issuecomment-5132340110)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1107#issuecomment-5133701408
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5133753013
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5138806209
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5138891683
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5141403408
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5146656309
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1107` to verify the conditio / https://github.com/saitoco/wholework/issues/1107#issuecomment-5147236819
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5174322332
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5185271057
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5195221877
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5202641834
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5212266965
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5225317632
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5229260433
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5235404344
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5246559780
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5255750622
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5296382958
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5304274379
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5310547922
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5327727952
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5341237445
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5354372746
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5369690655
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1107#issuecomment-5378422923
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1107#issuecomment-5379823627
 ## Autonomous Auto-Resolve Log
 
 - **`phase/ready` ラベル不在のまま実行を継続** — reason: Issue のラベルは `phase/code` (Spec は既に存在) であり、`/spec` フェーズがラベルを `phase/ready` を経由せず直接 `phase/code` に遷移させたと推測される。`reconcile-phase-state.sh --check-precondition code-pr` は `matches_expected: false` を返したが、Spec ファイル自体は存在し内容も完備しているため、SKILL.md の非対話モード既定 (「warn and continue」) に従い、警告を出力のうえ Spec を使用して実装を続行した。
