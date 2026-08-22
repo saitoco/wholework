@@ -100,6 +100,22 @@ Issue 本文の候補 A (fallback 投稿に独立マーカーを付与する) �
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: 姉妹 Issue #1175 (PR #1187) が検出した残存ギャップ3件を Background の「関連する既知の欠陥」セクションへ統合し、対応する Pre-merge AC を追加した旨の Issue Retrospective (`/issue` フェーズ由来)。内容は既に Issue body に反映済みのため、本 Spec は Issue body の現行内容をそのまま採用した。 / URL: https://github.com/saitoco/wholework/issues/1174#issuecomment-5199850290
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1174#issuecomment-5200795649
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5200988147
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5212269054
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5225318561
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5229261245
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5235405647
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5246562363
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5255754474
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5296385818
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5304275670
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5310549459
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5327731303
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5341241949
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5354377763
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5369694398
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1174#issuecomment-5378424377
 ## Code Retrospective
 
 ### Deviations from Design
