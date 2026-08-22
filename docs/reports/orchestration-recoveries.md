@@ -82,6 +82,31 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-22 10:10 UTC: review-tier3-recovery
+
+### Context
+- Issue #1271, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 1
+- Log tail: "Finished at: 2026-08-22 17:50:24"
+
+### Diagnosis
+- cause: background-notification-wait
+- run-review.sh exited 1 after CI checks passed (14/15, 1 unrelated failure) because the /review session ended its turn silently after the CI wait — reconcile confirms matches_expected:false with no Review Response Summary posted, and post-fallback-review-summary found no prior Acceptance Criteria comment to fall back on. This matches the known background-notification-wait failure mode (claude -p has no re-invocation guarantee once a session stalls waiting on a notification), and unlike prior occurrences (#1212/#1222) there is no evidence in the reconcile snapshot of uncommitted MUST/SHOULD fixes sitting in the review worktree — only a bare pr_number is reported as actual state — so a plain retry of the review phase is the safe first step rather than escalating to a human decision.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-22 06:29 UTC: review-tier3-recovery
 
 ### Context
