@@ -10,6 +10,23 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-05T02:50:37Z`。
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | skill キャッシュ境界は `/auto` 実行単位ではなく**会話セッション単位**であることを実測。別 `AUTO_SESSION_ID` でも同一会話内なら古い skill で動くため、方針 C の `AUTO_SESSION_ID` 比較は検知漏れになる。方針 A / B が相対的に優位、方針 D も `skill_versions` が「開始時点のハッシュ」でしかない同じ限界を持つ | https://github.com/saitoco/wholework/issues/1168#issuecomment-5186873804 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1168#issuecomment-5187847647
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5187909201
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5200238795
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5212268626
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5225318394
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5229261096
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5235405380
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5246561850
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5255753538
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5296385242
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5304275443
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5310549104
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5327730753
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5341241149
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5354376578
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5369693791
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1168#issuecomment-5378424157
 ## Overview
 
 wholework は自己ホスト型リポジトリであり、harness が **会話セッション単位で skill 内容をキャッシュ**する。このため `skills/*/SKILL.md` を変更する Issue の post-merge observation AC は、その Issue を処理した会話セッション内では原理的に評価できず、`/verify` が UNCERTAIN を返して `phase/verify` 滞留を 1 件増やす (実例: #1157 条件 7)。
