@@ -167,3 +167,6 @@
 ### Uncertainty と Implementation Steps の整合 (self-check)
 
 `## Uncertainty` の解決済み 2 項目は、いずれも Implementation Steps へ漏れなく転記した — curl エスケープ規則は Step 3、BSD `mktemp` 制約は Step 3 (新規ファイル) と Step 6 (既存記述の修正) の**両方**へ個別に列挙している (片方だけの転記にしない)。未解決 1 項目 (verify-executor 読者の到達前提) は Step 6 の Caller scope 記述と Notes の allowed-tools 節へ転記した。整合方向は (a)「不足項目を Implementation Steps へ追加する」を採用
+
+## Consumed Comments
+No new comments since last phase.
