@@ -164,6 +164,7 @@ $ gh run list --workflow=test.yml --limit=8 --json conclusion,headBranch,event
 #### verify
 - Pre-merge 4 件全 PASS。AC3 (4 箇所の形式一致) は review 修正で pr route 例から `--branch=main` を外したため一見不一致に見えるが、patch route 形式に限れば 4 箇所とも `--branch=main --limit=1` で一致し、pr route 例には route 別の注意書きが付いている。Background が問題視した `--commit` の有無の不一致は解消済みと判定した
 - **Spec の `## Auto Retrospective` に manual recovery が記録されていない**。`--write-manual-recovery` は `_write_manual_recovery_to_recoveries_log()` を呼んで `orchestration-recoveries.md` にのみ書き込む (#1181 の記録先変更後の挙動) が、`skills/verify/SKILL.md` Step 12 step 3 の skip 判定は依然として「`## Auto Retrospective` に Tier 2/3/Manual recovery の記録があるか」を機械的判定基準にしており、`_write_manual_recovery_to_spec()` が Spec に書く前提の記述が残っている。今回は notable content として本節に記録したが、判定基準と実際の記録先が乖離している
+- **2026-08-23 の post-merge observation 再評価で PASS 判定に到達 (2026-08-10 の前回パスは SKIPPED)**。前回パス (`/auto --batch 1316 1310 1315`) は観測対象となる CI 検証 AC を持つ patch route Issue が存在せず観測窓が開かなかったが、本セッション (`/auto --batch 5`) では #1442・#1441・#1439 が SSoT 推奨形どおりの AC を持ち、いずれも実装コミットを含む push の CI を正しく参照して誤判定は発生しなかった。欠陥 A/B ともに実地で再現しなかったことを確認できた
 
 ### Improvement Proposals
 - `/review` silent no-op の根本原因 (再呼び出し保証のない実行サーフェスでの background task 完了通知待ち) と、`post-fallback-review-summary.sh` が worktree の未コミット変更を検出すべきという提案 — **#1213 にコメントとして記録済み** (方針 1 の `skills/review/SKILL.md` への拡大、方針 2 の `run-review.sh` への拡大、方針 3 の新規提案)。本 Issue からの独立起票は行わない
