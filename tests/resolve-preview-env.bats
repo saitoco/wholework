@@ -40,7 +40,7 @@ MOCK
 }
 
 @test "error: unknown mode" {
-    run --separate-stderr "$SCRIPT" basic-auth 123
+    run --separate-stderr "$SCRIPT" bogus-mode 123
     [ "$status" -eq 1 ]
     [[ "$stderr" == *"unknown mode"* ]] || false
 }
@@ -158,4 +158,211 @@ MOCK
     run --separate-stderr "$SCRIPT" url 123
     [ "$status" -eq 0 ]
     [ "$output" = "https://preview-123.example.com" ]
+}
+
+# --- basic-auth mode (Issue #1429) ---
+
+mock_basic_auth_value() {
+    # $1 = preview-basic-auth-command value to return (empty string = key not declared).
+    printf '%s' "$1" > "$MOCK_DIR/preview-basic-auth-command-value"
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    preview-basic-auth-command) cat "$(dirname "$0")/preview-basic-auth-command-value" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+}
+
+mock_basic_auth_special() {
+    # $1 = raw "username:password" value, which may contain shell
+    # metacharacters (", \, multiple :, CR/LF, multibyte). Written via
+    # `printf '%s' "$1" > file` so the value round-trips byte-for-byte
+    # instead of being re-interpreted by an unquoted heredoc (#1428
+    # retrospective: embedding a value containing `"` directly into an
+    # unquoted heredoc corrupts it).
+    printf '%s' "$1" > "$MOCK_DIR/basic-auth-special-value"
+    cat > "$MOCK_DIR/basic-auth-emit.sh" <<'MOCK'
+#!/bin/bash
+cat "$(dirname "$0")/basic-auth-special-value"
+MOCK
+    chmod +x "$MOCK_DIR/basic-auth-emit.sh"
+    mock_basic_auth_value "$MOCK_DIR/basic-auth-emit.sh"
+}
+
+file_mode() {
+    stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1" 2>/dev/null
+}
+
+@test "basic-auth error: unknown --format value" {
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format bogus
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"unknown --format value"* ]] || false
+}
+
+@test "basic-auth error: unexpected 3rd argument that is not --format" {
+    run --separate-stderr "$SCRIPT" basic-auth 123 --bogus curl-config
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"unknown argument"* ]] || false
+}
+
+@test "basic-auth error: wrong number of arguments (3)" {
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"Usage:"* ]] || false
+}
+
+@test "basic-auth no-op: preview-basic-auth-command not declared (empty stdout, exit 0)" {
+    mock_basic_auth_value ""
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+}
+
+@test "basic-auth success: default format is curl-config, 600-perm file with escaped user line" {
+    mock_basic_auth_value "echo user1:pass1"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ -f "$output" ]
+    [ "$(file_mode "$output")" = "600" ]
+    [ "$(cat "$output")" = 'user = "user1:pass1"' ]
+    [[ "$stderr" == *"Resolved PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS via preview-basic-auth-command for PR #123"* ]] || false
+}
+
+@test "basic-auth success: --format curl-config is equivalent to the default" {
+    mock_basic_auth_value "echo user1:pass1"
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format curl-config
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = 'user = "user1:pass1"' ]
+}
+
+@test "basic-auth success: --format user-pass writes a 2-line file with no escaping" {
+    mock_basic_auth_value "echo user1:pass1"
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format user-pass
+    [ "$status" -eq 0 ]
+    [ -f "$output" ]
+    [ "$(file_mode "$output")" = "600" ]
+    [ "$(cat "$output")" = $'user1\npass1' ]
+}
+
+@test "basic-auth success: {pr} placeholder is substituted with the PR number" {
+    mock_basic_auth_value "echo user-{pr}:pass-{pr}"
+    run --separate-stderr "$SCRIPT" basic-auth 456 --format user-pass
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = $'user-456\npass-456' ]
+}
+
+@test "basic-auth fallback: command times out (simulated via timeout binary exit 124)" {
+    cat > "$MOCK_DIR/timeout" <<'MOCK'
+#!/bin/bash
+exit 124
+MOCK
+    chmod +x "$MOCK_DIR/timeout"
+    mock_basic_auth_value "sleep 999"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"exited non-zero (status=124)"* ]] || false
+}
+
+@test "basic-auth fallback: command exits non-zero" {
+    mock_basic_auth_value "exit 1"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"exited non-zero"* ]] || false
+}
+
+@test "basic-auth fallback: empty output" {
+    mock_basic_auth_value "true"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"produced empty output"* ]] || false
+}
+
+@test "basic-auth fallback: output exceeds 2048 chars" {
+    mock_basic_auth_value "python3 -c \"print('a' * 2049 + ':pass')\""
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"exceeds 2048 chars"* ]] || false
+}
+
+@test "basic-auth fallback (#1417 regression): output with no colon at all" {
+    mock_basic_auth_value "echo justausernamewithoutcolon"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"not in username:password format"* ]] || false
+}
+
+@test "basic-auth fallback (#1417 regression): empty username (:password)" {
+    mock_basic_auth_value "echo :passwordonly"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"not in username:password format"* ]] || false
+}
+
+@test "basic-auth fallback (#1417 regression): empty password (username:)" {
+    mock_basic_auth_value "echo usernameonly:"
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"not in username:password format"* ]] || false
+}
+
+@test "basic-auth: curl-config format escapes backslash before double-quote" {
+    mock_basic_auth_special 'alice:p"a\b'
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = 'user = "alice:p\"a\\b"' ]
+}
+
+@test "basic-auth: only the first colon splits username from password (colon preserved in password)" {
+    mock_basic_auth_special 'alice:pa:ss:word'
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format user-pass
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = $'alice\npa:ss:word' ]
+}
+
+@test "basic-auth: CRLF is stripped before evaluation" {
+    mock_basic_auth_special $'alice:pass\r'
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format user-pass
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = $'alice\npass' ]
+}
+
+@test "basic-auth: only the first line of multi-line output is evaluated" {
+    mock_basic_auth_special $'alice:pass\nignored-second-line'
+    run --separate-stderr "$SCRIPT" basic-auth 123 --format user-pass
+    [ "$status" -eq 0 ]
+    [ "$(cat "$output")" = $'alice\npass' ]
+}
+
+@test "basic-auth: byte length (not character count) governs the 2048 limit for multibyte passwords" {
+    # 700 copies of a 3-byte UTF-8 character (2100 bytes of password alone,
+    # 2102 bytes total with "u:" prefix) exceeds 2048 bytes but is only 701
+    # Unicode codepoints — forcing LC_ALL=C pins bash's ${#var} to byte
+    # counting so this test is deterministic regardless of the runner's
+    # default locale.
+    export LC_ALL=C
+    mock_basic_auth_value "python3 -c \"print('u:' + 'あ' * 700)\""
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+    [[ "$stderr" == *"exceeds 2048 chars"* ]] || false
+}
+
+@test "basic-auth masking: raw command output and split credentials never appear in output" {
+    mock_basic_auth_value "echo secretuser:secretpass123"
+    run "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"secretuser"* ]] || false
+    [[ "$output" != *"secretpass123"* ]] || false
+    [[ "$output" == *".tmp/curl-auth-"* ]] || false
 }

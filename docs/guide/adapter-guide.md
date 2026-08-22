@@ -72,8 +72,11 @@ resolving `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` instead of `PREVIEW_URL`. Pl
 under `.wholework/adapters/` alongside your other adapters and declare it with
 `preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"` in
 `.wholework.yml`. Like `preview-url-command`, this does **not** go through the 3-layer Adapter
-Resolution below — it is a plain script path declared directly in the config key, invoked by
-`scripts/run-review.sh` via `bash -c`. See [`docs/guide/customization.md`](customization.md) §
+Resolution below — the declared command is executed via `bash -c` by the shared resolver
+`scripts/resolve-preview-env.sh` (`basic-auth` mode, Issue #1429), which both
+`scripts/run-review.sh`'s preview-wait gate and `/review`'s own direct-skill-invocation path
+(`modules/verify-executor.md` / `modules/browser-adapter.md`) call. See
+[`docs/guide/customization.md`](customization.md) §
 "Automating Basic Auth credential resolution with `preview-basic-auth-command`" for the full
 contract.
 

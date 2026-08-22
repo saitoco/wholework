@@ -195,27 +195,55 @@ No new comments since last phase.
 
 `scripts/resolve-preview-env.sh` へ `basic-auth` という新規分岐を追加するため、AC7 (`github_check "gh pr checks" "Run bats tests"`) は既存スイートの PASS に加えて、`tests/resolve-preview-env.bats` への新規ケース追加を要求する。要求内訳は Implementation Step 10 の (a)-(g): `--format` 既定/明示/不正値、ガード 8 件の fail-open、`#1417` 非空性ガードの回帰テスト、特殊文字 (`"` / `\` / 複数 `:` / CRLF / 多バイト)、マスキング
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/resolve-preview-env.bats` の既存テスト `@test "error: unknown mode"` は `basic-auth 123` を「未知モード」として exit 1 を期待していたが、本 Issue の実装により `basic-auth` は正規サポートモードになったため、このテストは実装後 FAIL する状態になっていた。Spec の Implementation Step 10 は新規テストケースの追加のみを指示しており、この既存テストの修正は明記されていなかったが、テスト対象を `bogus-mode` に差し替えて「本当に未知のモード」をテストする形に修正した (`git diff` で確認可能)。Implementation Steps 自体の変更は不要 (新規実装ロジックとは無関係な、既存テストの前提崩れの修正のため)
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec が Implementation Steps・Notes・Uncertainty で実装判断のほぼ全てを事前に確定していたため、実装中に新たな設計判断や曖昧さの発見はなかった
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。curl config のエスケープ順序 (`\` → `\\` の後に `"` → `\"`) と BSD `mktemp` の末尾 X 制約は Spec の Uncertainty 節で事前解決済みで、実装時に `curl --config --libcurl` による往復検証と `mktemp` の実測確認を行い、Spec の記載通りであることを再確認しただけだった
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 資格情報は**値ではなくファイルパス**で伝搬する。`basic-auth` モードは `--format curl-config` (既定、curl `--config` 用にエスケープ済み 1 行) と `--format user-pass` (2 行: username / password、エスケープなし) の 2 形式を出力し、消費側はいずれもパース処理を持たない
-- `capabilities.pr-preview` ゲートは消費側 (モジュール本文) に置く。スクリプト内ゲートは `tests/run-review.bats` の `get-config-value.sh` モックと衝突し既存 8 テストを壊す
-- `scripts/run-review.sh` は `--format user-pass` を読み戻して `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` を export する契約を維持する (`claude` サブプロセスへの環境変数継承が目的のため)
-- `skills/code` / `/verify` / `/auto` の `allowed-tools` は拡張しない。新規解決ステップは `HAS_PR_PREVIEW_CAPABILITY` をロード済みの呼び出し元 (現状 `skills/review/SKILL.md` のみ) でのみ発火する
-- `modules/verify-executor.md` の既存 `mktemp .tmp/curl-auth-XXXXXX.cfg` を末尾 X 形式へ同時修正する (BSD `mktemp` が `X` を置換しない実測結果)
+- `capabilities.workflow: true` が有効だが、本セッションは headless (`--non-interactive`) で再起動保証がないため Workflow path を明示的にスキップし、静的 Task fan-out (review-spec + review-bug×2) を `run_in_background: false` で実行した
+- Parser/Validator Edge Case Pre-check (edge-case サブエージェントによる `scripts/resolve-preview-env.sh` の実測実行) と Base Branch Conflict Pre-check (`docs/structure.md`/`docs/ja/structure.md` の `changed in both`) を両方実行し、いずれも実害なしと確認した上で通常の review-spec/review-bug fan-out に進んだ
+- review-bug×2 が独立に検出した MUST (`resolve-preview-env.sh` の CWD-relative パスバグ) と、CI で実際に FAILURE していた `Validate skill syntax` (allowed-tools ギャップ) の計 2 件の MUST、および SHOULD 2件・CONSIDER 3件を Step 12 で修正し、フル bats スイート (1981/1981 PASS) と CI (15/15 SUCCESS) で再検証した
+- 「`/code` は `HAS_PR_PREVIEW_CAPABILITY` を読むが解決ステップに到達しない」という code phase の Deferred Items 記載の懸念は、アドバーサリアル検証で「文言はやや不正確だが実質的には正しい」と判定し、REJECT (false positive) として扱った (`modules/verify-executor.md` は未修正のまま — 文言精度の改善は本 PR のスコープ外と判断)
 
 ### Deferred Items
 
-- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` の Basic Auth 解決は Issue 本文 `## Known Gap` によりスコープ外。必要になった時点で別 Issue
-- Playwright MCP 経路 (`extraHTTPHeaders`) は MCP tool 引数にリテラル値を要求するため、この経路では資格情報が会話に現れる露出を解消できない。既存挙動と同一のため本 Issue では注記に留める
-- verify-executor の読者のうち `skills/review/SKILL.md` 以外が解決ステップに到達しないという前提は機械検証していない (マージ後の permission denied 監視で確認する)
+- `docs/guide/customization.md` の `preview-basic-auth-command` イントロ段落が `run-review.sh` 専用であるかのように読める記述 (CONSIDER) は、姉妹セクション `preview-url-command` にも同型の既存ギャップがあるため本 PR では見送り、まとめて直すフォローアップが望ましい
+- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` の Basic Auth 解決は Issue 本文 `## Known Gap` によりスコープ外のまま (変更なし)
+- CWD-relative path バグの regression テスト (main repo root と呼び出し元 CWD を意図的に分離した bats ケース) は fix commit のみで未追加 — 次回同種のリファクタで追加を検討
 
 ### Notes for Next Phase
 
-- **`#1428` retrospective の 3 つの落とし穴を再発させないこと**: (a) `printf | head -n 1 | tr -d` のパイプは `set -euo pipefail` 配下で SIGPIPE 異常終了しうる → 純 bash パラメータ展開へ、(b) 検証条件は値全体に対して評価する (行単位・部分一致にしない)、(c) 「そのまま移植」は関数から独立 `set -e` スクリプトへという文脈変化と組み合わさると新規リグレッションを生む
-- **`#1417` の非空性ガード 3 条件** (`!= *:*` / `-z "${_resolved_trimmed%%:*}"` / `-z "${_resolved_trimmed#*:}"`) を 1 つも落とさないこと。AC4 はこの再発防止が主眼
-- `tests/run-review.bats` の既存 8 テストは stderr 文言を文字列一致で検証している。警告メッセージは逐語一致させること
-- bats のモック生成で値に `"` を含む場合、非クオート heredoc への直接展開は壊れる。別ファイルへ `printf '%s' "$1" > file` して クオート済み heredoc + `cat` で読む方式を使うこと
-- `docs/ja/*` ミラーは日本語表現でパターンを扱う (英語パターンをそのまま持ち込まない)。`docs/translation-workflow.md` のコードフェンス数一致チェックも実施すること
+- Pre-merge AC 7件はすべて PASS。github_check (AC7, bats テスト) は review フェーズで PASS 確認済み
+- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの直接 `/review` 実行の観察) は未検証のまま — `/verify` フェーズで対応すること
+- `modules/verify-executor.md` の "Caller scope" 文言 ("do not load it") は実質的に正しいが不正確な表現のまま残っている — 将来 `/code` の実装が変わり実際に解決ステップへ到達するようになった場合は要再確認
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Code phase の Phase Handoff が明示的に「未検証のまま」と記録していた懸念 (「verify-executor の読者のうち `skills/review/SKILL.md` 以外が解決ステップに到達しないという前提」) が、review の 3 エージェント (review-spec, review-bug×2) すべてから独立に「`/code` について事実誤認」として報告された。アドバーサリアル検証の結果、`/code` は `HAS_PR_PREVIEW_CAPABILITY` を読み込むが Step 13 (Preview Build Verification のゲート) にのみ使用し、`modules/verify-executor.md` を full mode で読む Step 10/11 は PR 作成前に実行されるため `resolve-preview-env.sh` が必須とする PR 番号を渡せず、新規解決ステップに実際には到達しないことが確認された。文言 ("do not load it") はやや不正確だが実質的な主張は成立しており、MUST/SHOULD 相当のバグとしては REJECT (false positive) と判定した。code phase の「未検証」フラグが review フェーズでの深掘りを誘発し、正しい結論 (機能的には無害、文言のみ不正確) に到達できた点は Loop Engineering として機能した一例と言える
+- 「exhaustive (漏れなく)」を謳う shared module (`modules/verify-executor.md`) の記述は、設計時の推論だけでなく `grep -rn "HAS_PR_PREVIEW_CAPABILITY" skills/*/SKILL.md` のような機械的な裏取りを伴うべきという教訓が得られた。今回は実害がなかったが、次回同様の "exhaustive" claim を書く際は spec/code phase 側で先に機械的検証を行うことが望ましい
+
+### Recurring issues
+
+- **CWD-relative path を `cd` 境界をまたいで返す** バグパターンが MUST として1件見つかった (`scripts/resolve-preview-env.sh` の `basic-auth` モードが `cd "$MAIN_REPO_ROOT"` 後に `mktemp .tmp/...` の相対パスをそのまま呼び出し元に返し、worktree から呼ばれると解決できない)。このバグは 2 つの独立した review-bug エージェントが同一の手法 (`git worktree list --porcelain` をモックして呼び出し元 CWD と主リポジトリルートを分離) で実際にスクリプトを実行し発見した — 収束的な検出は confidence の裏付けとして機能した
+- 同バグが `tests/resolve-preview-env.bats` の既存 20 件のテストで検出されなかった原因は、`BATS_TEST_TMPDIR` が git リポジトリでないため `git worktree list --porcelain` が失敗し `cd` 自体が発火しないことだった。**テストハーネスの隔離環境が偶然 `cd`-依存バグを回避してしまうパターン**は、パスを返す (return a path, not consume-and-return-nothing) スクリプトの今後のテスト設計で意識すべき — 「main repo root と呼び出し元 CWD を意図的に分離した状態」を模した bats ケースを追加することが再発防止になる (今回は fix commit のみで対応し、専用の regression テストは追加していない — 次回同種のリファクタで追加を検討)
+
+### Acceptance criteria verification difficulty
+
+- 7件の Pre-merge AC はすべて `rubric` / `file_not_contains` / `github_check` で機械的に判定可能で、UNCERTAIN は 0 件だった。rubric 4件は Issue 本文が「何を」検証すべきかを明確に記述しており、判定に迷いはなかった
+- Parser/Validator Edge Case Pre-check (edge-case サブエージェントによる `scripts/resolve-preview-env.sh` の実測実行) は、curl config エスケープの往復検証を含め 5 軸すべてで問題を検出しなかった。これは実装が Spec の Uncertainty 節で事前解決していた内容を忠実に反映していたためで、review フェーズでの追加発見はなかった (MUST バグは edge-case pre-check ではなく review-bug エージェントの通常の diff 読解から見つかった)

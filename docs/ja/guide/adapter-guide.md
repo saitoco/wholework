@@ -68,8 +68,11 @@ adapter と並べて `.wholework/adapters/` 配下に置く (例:
 `.wholework.yml` で
 `preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"`
 のように宣言する。`preview-url-command` と同様、これは下記の 3 層 Adapter 解決を
-**通らない** — `scripts/run-review.sh` が `bash -c` 経由で呼び出す、設定キーに
-直接宣言されたスクリプトパスである。完全な契約は
+**通らない** — 宣言されたコマンドは共有の解決スクリプト `scripts/resolve-preview-env.sh`
+(`basic-auth` モード、Issue #1429) が `bash -c` 経由で実行し、この共有スクリプトは
+`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接
+呼び出す経路 (`modules/verify-executor.md` / `modules/browser-adapter.md`) の
+両方から呼ばれる。完全な契約は
 [`docs/ja/guide/customization.md`](customization.md) の
 「`preview-basic-auth-command` による Basic 認証情報解決の自動化」節を参照。
 
