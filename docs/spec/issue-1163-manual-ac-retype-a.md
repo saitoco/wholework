@@ -316,3 +316,8 @@ Nothing to note — Pre-merge AC 6 件 (rubric ×3, github_check ×3) は全て�
 - **No action (同上)**: `check-verify-dirty.sh` の分類が「進行中セッションの作業」を `other-session` として扱えず、SKILL.md exit 2 の 2 択が実態に合わない点も、#1058 の棚卸しスコープ (worktree セッション中の main 書き込み全般の再評価) に含まれる。分類ロジック側の改善として同 Issue の `/spec` で扱われるべき
 - **Tier 3 (one-time memo)**: precedent 引用の時制チェック — 「この Issue が引用対象自身を書き換える」構造を持つ report では、precedent 引用が過去形として読めるようスコープを明示する必要がある。review retrospective に既に記録済みで、review が実際に検出できているため仕組み化は不要
 
+### Post-merge Observation Follow-up (2026-08-23, observation dispatch re-check)
+
+- 唯一残る post-merge observation AC (「本 Issue で再型付けした AC 行数分だけ Manual waiting が減少する」) を今回の `auto-run` dispatch で再評価した。`docs/reports/observation-ac-audit-summary.md` (#1270 の baseline+集約レポート) によると、本 Issue が再型付けした 29 AC 行のうち、後続の実査 (#1274) で **2 行が `verify-type: manual` へ差し戻された** (分類 E)。当初の「exactly N 行分の減少」という想定は、後続のより精緻な実査によって部分的に修正されている (純減は 34−2=32 相当)。
+- これは実装の欠陥ではなく、#1270/#1274/#1275/#1276 という意図的な後続監査による想定修正であるため、**UNCERTAIN** と判定し FAIL による reopen/auto-retry は発生させなかった。人による、または本条件テキスト自体を #1274 の結論に合わせた更新が望ましい。
+- **Improvement Proposal (Tier 2 — memory candidate)**: 「Issue 自身の post-merge observation AC が、後続の別 Issue によって前提を修正され得る」というパターンは、#1163 のような「一括移行 + 後続の精査 Issue」の組み合わせで再発しうる。移行元 Issue の post-merge AC に「本条件は後続の精査 Issue (#N) の結論で更新されうる」旨を明示する慣行があれば、今回のような UNCERTAIN 化を避けられた可能性がある。単発の観測のため Issue 化はせず、ここに記録するに留める。
