@@ -120,17 +120,16 @@ All three literal-pattern directions from the Issue's Proposal were checked agai
 - Separately: `scripts/check-language-convention.py`'s CJK exclusion only strips double-quoted string content, not single-quoted. A legitimate non-prose usage (a bash regex literal that must contain Japanese characters as data, not accidental transcription) was flagged and required a quoting-style change to pass CI. Not a blocking issue for this PR (fixed inline), but a candidate for a small checker enhancement (extend the exclusion to single-quoted strings too) if this pattern recurs.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed both MUST issues found: (1) `HAS_XL_FACTS` checked the wrong facts JSON field (`.route == "xl"` instead of `.size == "XL"`) — corrected per `collect-run-facts.sh`'s actual schema, with the 4 new bats fixtures updated to match; (2) `Language Convention check` CI failure — `XL_SCOPE_PATTERN` switched from single- to double-quoted bash string literal (no semantic change) so `check-language-convention.py`'s CJK exclusion applies.
-- AC1's rubric verdict recorded as UNCERTAIN (not reverted from its existing `[x]` checked state) despite being structurally unverifiable via the rubric grader's documented Spec-exclusion rule, since the underlying content was independently confirmed true by direct Spec inspection and reverting a `/code`-checked box over a mechanism technicality was judged more disruptive than valuable; flagged as a SHOULD-level verify-command-quality finding instead.
-- The pre-existing greedy-`sed` comment-stripping bug found via edge-case execution (line 413) was left unfixed as out-of-scope for this diff (CONSIDER-level, recommended as a follow-up Issue) since it is not part of this PR's own new lines.
+- Squash-merged PR #1445 to `main` (commit `f7a246f5`) with `--delete-branch`; no conflicts, mergeable=true (CI success, review approved) so Step 3 (Resolve Conflicts) was skipped entirely.
+- Pre-merge AC gate: both Pre-merge acceptance conditions were already `[x]` on the Issue (`unchecked_count=0`); review-incomplete-fallback check confirmed the PR's review completion was organic (`/review`'s own Step 14), not fallback-origin — no override marker needed.
 
 ### Deferred Items
-- Follow-up Issue candidate: replace `scripts/opportunistic-search.sh`'s greedy `sed 's/ *<!--.*-->//g'` (line 413) with a non-greedy or iterative per-comment-span strip, so condition text between two separate HTML comments on the same Issue body line is not silently discarded.
-- Follow-up Issue candidate: establish a documented convention for `rubric` acceptance criteria whose primary evidence lives only in the Spec (currently structurally unverifiable, see AC1 above).
+- Follow-up Issue candidate (carried from review phase): replace `scripts/opportunistic-search.sh`'s greedy `sed 's/ *<!--.*-->//g'` (line 413) with a non-greedy or iterative per-comment-span strip.
+- Follow-up Issue candidate (carried from review phase): establish a documented convention for `rubric` acceptance criteria whose primary evidence lives only in the Spec.
 
 ### Notes for Next Phase
-- `/merge` should find both Pre-merge AC checkboxes in their pre-existing state (AC1 unchecked note applies only to `/review`'s own verification table, not to the Issue body checkbox, which was left unchanged — see AC verification results in the posted PR review for the full explanation) and both MUST review findings resolved in commit `bb14b688`.
-- Full bats suite (2005/2005) and `check-language-convention.py` both pass on the current PR branch tip after the fix commit.
+- `/verify` should confirm Post-merge state: this Issue's Post-merge section is "なし" (no post-merge acceptance conditions), so `/verify` is expected to complete with nothing to check.
+- Issue #1440 is expected to auto-close via `closes #1440` in the PR body (base branch is `main`); Step 6 fallback verification will confirm actual state.
