@@ -289,6 +289,7 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 #### verify
 - Post-merge AC は未発火のため SKIPPED。加えて本条件は「変更後に `/auto` を**複数回**実行し、起票レートが月次で低下していること」を要求するため、**変更着地当日の単一セッションでは原理的に判定不可能**。実質的な評価は 2026-08 月末以降の `/audit stats` になる
 - **本 retrospective は新デフォルト (迷ったら Tier 2) を適用した最初の実運用事例**。`retro_proposal_classified` イベントを 2 件 emit し、`Tier classification: 0 Tier 1 / 1 Tier 2 / 1 Tier 3 (filter hit rate 100%)` を出力した。**新規起票ゼロ**で着地している
+- **2026-08-22 の再評価 (`event=auto-run` 発火、本追記時点)**: `gh issue list` による簡易集計 (`/audit stats` の正式集計ではない粗い手計算) では、fix 着地前 (2026-08-01〜04、4日) は 7 件 (1.75件/日)、着地後 (2026-08-05〜22、18日) は 94 件 (5.2件/日) で、2026-07 の月次平均 4.77件/日と比べても低下が確認できず、むしろ高い水準にある。ただし本セッション自身が issue #1429 の対応中に2件を Tier 1 起票しており (#1441 / #1442、いずれも positive-evidence gate 経由で新デフォルトの「迷ったら Tier 2」には該当しない正当な Tier 1 判定)、大規模 batch セッションによる交絡の可能性も排除できないため UNCERTAIN と判定し、`phase/verify` を維持した。正式な `/audit stats` による人手再確認を推奨する
 
 ### Improvement Proposals
 
