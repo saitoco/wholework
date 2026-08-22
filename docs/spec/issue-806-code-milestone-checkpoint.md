@@ -4,6 +4,21 @@
 
 - saito / MEMBER / first-class / `## Issue Retrospective` (`/issue` フェーズの Auto-Resolve Log: milestone 6段階採用・review phase deferred・--resume 実装場所両方・Checkpoint Design AC 追加・AC2 grep `-E` 削除) / https://github.com/saitoco/wholework/issues/806#issuecomment-4823838553
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/806#issuecomment-4824207161
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5200984891
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5212262884
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5225315519
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5229259081
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5235402024
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5246556481
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5255745202
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5296378671
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5304272599
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5310545810
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5327723374
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5341231490
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5354367526
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/806#issuecomment-5369686170
 ## Overview
 
 `/auto --batch` セッションで `run-auto-sub.sh` が code phase 途中に外部 kill / watchdog kill されると、worktree に prepared 済みの commits が残っても `git push` / `gh pr create` が未実行のまま停止し、manual recovery (parent session または Tier 3 recovery sub-agent) が必要になる。
