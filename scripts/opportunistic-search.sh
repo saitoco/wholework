@@ -235,18 +235,20 @@ fi
 
 # HAS_XL_FACTS: gate for the XL-scope pre-filter below (opportunistic mode only). A
 # candidate whose condition text names an XL/parallel-sub-issue scenario can only be
-# judged non-SKIP when this run's own facts show XL route processing actually occurred;
+# judged non-SKIP when this run's own facts show XL Size processing actually occurred;
 # excluding it otherwise avoids a guaranteed-SKIP downstream emit_event call (Issue
 # #1440). Fail-open on any jq failure (missing jq, malformed JSON, empty .issues[]) --
 # same direction as every other --facts-derived gate in this script (FACT_TOKENS_LOWER
-# above, when=route: clauses below).
+# above, when=route: clauses below). Checks .size, not .route: collect-run-facts.sh's
+# route field is pr|patch|operate|unknown (never "xl") -- XL-ness is carried in the
+# separate size field (XS/S/M/L/XL).
 HAS_XL_FACTS=false
 if [ -n "$FACTS_PATH" ] && [ -f "$FACTS_PATH" ]; then
-    if jq -e 'any(.issues[]?; .route == "xl")' "$FACTS_PATH" >/dev/null 2>&1; then
+    if jq -e 'any(.issues[]?; .size == "XL")' "$FACTS_PATH" >/dev/null 2>&1; then
         HAS_XL_FACTS=true
     fi
 fi
-XL_SCOPE_PATTERN='XL (Issue|[Ss]ub-issue)|並列.{0,20}[Ss]ub-issue|[Ss]ub-issue.{0,20}並列'
+XL_SCOPE_PATTERN="XL (Issue|[Ss]ub-issue)|並列.{0,20}[Ss]ub-issue|[Ss]ub-issue.{0,20}並列"
 
 # resolve_run_facts: lazily resolve run facts JSON, once per process. Called on demand by
 # the first `when=`-tagged AC line encountered in the match loop below. Result is cached in

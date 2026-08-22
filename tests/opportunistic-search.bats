@@ -909,11 +909,11 @@ teardown() {
     [[ "$output" != *"Note: truncated"* ]]
 }
 
-@test "XL-scope gate: XL keyword match with facts showing xl route includes the issue" {
+@test "XL-scope gate: XL keyword match with facts showing XL size includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 950}]'
     export MOCK_ISSUE_BODY_950='## Post-merge
 - [ ] /verify skill checks 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: opportunistic -->'
-    echo '{"session_id":"s1","issues":[{"number":1,"route":"xl"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1,"size":"XL"}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
@@ -921,11 +921,11 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 950' > /dev/null
 }
 
-@test "XL-scope gate: XL keyword match with facts showing no xl route excludes the issue" {
+@test "XL-scope gate: XL keyword match with facts showing no XL size excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 951}]'
     export MOCK_ISSUE_BODY_951='## Post-merge
 - [ ] /verify skill checks 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: opportunistic -->'
-    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1,"size":"M"}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
@@ -936,7 +936,7 @@ teardown() {
     export MOCK_ISSUE_LIST='[{"number": 952}]'
     export MOCK_ISSUE_BODY_952='## Post-merge
 - [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
-    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1,"size":"M"}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
@@ -948,7 +948,7 @@ teardown() {
     export MOCK_ISSUE_LIST='[{"number": 953}]'
     export MOCK_ISSUE_BODY_953='## Post-merge
 - [ ] 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: observation event=auto-run -->'
-    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+    echo '{"session_id":"s1","issues":[{"number":1,"size":"M"}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
