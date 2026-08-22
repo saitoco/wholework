@@ -78,7 +78,7 @@ wholework/
 
 > **メンテナンスルール**: このセクションの表とリストは実際のファイルと整合させること。以下に列挙されたファイルが追加・削除・リネームされたり、役割/説明が変わった場合は、同じ変更の中で該当エントリを更新すること。`/audit drift` が乖離を検出するが、手動でのメンテナンスは引き続き必要である。
 >
-> `modules/` または `scripts/` にファイルを追加・削除する場合は、上記 Directory Layout セクションのファイル数コメント (例: `(29 files)`) も更新し、PR の受入基準に件数を確認する verify command を含めること (例: `<!-- verify: grep "(29 files)" "docs/structure.md" -->`)。
+> `modules/` または `scripts/` にファイルを追加・削除する場合は、上記 Directory Layout セクションのファイル数コメント (例: `(29 files)`) も更新すること。新しい件数を verify command にリテラル値として固定しないこと (同じ行を触る並行 PR に耐えられない)。代わりに post-merge の動的比較を使うこと。パターンと根拠は `modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience" を参照。
 
 ### Skills
 
