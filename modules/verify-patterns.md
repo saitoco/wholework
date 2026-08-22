@@ -1106,6 +1106,30 @@ A bats assertion that only checks whether a pattern name or keyword appears as a
 3. Add a `grep -o`-based extraction of the embedded command per the recommended bats pattern, and assert the extracted string is exactly the expected literal (verification means 2), or falls back to the no-unexpected-backslash form when a fixed literal is impractical.
 4. Add a `bash -n` syntax-validity assertion on the extracted string (verification means 1) alongside the content-level assertion from step 3 — never as its sole check, per the known limitation above.
 
+### 31. Literal Numeric Pinning ACs — Concurrent PR Resilience
+
+A verify command that pins a literal numeric value expected to change over time (e.g. `file_contains "docs/structure.md" "(94 files)"`) is structurally fragile against concurrent PRs. When two PRs each independently increment the same counter by one, and both branch from a base where the counter reads N, git's non-conflicting merge treats both edits as the same textual change (N → N+1) rather than as two additive changes that should compound. Whichever PR merges last silently keeps the counter at N+1, discarding the other PR's increment — the true post-merge value (N+2) is lost with no merge conflict to surface the discrepancy.
+
+**Background (#1047)**: during the code phase for #1047 (updating the script-count comments in `docs/structure.md` / `docs/ja/structure.md`), this branch had diverged before two already-merged PRs (#1428, #1432) independently bumped the same line from `92` to `93` for unrelated new scripts. Git's non-conflicting merge resolution collapsed both edits into a single `92→93` change, nearly discarding the true post-merge value of `94` — caught only by a Base Branch Conflict Pre-check's measured detection, not by the verify command itself. The same class of counter collision was observed earlier in #1119 (a `docs/structure.md` script-count off-by-one from concurrent PR #1211), which was triaged as a SHOULD-severity finding and deferred rather than structurally fixed — this section addresses the pattern both incidents share, after two independent recurrences.
+
+**Recommended pattern**: replace the literal pinned value with a post-merge dynamic comparison — a `command` verify command that recomputes the actual count and compares it against the value recorded in the document, rather than hardcoding an expected number:
+
+```
+<!-- verify: command "test \"$(find scripts -maxdepth 1 -type f | wc -l)\" -eq \"$(grep 'Utility scripts used by skills and agents' docs/structure.md | grep -oE '[0-9]+')\"" -->
+```
+
+Use `-E`/`-o` for extraction, not `-P` (PCRE) — BSD `grep` on macOS does not support `-P`, and this form must be portable to both local macOS environments and CI.
+
+**Why this cannot be resolved pre-merge**: while concurrent PRs are still open, `/review` (safe mode) has no way to observe a sibling PR's not-yet-merged change, so the collision is invisible at review time regardless of verify command shape. `command` verify commands additionally execute only in full mode — in `/review` (safe mode) they return UNCERTAIN (see § "Out-of-Tree File References" note on verify mode above) — so post-merge (`/verify`, full mode) is the only phase where a dynamic comparison can actually execute and catch a lost increment.
+
+**Decision procedure**:
+1. Identify whether an acceptance condition pins a literal numeric value expected to change over time (file/line/entry counts in a shared document, running totals, etc.).
+2. If found, assess concurrent-PR risk: is the counter on a line that multiple, independently-authored PRs are likely to touch in the same time window (a shared, frequently-edited document), or is it effectively exclusive to this change (no other PR plausibly touches the same line concurrently)?
+3. If concurrent-PR risk exists, replace the literal pin with a post-merge dynamic comparison per the recommended pattern above, classified `verify-type: auto` (a verify command is present).
+4. If no concurrent-PR risk exists (an exclusive counter unlikely to collide), the literal pre-merge pin is acceptable as-is — this section does not require converting every numeric AC.
+
+**Scope**: this pattern generalizes beyond `docs/structure.md`'s `(N files)` comment to any literal-numeric-pinning acceptance condition that counts files, lines, or entries in a document shared across concurrently-worked-on PRs.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
