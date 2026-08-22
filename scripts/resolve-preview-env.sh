@@ -245,12 +245,20 @@ fi
 _user="${_resolved_trimmed%%:*}"
 _pass="${_resolved_trimmed#*:}"
 
-mkdir -p .tmp 2>/dev/null || true
+mkdir -p .tmp 2>/dev/null || exit 0
+# Output path is built from $PWD (absolute, resolved to MAIN_REPO_ROOT by the
+# `cd` above when one was found) rather than a bare relative `.tmp/...`
+# template. A relative path here would be created under MAIN_REPO_ROOT but
+# handed back to a caller whose own CWD may be a PR worktree (e.g. /review's
+# Worktree Entry) — the returned path would silently fail to resolve there,
+# defeating both the curl --config consumer and the follow-up `rm -f`
+# cleanup (leaving a stray credential file behind). An absolute path
+# resolves correctly regardless of the caller's CWD.
 if [ "$FORMAT" = "curl-config" ]; then
   # Template's X run must be at the very end — BSD mktemp (macOS default)
   # does not randomize a XXXXXX run followed by a literal suffix (e.g.
   # "-XXXXXX.cfg"), producing a predictable, colliding filename instead.
-  _outfile="$(mktemp .tmp/curl-auth-XXXXXX)"
+  _outfile="$(mktemp "$PWD/.tmp/curl-auth-XXXXXX" 2>/dev/null)" || exit 0
   # curl's -K/--config double-quoted string escaping (see the curl manual,
   # -K/--config): only \\ \" \t \n \r \v are recognized escapes; any other
   # backslash is passed through literally. Escaping `\` before `"` (in that
@@ -265,7 +273,7 @@ else
   # KEY='value' shell format — a password containing `'` would break that
   # quoting; plain `{ IFS= read -r U; IFS= read -r P; } < file` has no
   # quoting to break.
-  _outfile="$(mktemp .tmp/preview-basic-auth-XXXXXX)"
+  _outfile="$(mktemp "$PWD/.tmp/preview-basic-auth-XXXXXX" 2>/dev/null)" || exit 0
   printf '%s\n%s\n' "$_user" "$_pass" > "$_outfile"
 fi
 
