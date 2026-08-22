@@ -115,7 +115,7 @@ capabilities:
 | `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
-| `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (解決の呼び出し箇所は `run-review.sh` の `pr-preview` ゲート内にある)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行をカバー) のみが参照する — `/review` を skill として直接呼ぶ経路では参照されない。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (このファイル内の他の実行コマンド系キーと同じ信頼レベル)。 |
+| `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`run-review.sh` の `pr-preview` ゲート・`/review` の Step 8.0 のいずれの解決呼び出し箇所もこの capability でゲートされる)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接呼ぶ経路の Step 8.0 の両方が参照する (共有スクリプト `scripts/resolve-preview-env.sh` 経由、Issue #1428)。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (このファイル内の他の実行コマンド系キーと同じ信頼レベル)。 |
 | `preview-basic-auth-command` | string | `""` | `preview-url-command` が `PREVIEW_URL` を解決するのと同じ仕組みで、プロジェクト側スクリプトが `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`preview-url-command` と同じゲート)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートのみが参照する。コマンド標準出力の 1 行目は `username:password` 形式である必要がある (最初の `:` で分割) — それ以外の結果 (非 0 終了、空出力、2048 文字超の出力、1 行目に `:` が無い) の場合は両変数を未設定のまま維持し、既存の非認証フォールバックを保持する。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`preview-url-command` と同じ信頼レベル)。 |
 | `spec-path` | string | `docs/spec` | spec の保存先 |
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
@@ -205,9 +205,9 @@ GitHub deployment を作らないホスティングプロバイダ (AWS Amplify 
 preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
 ```
 
-`{pr}` プレースホルダはコマンド実行前に PR 番号へ置換されます。省略した場合は引数なしでコマンドが実行されます (例: 現在のブランチから自身で PR を解決するスクリプト)。解決順序は「export 済みの `PREVIEW_URL` > `preview-url-command` > GitHub Deployments API」です。`capabilities.pr-preview: true` が必須です — 未設定の場合 `run-review.sh` の preview 待ちゲートは実行されず、このキーは無視されます。コマンド標準出力の 1 行目のみが URL として解釈されます (CR と前後の空白は除去) — それ以降の出力は検証対象外です。コマンドが非 0 終了する、出力が空になる、出力が 2048 文字を超える、あるいは (1 行目の) 出力が `http://`/`https://` の URL でない場合、`run-review.sh` は既存の Deployments API ポーリングへそのままフォールバックします (新たな fail-open も fail-closed も導入されません)。
+`{pr}` プレースホルダはコマンド実行前に PR 番号へ置換されます。省略した場合は引数なしでコマンドが実行されます (例: 現在のブランチから自身で PR を解決するスクリプト)。解決順序は「export 済みの `PREVIEW_URL` > `preview-url-command` > GitHub Deployments API」です。この優先順位は `/review` が `scripts/run-review.sh` 経由 (`/auto`・スケジュール実行・wrapper 直接実行) で実行される場合と、skill として直接呼び出される場合の両方で同じように適用されます — どちらの経路もガードロジック (timeout・出力検証) を共有スクリプト `scripts/resolve-preview-env.sh` に委譲しているためです。`capabilities.pr-preview: true` が必須です — 未設定の場合、いずれの経路でも `preview-url-command` は解決されず、このキーは無視されます。コマンド標準出力の 1 行目のみが URL として解釈されます (CR と前後の空白は除去) — それ以降の出力は検証対象外です。コマンドが非 0 終了する、出力が空になる、出力が 2048 文字を超える、あるいは (1 行目の) 出力が `http://`/`https://` の URL でない場合、解決スクリプトは既存の Deployments API ポーリングへそのままフォールバックします (新たな fail-open も fail-closed も導入されません)。
 
-カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート — すなわち `/auto`・スケジュール実行・`run-review.sh` の直接実行のみで参照されます。`/review` を skill として直接呼び出す経路では参照されず、その経路は引き続き上記の手動 `PREVIEW_URL` export が必要です。
+カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行) と、`/review` を skill として直接呼び出す経路の Step 8.0 の両方から参照されます。
 
 **`preview-basic-auth-command` による Basic 認証情報解決の自動化:**
 

@@ -44,17 +44,21 @@ capabilities:
 > Wholework は動的検出 (ToolSearch / `command -v`) にフォールバックする。
 > 明示的な宣言により、セッション状態によらず再現可能な挙動が得られる。
 
-**`preview-url-command`** — 関連するが別の仕組み: `scripts/run-review.sh` が
-`bash -c` 経由で直接呼び出し `PREVIEW_URL` を解決する、プロジェクトローカルの
-*スクリプト* (adapter contract の `.md` ファイルではない)。GitHub deployment を
-作らないホスティングプロバイダ (AWS Amplify Hosting 等) 向け。スクリプトは他の
+**`preview-url-command`** — 関連するが別の仕組み: `PREVIEW_URL` を解決する、
+プロジェクトローカルの*スクリプト* (adapter contract の `.md` ファイルではない)。
+GitHub deployment を作らないホスティングプロバイダ (AWS Amplify Hosting 等)
+向け。宣言されたコマンドは共有の解決スクリプト `scripts/resolve-preview-env.sh`
+(Issue #1428) が `bash -c` 経由で実行し、この共有スクリプトは
+`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接
+呼び出す経路の Step 8.0 の両方から呼ばれる — guard ロジック
+(timeout・出力検証) は両呼び出し元で1つの実装を共有する。スクリプトは他の
 adapter と並べて `.wholework/adapters/` 配下に置く (例:
 `.wholework/adapters/resolve-preview-url.sh`) と発見しやすく、`.wholework.yml`
 で `preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"` の
-ように宣言する。これは下記の 3 層 Adapter 解決を**通らない** — `run-review.sh`
-は bash wrapper であり、skill のように adapter contract の `.md` ファイルを
-「読んで従う」ことができないため、設定キーに直接スクリプトパスを宣言する形を
-取る。完全な契約 (フォールバック挙動・`{pr}` 置換・カバー範囲) は
+ように宣言する。これは下記の 3 層 Adapter 解決を**通らない** — 解決スクリプトは
+設定キーに直接宣言されたプレーンなスクリプトパスであり、「読んで従う」形で
+解決される adapter contract の `.md` ファイルではない。完全な契約
+(フォールバック挙動・`{pr}` 置換・カバー範囲) は
 [`docs/ja/guide/customization.md`](customization.md) の
 「`preview-url-command` による `PREVIEW_URL` 解決の自動化」節を参照。
 

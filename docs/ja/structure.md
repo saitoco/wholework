@@ -198,6 +198,7 @@ wholework/
 - `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` (session_id でフィルタ) から /auto セッション retrospective の `## Metrics` markdown セクション (`--metrics-only`) を発行する。`session.md` への埋め込みと `/audit auto-session` 用
 - `scripts/get-verify-iteration.sh` — Issue コメントから最も高い `<!-- verify-iteration: N -->` マーカーを読み取る
 - `scripts/resolve-preview-ac-fallback.sh` — Issue コメントから最新の `type=preview-ac-unverified` マーカーを解決し、`/verify` フォールバックが必要な AC の 1-based インデックスを出力する (なければ空)
+- `scripts/resolve-preview-env.sh` — プロジェクト宣言の `preview-url-command` の共有リゾルバ (`url` サブコマンド): 30秒制限の `bash -c` 実行、空出力/非ゼロ終了/2048文字超/URL形式のガード付き、fail-open (空 stdout + exit 0) で呼び出し元は GitHub Deployments API にフォールバックする。`scripts/run-review.sh` の preview 待ちゲートと `skills/review/SKILL.md` Step 8.0 から呼ばれる
 - `scripts/verify-executability-marker.sh` — 手動のマージ後 AC に対する `/verify` Step 8b の Claude-executability 判断を記録する `type=verify-executability` マーカーを生成 (`format`) および解決 (`resolve`、最新優先) する
 - `scripts/check-pre-merge-ac.sh` — Issue 本文の `### Pre-merge` サブセクションで未チェックのチェックボックスをスキャンし、グローバルな 1-based インデックス + テキストを JSON として出力する。`skills/merge/SKILL.md` Step 1 の pre-merge AC ゲートで使用される
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッションタイトルを自動リネームする

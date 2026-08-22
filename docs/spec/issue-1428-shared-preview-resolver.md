@@ -166,19 +166,98 @@ No new comments since last phase.
 
 - `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式 (Deployments API 経路・preview-url-command 経路の両方) の相互作用は、コードベース調査で新たに発見した未解決の疑問点。既存 (Deployments API) 経路にも同じ特性があり #1428 固有の新規欠陥ではないと判断し、Pre-merge AC には含めず Uncertainty として記録した。`/code` 実装後に実地確認し Code Retrospective に記録する運用とした
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-10 は Spec の記述どおりに実装した (インターフェース・挿入位置・ゲート条件を含め設計からの逸脱なし)
+
+### Design Gaps/Ambiguities
+- なし。Spec の Alternatives Considered / Notes が事前に判断根拠を記録済みだったため、実装中に新たな曖昧点は発生しなかった
+
+### Rework
+- `tests/resolve-preview-env.bats` の 2048 文字超テストで、`mock_config_value()` ヘルパーが未クオートの heredoc (`<<MOCK`) 内で `echo "$1"` の形にコマンド文字列を直接展開していたため、`$1` に二重引用符 (`python3 -c "print(...)"`) が含まれるケースで生成されるモックスクリプトのクオートが壊れて構文的に破綻した。値を別ファイルへ `printf '%s' "$1" > file` で書き出し、heredoc 側は `<<'MOCK'` (クオート済み) にして `cat` で読み込む方式に変更して解消した — bats のモック生成で「呼び出し元の任意文字列をそのまま heredoc に埋め込む」パターンは、値に `"` を含むケースで一般に壊れる点に注意
+
+### Uncertainty resolution (`--when="test -n \"$PREVIEW_URL\""` との相互作用)
+- Spec Uncertainty 節の疑問点をコードベース調査で確認した (実プロジェクトでの実地確認ではなく、静的な契約の突き合わせによる確認 — 本 Issue の non-interactive 実行では `capabilities.pr-preview: true` を宣言した実プロジェクトが手元になく、実地確認は実施できなかったため best-effort で代替した)
+- `modules/verify-executor.md` は `--when` 条件を実際の Bash サブプロセスで評価する。Step 8.0 の Deployments API 経路 (既存) と本 Issue が追加した preview-url-command 経路は、いずれも解決した URL を `{{base_url}}` へ**リテラル文字列として代入**するのみで、実際に `PREVIEW_URL` を shell に `export` するわけではない
+- そのため `--when` 評価用のサブプロセスには `$PREVIEW_URL` は存在せず、`test -n "$PREVIEW_URL"` は偽と評価され、`--when` ガード付き AC は「Fast path (env 既存)」以外の2経路 (Deployments API・preview-url-command) では SKIP される
+- Spec の想定どおり、これは Deployments API 経路に既に (#1428 以前から) 存在していた特性であり、preview-url-command 経路固有の新規欠陥ではない。本 Issue のスコープでは修正しない (Spec の Uncertainty 節・Out of Scope の判断を踏襲)
+- 修正が必要と判断された場合は別 Issue とする (Spec の判断をそのまま維持)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Parser/Validator Edge Case Pre-check の実測実行で、`scripts/resolve-preview-env.sh` に Spec の Implementation Steps には現れなかった実装レベルの逸脱が複数見つかった: (a) `printf | head -n 1 | tr -d` のパイプが `set -euo pipefail` 配下の独立スクリプト化で SIGPIPE 経由の異常終了を起こしうる (移行元は errexit 無効化された関数本体だったため顕在化していなかった)、(b) URL 検証正規表現が末尾アンカーを持たず同一行の末尾ゴミを許容してしまう、(c) PR 番号検証が `grep` の行単位マッチで複数行入力に対して移行元の bash 正規表現 (全体マッチ) より緩い。いずれも Spec の Implementation Step 1 が「既存 #1410 実装をそのまま踏襲」と記述していた箇所で、"そのまま移植" が独立スクリプト化という文脈変化 (関数 → 独立 `set -e` スクリプト) と組み合わさることで新規リグレッションを生んだ。実コード実行によるエッジケース検証 (静的読解だけでは見つからない) が有効だった事例
+- Steering Documents (`docs/tech.md`・`docs/structure.md`) の同期漏れが 2 件重複して発生した: Spec の Changed Files / Pre-merge AC はいずれも `docs/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` ゲート一覧行、および `docs/structure.md` の Key Files 一覧 (件数コメントのみ更新、一覧本体は未更新) を対象に含めていなかった。`docs/guide/customization.md` / `docs/guide/adapter-guide.md` は Spec 対象に含まれ実際に更新されたが、同種の SSoT である `docs/tech.md`/`docs/structure.md` Key Files が漏れた — 「同じ変更内容を複数の SSoT に反映する」タスクで対象ドキュメントの列挙が不完全になりやすいパターン
+
+### Recurring issues
+
+- 本 PR のレビューで検出した SHOULD/CONSIDER 12 件のうち 5 件 (SIGPIPE 回帰・regex 末尾アンカー・PR 番号検証・`cat` ガード欠落・wrapper の暗黙 return 1) は共通して「`set -e`/`pipefail` 環境下でのエラーハンドリングの契約が、コードを移動 (関数 → 独立スクリプト) する際に暗黙のうちに変化する」という同一クラスの問題だった。今後同様の「既存ロジックを共有スクリプト化して切り出す」設計の Issue では、Spec の Implementation Steps に "移行前後で `set -e`/errexit の有効/無効コンテキストが変わらないか" を明示的なチェック項目として含めることが有効と考えられる
+
+### Acceptance criteria verification difficulty
+
+- 特になし。Pre-merge AC 7 件はいずれも `rubric` / `file_exists` / `grep` / `file_not_contains` / `github_check` の verify command が過不足なく整備されており、UNCERTAIN や verify command の不備は発生しなかった
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `_resolve_preview_url_command()` を薄いラッパー化する際、既存コメント文言に `preview-url-command` の文字列を意図的に保持し、#1410 の既存 verify command (`grep "preview-url-command" "scripts/run-review.sh"`) を壊さない設計にした
-- 共有スクリプトは呼び出し元 CWD に依存せず `git worktree list --porcelain` で MAIN_REPO_ROOT を自前解決する設計にした — worktree 内で動く `/review` 直接実行と main repo root で動く `run-review.sh` の信頼境界を揃えるため
-- インターフェースを `--key` フラグなしの `url` サブコマンド固定に簡略化した (Basic Auth は #1429 が別サブコマンドで追加する設計のため)
+- Pre-merge AC ゲート (7 件) は全て checked 済みで review-incomplete-fallback も検出されなかったため、override マーカーなしで通常経路のまま squash merge を実行した
+- `gh-pr-merge-status.sh` が `mergeable=true, reason=clean` を返したため、コンフリクト解消 (Step 3) はスキップし直接 Step 4 (squash merge) に進んだ
 
 ### Deferred Items
-- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用の実地確認 (Uncertainty 節参照) — `/code` が実装後に確認し Code Retrospective に記録する
-- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` での Basic Auth 解決は `#1429` の Known Gap として既に対象外 (本 Issue はそもそも Basic Auth を扱わない)
+- `--when="test -n \"$PREVIEW_URL\""` ガード付き auto-subcase の preview AC が `preview-url-command` 経路でも `export PREVIEW_URL` されないため実質 SKIP され続ける件は、review フェーズに続き本フェーズでも据え置き。修正する場合は別 Issue で `/review` 側に `export PREVIEW_URL` を追加する設計を検討する必要がある
 
 ### Notes for Next Phase
-- `tests/run-review.bats` の既存13テスト (L511-741付近) が薄いラッパー化後も同じ出力文言・exit code で PASS することを必ず確認すること — メッセージ文言を1文字でも変えると壊れる
-- `scripts/resolve-preview-env.sh` は fail-safe critical (fail-open設計) — 依存コマンド失敗時に fail-closed 化しないこと
-- `docs/ja/guide/customization.md` / `docs/ja/guide/adapter-guide.md` / `docs/ja/structure.md` の ja ミラー更新を忘れないこと (`docs/translation-workflow.md` の同期手順に従う)
+- Post-merge AC (「`preview-url-command` を宣言した実プロジェクトで `--auto` なしの `/review` を直接実行し観察」) は `verify-type: manual` のため、`/verify` は自動確認できない。人手による観察結果の記録が必要
+- 全 bats テストスイートは merge フェーズ実行時点で CI 上 SUCCESS 済みであることを `gh-pr-merge-status.sh` の `ci_status: success` で確認済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec Uncertainty 節に記録した `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用は、Code Retrospective で静的な契約突き合わせにより確認され (実プロジェクトでの実地確認は本 Issue の non-interactive 実行では実施不可のため best-effort 代替)、既存 Deployments API 経路にも同じ特性がある既知の特性として妥当に処理された。Spec 自身がこの疑問点を先回りして記録していたことが、Code/Review フェーズでの手戻りを防いだ
+
+#### design
+- Alternatives Considered / Notes セクションが事前に判断根拠を記録済みだったため、実装中に新たな曖昧点は発生しなかった (Code Retrospective「Design Gaps/Ambiguities: なし」)
+- 一方で Spec の Changed Files は `docs/guide/customization.md` / `docs/guide/adapter-guide.md` を対象に含めていたが、同種の SSoT である `docs/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` ゲート一覧行と `docs/structure.md` の Key Files 一覧本体 (件数コメントのみ含めていた) が漏れていた
+
+#### code
+- 実装ステップは Spec 記述どおりに完了し設計逸脱なし
+- bats テストのモック生成 (`mock_config_value()`) で、未クオート heredoc 内に呼び出し元の任意文字列を直接展開するパターンが二重引用符を含む値で構文的に破綻するバグが発生・修正された。値をファイル経由で渡す方式へ変更して解消
+
+#### review
+- Parser/Validator Edge Case Pre-check の実測実行で、Spec の「既存実装をそのまま踏襲」という記述だけでは見つからない実装レベルの逸脱 (SIGPIPE 回帰・正規表現末尾アンカー欠如・PR 番号検証の緩さ) を検出した。関数を独立スクリプト化する際の `set -e`/pipefail コンテキスト変化が原因で、静的読解だけでは見つからず実コード実行によるエッジケース検証が有効だった
+- Steering Docs 同期漏れ 2 件 (`docs/tech.md`、`docs/structure.md` Key Files) を review で検出・修正 (commit `6d49fcd6` / `89db1fca`)
+
+#### merge
+- Pre-merge AC 7 件全て checked 済み、review-incomplete-fallback も未検出のため通常経路で squash merge 実行。特筆すべき問題なし
+
+#### verify
+- Pre-merge AC 7 件はいずれも `/review`/`/merge` 時点で既に checked 済みのため verify 実行時は再検証不要 (already-checked skip rule)。Post-merge manual AC 1 件は実プロジェクトでの観察が必要なため Claude 実行不可と判定し、`phase/verify` を維持した
+
+### Improvement Proposals
+
+1. **共有スクリプト化パターンの Spec 手順への反映**: 関数から独立スクリプトへの切り出しを伴う Issue では、Spec の Implementation Steps に「移行前後で `set -e`/errexit の有効/無効コンテキストが変わらないか」を明示的なチェック項目として含める。本 Issue の review で検出された SHOULD/CONSIDER 12 件中 5 件 (SIGPIPE 回帰・regex 末尾アンカー・PR 番号検証・`cat` ガード欠落・wrapper の暗黙 return 1) が共通してこの問題に起因していた
+2. **複数 SSoT への同一変更反映時のドキュメント列挙補強**: 本 Issue で `docs/guide/customization.md`/`docs/guide/adapter-guide.md` は正しく Changed Files に含めたが、同種の SSoT である `docs/tech.md`/`docs/structure.md` Key Files 本体が漏れた。Steering Docs sync candidate check の grep 範囲または Spec 作成者のドキュメント列挙プロセスに、同一トピックを扱う複数ドキュメントの網羅性チェックを補強する余地がある
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code | pr | SUCCESS | PR #1432 作成 |
+| review | pr | SUCCESS (Tier 3 リトライ後) | 1回目 exit 1 (host-sleep-network-loss)。Tier 3 recovery sub-agent が action=retry を判定、再実行で正常完了 |
+| merge | pr | SUCCESS | squash merge、PR #1432 MERGED |
+| verify | - | SUCCESS (一部保留) | Pre-merge 7件 PASS、Post-merge manual 1件保留、phase/verify 維持 |
+
+### Orchestration Anomalies
+
+- **review フェーズ 1回目失敗 (exit code 1)**: `run-review.sh` は CI 待機完了 (15/15 PASS) 後、`claude -p` 呼び出し内で watchdog silent window が 1500s 超に達した後 `API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)` で終了。ユーザーからホストマシンのスリープが原因と直接確認を得た (`host-sleep-network-loss`)。`detect-external-kill.sh` は no-match と判定 (exit code 1 + 正常な wrapper exit trailer あり、SIGKILL パターンではない)。CI platform failure pre-check も verdict=implementation (CI自体は15/15 PASS済み、失敗はレビュー呼び出し自身のネットワーク断)。Tier 1 (reconcile-phase-state.sh) は matches_expected: false を確認、Tier 2 (detect-wrapper-anomaly.sh) は既知パターン不一致、Tier 3 recovery sub-agent (`agents/orchestration-recovery`) を起動し action=retry, cause=host-sleep-network-loss の復旧プランを取得。`validate-recovery-plan.sh` で検証後、review フェーズを再実行し正常完了 (`Review Response Summary found in PR #1432 comments` を確認)
+
+### Improvement Proposals
+
+- N/A (Tier 3 recovery は正常に機能し新たな構造的問題は検出されなかった。root cause は wholework 側で修正不能なホスト環境要因)

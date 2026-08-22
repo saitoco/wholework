@@ -82,6 +82,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-22 06:29 UTC: review-tier3-recovery
+
+### Context
+- Issue #1428, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 1
+- Log tail: "[exited with code 1]"
+
+### Diagnosis
+- cause: host-sleep-network-loss
+- CI checks passed cleanly (15/15) before the failure; the review claude invocation then lost network connectivity because the host machine went to sleep mid-run, producing an `API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)` after ~1500s of watchdog silence. `detect-external-kill.sh` returned no-match (exit code 1 with a clean wrapper exit trailer present, not a SIGKILL pattern). The CI platform failure pre-check verdict was `implementation` (CI itself had already passed; the failure was in the review invocation's own network access, not a CI signature). PR #1432 had zero reviews and zero comments at the time of failure, confirming no partial review state existed. The host machine sleeping mid-run was directly confirmed by the human operator, who also confirmed the machine was awake again before the retry.
+
+### Recovery Applied
+- action=retry (Tier 3 plan, `agents/orchestration-recovery` sub-agent)
+- steps: 0 (plan required no additional steps beyond the retry itself)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- N/A (root cause is a host-environment condition outside wholework's control; Tier 3 recovery functioned as designed)
+
+---
+
 ## 2026-08-21 20:41 UTC: manual-recovery-respawn
 
 ### Context
