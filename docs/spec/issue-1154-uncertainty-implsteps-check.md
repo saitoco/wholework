@@ -44,6 +44,9 @@
 
 いずれも Issue 本文更新として既に反映済みのため、本 Spec 作成にあたり追加のアクションは不要。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1154#issuecomment-5368191727
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1154#issuecomment-5369692599
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1154#issuecomment-5378423701
 ## Code Retrospective
 
 ### Deviations from Design
