@@ -909,6 +909,53 @@ teardown() {
     [[ "$output" != *"Note: truncated"* ]]
 }
 
+@test "XL-scope gate: XL keyword match with facts showing xl route includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 950}]'
+    export MOCK_ISSUE_BODY_950='## Post-merge
+- [ ] /verify skill checks 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"route":"xl"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 950' > /dev/null
+}
+
+@test "XL-scope gate: XL keyword match with facts showing no xl route excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 951}]'
+    export MOCK_ISSUE_BODY_951='## Post-merge
+- [ ] /verify skill checks 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 0' > /dev/null
+}
+
+@test "XL-scope gate: condition without XL keyword matches unconditionally regardless of facts" {
+    export MOCK_ISSUE_LIST='[{"number": 952}]'
+    export MOCK_ISSUE_BODY_952='## Post-merge
+- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 952' > /dev/null
+}
+
+@test "XL-scope gate: ignored in event mode" {
+    export MOCK_ISSUE_LIST='[{"number": 953}]'
+    export MOCK_ISSUE_BODY_953='## Post-merge
+- [ ] 3 件以上の patch route sub-issue を持つ XL Issue で並列実行される <!-- verify-type: observation event=auto-run -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"route":"pr"}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 953' > /dev/null
+}
+
 @test "population: gh issue list is called with --state all, not --state closed (issue #1242)" {
     export MOCK_ISSUE_LIST="[]"
     run bash "$SCRIPT" /issue
