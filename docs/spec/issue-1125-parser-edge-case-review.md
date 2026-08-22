@@ -51,6 +51,14 @@ PR #1120 (Issue #1055) の `/review --light` で、追加コードに silent fai
 |-------|-------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。`triaged` 済みのため triage auto-chain はスキップ、steering docs との用語抵触なし、曖昧ポイント検出なし。Post-merge AC の `verify-type: observation event=auto-run` に `session=next` が欠落していたため追加済み (本 Spec 作成時点の Issue body で反映済みを確認)。手順順序の補正メモ (comment consumption を label transition より先に実行すべきところ誤って逆順で実行、実害なし) | https://github.com/saitoco/wholework/issues/1125#issuecomment-5302569064 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1125#issuecomment-5303003847
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5304274759
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5310548285
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5327728887
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5341238857
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5354373864
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5369691715
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1125#issuecomment-5378423315
 ## Code Retrospective
 
 ### Deviations from Design
