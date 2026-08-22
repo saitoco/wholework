@@ -973,9 +973,9 @@ case "$EFFECTIVE_SIZE" in
     if [[ "${_TIER3_RECOVERY_ACTION:-}" == "skip" ]]; then
       _SKIP_PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
       if [[ -n "$_SKIP_PR_NUMBER" ]]; then
-        if [[ "$AUTO_STOP_AT" == "code" || "$AUTO_STOP_AT" == "spec" ]]; then
+        if "$SCRIPT_DIR/should-stop-at-phase.sh" code "$AUTO_STOP_AT"; then
           echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}, but auto-stop-at=${AUTO_STOP_AT}: not continuing"
-        elif [[ "$AUTO_STOP_AT" == "review" ]]; then
+        elif "$SCRIPT_DIR/should-stop-at-phase.sh" review "$AUTO_STOP_AT"; then
           echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}; continuing to review only (auto-stop-at=review)"
           echo "${LOG_PREFIX} --- review phase (light): PR #${_SKIP_PR_NUMBER} ---"
           _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$_SKIP_PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
@@ -1056,13 +1056,13 @@ case "$EFFECTIVE_SIZE" in
     fi
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
-    if [[ "$AUTO_STOP_AT" == "spec" || "$AUTO_STOP_AT" == "code" ]]; then
+    if "$SCRIPT_DIR/should-stop-at-phase.sh" code "$AUTO_STOP_AT"; then
       echo "${LOG_PREFIX} Stopped at phase: code (auto-stop-at=${AUTO_STOP_AT})"
     else
       echo "${LOG_PREFIX} --- review phase (light): PR #${PR_NUMBER} ---"
       _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
 
-      if [[ "$AUTO_STOP_AT" == "review" ]]; then
+      if "$SCRIPT_DIR/should-stop-at-phase.sh" review "$AUTO_STOP_AT"; then
         echo "${LOG_PREFIX} Stopped at phase: review (auto-stop-at=review)"
       else
         echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
@@ -1135,13 +1135,13 @@ case "$EFFECTIVE_SIZE" in
     fi
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
-    if [[ "$AUTO_STOP_AT" == "spec" || "$AUTO_STOP_AT" == "code" ]]; then
+    if "$SCRIPT_DIR/should-stop-at-phase.sh" code "$AUTO_STOP_AT"; then
       echo "${LOG_PREFIX} Stopped at phase: code (auto-stop-at=${AUTO_STOP_AT})"
     else
       echo "${LOG_PREFIX} --- review phase (full): PR #${PR_NUMBER} ---"
       _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
 
-      if [[ "$AUTO_STOP_AT" == "review" ]]; then
+      if "$SCRIPT_DIR/should-stop-at-phase.sh" review "$AUTO_STOP_AT"; then
         echo "${LOG_PREFIX} Stopped at phase: review (auto-stop-at=review)"
       else
         echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
