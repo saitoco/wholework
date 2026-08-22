@@ -72,3 +72,25 @@ N/A
 ### Notes for Next Phase
 - 4件の Pre-merge AC (rubric x2, section_contains, command) は `/code` フェーズ内で全て PASS 済みでチェック済み。`/review` では追加の逸脱がないことの確認で足りる想定。
 - Post-merge の observation AC (`event=auto-run session=next`) は次回 Uncertainty 節を持つ Issue の `/spec` 実行時に観察されるべき項目 — `/verify` 実行時点ではまだ発火していない可能性が高い。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- N/A — Implementation Steps どおりに実装され、Code Retrospective に Design Gaps/Ambiguities なしと記録済み。
+
+#### code
+- 特筆事項なし。Phase Handoff に記載の判断 (番号リストへの追記、bats テスト追加なし) がそのまま踏襲された。
+
+#### review
+- 特筆事項なし (patch route、追加の逸脱なし)。
+
+#### merge
+- 特筆事項なし。
+
+#### verify
+- Pre-merge 4件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は、本 `/verify` 実行と同一セッション内で先行実行された issue #1429 の `/spec` (Opus, SPEC_DEPTH=full) で実際に自己チェックが発火したことを直接確認できたため PASS: `docs/spec/issue-1429-preview-basic-auth-resolve.md` の `## Notes` に「### Uncertainty と Implementation Steps の整合 (self-check)」という専用サブセクションが記録され、Uncertainty 解決済み2項目が Implementation Steps へ漏れなく転記されたことを明示していた。全条件 checked のため `phase/done` へ遷移した。
+
+### Improvement Proposals
+- N/A
