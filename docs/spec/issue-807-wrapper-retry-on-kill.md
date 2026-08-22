@@ -137,6 +137,21 @@ Step 6 (conflict detection) および Step 7 (ambiguity resolution) で以下を
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/807#issuecomment-4824680842
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5200985119
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5212263066
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5225315608
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5229259164
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5235402146
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5246556774
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5255745569
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5296378965
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5304272712
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5310545945
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5327723669
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5341231952
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5354367901
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/807#issuecomment-5369686462
 ## issue retrospective
 
 (Transferred from Issue #807 comment — /issue phase Auto-Resolve Log)
