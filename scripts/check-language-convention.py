@@ -14,7 +14,7 @@ expected to pass a diff already scoped to the target paths (e.g.
 `git diff -- skills/ modules/ scripts/`); this script does not filter by path
 itself.
 
-False positives are excluded for three legitimate CJK usages, per CLAUDE.md's
+False positives are excluded for four legitimate CJK usages, per CLAUDE.md's
 "Skill output (terminal): Japanese" convention:
   (i)   Fenced code blocks containing terminal output templates (e.g. the
         `Print advisory` template block in skills/verify/SKILL.md) — added
@@ -27,8 +27,21 @@ False positives are excluded for three legitimate CJK usages, per CLAUDE.md's
   (iii) Double-quoted string literals carrying an output message (e.g. after
         `Print:` / `Notify user:`) — the content of double-quoted strings is
         stripped before the CJK check.
+  (iv)  Single-quoted string literals carrying an output message (e.g. a
+        bash `printf '...'` / `echo '...'` Japanese literal) — the content
+        of single-quoted strings is stripped before the CJK check, subject
+        to the asymmetry guard below.
 
-Any CJK character remaining in plain prose after these three exclusions is
+Unlike double quotes, an apostrophe also appears mid-word in English prose
+(contractions such as `don't`, possessives such as `user's`). A naive
+symmetric pattern would pair up two unrelated apostrophes and swallow
+everything between them — including real CJK violations — as a false
+negative. `SINGLE_QUOTED_PATTERN` guards against this by requiring that
+neither the opening nor the closing quote is adjacent to a word character:
+an apostrophe preceded by a letter/digit/underscore (as in a contraction or
+possessive) can never open or close a stripped span.
+
+Any CJK character remaining in plain prose after these four exclusions is
 treated as a language convention violation.
 
 Uses Python standard library only.
@@ -44,6 +57,7 @@ CJK_PATTERN = re.compile(r"[぀-ゟ゠-ヿ一-鿿]")
 # unmatched first backtick greedily consuming the rest of the document.
 INLINE_CODE_PATTERN = re.compile(r'(`+)(?:(?!\1).)+?\1', re.DOTALL)
 DOUBLE_QUOTED_PATTERN = re.compile(r'"[^"]*"')
+SINGLE_QUOTED_PATTERN = re.compile(r"(?<!\w)'[^']*'(?!\w)")
 FENCE_PATTERN = re.compile(r"^\s*```")
 
 
@@ -86,6 +100,7 @@ def find_violations(diff_text):
 
         stripped = INLINE_CODE_PATTERN.sub("", content)
         stripped = DOUBLE_QUOTED_PATTERN.sub("", stripped)
+        stripped = SINGLE_QUOTED_PATTERN.sub("", stripped)
 
         if CJK_PATTERN.search(stripped):
             violations.append(f"{current_file}:{content}")

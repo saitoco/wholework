@@ -43,3 +43,14 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/check-languag
   [ "$status" -eq 1 ]
   [[ "$output" == *"modules/example.md:"* ]]
 }
+
+@test "false positive: CJK inside single-quoted string literal exits 0" {
+  run bash -c "printf '+++ b/scripts/example.sh\n@@ -1,0 +1,1 @@\n+printf '\''検証が完了しました'\''\n' | python3 '$SCRIPT'"
+  [ "$status" -eq 0 ]
+}
+
+@test "true positive: apostrophes in English contractions/possessives do not pair up and swallow CJK" {
+  run bash -c "printf '+++ b/modules/example.md\n@@ -1,0 +1,1 @@\n+isn'\''t sure 検証 that'\''s fine\n' | python3 '$SCRIPT'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"modules/example.md:"* ]]
+}
