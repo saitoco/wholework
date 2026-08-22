@@ -40,13 +40,35 @@
 # is never left as bare bullet-less prose in violation of
 # scripts/check-ac-checkbox-format.sh's format guard.
 #
+# Malformed structure guard: the body rewrite assumes exactly one `### Post-merge`
+# (or `## Post-merge`) heading, and (when `### Retired Post-merge Conditions`
+# already exists) that it comes AFTER the Post-merge heading. Either violation
+# makes the line-range-based rebuild ambiguous, so the script refuses to rewrite
+# and falls back to the same fail-open shape as a body-fetch failure
+# (`action=retire` / `retired=0`, warning to stderr) rather than risk silently
+# corrupting the body (duplicated heading / a "retired" condition left live).
+#
+# Retire-target verify-type tag matching requires a closing `-->` on the same
+# line; a `<!-- verify-type: ...` tag with no closing delimiter is treated as
+# absent (not retired), since an unterminated HTML comment written back to the
+# Issue body would swallow the remainder of the body/comment when rendered by
+# GitHub.
+#
 # Output (stdout):
-#   Line 1 is always `action=<none|propose|retire>`.
+#   Line 1 is always `action=<none|propose|retire>`. When LEVEL=3 and TIER is
+#   L2/L3, the script tentatively targets `retire` but the Issue body is always
+#   read and parsed before this line is actually printed: if the body's
+#   Post-merge section has zero unchecked observation/opportunistic conditions
+#   (e.g. it contains only manual/auto conditions), the script prints
+#   `action=propose` instead -- identical in shape to the L1 propose case, so
+#   the caller posts the same decision-prompt comment a human should still see.
+#   `action=retire` is printed only when a real retire is attempted (including
+#   its fail-open short-circuits below).
 #   When action=retire, three more lines follow: `retired=<N>`, `remaining=<M>`
 #   (unchecked post-merge AC left after the rewrite, any verify-type),
 #   `transitioned=<true|false>` (whether the issue moved to phase/done). On any
 #   fail-open short-circuit inside the retire path (issue body fetch failure,
-#   zero retire targets, or a failed body write-back), only `retired=0` is
+#   malformed structure guard, or a failed body write-back), only `retired=0` is
 #   printed and the script exits before computing remaining/transitioned.
 #
 # --dry-run: performs the same read + computation as a real run but skips every
@@ -59,7 +81,11 @@
 #
 # Fail-safe direction (asymmetric by design -- see Spec Notes "fail-safe critical判定"):
 #   compute-escalation-level.sh failure -> fail-closed (action=none)
-#   issue body fetch failure            -> fail-open (retired=0, exit 0)
+#   issue body fetch failure            -> fail-open (action=retire, retired=0, exit 0)
+#   malformed structure (multiple Post-merge headings, or Retired-before-Post-merge)
+#                                        -> fail-open (action=retire, retired=0, exit 0)
+#   zero retire targets (manual/auto-only Post-merge)
+#                                        -> action=propose (caller posts the decision-prompt comment)
 #   body write-back failure             -> fail-open, no comment/label transition
 #   comment / label transition failure  -> fail-open (warning only, continue)
 #
@@ -151,13 +177,13 @@ if [ "$LEVEL" = "3" ]; then
   esac
 fi
 
-echo "action=${ACTION}"
-
 if [ "$ACTION" != "retire" ]; then
+  echo "action=${ACTION}"
   exit 0
 fi
 
-# --- Retire path --------------------------------------------------------------
+# --- Retire path (tentative -- the body is parsed before "action=retire" is
+# actually printed; a zero-target body resolves to action=propose instead) ---
 
 BODY_FILE=$(mktemp)
 RETIRE_META_FILE=$(mktemp)
@@ -171,19 +197,22 @@ trap cleanup EXIT
 
 if ! gh issue view "$ISSUE_NUMBER" --json body --jq '.body' > "$BODY_FILE" 2>/dev/null; then
   echo "Warning: failed to fetch issue body for #${ISSUE_NUMBER}; fail-open (retired=0)" >&2
+  echo "action=retire"
   echo "retired=0"
   exit 0
 fi
 
 # Single-pass metadata + retire-target extraction. Writes:
-#   RETIRE_META_FILE: <line_no>\t<global_ac_index>\t<verify-type>\t<clean text>
+#   RETIRE_META_FILE: <line_no>\t<global_ac_index>\t<verify-type>\t<had_cr:0|1>\t<clean text>
 #     for every unchecked Post-merge AC line whose verify-type is
-#     observation/opportunistic (retire candidates).
-#   META_FILE: pm_start=/pm_end=/rt_start=/rt_end=/total_lines=/prose_needed=
-#     (shell-sourceable; values are integers computed entirely by this awk
-#     script -- never derived from Issue body content -- so sourcing is safe).
+#     observation/opportunistic (retire candidates). had_cr records whether the
+#     source line ended with a CRLF \r so the retired display line can restore it.
+#   META_FILE: pm_start=/pm_end=/rt_start=/rt_end=/total_lines=/prose_needed=/
+#     multi_pm=/reordered= (shell-sourceable; values are integers computed
+#     entirely by this awk script -- never derived from Issue body content --
+#     so sourcing is safe).
 awk -v RETIRE_META="$RETIRE_META_FILE" -v META="$META_FILE" '
-  BEGIN { in_fence = 0; idx = 0; section = "none"; pm_start = 0; pm_end = 0; rt_start = 0; rt_end = 0 }
+  BEGIN { in_fence = 0; idx = 0; section = "none"; pm_start = 0; pm_end = 0; rt_start = 0; rt_end = 0; pm_heading_count = 0 }
   {
     line = $0
     if (line ~ /^[ \t]*```/) {
@@ -193,6 +222,7 @@ awk -v RETIRE_META="$RETIRE_META_FILE" -v META="$META_FILE" '
         if (section == "postmerge" && pm_end == 0) pm_end = NR - 1
         if (section == "retired" && rt_end == 0) rt_end = NR - 1
         section = "postmerge"; pm_start = NR
+        pm_heading_count++
       } else if (line ~ /^### Retired Post-merge Conditions/) {
         if (section == "postmerge" && pm_end == 0) pm_end = NR - 1
         section = "retired"; rt_start = NR
@@ -207,18 +237,24 @@ awk -v RETIRE_META="$RETIRE_META_FILE" -v META="$META_FILE" '
       idx++
       if (section == "postmerge" && substr(line, 4, 1) == " ") {
         vtype = ""
-        if (match(line, /<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/)) {
+        # Full-span match through the tags own closing --> (modules/verify-classifier.md
+        # section Tag Extraction Rule canonical form) -- a tag with no closing delimiter on the
+        # same line does not match and is treated as absent, since an unterminated <!-- written
+        # back to the Issue body would swallow the remainder of the rendered body/comment on GitHub.
+        if (match(line, /<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+([^-]|-[^-]|--[^>])*-->/)) {
           tag = substr(line, RSTART, RLENGTH)
           sub(/^<!--[ \t]*verify-type:[ \t]*/, "", tag)
-          vtype = tag
+          match(tag, /^[a-zA-Z_]+/)
+          vtype = substr(tag, RSTART, RLENGTH)
         }
         if (vtype == "observation" || vtype == "opportunistic") {
           text = line
           sub(/^- \[ \][ \t]*/, "", text)
           gsub(/<!--([^-]|-[^-]|--[^>])*-->/, "", text)
           gsub(/^[ \t]+/, "", text)
+          had_cr = (text ~ /\r$/) ? 1 : 0
           gsub(/[ \t\r]+$/, "", text)
-          print NR "\t" idx "\t" vtype "\t" text > RETIRE_META
+          print NR "\t" idx "\t" vtype "\t" had_cr "\t" text > RETIRE_META
           retired_line[NR] = 1
         }
       }
@@ -242,18 +278,36 @@ awk -v RETIRE_META="$RETIRE_META_FILE" -v META="$META_FILE" '
     printf "rt_end=%d\n", rt_end > META
     printf "total_lines=%d\n", total_lines > META
     printf "prose_needed=%d\n", (pm_start > 0 && !remaining_pm_checkbox) ? 1 : 0 > META
+    printf "multi_pm=%d\n", (pm_heading_count > 1) ? 1 : 0 > META
+    printf "reordered=%d\n", (rt_start > 0 && pm_start > 0 && rt_start < pm_start) ? 1 : 0 > META
     close(META)
   }
 ' "$BODY_FILE"
 
-RETIRED_COUNT=$(wc -l < "$RETIRE_META_FILE" | tr -d ' ')
-if [ -z "$RETIRED_COUNT" ] || [ "$RETIRED_COUNT" -eq 0 ]; then
+# shellcheck source=/dev/null
+. "$META_FILE"
+
+if [ "${multi_pm:-0}" = "1" ]; then
+  echo "Warning: multiple ### Post-merge headings found in issue #${ISSUE_NUMBER}; refusing to rewrite (ambiguous section boundaries)" >&2
+  echo "action=retire"
   echo "retired=0"
   exit 0
 fi
 
-# shellcheck source=/dev/null
-. "$META_FILE"
+if [ "${reordered:-0}" = "1" ]; then
+  echo "Warning: ### Retired Post-merge Conditions precedes ### Post-merge in issue #${ISSUE_NUMBER}; refusing to rewrite (unexpected section order)" >&2
+  echo "action=retire"
+  echo "retired=0"
+  exit 0
+fi
+
+RETIRED_COUNT=$(wc -l < "$RETIRE_META_FILE" | tr -d ' ')
+if [ -z "$RETIRED_COUNT" ] || [ "$RETIRED_COUNT" -eq 0 ]; then
+  echo "action=propose"
+  exit 0
+fi
+
+echo "action=retire"
 
 # --- Build the rewritten body -------------------------------------------------
 
@@ -270,7 +324,7 @@ awk -v endline="$pm_end" -v exclf="$RETIRE_LINES_FILE" '
 ' "$BODY_FILE" > "$NEW_BODY_FILE"
 
 if [ "$prose_needed" = "1" ]; then
-  printf '%s\n' 'すべての post-merge 条件は #1271 の自動 retire で退避済み (下記 `### Retired Post-merge Conditions` を参照)。' >> "$NEW_BODY_FILE"
+  printf "%s\n" "すべての post-merge 条件は phase/verify Level 3 の自動 retire で退避済み (下記 \`### Retired Post-merge Conditions\` を参照)。" >> "$NEW_BODY_FILE"
 fi
 
 # Determine the most recent dispatch marker's createdAt for this Issue (used
@@ -291,9 +345,13 @@ fi
   else
     printf '\n### Retired Post-merge Conditions\n\n'
   fi
-  while IFS=$'\t' read -r _lno _gidx vtype text; do
-    printf -- '- ~~%s~~ — **retired (auto, dwell %sd)**: 90 日間 event が発火せず、または発火しても判定に至らなかった (verify-type: %s, 最終 dispatch: %s)\n' \
-      "$text" "$DWELL" "$vtype" "$DISPATCH_TS"
+  while IFS=$'\t' read -r _lno _gidx vtype had_cr text; do
+    cr=""
+    if [ "$had_cr" = "1" ]; then
+      cr=$'\r'
+    fi
+    printf -- "- ~~%s~~ — **retired (auto, dwell %sd)**: 90 日間 event が発火せず、または発火しても判定に至らなかった (verify-type: %s, 最終 dispatch: %s)%s\n" \
+      "$text" "$DWELL" "$vtype" "$DISPATCH_TS" "$cr"
   done < "$RETIRE_META_FILE"
   if [ "$rt_start" -gt 0 ]; then
     awk -v s="$((rt_end + 1))" -v e="$total_lines" 'NR >= s && NR <= e { print }' "$BODY_FILE"
@@ -337,10 +395,10 @@ AC_LIST=$(cut -f2 "$RETIRE_META_FILE" | paste -s -d, -)
 {
   printf '%s\n' "<!-- wholework-event: type=verify-ac-retired phase=audit issue=${ISSUE_NUMBER} dwell=${DWELL} ac=${AC_LIST} verify-types=observation,opportunistic -->"
   printf '%s\n\n' "## phase/verify Level 3 Auto-Retire"
-  printf 'dwell: %sd, 最終 dispatch: %s\n\n' "$DWELL" "$DISPATCH_TS"
-  printf 'Retired post-merge acceptance conditions (90 日間 event が発火せず、または発火しても判定に至らなかった):\n\n'
-  while IFS=$'\t' read -r _lno gidx vtype text; do
-    printf -- '- #%s (verify-type: %s): %s\n' "$gidx" "$vtype" "$text"
+  printf "dwell: %sd, 最終 dispatch: %s\n\n" "$DWELL" "$DISPATCH_TS"
+  printf "Retired post-merge acceptance conditions (90 日間 event が発火せず、または発火しても判定に至らなかった):\n\n"
+  while IFS=$'\t' read -r _lno gidx vtype _had_cr text; do
+    printf -- "- #%s (verify-type: %s): %s\n" "$gidx" "$vtype" "$text"
   done < "$RETIRE_META_FILE"
 } > "$COMMENT_FILE"
 
@@ -350,16 +408,17 @@ fi
 
 TRANSITIONED=false
 if [ "$REMAINING" -eq 0 ]; then
-  if ! "$SCRIPT_DIR/gh-label-transition.sh" "$ISSUE_NUMBER" done >/dev/null 2>&1; then
-    echo "Warning: failed to transition issue #${ISSUE_NUMBER} to phase/done" >&2
-  fi
-  STATE=$(gh issue view "$ISSUE_NUMBER" --json state --jq '.state' 2>/dev/null || echo "")
-  if [ "$STATE" = "OPEN" ]; then
-    if ! gh issue close "$ISSUE_NUMBER" >/dev/null 2>&1; then
-      echo "Warning: failed to close issue #${ISSUE_NUMBER}" >&2
+  if "$SCRIPT_DIR/gh-label-transition.sh" "$ISSUE_NUMBER" done >/dev/null 2>&1; then
+    STATE=$(gh issue view "$ISSUE_NUMBER" --json state --jq '.state' 2>/dev/null || echo "")
+    if [ "$STATE" = "OPEN" ]; then
+      if ! gh issue close "$ISSUE_NUMBER" >/dev/null 2>&1; then
+        echo "Warning: failed to close issue #${ISSUE_NUMBER}" >&2
+      fi
     fi
+    TRANSITIONED=true
+  else
+    echo "Warning: failed to transition issue #${ISSUE_NUMBER} to phase/done; not closing" >&2
   fi
-  TRANSITIONED=true
 fi
 
 echo "retired=${RETIRED_COUNT}"

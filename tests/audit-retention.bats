@@ -327,7 +327,7 @@ BODY
 
 # --- additional case: verify-type restriction (manual/auto never retired) ---
 
-@test "apply-verify-retire: manual/auto-only Post-merge -> retired=0 (verify-type scope)" {
+@test "apply-verify-retire: manual/auto-only Post-merge -> action=propose (verify-type scope, human still decides)" {
   setup_retire_mocks
   cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
 ## Acceptance Criteria
@@ -342,8 +342,7 @@ BODY
 
   AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
   [ "$status" -eq 0 ]
-  [[ "$output" == *"action=retire"* ]]
-  [[ "$output" == *"retired=0"* ]]
+  [ "$output" = "action=propose" ]
   no_l0_writes
 }
 
@@ -366,20 +365,20 @@ BODY
 
   AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
   [ "$status" -eq 0 ]
-  [[ "$output" == *"retired=0"* ]]
+  [ "$output" = "action=propose" ]
   no_l0_writes
 }
 
 # --- additional case: idempotency (0 target on a re-run) ---
 
-@test "apply-verify-retire: already-retired issue (0 unchecked observation/opportunistic) -> retired=0, idempotent" {
+@test "apply-verify-retire: already-retired issue (0 unchecked observation/opportunistic) -> action=propose, idempotent" {
   setup_retire_mocks
   cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
 ## Acceptance Criteria
 
 ### Post-merge
 
-すべての post-merge 条件は #1271 の自動 retire で退避済み (下記 `### Retired Post-merge Conditions` を参照)。
+すべての post-merge 条件は phase/verify Level 3 の自動 retire で退避済み (下記 `### Retired Post-merge Conditions` を参照)。
 
 ### Retired Post-merge Conditions
 
@@ -390,8 +389,146 @@ BODY
 
   AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 120
   [ "$status" -eq 0 ]
+  [ "$output" = "action=propose" ]
+  no_l0_writes
+}
+
+# --- additional case: malformed structure guard (multiple Post-merge headings) ---
+
+@test "apply-verify-retire: multiple ### Post-merge headings -> fail-open, no duplication" {
+  setup_retire_mocks
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] obs condition A <!-- verify-type: observation -->
+
+## Related
+
+### Post-merge
+
+- [ ] obs condition B <!-- verify-type: observation -->
+BODY
+
+  AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"action=retire"* ]]
   [[ "$output" == *"retired=0"* ]]
   no_l0_writes
+}
+
+# --- additional case: malformed structure guard (Retired section precedes Post-merge) ---
+
+@test "apply-verify-retire: Retired Post-merge Conditions precedes Post-merge -> fail-open, no duplication" {
+  setup_retire_mocks
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Retired Post-merge Conditions
+
+- ~~old condition~~ — retired previously
+
+### Post-merge
+
+- [ ] obs condition <!-- verify-type: observation -->
+
+## Related
+BODY
+
+  AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"action=retire"* ]]
+  [[ "$output" == *"retired=0"* ]]
+  no_l0_writes
+}
+
+# --- additional case: unterminated verify-type tag is not treated as a real tag ---
+
+@test "apply-verify-retire: unterminated verify-type tag is not retired" {
+  setup_retire_mocks
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] condition with unclosed tag <!-- verify-type:observation
+- [ ] opp condition <!-- verify-type: opportunistic -->
+
+## Related
+BODY
+
+  AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"retired=1"* ]]
+  [ -f "$BATS_TEST_TMPDIR/new-body.md" ]
+  grep -q -- "- \[ \] condition with unclosed tag <!-- verify-type:observation" "$BATS_TEST_TMPDIR/new-body.md"
+  ! grep -q "opp condition <!--" "$BATS_TEST_TMPDIR/new-body.md"
+}
+
+# --- additional case: verify-type tag with trailing attributes still retires ---
+
+@test "apply-verify-retire: verify-type tag with trailing event= attribute still retires" {
+  setup_retire_mocks
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] obs condition with event <!-- verify-type: observation event=auto-run -->
+
+## Related
+BODY
+
+  AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"retired=1"* ]]
+}
+
+# --- additional case: generated prose does not hardcode a specific issue number ---
+
+@test "apply-verify-retire: generated prose does not reference #1271" {
+  setup_retire_mocks
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] obs condition <!-- verify-type: observation -->
+
+## Related
+BODY
+
+  AUTONOMY_TIER=L3 run bash "$APPLY_RETIRE_SCRIPT" --issue 999 --dwell 200
+  [ "$status" -eq 0 ]
+  [ -f "$BATS_TEST_TMPDIR/new-body.md" ]
+  ! grep -q "#1271" "$BATS_TEST_TMPDIR/new-body.md"
+}
+
+# --- additional case: label-transition failure does not misreport transitioned=true ---
+
+@test "apply-verify-retire: gh-label-transition.sh failure -> transitioned=false, issue not closed" {
+  setup_retire_mocks
+  cat > "$MOCK_DIR/gh-label-transition.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+  chmod +x "$MOCK_DIR/gh-label-transition.sh"
+
+  cat > "$BATS_TEST_TMPDIR/fixture-body.md" <<'BODY'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] obs condition <!-- verify-type: observation -->
+
+## Related
+BODY
+
+  AUTONOMY_TIER=L2 run bash "$APPLY_RETIRE_SCRIPT" --issue 42 --dwell 95
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"transitioned=false"* ]]
+  [ ! -f "$BATS_TEST_TMPDIR/close-calls.log" ]
 }
 
 # --- additional case: fail-closed when compute-escalation-level.sh fails ---
