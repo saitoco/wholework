@@ -81,6 +81,31 @@ until_mode_section() {
     [ "$status" -eq 0 ]
 }
 
+@test "Count mode section: wholework:verify Skill invocation present" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'wholework:verify'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: phase/verify label check present" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/verify'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: AUTO_STOP_AT retained for verify gate" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'AUTO_STOP_AT'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: auto-stop-at merge skip behavior present" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'auto-stop-at=merge'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: non-interactive skip behavior present" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'non-interactive'"
+    [ "$status" -eq 0 ]
+}
+
 @test "Until mode section: resolve-batch-query.sh referenced" {
     run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'resolve-batch-query.sh'"
     [ "$status" -eq 0 ]
