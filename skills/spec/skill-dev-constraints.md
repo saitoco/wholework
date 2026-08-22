@@ -78,6 +78,7 @@ SHOULD constraints (best practices, manual check — examples):
 | macOS system-level debug fallback | When implementation steps include macOS system-level debugging procedures (e.g., `fs_usage`, Console.app privacy logs) requiring interactive execution, explicitly state that `--non-interactive` mode uses static analysis + hypothesis evaluation as an alternative | #378 |
 | Design Gaps → Implementation Steps backfill | When recording specific implementation knowledge (variable names, call forms, parameter passing methods) in spec retrospective sections (e.g., `## Design Gaps/Ambiguities`, `## Implementation Notes`), also write it directly in the corresponding `## Implementation Steps` body. `code` and `review` phases follow Implementation Steps sequentially — knowledge recorded only in retrospective sections is structurally prone to being overlooked | #579 |
 | ブランチ分岐ロジックの挙動全列挙 | When defining a helper/watchdog/runner with `if`/`case` branch conditions in the Spec, enumerate all branches with 正常終了条件 / timeout 条件 / kill 条件 / error path / 各ブランチでの監視継続有無. Vague descriptions ("同様に処理", "適切にハンドル") are forbidden — specify concrete thresholds, timer values, and exit signals. See the section below for details | #642 |
+| HTML コメントタグ抽出の閉じタグ検証 | `<!-- verify-type: ... -->` 等の HTML コメント形式タグをパースするスクリプトを新規実装する際、開始タグだけでなく閉じタグ `-->` まで検証する (`modules/verify-classifier.md` § Tag Extraction Rule の canonical pattern を参照) | #1271 |
 
 ## ブランチ分岐ロジックの挙動全列挙
 
