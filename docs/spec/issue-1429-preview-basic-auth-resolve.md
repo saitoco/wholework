@@ -244,3 +244,32 @@ No new comments since last phase.
 
 - 7件の Pre-merge AC はすべて `rubric` / `file_not_contains` / `github_check` で機械的に判定可能で、UNCERTAIN は 0 件だった。rubric 4件は Issue 本文が「何を」検証すべきかを明確に記述しており、判定に迷いはなかった
 - Parser/Validator Edge Case Pre-check (edge-case サブエージェントによる `scripts/resolve-preview-env.sh` の実測実行) は、curl config エスケープの往復検証を含め 5 軸すべてで問題を検出しなかった。これは実装が Spec の Uncertainty 節で事前解決していた内容を忠実に反映していたためで、review フェーズでの追加発見はなかった (MUST バグは edge-case pre-check ではなく review-bug エージェントの通常の diff 読解から見つかった)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の引用文字列・行番号参照が兄弟 Sub-issue (`#1428`) のマージにより起票時点から陳腐化していたが、`/spec` の `file_not_contains` verify command existence check が機械的に検出し自己修正した。親 Issue 分割時の「先行 Sub-issue のマージが後続 Sub-issue の Issue 本文を陳腐化させる」構造的リスクは今回実害なく収束したため、追加のアクションは不要と判断
+
+#### design
+- N/A — Spec が実装判断のほぼ全てを事前確定しており、design フェーズ固有の観察はなし (spec/code phase 内容と重複)
+
+#### code
+- 手戻りなし。既存テスト `@test "error: unknown mode"` の前提崩れ (新規 `basic-auth` モードが正規サポートになったことによる) を Implementation Steps の明記なしに適切に検出・修正できており、健全な実装プロセスだった
+
+#### review
+- 3エージェント (review-spec, review-bug×2) が独立に CWD-relative path バグ (`cd` 境界をまたいで相対パスを返す) を検出し、うち2件は実際にスクリプトを実行するアドバーサリアル手法で収束的に確認した。一方で code phase の「未検証」フラグに対する事実誤認の指摘は、実装の実行経路を機械的に裏取りしたことで REJECT (false positive) と正しく判定できており、レビューの精度は高かった
+- 検出した MUST バグの regression テストは fix commit のみで追加されず、Deferred Items に留められた (下記 Improvement Proposals 参照)
+
+#### merge
+- 特筆すべき問題なし。CI green / review approved を確認し、コンフリクトなく squash merge が完了した
+
+#### verify
+- Pre-merge AC 7件はすべて `/code`/`/review` 時点で checked 済みのため再検証は SKIPPED (already-checked rule)。Post-merge の manual AC 1件 (実プロジェクトでの `/review` 直接実行観察) は Claude 実行不可のため人手確認待ちで `phase/verify` に留めた
+- FAIL/UNCERTAIN は 0 件で、reopen 判定・auto-retry は発火しなかった
+
+### Improvement Proposals
+
+- `scripts/resolve-preview-env.sh` の `basic-auth` モードで発見された CWD-relative path バグ (`cd "$MAIN_REPO_ROOT"` 後に相対パスをそのまま返す) の regression テスト (main repo root と呼び出し元 CWD を意図的に分離した bats ケース) が、Phase Handoff の Deferred Items に記録されたまま未起票。テストハーネスの隔離環境 (`BATS_TEST_TMPDIR` が git リポジトリでないため `git worktree list --porcelain` が失敗し `cd` 自体が発火しない) が同種バグを偶然回避してしまうパターンの再発防止として、Issue化を推奨する
+- 「exhaustive (漏れなく)」を謳う共有 prose モジュール (例: `modules/verify-executor.md`) の記述について、設計時の推論だけでなく `grep -rn` 等による機械的裏取りを伴うべきという教訓が review retrospective で得られた。今回は実害なし (false positive として収束) だったが、同種の "exhaustive" claim を書く際の運用ルールとして `/spec`/`/code` 側のガイドラインに明文化することを推奨する (skill infrastructure improvement)
