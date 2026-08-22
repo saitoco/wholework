@@ -170,3 +170,7 @@
 ### Improvement Proposals
 
 - **§23 に「実装前に AC を書く場合」の分岐が欠けている**: `modules/verify-patterns.md` §23 の decision procedure は step 2 で「実装に現れる連続部分文字列を anchor として選び直す」、step 3 で「選んだ anchor が実装ファイルに literal で現れることを確認する (§3 の cross-reference 手順)」と定めているが、いずれも**実装ファイルが既に存在すること**を前提にしている。Wholework の AC は `/issue` / `/spec` フェーズ (実装前) に書かれるため、この前提は多くのケースで成立しない。実際 `/auto 1074` では `curl --config` という非連続 anchor に対し、`/spec` が「Implementation Steps に連続リテラルを含めることを要求する」という逆方向の解法を採った (結果として AC は正しく機能した)。この解法は妥当だが §23 に記述がなく、実行者ごとに再発明されている状態。対応候補: §23 の decision procedure に「実装が未存在の場合 (issue/spec フェーズでの AC 作成時) は、anchor を選び直す代わりに Implementation Steps 側で当該連続リテラルの出現を要求し、その旨を Spec に明記する」分岐を追記する
+
+### Re-verification Note (2026-08-22, session 54306-1787322915)
+
+前回の判定 (`/auto 1074` を部分観測として post-merge AC 未チェック) の後、`docs/spec/issue-1087-verify-patterns-preimpl-anchor.md` の Implementation Steps に、汎化済み §23 heuristic が `kubectl apply` / `docker compose up` / `ssh -i ~/.ssh/key user@host` という git 以外の非連続シンボル例へ直接適用され、対応する `tests/verify-heuristics.bats` の regression test (`§23 ssh example uses real key path`) まで存在することを確認した。これは #1074 の「逆方向解法」(anchor を選び直さず Implementation Steps 側に連続リテラルを要求する迂回策) とは異なり、§23 の decision procedure が本来意図した「git 以外のシンボルへの直接汎化」がそのまま機能している事例であるため、post-merge AC を **PASS** と判定してチェック済みとした。上記の Improvement Proposal (実装前 AC 作成時の分岐欠如) は #1074 の事例に基づく既存の指摘であり、本 Issue のスコープでは解消されないため、引き続き有効な観察として残す。
