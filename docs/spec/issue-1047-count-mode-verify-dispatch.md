@@ -57,7 +57,7 @@
 
 - 実行形式: `scripts/should-stop-at-phase.sh <completed-phase> [stop-at-value]`
 - `<completed-phase>`: 直前に完了したフェーズ名 (`spec` / `code` / `review` / `merge` / `verify`)
-- `[stop-at-value]`: 任意。省略時は `"$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify` で `.wholework.yml` から解決する (`SCRIPT_DIR` は `${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}`、`run-auto-sub.sh` と同じ解決方式)
+- `[stop-at-value]`: 任意。省略時、および明示的に空文字が渡された場合 (実装は `[[ -z "$stop_at" ]]` で両者を同一視する) は `"$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify` で `.wholework.yml` から解決する (`SCRIPT_DIR` は `${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}`、`run-auto-sub.sh` と同じ解決方式)
 - 標準出力: なし (呼び出し元のログを汚さないため)
 - 判定式: phase 順序を `spec=1 / code=2 / review=3 / merge=4 / verify=5` とし、`order(stop-at) <= order(completed-phase)` のとき stop
 
@@ -68,7 +68,8 @@
 | 1 | `order(stop-at) <= order(completed-phase)` | 0 | なし | stop — `<completed-phase>` より先へ進まない |
 | 2 | `order(stop-at) > order(completed-phase)` | 1 | なし | continue — 次フェーズへ進む |
 | 3 | `<completed-phase>` が未指定または未知の値 | 2 | stderr に `should-stop-at-phase.sh: unknown completed phase: '<value>'` | usage error。呼び出し元が `if` 条件で使う限り分岐 2 と同じ「continue」側に落ちる (fail-open) |
-| 4 | `[stop-at-value]` が空文字・未知の値 | 分岐 1 または 2 に従う | なし | `verify` (= フルパイプライン) に fallback。`modules/detect-config-markers.md` の documented fallback と一致し、既存の直接比較が未知値で false になる挙動と等価 |
+| 4a | `[stop-at-value]` が空文字 | 分岐 1 または 2 に従う | なし | 省略時と同一視し `get-config-value.sh auto-stop-at verify` で `.wholework.yml` から解決する (分岐 3 の「空入力即 usage error」とは異なり、`completed-phase` 側の空文字判定とは非対称)。解決結果が未知の値であれば分岐 4b に従う |
+| 4b | `[stop-at-value]` が (直接指定または 4a の解決結果として) 未知の値 | 分岐 1 または 2 に従う | なし | `verify` (= フルパイプライン) に fallback。`modules/detect-config-markers.md` の documented fallback と一致し、既存の直接比較が未知値で false になる挙動と等価 |
 | 5 | `[stop-at-value]` 省略時に `get-config-value.sh` が失敗 | 分岐 1 または 2 に従う | なし | `|| echo verify` により `verify` へ fallback。`run-auto-sub.sh` L955 の既存 fallback と同一 (fail-open) |
 
 fail-safe 設計の根拠 (本 helper は `modules/*` の gate に相当するため明記): 未知入力・依存コマンド失敗のいずれも **fail-open (continue)** を選ぶ。既存の直接比較 (`[[ "$AUTO_STOP_AT" == "review" ]]`) は未知値に対して false = continue であり、fail-open が唯一の挙動保存的な選択である。fail-closed (stop) にすると設定ミスやタイポでパイプラインが無言で停止し、Issue が中間フェーズに滞留する work loss を生む。
@@ -164,10 +165,10 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - <!-- verify: file_contains "tests/auto-batch.bats" "Count mode section: auto-stop-at merge skip behavior present" --> Count mode の verify orchestration ブロックの挙動を検証する bats テストが `tests/auto-batch.bats` に追加されている
 - <!-- verify: rubric "scripts/should-stop-at-phase.sh が phase 順序 (spec<code<review<merge<verify) に基づく stop 判定を行い、scripts/run-auto-sub.sh 内の AUTO_STOP_AT 直接比較が全て helper 呼び出しに置き換わっており、置換前後で分岐条件が等価である" --> 共通ヘルパーが実装され、`run-auto-sub.sh` の `AUTO_STOP_AT` 直接比較 6 箇所が helper 呼び出しに置き換えられている
 - <!-- verify: file_contains "scripts/run-auto-sub.sh" "should-stop-at-phase.sh" --> `scripts/run-auto-sub.sh` が helper を参照している
-- <!-- verify: command "bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/should-stop-at-phase.bats tests/run-auto-sub.bats tests/auto-batch.bats" --> helper の新規テストと既存スイートが PASS する (新規ロジックを検証する新規テストケースを追加したうえでスイート全体が PASS すること)
+- <!-- verify: github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success" --> helper の新規テストと既存スイートが PASS する (新規ロジックを検証する新規テストケースを追加したうえでスイート全体が PASS すること。`modules/verify-executor.md` の Timeout Coverage Audit に従い `command` の 60 秒 timeout ではなく CI 参照形の `github_check` を使用 — `Run bats tests` ジョブは `bats --jobs $(nproc) tests/` を実行し対象 3 ファイルを含む)
 - <!-- verify: file_contains "docs/structure.md" "should-stop-at-phase.sh" --> `docs/structure.md` の Scripts セクションに新スクリプトのエントリが追加されている
-- <!-- verify: file_contains "docs/structure.md" "(93 files)" --> `docs/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
-- <!-- verify: file_contains "docs/ja/structure.md" "(93 ファイル)" --> `docs/ja/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
+- <!-- verify: file_contains "docs/structure.md" "(94 files)" --> `docs/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
+- <!-- verify: file_contains "docs/ja/structure.md" "(94 ファイル)" --> `docs/ja/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
 - <!-- verify: rubric "docs/workflow.md と docs/ja/workflow.md の --batch 記述が Count mode でも verify orchestration が走ることと auto-stop-at gate の存在を記載しており、docs/ja/structure.md に should-stop-at-phase.sh のエントリがある" --> `docs/workflow.md` / `docs/ja/workflow.md` の `--batch N` 記述が更新され、`docs/ja/structure.md` にも新スクリプトのエントリが追加されている
 
 ### Post-merge

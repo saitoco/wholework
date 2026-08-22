@@ -3,17 +3,18 @@
 #
 # Usage: should-stop-at-phase.sh <completed-phase> [stop-at-value]
 #   <completed-phase>: phase just completed (spec/code/review/merge/verify)
-#   [stop-at-value]: optional; when omitted, resolved from .wholework.yml via
-#                     get-config-value.sh auto-stop-at (fallback: verify)
+#   [stop-at-value]: optional; when omitted OR empty, resolved from .wholework.yml
+#                     via get-config-value.sh auto-stop-at (fallback: verify)
 #
 # Exit codes: 0 = stop (do not proceed past <completed-phase>)
 #             1 = continue (proceed to the next phase)
 #             2 = usage error (unknown/empty <completed-phase>)
 #
 # No stdout output (callers use this as an `if` condition, not a value producer).
-# Fail-open: an unknown/empty stop-at value or a get-config-value.sh failure both
-# fall back to "verify" (= full pipeline, i.e. continue), matching the fail-open
-# behavior of the direct AUTO_STOP_AT comparisons this helper replaces.
+# Fail-open: an unknown stop-at value (given directly, or resolved from config) or
+# a get-config-value.sh failure all fall back to "verify" (= full pipeline, i.e.
+# continue), matching the fail-open behavior of the direct AUTO_STOP_AT comparisons
+# this helper replaces.
 
 set -uo pipefail
 

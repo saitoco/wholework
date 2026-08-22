@@ -50,9 +50,19 @@ teardown() {
     [ "$status" -eq 1 ]
 }
 
-@test "should-stop-at-phase: empty stop-at value falls back to verify" {
+@test "should-stop-at-phase: empty stop-at value falls back to verify (no config present)" {
     run bash "$SCRIPT" review ""
     [ "$status" -eq 1 ]
+}
+
+@test "should-stop-at-phase: empty stop-at value resolves from config, same as omitted" {
+    export WHOLEWORK_SCRIPT_DIR="$PROJECT_ROOT/scripts"
+    export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/.wholework.yml"
+    printf 'auto-stop-at: review\n' > "$WHOLEWORK_CONFIG_PATH"
+    run bash "$SCRIPT" review ""
+    [ "$status" -eq 0 ]
+    unset WHOLEWORK_SCRIPT_DIR
+    unset WHOLEWORK_CONFIG_PATH
 }
 
 @test "should-stop-at-phase: stop-at read from .wholework.yml when omitted" {
