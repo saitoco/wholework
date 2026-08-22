@@ -85,6 +85,35 @@ All three literal-pattern directions from the Issue's Proposal were checked agai
 
 - Carried over from `/issue`'s own Auto-Resolve Log (see Consumed Comments below): the "multiple sessions" threshold for acceptance criteria A was deliberately left undefined in the Issue body, deferring to whatever this Spec's own measurement produced. Resolved: 22 sessions (see measurement above) — well beyond any reasonable reading of "multiple."
 
+## Code Retrospective
+
+### Deviations from Design
+- None. All 4 Implementation Steps were applied as written: the `HAS_XL_FACTS`/`XL_SCOPE_PATTERN` gate and per-candidate `continue` check landed at the exact anchor points the Spec specified in `scripts/opportunistic-search.sh`; the 4 new `tests/opportunistic-search.bats` cases use the same test names and scenario shapes listed in Implementation Step 3; the `modules/observation-trigger.md` paragraph and closing-sentence additions landed at the exact section anchors in Implementation Step 4.
+
+### Design Gaps/Ambiguities
+- None found during implementation. The Spec's own Notes section had already resolved the two open questions (SKIP-rate confirmation, pre-filter direction selection) before this phase started, so no new ambiguity surfaced.
+
+### Rework
+- None.
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1440 --non-interactive` Issue Retrospective comment (2026-08-22T15:17:30Z) — confirms Background facts were codebase-verified, AC checkbox/format checks passed, no open blockers, no title drift, and records the Auto-Resolve Log for the "multiple sessions" threshold deferred to this Spec's own measurement (see Auto-Resolve Log above). https://github.com/saitoco/wholework/issues/1440#issuecomment-5381115897
+- No new comments since last phase (code phase cutoff: 2026-08-22T15:44:41Z, the `phase/ready` label assignment timestamp).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented exactly the XL-scope pre-filter direction the Spec's own investigation (Notes § Investigated pre-filter directions) selected — no re-evaluation of the rejected directions (repository-scope, user-confirmation-required, Issue-absence filter) was performed in this phase; they were already closed out at spec time.
+- Both Pre-merge rubric AC were judged satisfied directly against the Spec's Notes (measurement) and the committed code diff (filter implementation), and checked off on the Issue in Step 10 — no `/review` fan-out was needed to make that call since both rubrics are structural/textual, not behavioral judgment calls.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- `/review` should confirm PR #1445's diff matches the Spec's `## Changed Files` list exactly (3 files: `scripts/opportunistic-search.sh`, `tests/opportunistic-search.bats`, `modules/observation-trigger.md`) and that the full bats suite (2005 tests) still passes on the PR branch.
+- No CI-check-type pre-merge AC exists for this Issue (both AC are rubric-form), so `/merge`'s pre-merge AC gate should find both already checked with nothing further to evaluate.
