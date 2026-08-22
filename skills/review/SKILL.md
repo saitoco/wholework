@@ -110,7 +110,7 @@ Determine the review mode using ARGUMENTS and the linked Issue's Size, and store
 
 **Exclusivity check:** if both `--light` and `--full` are specified, display error and exit.
 
-**Load `ALWAYS_PR` (before Size branching):** read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` and `HAS_PR_PREVIEW_CAPABILITY` for use below.
+**Load `ALWAYS_PR` (before Size branching):** read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR`, `HAS_PR_PREVIEW_CAPABILITY`, and `PREVIEW_URL_COMMAND` for use below.
 
 **Detection priority:**
 
@@ -234,9 +234,9 @@ If the `PREVIEW_URL` environment variable is already exported (set by CI or a pr
 
 **preview-url-command resolution — `PREVIEW_URL` unset but declared via config:**
 
-If `PREVIEW_URL` is not exported, `HAS_PR_PREVIEW_CAPABILITY` is `true`, and `.wholework.yml` declares `preview-url-command`, resolve it in a single Bash tool call:
+If `PREVIEW_URL` is not exported, `HAS_PR_PREVIEW_CAPABILITY` is `true`, and `.wholework.yml` declares `preview-url-command`, resolve it in a single Bash tool call. Append `2>/dev/null` as shown — the script writes an informational/warning message to stderr on both its success and failure paths, and without discarding it here, the Bash tool's merged stdout+stderr result could make that message indistinguishable from the resolved value itself:
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh url "$NUMBER"
+${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh url "$NUMBER" 2>/dev/null
 ```
 If the command produces non-empty stdout, treat it as the resolved preview URL: replace `{{base_url}}` with this **literal value** (not a `$PREVIEW_URL` shell reference — Bash tool calls do not persist exported env vars across invocations) and proceed to step 5, skipping the Deployments API lookup below — mirroring how the Deployments API path itself substitutes its resolved `environment_url` literally. If stdout is empty, fall through to the Deployments API path below unchanged.
 
