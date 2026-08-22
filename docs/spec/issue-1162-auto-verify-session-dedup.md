@@ -10,6 +10,23 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective。候補 A ( セッション内 verify 済みリストによる除外 ) は `modules/event-emission.md` が既に `/verify` から `phase_start`/`phase_complete` (`phase=verify`, `session_id` 付き) を `auto-events.jsonl` に emit していることを確認済みで、新規記録機構なしに実現可能と判断した旨を記録。post-merge AC の `session=next` 付与についても言及 ( 本 Spec は Issue 本文に既に反映済みの内容として扱う ) / URL: https://github.com/saitoco/wholework/issues/1162#issuecomment-5202874766
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1162#issuecomment-5203862327
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5205247880
+- saito / MEMBER / first-class / ## Observation AC Evaluation (`event=auto-run` 発火) / https://github.com/saitoco/wholework/issues/1162#issuecomment-5212504925
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5213691180
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5225318251
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5229260935
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5235405101
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5246561251
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5255752771
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5296384731
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5304275204
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5310548807
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5327730165
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5341240406
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5354375558
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5369693198
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1162#issuecomment-5378423926
 ## Changed Files
 
 - `scripts/filter-session-verified-issues.sh`: 新規ファイル。候補 Issue 番号 (標準入力、1 行 1 番号) を受け取り、`.tmp/auto-events.jsonl` ( `$AUTO_EVENTS_LOG` で上書き可 ) の中から、現在の `/auto` セッション (`$AUTO_SESSION_ID` env var、無ければ `.tmp/auto-session-current` ポインタファイル ) に対して `phase=verify` の `phase_start`/`phase_complete` イベントが記録済みの Issue 番号を除外して標準出力へ返す。セッション ID が解決できない、または `.tmp/auto-events.jsonl` が存在しない場合は fail-open ( 候補をそのまま出力し、stderr に warning ) とする — 本フィルタが observation scan 自体をブロックしてはならないため。bash 3.2+ 互換 ( macOS system bash )、`mapfile` 不使用。
