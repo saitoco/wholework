@@ -215,4 +215,64 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - **UI Design 非該当**: UI 変更を含まない。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective。Background の事実主張をコードベース照合済みであること、条件付き共通ヘルパー化 AC を #1044 の先例に合わせて維持したこと、blocked-by なし・タイトルドリフトなしを報告 / https://github.com/saitoco/wholework/issues/1047#issuecomment-5378149523
+- saito / MEMBER / first-class / Triage AC audit の警告。`section_contains` の heading 引数に先頭の `####` を含めており恒久 UNCERTAIN になるため `"Process Each Issue"` へ修正するよう指摘 (本フェーズで Issue 本文と Spec の両方に反映済み) / https://github.com/saitoco/wholework/issues/1047#issuecomment-5378164415
+
+## issue retrospective
+
+- Background に記載された事実主張 (Count mode に verify orchestration ステップが存在しないこと、List mode Step 7 との対比、stop-at 判定箇所が本 Issue の実装で合計 8 箇所に到達する見込み) をコードベース照合し、いずれも `skills/auto/SKILL.md` / `scripts/run-auto-sub.sh` の現状実装と整合していることを確認した (Step 5 advisory check)。
+- Acceptance Criteria: Pre-merge AC の1件目 (`rubric` で verify orchestration ブロック追加を判定) に対し、`modules/verify-patterns.md` §9 のガイドライン (rubric + supplementary file_contains/section_contains) に従い、対象ファイルとセクション見出し (`skills/auto/SKILL.md` の `#### Process Each Issue` 見出し、Count mode 配下で一意) が事前に特定可能なため、`section_contains "skills/auto/SKILL.md" "#### Process Each Issue" "AUTO_STOP_AT"` を機械的な補完チェックとして追加した。2件目の AC (bats テスト追加を判定する rubric) は追加されるテストケース名が実装依存 (developer-determined) であり、`modules/verify-patterns.md` §9 の "When NOT to apply" (実装箇所が developer-determined) に該当するため、補完チェックは付与しなかった。
+- 共通ヘルパー化 AC (`should-stop-at-phase.sh` 相当) は本文で既に「実装した場合」という条件付き AC として記載されている。過去の Issue #1044 の Spec (`docs/spec/issue-1044-batch-verify-stop-at-merge.md`) では、同種の共通ヘルパー化を「既存パターンとの差分最小化を優先し見送り、分散箇所が閾値を超過した時点で別 Issue にて再検討する」方針が明示的に記録されており、本 Issue はまさにその「別 Issue」に相当するスコープを含む。この過去判断と整合するため、AC を必須化せず条件付きのまま維持した (auto-resolve — 過去の同種判断からの一意な推論)。
+- Blocked-by: `gh-check-blocking.sh` は exit 0 (オープンなブロッカーなし)。
+- タイトルドリフト: なし (現在のタイトルは更新後の本文スコープと一致)。
+- Sub-issue 分割評価: non-interactive モードのため High-Stakes Decision としてスキップ。Size L だが `skills/auto/SKILL.md` への同型ブロック追加 + テスト追加という単一スコープの変更であり、参考情報としても分割の必要性は低いと判断した。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` フェーズが補完チェックとして追加した `section_contains` の heading 引数に `####` プレフィックスが含まれており、`modules/verify-executor.md` の heading 部分一致規則 (先頭の `#` と空白を除去してから部分一致) の下では恒久 UNCERTAIN になる形だった。同一セッション内の Triage AC audit が検出し、本フェーズで修正した。`section_contains` の補完チェックを新規に書く際は、見出しレベル記号を引数に含めないことを毎回確認する必要がある。
+- `docs/structure.md` のスクリプト件数コメント `(92 files)` は `find scripts -maxdepth 1 -type f | wc -l` (= 92) と一致するが、`ls scripts/ | wc -l` (= 93) とは一致しない。`scripts/git-hooks/` サブディレクトリが `ls` では 1 件として数えられるため。件数更新時は必ず `-maxdepth 1 -type f` の値を使う。
+
+### Judgment rationale
+
+- Issue 本文の「stop-at 判定箇所が合計 8 箇所」は SKILL.md の LLM prose のみの数であり、共通ヘルパー (bash script) の実際の置換対象である `scripts/run-auto-sub.sh` の bash 条件式 6 箇所を含んでいなかった。両者は実行サーフェスが異なる (prose は LLM 実行、bash は subprocess) ため単純合算できない。AC 4 の rubric が `tests/run-auto-sub.bats` を名指ししていたこと、共通ヘルパー化トリガーの系譜 (#980 / #1042) がいずれも `run-auto-sub.sh` であったことを根拠に、置換対象を bash 側 6 箇所に確定した。
+- Count mode の gate をリテラル比較 (`AUTO_STOP_AT == "merge"`) に留め、helper の phase 順序判定に広げなかった。本 Issue の目的が両モードの挙動統一である以上、Count mode だけ広い gate を持たせると新たな非対称を作ることになるため。List mode 側の gate 拡張は独立した判断であり、必要なら別 Issue とする。
+- Count mode は `write_batch` を一度も呼ばないため、List mode step 7 から `auto-checkpoint.sh update_batch` 呼び出しを除いた形で移植した。将来の読者が List mode との対称性から checkpoint 呼び出しを「復元」しないよう、その旨の注記を追加ブロック内に置く仕様とした。
+- helper の exit code 規約 (0=stop / 1=continue / 2=usage error) は、同じ `scripts/run-auto-sub.sh` 内の既存 predicate `_spec_is_diffless()` と同一の 0/1 規約に揃えた。stdout に判定語を出す案は、呼び出し元 (`if` 条件) の記述が `grep -q` 経由になり読みにくくなるため採らなかった。
+
+### Uncertainty resolution
+
+- `section_contains` の heading 引数照合規則: `modules/verify-executor.md` の翻訳表を読んで解決 (先頭 `#` 除去後の部分一致)。Issue 本文の AC と Spec の両方を修正済み。
+- `set -euo pipefail` 下で helper の exit 1 が script を止めないか: `if <command>; then` の条件位置は `set -e` の対象外であること、および同ファイル内の `_spec_is_diffless()` が同じ規約で使われていることを確認して解決。
+- `tests/run-auto-sub.bats` の `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` により新規 helper が mock ディレクトリ側に解決される点: `setup()` を読んで確認し、`get-config-value.sh` と同じ「実物を copy」方式を Implementation Steps 5 に明記して解決。
+
+### 新規テストケース要件のサマリ
+
+- Implementation Steps 1 (helper の 5 分岐) と 3 (Count mode step 6 の 3 分岐) がいずれも新規分岐ロジックのため、`tests/should-stop-at-phase.bats` に 12 ケース、`tests/auto-batch.bats` の Count mode section に 5 ケースの新規テストを追加したうえでスイート全体が PASS することを受入基準 6 に要求した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 共通ヘルパー `scripts/should-stop-at-phase.sh` の適用範囲は `scripts/run-auto-sub.sh` の bash 条件式 6 箇所に限定し、`skills/auto/SKILL.md` の LLM prose 8 箇所は対象外とした (prose を subprocess 呼び出しに置き換えても編集箇所数が減らず、実行コストと失敗面のみ増えるため)。
+- helper のインターフェースは exit code 規約 (0=stop / 1=continue / 2=usage error) とし、stdout には何も出さない。既存 predicate `_spec_is_diffless()` と同じ 0/1 規約に揃えた。
+- 未知の stop-at 値・`get-config-value.sh` 失敗はいずれも `verify` へ fallback する fail-open 設計とした。既存の直接比較が未知値で false = continue になる挙動を保存する唯一の選択であるため。
+- Count mode の verify gate はリテラル比較 (`AUTO_STOP_AT == "merge"`) を維持し、helper の phase 順序判定には広げない (List mode との挙動統一が本 Issue の目的のため)。
+- Count mode は batch checkpoint を持たないため、移植した verify orchestration ブロックから `auto-checkpoint.sh update_batch` 呼び出しをすべて除いた。
+
+### Deferred Items
+
+- `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外。将来 stop-at 値を追加する際に再評価する。
+- List mode step 7 の gate を phase 順序判定へ広げる案は本 Issue の対象外 (Issue 本文で明示)。必要なら別 Issue とする。
+- `modules/detect-config-markers.md` は Steering Docs sync candidate として列挙したが、記述変更は不要の見込み。`/code` フェーズで fallback 文言が現状と整合しているか最終判断すること。
+
+### Notes for Next Phase
+
+- CI 制約: `scripts/` と `skills/` への追加行は英語であること (`scripts/check-language-convention.py` が diff の CJK を検出。日本語は二重引用符内文字列とインラインコードスパンのみ許容)。`skills/auto/SKILL.md` 本文には半角感嘆符と 3 連バッククォートを含めないこと。`scripts/*.sh` は macOS の bash 3.2 で `bash -n` が通ること。
+- `tests/run-auto-sub.bats` は `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定しているため、実物の `should-stop-at-phase.sh` を `$MOCK_DIR` に copy しないと既存の `auto-stop-at` 系テスト 3 件が helper 不在で失敗する (Implementation Steps 5)。
+- `docs/structure.md` / `docs/ja/structure.md` の件数は `find scripts -maxdepth 1 -type f | wc -l` の値 (= 実装後 93) を使うこと。`ls scripts/ | wc -l` は `scripts/git-hooks/` を含むため一致しない。
+- 置換の等価性は Spec の「run-auto-sub.sh 置換対応表 (exhaustive)」に 6 行すべて記載済み。置換後に `AUTO_STOP_AT` の直接比較が残っていないことを確認すること (代入行と helper への引数渡しは残る)。
+- `docs/ja/workflow.md` / `docs/ja/structure.md` は `docs/translation-workflow.md` の同期義務対象。code fence 数の一致確認まで行うこと。
