@@ -47,6 +47,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Read instruction placement | Place shared module Read instructions immediately after step heading | tech.md |
 | Module standard structure | New modules follow 4-section structure (Purpose/Input/Processing Steps/Output) | tech.md |
 | Example/exhaustive markers | Add (examples), (exhaustive), (project-dependent) markers to lists/tables | tech.md |
+| Exhaustive claim mechanical verification | When a Spec's Implementation Steps write or modify a shared prose module (`modules/*.md`) description claiming completeness ("exhaustive", "漏れなく", "all", "always"), include a step to mechanically verify the claim (e.g., `grep -rn "{referenced pattern}" skills/*/SKILL.md`) rather than relying on design-time reasoning alone | #1058, #1429 |
 | Input interface | Explicitly state input/output for new components in implementation steps | tech.md |
 | Edge cases | Include error cases (empty args, missing files, uncommitted changes, permission errors) in new skill/step design | #423 |
 | Argument parser edge cases | Include unclosed quotes, empty values, invalid chars, escape edge cases in test case lists | #672 |
