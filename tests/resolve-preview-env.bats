@@ -366,3 +366,40 @@ MOCK
     [[ "$output" != *"secretpass123"* ]] || false
     [[ "$output" == *".tmp/curl-auth-"* ]] || false
 }
+
+@test "basic-auth: returned temp file path resolves from caller CWD when MAIN_REPO_ROOT differs (#1441 regression)" {
+    # #1429 bug: the script `cd`s to MAIN_REPO_ROOT before mktemp'ing the
+    # returned credential file. A relative output path (the pre-fix
+    # behavior, `mktemp .tmp/curl-auth-XXXXXX.cfg`) only resolves relative to
+    # MAIN_REPO_ROOT — a caller whose own CWD is a different worktree (as
+    # /review's Worktree Entry is) cannot read it. This test intentionally
+    # separates the caller's CWD ($BATS_TEST_TMPDIR, set by setup()) from
+    # MAIN_REPO_ROOT ($BATS_TEST_TMPDIR/main-repo, reported by the mocked
+    # `git worktree list --porcelain`) and asserts the returned path is
+    # absolute and directly readable from the caller's CWD with no `cd`.
+    mkdir -p "$BATS_TEST_TMPDIR/main-repo"
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    echo "worktree $BATS_TEST_TMPDIR/main-repo"
+    exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/git"
+    mock_basic_auth_value "echo user1:pass1"
+
+    [ "$(pwd)" = "$BATS_TEST_TMPDIR" ]
+    run --separate-stderr "$SCRIPT" basic-auth 123
+    [ "$status" -eq 0 ]
+
+    # Must be absolute — a bare relative path would only resolve from
+    # MAIN_REPO_ROOT, not from the caller's actual CWD asserted above.
+    [[ "$output" == /* ]] || false
+    [[ "$output" == "$BATS_TEST_TMPDIR/main-repo/.tmp/curl-auth-"* ]] || false
+
+    # Readable straight from the caller's own CWD, without cd'ing anywhere.
+    [ -f "$output" ]
+    [ -r "$output" ]
+    [ "$(cat "$output")" = 'user = "user1:pass1"' ]
+}
