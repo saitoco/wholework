@@ -164,7 +164,7 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - <!-- verify: file_contains "tests/auto-batch.bats" "Count mode section: auto-stop-at merge skip behavior present" --> Count mode の verify orchestration ブロックの挙動を検証する bats テストが `tests/auto-batch.bats` に追加されている
 - <!-- verify: rubric "scripts/should-stop-at-phase.sh が phase 順序 (spec<code<review<merge<verify) に基づく stop 判定を行い、scripts/run-auto-sub.sh 内の AUTO_STOP_AT 直接比較が全て helper 呼び出しに置き換わっており、置換前後で分岐条件が等価である" --> 共通ヘルパーが実装され、`run-auto-sub.sh` の `AUTO_STOP_AT` 直接比較 6 箇所が helper 呼び出しに置き換えられている
 - <!-- verify: file_contains "scripts/run-auto-sub.sh" "should-stop-at-phase.sh" --> `scripts/run-auto-sub.sh` が helper を参照している
-- <!-- verify: command "bats tests/should-stop-at-phase.bats tests/run-auto-sub.bats tests/auto-batch.bats" --> helper の新規テストと既存スイートが PASS する (新規ロジックを検証する新規テストケースを追加したうえでスイート全体が PASS すること)
+- <!-- verify: command "bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/should-stop-at-phase.bats tests/run-auto-sub.bats tests/auto-batch.bats" --> helper の新規テストと既存スイートが PASS する (新規ロジックを検証する新規テストケースを追加したうえでスイート全体が PASS すること)
 - <!-- verify: file_contains "docs/structure.md" "should-stop-at-phase.sh" --> `docs/structure.md` の Scripts セクションに新スクリプトのエントリが追加されている
 - <!-- verify: file_contains "docs/structure.md" "(93 files)" --> `docs/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
 - <!-- verify: file_contains "docs/ja/structure.md" "(93 ファイル)" --> `docs/ja/structure.md` の Directory Layout のスクリプト件数コメントが更新されている
