@@ -207,3 +207,19 @@ milestone は 6段階: `initial` / `pre-commit` / `post-commit` / `post-push` / 
 - verify では `bats tests/auto-checkpoint.bats` (10件) および `bats tests/run-auto-sub.bats` (30件) を実行して全 PASS を確認すること。
 - AC3 (`resume_action post-commit` → `push-and-pr`) は CLI コマンド直接実行で確認可能。
 - Post-merge AC (kill-resume 実走) は verify スコープ外だが、観察できれば記録すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec / design / code
+- 特筆事項なし。既存の retrospective (Code Retrospective・review retrospective) に記録済みの観察 (AC2 verify command のコメント行マッチ、`file_contains` 形式への推奨切り替え) は既に十分に記録されており、本 verify 実行で新たに追加すべき内容はない。
+
+#### review
+- 既存の review retrospective が記録した推奨事項 (今後は `file_contains "path" "write_milestone"` 形式を優先) は既に記録済みであり、追加のアクションは不要と判断した。
+
+#### verify
+- Pre-merge 5件は already-checked のため SKIPPED。Post-merge observation (event=auto-run) は **PASS** — 本 `/auto --batch` セッション (54306-1787322915) 内で #1134・#1139 の review フェーズ external kill 後、`run-auto-sub.sh` の respawn が `code_phase_milestone` (`post-PR-create`) を観測し `skip-to-review` で手動介入なく正常完走したことを直接確認した。本 Issue が実装した milestone-based checkpoint が実運用で意図通り機能していることの実証。
+
+### Improvement Proposals
+- N/A — 既存の retrospective に記録済みの推奨事項以外、新規の観察はない。
