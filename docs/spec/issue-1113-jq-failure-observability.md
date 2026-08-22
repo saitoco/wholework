@@ -49,6 +49,29 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: Option A を必須実装採用・gh失敗とjqエラーは区別しない・`<step>`は変数名を使用・AC4のbatsファイルは既存確認済み / https://github.com/saitoco/wholework/issues/1113#issuecomment-5138294160
 
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1113` to verify the conditio / https://github.com/saitoco/wholework/issues/1113#issuecomment-5138806329
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1113` to verify the conditio / https://github.com/saitoco/wholework/issues/1113#issuecomment-5138891785
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1113` to verify the conditio / https://github.com/saitoco/wholework/issues/1113#issuecomment-5141403601
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1113` to verify the conditio / https://github.com/saitoco/wholework/issues/1113#issuecomment-5146656600
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1113` to verify the conditio / https://github.com/saitoco/wholework/issues/1113#issuecomment-5147236963
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5174322475
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5185271283
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5195222171
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5202642115
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5212267312
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5225317824
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5229260598
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5235404593
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5246560237
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5255751474
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5296383524
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5304274621
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5310548170
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5327728588
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5341238443
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5354373518
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5369691437
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5378423203
 ## Notes
 
 - **Scope confirmation**: Issue Background に記載された5箇所 (L67/72/80/86/125) は、現行コードの実際の行番号と完全に一致することを確認済み (ズレなし)。実装は行番号ではなく変数名 (`RAW_COMMENTS` 等) で特定する。
