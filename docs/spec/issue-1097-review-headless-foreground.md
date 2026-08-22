@@ -80,6 +80,23 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要旨: `/issue` フェーズの Issue Retrospective。AC2 の修正先を `skills/review/SKILL.md` の `## Non-Interactive Mode Behavior` 節に特定し、機械チェック用に AC3 (`section_contains ... "前景"`) を追加し、`/spec`・`/verify` への同種の個別注記追加を本 Issue のスコープ外と確定した経緯を記録 / URL: https://github.com/saitoco/wholework/issues/1097#issuecomment-5140788831
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1097#issuecomment-5140991381
+- saito / MEMBER / first-class / ## Post-merge AC 充足の記録 (#1164 より) / https://github.com/saitoco/wholework/issues/1097#issuecomment-5211903386
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5212266474
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5225317366
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5229260231
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5235403967
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5246558999
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5255749453
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5296382079
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5304274019
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5310547494
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5327727022
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5341236292
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5354371613
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5369689595
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1097#issuecomment-5378422588
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1097#issuecomment-5379785093
 ## Code Retrospective
 
 N/A — Implementation Steps 1〜4 をそのまま実施し、設計からの逸脱・手戻り・未解決の曖昧さはなかった。
