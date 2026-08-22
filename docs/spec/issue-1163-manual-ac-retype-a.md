@@ -22,6 +22,22 @@ Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加
 
 `phase/ready` 付与以降の新規コメントなし。Cross-phase marker の追加スキャン結果も該当なし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1163#issuecomment-5201173851
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5201215839
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5212268429
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5225318329
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5229261031
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5235405237
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5246561560
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5255753133
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5296384975
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5304275317
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5310548960
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5327730478
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5341240763
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5354376045
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5369693475
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1163#issuecomment-5378424030
 ## Autonomous Auto-Resolve Log
 
 - **`phase/ready` ラベル不在での続行**: `/code 1163 --pr --non-interactive` 開始時点で Issue のラベルは `phase/code` (label timeline 上、`phase/ready` は 2026-08-06T04:56:03Z に `phase/code` へ既に遷移済み)。`reconcile-phase-state.sh --check-precondition code-pr` も `matches_expected: false` を返した。Spec (`docs/spec/issue-1163-manual-ac-retype-a.md`) は spec retrospective・issue retrospective・Phase Handoff まで完備しており、コーディング未着手のまま前回セッションが label 遷移後に中断したレジューム状態と判断。Spec が存在するため「Spec なしで Issue 本文から要件を読む」対応は不要。warn のうえ Spec を正として続行した — reason: 非対話モードのポリシー (`--warn-only` 相当) は Spec 欠落時の縮退経路であり、本件は Spec 完備のため実質的にブロッカーではない。
