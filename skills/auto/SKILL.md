@@ -1129,6 +1129,10 @@ Sort by `createdAt` descending (newest first) and select the top N. Targets: Iss
 
 #### Process Each Issue
 
+**Load stop-at setting (Count mode only):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT` for use in step 6's verify orchestration gate below.
+
 Process the selected N Issues **sequentially** (serially):
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
@@ -1138,6 +1142,15 @@ Process the selected N Issues **sequentially** (serially):
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
 5. **If `$ISSUE_SIZE` is XS**: transcribe issue retrospective to Spec (see Step 4b)
+6. **Verify orchestration** (after run-auto-sub.sh success):
+   - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
+   - If `phase/verify` is present in labels:
+     - If `AUTO_STOP_AT == "merge"`: output "Skipping verify for #$NUMBER (auto-stop-at=merge); phase/verify remains" and skip to the next Issue
+     - Else if `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER --session-id=<literal SESSION_ID value from step 1>")` in the parent session
+       - On failure or output contains `MAX_ITERATIONS_REACHED`: output a warning and skip to the next Issue (do not abort the entire batch)
+     - Else (`--non-interactive` IS in ARGUMENTS): output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains" and skip to the next Issue
+   - If `phase/verify` is NOT in labels: skip to the next Issue with no action
+   - Note: Count mode has no `BATCH_ID` (`write_batch` is never called for Count mode), so unlike List mode step 7, this step never calls `auto-checkpoint.sh update_batch`.
 
 ### List mode (--batch N1 N2 ...)
 
