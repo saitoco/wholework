@@ -50,7 +50,7 @@ GitHub deployment を作らないホスティングプロバイダ (AWS Amplify 
 向け。宣言されたコマンドは共有の解決スクリプト `scripts/resolve-preview-env.sh`
 (Issue #1428) が `bash -c` 経由で実行し、この共有スクリプトは
 `scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接
-呼び出す経路の Step 8.0 Fast path の両方から呼ばれる — guard ロジック
+呼び出す経路の Step 8.0 の両方から呼ばれる — guard ロジック
 (timeout・出力検証) は両呼び出し元で1つの実装を共有する。スクリプトは他の
 adapter と並べて `.wholework/adapters/` 配下に置く (例:
 `.wholework/adapters/resolve-preview-url.sh`) と発見しやすく、`.wholework.yml`

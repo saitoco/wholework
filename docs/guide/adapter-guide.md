@@ -56,7 +56,7 @@ Required for `mcp_call` verify commands. Wholework uses the declared list to pro
 that never create a GitHub deployment (e.g. AWS Amplify Hosting). The declared command is
 executed via `bash -c` by the shared resolver `scripts/resolve-preview-env.sh` (Issue
 #1428), which both `scripts/run-review.sh`'s preview-wait gate and `/review`'s own Step
-8.0 Fast path (when invoked directly as a skill) call — a single guard implementation
+8.0 (when invoked directly as a skill) call — a single guard implementation
 (timeout, output validation) shared by both call sites. Place the script under
 `.wholework/adapters/` (e.g. `.wholework/adapters/resolve-preview-url.sh`) alongside your
 other adapters for discoverability, and declare it with
