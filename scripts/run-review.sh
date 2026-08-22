@@ -151,6 +151,7 @@ _resolve_preview_basic_auth_command() {
   local _f
   _f=$("$SCRIPT_DIR/resolve-preview-env.sh" basic-auth "$PR_NUMBER" --format user-pass) || return 0
   [[ -z "$_f" ]] && return 0
+  [[ -r "$_f" ]] || return 0
   { IFS= read -r PREVIEW_BASIC_USER; IFS= read -r PREVIEW_BASIC_PASS; } < "$_f"
   rm -f "$_f"
   export PREVIEW_BASIC_USER PREVIEW_BASIC_PASS
