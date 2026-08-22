@@ -124,6 +124,11 @@ MOCK
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/get-config-value.sh" "$MOCK_DIR/get-config-value.sh"
     chmod +x "$MOCK_DIR/get-config-value.sh"
 
+    # Real should-stop-at-phase.sh (needed to exercise auto-stop-at gate tests; WHOLEWORK_SCRIPT_DIR
+    # points run-auto-sub.sh's own $SCRIPT_DIR/should-stop-at-phase.sh calls at $MOCK_DIR)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/should-stop-at-phase.sh" "$MOCK_DIR/should-stop-at-phase.sh"
+    chmod +x "$MOCK_DIR/should-stop-at-phase.sh"
+
     # Mock auto-checkpoint.sh: no-op milestone operations so existing tests are unaffected
     cat > "$MOCK_DIR/auto-checkpoint.sh" <<'MOCK'
 #!/bin/bash
