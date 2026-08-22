@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (94 files)
+├── scripts/             # Utility scripts used by skills and agents (95 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -220,6 +220,7 @@ Key modules:
 - `scripts/rank-verify-backlog.sh` — rank `phase/verify` backlog Issues by unchecked Post-merge acceptance conditions carrying a verify command (auto-checkable), excluding code-fenced sample checkbox text; outputs the top N Issue numbers for `/audit verify-backlog`
 - `scripts/collect-verify-path-done-rate.sh` — compare `phase/done` reach rate across the batch sweep / observation dispatch / opportunistic-verify dispatch paths (Issue comment markers for the first two, `docs/sessions/*/events.jsonl` for the third; paths are not mutually exclusive), for `/audit stats --retention` Section 12
 - `scripts/apply-run-fact-match.sh` — deterministic autonomy-tier gate for a run-fact AC match verdict (satisfied/not_satisfied/ambiguous): auto-checks the checkbox, prints an advisory `Recommend:` line, or does nothing
+- `scripts/apply-verify-retire.sh` — deterministic autonomy-tier gate + retire executor for `phase/verify` Level 3 (90+ day dwell): auto-retires unchecked `observation`/`opportunistic` post-merge conditions under L2/L3 (body rewrite + audit-trail comment + `phase/done` transition), or prints an advisory-only `action=propose`/`action=none` at L1/lower levels
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
 **Process management:**

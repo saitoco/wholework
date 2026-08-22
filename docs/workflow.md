@@ -197,7 +197,7 @@ Setup: Wholework automatically creates the labels it needs on first run. Manual 
 | `phase/review` | Review phase | `/review` | `/merge` |
 | `phase/skill` | Skill development / migration tracking | Developer (when creating skill-behavior Issues) | — (tracking label, remains) |
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
-| `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked) | — |
+| `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked); `/audit stats --retention` (Level 3 auto-retire, autonomy tier L2/L3, when the retire leaves no unchecked post-merge condition) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
 
 ### XL Parent Issue Phase Management

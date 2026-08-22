@@ -190,7 +190,7 @@ bash scripts/check-translation-sync.sh
 | `phase/review` | レビューフェーズ | `/review` | `/merge` |
 | `phase/skill` | スキル開発 / 移行トラッキング | 開発者（スキル動作変更 Issue 起票時） | —（追跡ラベル、残存） |
 | `phase/verify` | 受入テストフェーズ | `/merge` | `/verify` |
-| `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時） | — |
+| `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時）、`/audit stats --retention` (Level 3 auto-retire、autonomy tier L2/L3、retire 後に未チェックの post-merge 条件が残らない場合) | — |
 | （ラベルなし） | バックログ / 未着手 | — | `/verify`（FAIL 時） |
 
 ### XL 親 Issue のフェーズ管理

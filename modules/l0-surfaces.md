@@ -280,6 +280,33 @@ whether **at least one** marker exists for a given Issue — since Issue comment
 an older marker remains valid evidence even for an Issue that was selected by multiple batch
 sweep runs over time.
 
+**`type=verify-ac-retired`**: posted by `scripts/apply-verify-retire.sh` (called from
+`/audit stats --retention`'s Retire-Proposal Comment Posting, phase/verify Level 3 branch) whenever
+it auto-retires one or more unchecked post-merge acceptance conditions under autonomy tier L2/L3.
+Attributes: `phase=audit`, `issue=<N>`, `dwell=<days>` (dwell days at time of retire), `ac=<i,j,...>`
+(comma-separated 1-based indices into the Issue body's full AC enumeration, same convention as
+`gh-issue-edit.sh --checkbox`, of the conditions retired by this run), `verify-types=observation,opportunistic`
+(the fixed, exhaustive set of verify-type values eligible for auto-retire — `manual`/`auto` are never
+retired, see `skills/audit/SKILL.md` § Retire-Proposal Comment Posting for why). Example:
+```
+<!-- wholework-event: type=verify-ac-retired phase=audit issue=42 dwell=95 ac=2,5 verify-types=observation,opportunistic -->
+## phase/verify Level 3 Auto-Retire
+
+dwell: 95d, 最終 dispatch: 2026-05-10T00:00:00Z
+
+Retired post-merge acceptance conditions (90 日間 event が発火せず、または発火しても判定に至らなかった):
+
+- #2 (verify-type: observation): obs condition one
+- #5 (verify-type: opportunistic): opp condition two
+```
+Resolution: like `type=batch-verify-dispatch`, no latest-wins resolution is needed — this is an
+append-only history of retire events, and each occurrence documents a real retire that already
+happened (the retired conditions themselves are visible in the Issue body's
+`### Retired Post-merge Conditions` section, which is the authoritative record; this marker exists
+so a consumer can find *when* and *under what dwell* a given retire happened without re-parsing
+body diffs). A consumer only needs to check whether **at least one** marker exists for a given
+Issue (or Issue+AC-index pair), the same check `type=batch-verify-dispatch`'s consumer performs.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 
