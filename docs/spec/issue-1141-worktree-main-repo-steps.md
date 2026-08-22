@@ -61,3 +61,22 @@ Size=XS、Pre-merge/Post-merge のセクション構成は既存のまま維持 
 - N/A (新規起票なし)。検出した 2 点はいずれも既存の記録先で処理済み:
   - **`triaged` 済み Issue で AC 監査が走らない構造** → #1083 のコメントに記録済み。ユーザー判断により「サポート方法は別途検討」として保留 (メモリにも保持)
   - **`/auto` Step 4b の実行漏れ** → 本セッション内で検出し復旧済み。手順自体は skill に明記されており、実装・記述の欠陥ではなく実行時の見落とし
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1141#issuecomment-5199350362
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5200238321
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5212267884
+- saito / MEMBER / first-class / ## Observation AC Evaluation (`event=auto-run` 発火) / https://github.com/saitoco/wholework/issues/1141#issuecomment-5212502084
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5225318096
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5229260757
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5235404849
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5246560775
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5255752150
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5296384133
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5304274977
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5310548515
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5327729475
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5341239564
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5354374649
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5369692356
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1141#issuecomment-5378423573
