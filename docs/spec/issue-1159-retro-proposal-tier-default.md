@@ -14,6 +14,25 @@
 
 No new comments since last phase. (cutoff: `phase/*` ラベル最終付与時刻 `2026-08-04T20:51:26Z`、`type=verify-fail` / `type=preview-ac-unverified` マーカーも該当なし)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1159#issuecomment-5185243930
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5185272046
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5195223898
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5202643882
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5212268205
+- saito / MEMBER / first-class / ## Observation AC Evaluation (`event=auto-run` 発火) / https://github.com/saitoco/wholework/issues/1159#issuecomment-5212516350
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5225318175
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5229260870
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5235404983
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5246561029
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5255752433
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5296384444
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5304275105
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5310548661
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5327729796
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5341240023
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5354375045
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5369692886
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5378423826
 ## Changed Files
 
 - `modules/retro-proposals.md`: Step 6 の Tier 1 行を positive-evidence gate へ書き換え、Mechanical heuristics を「キーワード単独では Tier 1 を選ばない」形へ引き締め、`**Default**` を Tier 2 へ反転して根拠ブロックを追加、`**Tier classification persistence**` サブ節を追加。冒頭 `Called by:` の step 番号 (`/verify` Step 13 → Step 16、`/auto` Step 4a → Step 5 L3 auto-retrospective) と `## Output` 節を更新
