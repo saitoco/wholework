@@ -213,3 +213,6 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - **CI 制約**: `scripts/` と `skills/` の追加行は英語であること (`scripts/check-language-convention.py` が diff に対して CJK を検出する。日本語は二重引用符内の文字列とインラインコードスパンのみ許容)。`skills/auto/SKILL.md` 本文には半角感嘆符と 3 連バッククォートを含めないこと (`scripts/validate-skill-syntax.py` の MUST 制約)。`scripts/*.sh` は macOS の bash 3.2 で `bash -n` が通ること。
 - **Smoke Test 非該当**: 外部/MCP ツール呼び出しを含まないため `## Smoke Test` セクションは設けない。
 - **UI Design 非該当**: UI 変更を含まない。
+
+## Consumed Comments
+No new comments since last phase.
