@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (94 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (95 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -213,6 +213,7 @@ wholework/
 - `scripts/rank-verify-backlog.sh` — verify command を伴う (自動チェック可能な) 未チェックの Post-merge 受入条件の数で `phase/verify` バックログ Issue をランク付けする (コードフェンスで囲まれたサンプルのチェックボックステキストは除外)。`/audit verify-backlog` 用に上位 N 件の Issue 番号を出力する
 - `scripts/collect-verify-path-done-rate.sh` — バッチスイープ / observation ディスパッチ / opportunistic-verify ディスパッチの各経路間で `phase/done` 到達率を比較する (最初の 2 つは Issue コメントマーカー、3 つ目は `docs/sessions/*/events.jsonl`。経路は互いに排他的ではない)。`/audit stats --retention` Section 12 用
 - `scripts/apply-run-fact-match.sh` — run-fact AC マッチ判定 (satisfied/not_satisfied/ambiguous) に対する決定的な autonomy-tier ゲート: チェックボックスを自動チェックするか、`Recommend:` 行を出力するか、何もしない
+- `scripts/apply-verify-retire.sh` — `phase/verify` Level 3 (90 日以上の滞留) に対する決定的な autonomy-tier ゲート + retire 実行スクリプト: L2/L3 で未チェックの `observation`/`opportunistic` post-merge 条件を自動 retire する (body 書き換え + 監査証跡コメント + `phase/done` 遷移)。L1 以下ではアドバイザリな `action=propose`/`action=none` のみ出力する
 - `scripts/triage-backlog-filter.sh` — triage 用のバックログフィルタ
 
 **プロセス管理:**

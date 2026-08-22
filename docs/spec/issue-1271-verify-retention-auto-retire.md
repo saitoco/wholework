@@ -272,28 +272,52 @@ Background / 対応方針セクション内の「`manual` を含めるか否か�
 
 Implementation Step 8 が新規分岐ロジックを導入するため、受入条件 7 (`command "bats tests/"`) は既存スイート PASS に加えて新規テストケースの追加を伴う。必須 3 ケース (Level 3 × L2/L3 → retire、Level 3 × L1 → 提案のみ、Level 2 以下 → retire しない) + 追加 6 ケース (verify-type 限定、fenced code block 除外、冪等性、`transitioned=false`、fail-closed、引数バリデーション) を `tests/audit-retention.bats` へ追加する。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1–9 を Spec の記述順どおりに実装した。順序の入れ替え・省略・統合は発生していない。
+
+### Design Gaps/Ambiguities
+
+- Implementation Step 4 の「`### Post-merge` 節に `- [` で始まる行が 1 つも残らない場合のみプレーン散文行を挿入する」という条件判定は、Spec 本文では fenced code block の除外に明示的に触れていなかった。実装時、手動テストで「実条件はすべて retire 対象だが、fenced code block 内のサンプル `- [ ]` 行だけが Post-merge 節に残る」ケースを検証したところ、fence 内容を除外せずに `- [` を素朴にスキャンする実装では散文行が誤って挿入されず (fenced sample を「実条件が残っている」と誤認)、`### Post-merge` 節が箇条書きなしの裸プロークで終わる不整合が起きることを発見した。`modules/l0-surfaces.md` § AC Enumeration Convention (b) の fence 除外規約はこの判定にも一律適用されるべきという前提を Spec は明文化していなかったため、Implementation Step 3 の fence 追跡 (in_fence) をこの残数判定にも流用する形で対処した (awk に `fence_state[NR]` 配列を追加)。同種の「fence 除外はどの判定に適用されるか」を Spec に書く際は、AC Enumeration Convention への参照だけでなく、具体的にどの計算箇所に適用が及ぶかを明示すると実装時の手戻りを防げる
+
+### Rework
+
+- 上記の fence 除外漏れは、`scripts/apply-verify-retire.sh` を書き上げた直後の手動統合テスト (`.tmp/manual-test/` に一時的なモック環境を作り、Post-merge 節の全条件が fenced sample を除いて retire される fixture を用意して実行) で発見した。修正は awk の main ブロックに `fence_state[NR] = in_fence` を追加し、END ブロックの `remaining_pm_checkbox` ループで `fence_state[i]` が真の行をスキップするよう変更する 1 箇所のみで、bats テスト (`fenced sample checkbox is excluded from retire targets` および他の既存ケース) は影響を受けなかった
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Steps は「body を 1 つの連続領域として awk で 1 パス抽出し、3 スライスで再構成する」という設計だったが、Post-merge 節や Retired Post-merge Conditions 節が複数回出現する、または想定と逆順に出現するケースへの防御が Spec に明記されていなかった。実装レビューで実際に fixture を実行したところ、(a) `### Post-merge` 見出しが 2 回出現する body、(b) `### Retired Post-merge Conditions` が `### Post-merge` より前に出現する body の 2 パターンで、スライス境界の前提が崩れて条件が重複計上される (retire 済みとして strikethrough 表示されつつ、元の生きた unchecked checkbox としても残る) ことを確認した。Spec の「Body rewrite」記述は正常系の 1 パターンしか想定しておらず、構造前提が崩れた場合のガードが設計段階で要求されていなかった
+- Spec Notes の「manual/auto は Level 3 の提案動作に留める」という設計意図と、実装の `action=` 決定ロジック (body を読む前に LEVEL×TIER だけで action を確定する) との間に乖離があった。manual/auto のみの Post-merge を持つ Level 3 Issue が L2/L3 下で `action=retire` かつ `retired=0` に解決され、SKILL.md 側が `action=retire` に対して追加コメント投稿を禁止していたため、結果として提案コメントも retire コメントもどちらも投稿されない状態になっていた。Spec の設計意図は正しかったが、`action=` の決定タイミングと SKILL.md 側の分岐条件の組み合わせを Spec レベルで検証していなかった
+
+### Recurring issues
+
+- HTML コメント形式のタグ (`<!-- verify-type: ... -->`) を扱うスクリプトが、閉じタグ `-->` の有無を検証せずに開始タグだけでマッチしてしまう問題は、`modules/verify-classifier.md` § Tag Extraction Rule に既に「full span through the comment's own closing `-->`」という canonical pattern が明文化されているにもかかわらず、本 PR の初版実装ではその canonical pattern を踏襲していなかった (bare-tag-value 形式のみを使用し、閉じタグの存在を検証していなかった)。同一モジュールに既存の canonical pattern がある場合、実装時に該当箇所を明示的に参照するチェックリスト項目があると同種の手戻りを防げる
+- 日本語文字列をシングルクォートで囲んだ bash `printf` リテラルが `check-language-convention.py` のダブルクォート限定除外パターンに引っかからず CI FAILURE になる問題は、本 PR で初めて顕在化したものではなく、チェッカー自体の既知の非対称性 (ダブルクォートのみ除外、シングルクォートは除外しない) に起因する。今後 Issue 本文や Issue コメントに書き込む日本語プロースを含む新規スクリプトを書く際は、`printf` リテラルをダブルクォートで統一するか、チェッカー側の非対称性自体を別 Issue で是正するかの判断が必要
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 7 件はすべて Issue 起票時点で `[x]`済みだったが、これは rubric/section_contains の設計判断が正しかったことを意味するだけで、実装の正確性 (edge case 耐性) までは検証していなかった。今回 2 件の MUST バグ (body 構造前提の崩壊、タグ終端未検証) は AC の rubric テキストでは検出できず、Parser/Validator Edge Case Pre-check による実行ベースの検証で初めて発見された。Issue body/Spec を解析・検証する新規スクリプトについては、AC の rubric 判定だけでなく edge case 実行検証を必須とする現行の `/review` 設計 (Step 10 Parser/Validator Edge Case Pre-check) が有効に機能した実例として記録する
+- verify command は 6/7 件が `rubric` で、いずれも「設計が文書化されているか」を問う形だった。実装の正確性 (body 書き換えロジックの境界条件) を問う verify command は Issue 側に存在せず、bats テストの充実度に依存していた。本 PR のように body/comment 生成を伴うスクリプトでは、rubric に加えて「境界条件を bats がカバーしているか」を問う verify command を追加する余地があった
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Level 3 の判断ロジックを `scripts/apply-verify-retire.sh` へ切り出す。受入条件 6 が bats による 3 ケース検証を求めており、LLM prose では充足できないため。`scripts/apply-run-fact-match.sh` と同型 (決定的な autonomy-tier ゲート / `action=` 標準出力 / `--dry-run` / fail-open / `WHOLEWORK_SCRIPT_DIR` モック) に揃える
-- 自動 retire の対象は verify-type が `observation` / `opportunistic` の条件に限定する。`manual` は「人間が見ると明示的に判断された」ため、`auto` は「1 回の `/verify` で満たせる条件を捨てることになる」ため、いずれも Level 3 の提案動作に留める
-- ゲートは autonomy tier のみ。`retention-auto-retire.enabled` のような設定キーは追加しない (`recoveries-auto-fire` が追加キーを持つのは新規 Issue 作成を伴うためで、本機能は可逆な body 編集のみ)
-- `auto-retired` 等の追跡ラベルは追加しない。`stale-verify` が Level 2 で付与済みであり、retire の事実は `<!-- wholework-event: type=verify-ac-retired ... -->` marker コメントで機械可読に記録される
-- 依存コマンド失敗時の方向を非対称にする。`compute-escalation-level.sh` 失敗は fail-closed (retire しない)、`gh` 系の失敗は fail-open (`/audit` 全体を中断しない)
+- `scripts/apply-verify-retire.sh` の body 書き換えに 2 つの構造ガード (`multi_pm`: 複数 `### Post-merge` 見出し、`reordered`: `### Retired Post-merge Conditions` が `### Post-merge` より前に出現) を追加し、いずれかが真の場合は body-fetch failure と同じ fail-open shape (`action=retire` / `retired=0` / 警告のみ) にフォールバックする設計を採用した。body を書き換えず何もしない方が、誤った構造の body を書き換えて悪化させるより安全という判断
+- `action=` の決定を LEVEL×TIER 判定直後ではなく、body を読み込んで retire 対象数を数えた後に確定するよう変更した (`RETIRED_COUNT == 0` のとき `action=propose` を出力)。これにより SKILL.md 側の「`action=retire` のときは追加コメントを投稿しない」というルールが、実際に retire が起きなかったケースを誤って飲み込まなくなる
+- `verify-type` タグの抽出を `modules/verify-classifier.md` § Tag Extraction Rule の canonical full-span pattern (`<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+([^-]|-[^-]|--[^>])*-->`) に統一した。bare-tag-value pattern (閉じタグ未検証) から切り替えることで、閉じタグを欠いた壊れたコメントを「タグなし」として安全に扱えるようにした
 
-### Deferred Items
+### Deviations from Design
 
-- `scripts/collect-verify-path-done-rate.sh` (Section 12) の done 率に「検証によらない done」が混入する相互作用。Issue 本文の受入条件を変更しない方針のため本 Issue では対処せず、`type=verify-ac-retired` marker で後から除外可能な形に留める。`/verify` フェーズの Improvement Proposal 候補
-- Issue 本文 Notes が指摘する `/audit stats --retention` の Manual waiting 計数への影響 (Issue 本文自身が「本 Issue の対象範囲外」と明記) — なお当該指摘の前提である `scripts/scan-pending-ac.sh` の緩い抽出パターンは既に修正済みで、指摘自体が陳腐化している (Spec の Notes 参照)
-- 1 回の実行あたりの retire 件数上限。本 Issue の目的と矛盾するため設けないが、実運用で問題が出た場合は別 Issue で再評価する
-- `docs/stats/2026-06-27.md:112` が記録する「Level 2 の 130 件一括投稿は safety scope 超過」という過去判断。Level 2 側の動作は本 Issue では変更しない
+N/A — 今回の修正はすべて Spec が既に述べていた設計意図 (manual/auto は提案のまま・#1165 形式の踏襲・fail-open/fail-closed の非対称性) を実装が正しく満たすようにするバグ修正であり、設計自体の変更ではない
 
 ### Notes for Next Phase
 
-- 受入条件 1 の `section_contains` は h4 見出し `#### Retire-Proposal Comment Posting` から次の h4 以上の見出し (現状 `### Step 4: Save`) の直前までを判定範囲とする。`auto-retire` の語をこの範囲内に置くこと。frontmatter の `description` に書いても PASS しない
-- verify-type の抽出は必ず HTML コメント限定パターン (`/<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/`) を使う。Issue 本文 Notes が引用する `scripts/scan-pending-ac.sh:134` の緩いパターンの記述は陳腐化しており、現在の同スクリプト 181 行目は既に HTML コメント限定形になっている
-- body 書き換えでは `in_fence` を必ず追跡する (`scripts/check-pre-merge-ac.sh:59-61` が参照実装)。fenced code block 内のサンプル `- [ ]` 行を retire 対象にしてはならない
-- `gh-issue-edit.sh` の失敗時は marker コメント投稿とラベル遷移を実行しないこと。着地していない retire を主張する記録を残さないための順序ゲート
-- `tests/audit-retention.bats` は現在 `WHOLEWORK_SCRIPT_DIR` を使っていない。新規テストの `setup` 内でのみ export し、既存 16 ケースに影響を与えないこと
+- `/verify` は本 Issue の Post-merge 条件 3 件 (`verify-type: observation event=auto-run session=next`) を引き続き判定対象とする。実装は `/review` の 2 回の追加コミット (バグ修正 + ドキュメント同期) を経ているため、post-merge の実測 (`scripts/collect-verify-retention-stats.sh --window 2026-05-07` の再実行) はこの最終状態を基準にする
+- 未対応で残した CONSIDER 2 件 (`docs/guide/autonomy.md` の L2 説明更新、`set -euo pipefail` 下での awk/cut/paste 未ガード時の異常終了リスク) は、実際に問題が顕在化した場合にフォローアップ Issue で対処する想定。特に後者は、今回のレビューで実行検証しても再現するトリガーが見つからなかったため、現時点では理論上のリスクに留まる
+- `tests/audit-retention.bats` に 6 件の回帰テストを追加し (35 件中)、既存アサーション 3 件を `[[ ]]` (macOS bash 3.2 の `set -e` では実質的に無効化される) から `[ ]` の完全一致比較に切り替えた。今後同ファイルにテストを追加する際は `[[ ]]` の単独文をアサーションとして使わない (`[ ]` または `run` の `$status` チェックを使う) ことを推奨する
