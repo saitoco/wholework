@@ -14,6 +14,78 @@
 - saito (MEMBER, first-class): Issue Retrospective — AC3 verify command のパッチ経路修正 (`gh pr checks` → `gh run list`)、AC1・AC2 への補助 `file_contains` 追加、Auto-Resolve ログ (セクションタイトル変更スコープ外の判断) を記録
   URL: https://github.com/saitoco/wholework/issues/841#issuecomment-4828212222
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-4828302515
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4829014655
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4831712874
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4862949608
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4867386985
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4872377920
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4874542150
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4882909481
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4883175153
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4884079552
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4884199806
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4884727356
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4885444310
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4885983332
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4886076308
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4886244187
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4887685329
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4923072638
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4923359395
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4928889921
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-4928949265
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4929804989
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4939211719
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4949705098
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4950419690
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4954480976
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4961350042
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4973945720
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4980718884
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-4980822585
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-4988172801
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-4988186848
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5019750873
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5020098013
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-5020154060
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5033000721
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5041911614
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5053876870
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5053880644
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5059780897
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5112390950
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5112395298
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5113360482
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-5113600706
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5114561463
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5114567245
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5114572823
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5131473183
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-5131496856
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/841#issuecomment-5131604161
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5132999383
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5133751664
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5138805319
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5138890952
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5141401933
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5146655143
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 841` to verify the condition / https://github.com/saitoco/wholework/issues/841#issuecomment-5147235774
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5195219640
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5202639225
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5212263661
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5225315920
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5229259384
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5235402491
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5246557301
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5255746351
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5296379635
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5304273007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5310546295
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5327724332
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5341232971
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5354368708
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/841#issuecomment-5369687125
 ## Changed Files
 
 - `modules/verify-patterns.md`: §23 "Generalizes to any command" テーブルに `kubectl` / `docker compose` 行を追加、ssh 行のキーパス placeholder `key` を `~/.ssh/key` に修正 — bash 3.2+ 非該当 (Markdown ファイル)
