@@ -41,3 +41,31 @@
 
 - saito / MEMBER / first-class / Issue Retrospective — AC1 の rubric 対象ファイル優先順位を `modules/verify-patterns.md` に決定した判断根拠、Post-merge セクション追加、タイトル変更 (`spec-test-guidelines:` → `verify-patterns:`) の記録 / https://github.com/saitoco/wholework/issues/1435#issuecomment-5379608577
 - saito / MEMBER / first-class / Triage AC audit — AC1 の rubric が既存の §24 (Behavioral Changes) の記述だけで満たされていると誤判定されるリスク (§24 は意味的トリガー、本 Issue は構文的トリガーで独立) を指摘。実装時に §24 とは別の新規パターン行として追加し独立性を明記するよう推奨 (本 Spec の Implementation Steps・Notes に反映済み) / https://github.com/saitoco/wholework/issues/1435#issuecomment-5379629300
+- (code phase) No new comments since last phase (`phase/ready` label assignment at 2026-08-22T10:00:59Z).
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Step 1 was implemented as specified: `### 32.` was inserted immediately before `## Output`, using the detection heuristic (a)/(b), the §24 independence paragraph, and the ❌/✅ example, all as designed.
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's Implementation Steps as-is: added `### 32. Multi-File \`command\` Verify Commands — Early Timeout-Risk Detection` immediately before `## Output` in `modules/verify-patterns.md`, matching the two-heuristic detection ((a) space-separated multi-file argument, (b) multi-match glob) and the §24-independence framing specified in the Spec.
+- No new bats test cases were added, per the Spec's own Notes decision — `modules/verify-patterns.md` is an LLM-read prose guideline, not branching script logic, so the existing `tests/verify-heuristics.bats` grep-based existence checks remain sufficient and unaffected.
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Both pre-merge AC are `rubric` type; they were judged PASS in this code phase (Step 10) and checked off directly in the Issue body — no `github_check`/CI-dependent AC remains pending for `/review` or `/verify` on this Issue.
