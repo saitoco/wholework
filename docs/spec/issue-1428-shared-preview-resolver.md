@@ -200,15 +200,15 @@ No new comments since last phase.
 - 特になし。Pre-merge AC 7 件はいずれも `rubric` / `file_exists` / `grep` / `file_not_contains` / `github_check` の verify command が過不足なく整備されており、UNCERTAIN や verify command の不備は発生しなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Parser/Validator Edge Case Pre-check (実行ベースの検証) で見つかった SIGPIPE 回帰・regex 末尾アンカー欠如・PR 番号検証緩和の 3 件は、いずれもレビュー段階で fix まで実施した (レビューコメント投稿 → 修正 → 再テスト → コミットの順で、Refs リンク付きで追跡可能にした)
-- Post-merge AC (`--when` ガード付き preview AC の SKIP 挙動との相互作用) は、Code Retrospective で著者自身が既に out-of-scope と判断していたため、レビューでは修正せず General Comment として記録するに留めた (Step 12.2 の「out-of-scope 明記済み項目は fix しない」規則に従った)
+- Pre-merge AC ゲート (7 件) は全て checked 済みで review-incomplete-fallback も検出されなかったため、override マーカーなしで通常経路のまま squash merge を実行した
+- `gh-pr-merge-status.sh` が `mergeable=true, reason=clean` を返したため、コンフリクト解消 (Step 3) はスキップし直接 Step 4 (squash merge) に進んだ
 
 ### Deferred Items
-- `--when="test -n \"$PREVIEW_URL\""` ガード付き auto-subcase の preview AC が、`preview-url-command` 経路でも `export PREVIEW_URL` されないため実質 SKIP され続ける件は、本 PR のスコープ外として据え置き。修正する場合は別 Issue で `/review` 側に `export PREVIEW_URL` を追加する設計を検討する必要がある (`modules/l0-surfaces.md` や `skills/review/SKILL.md` Step 8.0 双方への影響を要確認)
+- `--when="test -n \"$PREVIEW_URL\""` ガード付き auto-subcase の preview AC が `preview-url-command` 経路でも `export PREVIEW_URL` されないため実質 SKIP され続ける件は、review フェーズに続き本フェーズでも据え置き。修正する場合は別 Issue で `/review` 側に `export PREVIEW_URL` を追加する設計を検討する必要がある
 
 ### Notes for Next Phase
-- 全 1942 bats テスト・`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-translation-sync.sh` をレビュー中の fix 後に再実行し、PASS/クリーンを確認済み
-- CI (15 checks) は fix コミットの push 後に再度全て SUCCESS
+- Post-merge AC (「`preview-url-command` を宣言した実プロジェクトで `--auto` なしの `/review` を直接実行し観察」) は `verify-type: manual` のため、`/verify` は自動確認できない。人手による観察結果の記録が必要
+- 全 bats テストスイートは merge フェーズ実行時点で CI 上 SUCCESS 済みであることを `gh-pr-merge-status.sh` の `ci_status: success` で確認済み
