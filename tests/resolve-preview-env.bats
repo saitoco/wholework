@@ -364,5 +364,5 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"secretuser"* ]] || false
     [[ "$output" != *"secretpass123"* ]] || false
-    [[ "$output" == *".tmp/curl-auth-"* || "$output" == *"curl-auth-"* ]] || false
+    [[ "$output" == *".tmp/curl-auth-"* ]] || false
 }
