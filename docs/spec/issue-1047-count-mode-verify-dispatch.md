@@ -256,26 +256,22 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - Implementation Steps 1 (helper の 5 分岐) と 3 (Count mode step 6 の 3 分岐) がいずれも新規分岐ロジックのため、`tests/should-stop-at-phase.bats` に 12 ケース、`tests/auto-batch.bats` の Count mode section に 5 ケースの新規テストを追加したうえでスイート全体が PASS することを受入基準 6 に要求した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Pre-merge AC 10 件は全て PASS と判定し checked 済み。MUST 2 件 (docs/structure.md / docs/ja/structure.md のファイル数コメント 93→94) と SHOULD 2 件 (should-stop-at-phase.sh の空文字 stop-at 値の Spec/実装不一致、AC 6 の `command`→`github_check` 切替) を修正し、review 内で fix + re-check まで完了した。
-- MUST の根本原因は、本 PR のブランチが既にマージ済みの別 PR (#1428/#1432) より前に分岐しており、両 PR が独立に同じファイル数コメントを `92→93` に更新していたこと。`origin/main` をこのブランチにマージして実測値 94 に修正した。
-- SHOULD 2 件は review-bug の 2-stage 検証で 1 件 REJECT (fail-open on helper execution failure — 意図的な設計と判明) となり、review-spec 由来の 2 件のみ修正対象とした。
+- Pre-merge AC 10 件は全て checked 済みで unchecked 0 件、review_incomplete_fallback も検出されず。追加の override marker なしで squash merge を実行した。
+- `gh pr merge --squash --delete-branch` 実行後、worktree を `origin/main` へ `--ff-only` で追従させ、Phase Handoff の書き込み先を main 直上の Spec ファイルとした (merge phase の既定手順どおり)。
 
 ### Deferred Items
 
-- `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外 (spec phase から引き継ぎ、未着手のまま)。将来 stop-at 値を追加する際に再評価する。
-- List mode step 7 の gate を phase 順序判定へ広げる案は本 Issue の対象外 (spec phase から引き継ぎ、Issue 本文で明示)。必要なら別 Issue とする。
-- ファイル数コメント AC の並行 PR 耐性、および `command` verify type の early detection は review retrospective の Improvement Proposals として記録 (Issue 起票はしない、`/verify` での集約に委ねる)。
+- `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外のまま (spec/review phase から引き継ぎ、未着手)。将来 stop-at 値を追加する際に再評価する。
+- ファイル数コメント AC の並行 PR 耐性、および `command` verify type の early detection は review retrospective の Improvement Proposals に記録済み (Issue 起票はしない、`/verify` での集約に委ねる)。
 
 ### Notes for Next Phase
 
-- 受入基準 8/9 (ファイル数コメント) は `(94 files)`/`(94 ファイル)` に修正済み。`/merge`/`/verify` で再確認する際は修正後の Issue 本文記載のコマンドを使うこと。
-- 受入基準 6 (helper テスト PASS) は `github_check` (CI 参照形、対象ジョブ `Run bats tests`) に切替済み。
-- full suite (`bats --jobs 18 tests/`) は review 修正後の再チェックで 1960 件全て PASS (1939 + 新規空文字config テスト 1 件)。CI も再push後 15/15 SUCCESS、`gh pr view --json mergeable,mergeStateStatus` は MERGEABLE/CLEAN。
-- `docs/structure.md`/`docs/ja/structure.md`/`docs/workflow.md`/`docs/ja/workflow.md` は spec/code フェーズで更新済み。`docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`docs/ja/guide/xl-decomposition.md` 未更新) は本 Issue と無関係の既存差分のため未対応。
+- `/verify` は Issue #1047 の post-merge AC (存在する場合) を確認すること。Pre-merge AC は review phase で全件 PASS 済み。
+- squash merge コミットは `c62c932b`。`docs/structure.md`/`docs/ja/structure.md` のファイル数コメントは `94` で確定。
 
 ## Code Retrospective
 
