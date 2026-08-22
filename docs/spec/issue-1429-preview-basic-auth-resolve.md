@@ -210,25 +210,22 @@ No new comments since last phase.
 - N/A — 手戻りは発生しなかった。curl config のエスケープ順序 (`\` → `\\` の後に `"` → `\"`) と BSD `mktemp` の末尾 X 制約は Spec の Uncertainty 節で事前解決済みで、実装時に `curl --config --libcurl` による往復検証と `mktemp` の実測確認を行い、Spec の記載通りであることを再確認しただけだった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `capabilities.workflow: true` が有効だが、本セッションは headless (`--non-interactive`) で再起動保証がないため Workflow path を明示的にスキップし、静的 Task fan-out (review-spec + review-bug×2) を `run_in_background: false` で実行した
-- Parser/Validator Edge Case Pre-check (edge-case サブエージェントによる `scripts/resolve-preview-env.sh` の実測実行) と Base Branch Conflict Pre-check (`docs/structure.md`/`docs/ja/structure.md` の `changed in both`) を両方実行し、いずれも実害なしと確認した上で通常の review-spec/review-bug fan-out に進んだ
-- review-bug×2 が独立に検出した MUST (`resolve-preview-env.sh` の CWD-relative パスバグ) と、CI で実際に FAILURE していた `Validate skill syntax` (allowed-tools ギャップ) の計 2 件の MUST、および SHOULD 2件・CONSIDER 3件を Step 12 で修正し、フル bats スイート (1981/1981 PASS) と CI (15/15 SUCCESS) で再検証した
-- 「`/code` は `HAS_PR_PREVIEW_CAPABILITY` を読むが解決ステップに到達しない」という code phase の Deferred Items 記載の懸念は、アドバーサリアル検証で「文言はやや不正確だが実質的には正しい」と判定し、REJECT (false positive) として扱った (`modules/verify-executor.md` は未修正のまま — 文言精度の改善は本 PR のスコープ外と判断)
+- Pre-merge AC ゲートは 7 件すべて checked、review-incomplete-fallback も未検出だったため、追加の override marker なしで squash merge を実行した
+- CI (mergeable=true, ci_status=success, review_status=approved) を確認済みで、`gh pr merge --squash --delete-branch` はコンフリクトなく完了した
 
 ### Deferred Items
 
-- `docs/guide/customization.md` の `preview-basic-auth-command` イントロ段落が `run-review.sh` 専用であるかのように読める記述 (CONSIDER) は、姉妹セクション `preview-url-command` にも同型の既存ギャップがあるため本 PR では見送り、まとめて直すフォローアップが望ましい
-- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` の Basic Auth 解決は Issue 本文 `## Known Gap` によりスコープ外のまま (変更なし)
+- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの直接 `/review` 実行の観察) は未検証のまま — `/verify` フェーズで対応すること
 - CWD-relative path バグの regression テスト (main repo root と呼び出し元 CWD を意図的に分離した bats ケース) は fix commit のみで未追加 — 次回同種のリファクタで追加を検討
+- `docs/guide/customization.md` の `preview-basic-auth-command` イントロ段落が `run-review.sh` 専用であるかのように読める記述は、姉妹セクション `preview-url-command` にも同型の既存ギャップがあるため見送り継続
 
 ### Notes for Next Phase
 
-- Pre-merge AC 7件はすべて PASS。github_check (AC7, bats テスト) は review フェーズで PASS 確認済み
-- Post-merge AC (`preview-basic-auth-command` を宣言した実プロジェクトでの直接 `/review` 実行の観察) は未検証のまま — `/verify` フェーズで対応すること
+- `/verify` は Post-merge AC (実プロジェクトでの直接 `/review` 実行観察) を確認すること
 - `modules/verify-executor.md` の "Caller scope" 文言 ("do not load it") は実質的に正しいが不正確な表現のまま残っている — 将来 `/code` の実装が変わり実際に解決ステップへ到達するようになった場合は要再確認
 
 ## review retrospective
