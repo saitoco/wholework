@@ -364,6 +364,16 @@ individual firing skill's own invocation (main vs. fork context, per
 so it is resolved directly from the `--execution-context` argument the firing skill passes —
 `collect-run-facts.sh` is not involved.
 
+Although this section's problem statement and worked examples above are framed around
+`event=<name>` conditions, the gate itself applies uniformly to `verify-type: opportunistic` tags
+as well — `modules/verify-classifier.md`'s attribute reference table already documents
+`verify-type: opportunistic` + `when=` as a supported combination, and `opportunistic-search.sh`
+gates `keyword=`/`config=`/`when=` unconditionally (no `$EVENT_NAME` check) for both tag kinds.
+Issue authors can already attach a `when=route:xl` (or `mode:`/`recovery-tier:`) clause to a
+`verify-type: opportunistic` condition to declare a context precondition, independent of the
+narrower, auto-detecting XL-scope keyword pre-filter described below (§ Conditions That Cannot Be
+Pre-Excluded).
+
 **Arguments table addition (both scripts):**
 
 | Argument | Description |
@@ -407,6 +417,14 @@ condition does not hold is the correct, expected behavior — not a defect to fi
 idempotency guard (§ Idempotency guard marker format above), not the condition check gate. The
 gate's job is to filter out AC that are *knowably* inapplicable to a run's context before
 dispatch; conditions in this section are not knowable in advance by construction.
+
+This steady-state pattern is not limited to `event=` observation conditions. Issue #1440 measured
+the `skill=verify` `verify-type: opportunistic` population specifically (a second, independent data
+point beyond the observation-mode measurements above): SKIP rate ~99% across 22 distinct sessions
+(2026-08-07 to 2026-08-22), and hand-inspection of the small number of surviving `PASS` outcomes
+found each one describes a distinct, narrow precondition rather than a systemic pre-filterable
+pattern — reinforcing that dispatch-and-let-SKIP is this population's expected steady state, not a
+defect to keep chasing with ever-narrower filters.
 
 ## Notes
 

@@ -85,6 +85,52 @@ All three literal-pattern directions from the Issue's Proposal were checked agai
 
 - Carried over from `/issue`'s own Auto-Resolve Log (see Consumed Comments below): the "multiple sessions" threshold for acceptance criteria A was deliberately left undefined in the Issue body, deferring to whatever this Spec's own measurement produced. Resolved: 22 sessions (see measurement above) — well beyond any reasonable reading of "multiple."
 
+## Code Retrospective
+
+### Deviations from Design
+- None. All 4 Implementation Steps were applied as written: the `HAS_XL_FACTS`/`XL_SCOPE_PATTERN` gate and per-candidate `continue` check landed at the exact anchor points the Spec specified in `scripts/opportunistic-search.sh`; the 4 new `tests/opportunistic-search.bats` cases use the same test names and scenario shapes listed in Implementation Step 3; the `modules/observation-trigger.md` paragraph and closing-sentence additions landed at the exact section anchors in Implementation Step 4.
+
+### Design Gaps/Ambiguities
+- None found during implementation. The Spec's own Notes section had already resolved the two open questions (SKIP-rate confirmation, pre-filter direction selection) before this phase started, so no new ambiguity surfaced.
+
+### Rework
+- None.
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1440 --non-interactive` Issue Retrospective comment (2026-08-22T15:17:30Z) — confirms Background facts were codebase-verified, AC checkbox/format checks passed, no open blockers, no title drift, and records the Auto-Resolve Log for the "multiple sessions" threshold deferred to this Spec's own measurement (see Auto-Resolve Log above). https://github.com/saitoco/wholework/issues/1440#issuecomment-5381115897
+- No new comments since last phase (code phase cutoff: 2026-08-22T15:44:41Z, the `phase/ready` label assignment timestamp).
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Not an implementation deviation, but a Spec-authoring gap: Implementation Step 1 explicitly specified `jq -e 'any(.issues[]?; .route == "xl")'`, and the `/code` phase implemented it exactly as written. The bug (checking `.route` instead of `.size` for XL-ness) originated in the Spec itself — `collect-run-facts.sh`'s actual schema (`route: pr|patch|operate|unknown`, `size: XS/S/M/L/XL`) was never cross-checked against the field name chosen for the new gate before it was written into the Implementation Steps. `/review`'s own Parser/Validator Edge Case Pre-check (real script execution against fixture inputs) did not catch this either, since it exercises the new code's behavior given its own inputs correctly — the bug is a field-name/schema mismatch invisible to black-box execution testing and only surfaced via the review-light agent's independent cross-reference against `collect-run-facts.sh`'s source and `modules/run-fact-matching.md`'s documented schema. Future Specs introducing a new `--facts`-derived gate should explicitly cite the producing script's field names/enum values in the Implementation Step text (not just "route" as a bare word), and `/spec`'s own investigation phase should grep the actual producer script's field names before finalizing a jq query against it.
+
+### Recurring issues
+
+- None found — this is the first instance of a Spec-originated field-name mismatch surfacing in `/review` for this repository as far as this session's context shows.
+
+### Acceptance criteria verification difficulty
+
+- AC1's `rubric` verify command references "Spec の Notes セクション" content, but `modules/verify-executor.md`'s rubric grader input scope explicitly excludes Spec files (Issue=WHAT / Spec=HOW separation). This AC is structurally unverifiable via `rubric` as authored — `/review`'s Step 8 correctly classified it UNCERTAIN rather than PASS, even though the referenced content is genuinely present in the Spec. This is a real, if narrow, blind spot in how "investigation/measurement" style acceptance criteria interact with the rubric mechanism's designed Spec exclusion. Recommend: a future Issue to establish a documented convention for ACs whose primary evidence is Spec-only investigation output (e.g., require the Issue body or PR body to carry a copy/summary of the measurement instead of the Spec, or introduce an explicit opt-in mechanism analogous to the `rubric` "files explicitly named" exception that can name a Spec file for this narrow case).
+- Separately: `scripts/check-language-convention.py`'s CJK exclusion only strips double-quoted string content, not single-quoted. A legitimate non-prose usage (a bash regex literal that must contain Japanese characters as data, not accidental transcription) was flagged and required a quoting-style change to pass CI. Not a blocking issue for this PR (fixed inline), but a candidate for a small checker enhancement (extend the exclusion to single-quoted strings too) if this pattern recurs.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed both MUST issues found: (1) `HAS_XL_FACTS` checked the wrong facts JSON field (`.route == "xl"` instead of `.size == "XL"`) — corrected per `collect-run-facts.sh`'s actual schema, with the 4 new bats fixtures updated to match; (2) `Language Convention check` CI failure — `XL_SCOPE_PATTERN` switched from single- to double-quoted bash string literal (no semantic change) so `check-language-convention.py`'s CJK exclusion applies.
+- AC1's rubric verdict recorded as UNCERTAIN (not reverted from its existing `[x]` checked state) despite being structurally unverifiable via the rubric grader's documented Spec-exclusion rule, since the underlying content was independently confirmed true by direct Spec inspection and reverting a `/code`-checked box over a mechanism technicality was judged more disruptive than valuable; flagged as a SHOULD-level verify-command-quality finding instead.
+- The pre-existing greedy-`sed` comment-stripping bug found via edge-case execution (line 413) was left unfixed as out-of-scope for this diff (CONSIDER-level, recommended as a follow-up Issue) since it is not part of this PR's own new lines.
+
+### Deferred Items
+- Follow-up Issue candidate: replace `scripts/opportunistic-search.sh`'s greedy `sed 's/ *<!--.*-->//g'` (line 413) with a non-greedy or iterative per-comment-span strip, so condition text between two separate HTML comments on the same Issue body line is not silently discarded.
+- Follow-up Issue candidate: establish a documented convention for `rubric` acceptance criteria whose primary evidence lives only in the Spec (currently structurally unverifiable, see AC1 above).
+
+### Notes for Next Phase
+- `/merge` should find both Pre-merge AC checkboxes in their pre-existing state (AC1 unchecked note applies only to `/review`'s own verification table, not to the Issue body checkbox, which was left unchanged — see AC verification results in the posted PR review for the full explanation) and both MUST review findings resolved in commit `bb14b688`.
+- Full bats suite (2005/2005) and `check-language-convention.py` both pass on the current PR branch tip after the fix commit.
