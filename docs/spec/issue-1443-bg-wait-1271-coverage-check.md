@@ -85,3 +85,23 @@ No new comments since last phase.
 ### Notes for Next Phase
 - Post-merge AC is an `observation` type (event=auto-run session=next) — no action needed from `/review`/`/merge`; `/verify` will pick it up in a later auto-run session.
 - Both Pre-merge rubric AC are self-graded PASS in this phase based on: (a) the diff to `modules/execution-context.md` / `skills/review/SKILL.md`, and (b) the Issue body `## Resolution` section added in this phase. If `/review` re-grades adversarially and disagrees, check whether it read the worktree-current Issue body (post-edit) rather than a stale cached version.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Investigation was concrete and evidence-based rather than a guess: it directly confirmed `run-review.sh:251-257` unconditionally sources `guard-prefix.sh` (no bypass branch), and quantified the recurrence rate (1 in ~51 PRs over the 12-day window since PR #1332 merged). This distinguishes it clearly from the earlier #1130 case (a genuine coverage gap in the spec phase) — #1271 is not a coverage gap, the guard reached the execution path and the failure is the pre-existing residual-rate LLM-instruction-adherence variance the design already accounted for.
+- The Spec explicitly scoped out one uncertainty at "light" depth: whether Claude Code's `Task`/`Agent` sub-agent dispatch is synchronous or notification-based inside a `claude -p --non-interactive` session. This is a reasonable acceptance-condition-driven scope cut (the two Pre-merge rubric AC only require identifying the root cause and a concrete conclusion, not resolving every open question), but it leaves the Root Cause's most specific hypothesis (Step 10 of `skills/review/SKILL.md`, the orchestrator's own `Task(...)` dispatch) unconfirmed by direct evidence.
+
+#### code
+- Clean single-commit patch route execution (`b54923f9`), no rework or fixup commits.
+- One documented deviation from Implementation Step 4's literal instruction ("record in commit message and Issue body retrospective"): concretized as adding a `## Resolution` section to the Issue body itself, reasoned from the rubric grader's actual input scope (Issue body + git diff + explicitly-named files — Spec is not read by the grader). This is a sound adaptation, not scope creep.
+
+#### verify
+- Both Pre-merge rubric AC were already `[x]` at verify time (self-checked by `/code`) and were SKIPPED per the already-checked AC skip rule rather than re-graded — this run did not independently re-confirm the rubric judgments, only confirmed via Issue-state/label reconciliation that the commit landed and the Issue body carries the required evidence. No FAIL/UNCERTAIN encountered.
+- The single Post-merge AC (`observation event=auto-run session=next`) is correctly un-fireable in this same session (the skill/module change it monitors has not propagated to a fresh conversation session yet) — SKIPPED as designed, `phase/verify` retained pending a future auto-run.
+- No Tier 1/2/3 recovery or external-kill event occurred during this Issue's own spec/code/verify execution — a clean run, consistent with the Issue's own finding that the pattern's recurrence rate is low (1/51 PRs in the reference window).
+
+### Improvement Proposals
+- The unresolved uncertainty from the Spec Notes (whether `Task`/`Agent` sub-agent dispatch is synchronous or notification-based under `claude -p --non-interactive`) directly limits how precisely future Tier 3 `orchestration-recovery` diagnoses can pinpoint where a `background-notification-wait` recurrence actually happened, since the sub-agent only receives wrapper `log_tail` + `reconcile-phase-state.sh` snapshot, never the review session's internal tool-call trace. Resolving this (e.g. via a small first-party test or an Anthropic-documentation check) would sharpen future incident diagnoses in this same recurring category, but is out of scope for this Issue (which reached a "Verdict: maintain" documentation-only conclusion). Recorded here as a candidate for a future session to pick up if this pattern recurs again and the same evidentiary gap resurfaces.
