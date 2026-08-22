@@ -243,3 +243,19 @@ No new comments since last phase.
 - verify phase では retry-on-kill の動作確認 (orchestration-recoveries.md 書き込み) が手動 AC として残る。自動化 verify command では確認不可のため観察ベースで判断。
 - bats 全体 (`bats tests/`) は PR マージ前に CI で確認済み (130 tests pass)。verify でのテスト再実行は不要。
 - None (その他特記事項なし)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec / design / code
+- 特筆事項なし。review retrospective に既に記録済みの観察 (sourceable helper 追加時の周辺 bats 波及チェック `grep -r "WHOLEWORK_SCRIPT_DIR" tests/`) は十分に記録されており、追加すべき内容はない。
+
+#### review
+- 既存の記録の通り、`WHOLEWORK_SCRIPT_DIR` でオーバーライドされる周辺 bats ファイルへの対応漏れパターンが初めて顕在化した。今後同種のヘルパー追加時に活用する価値がある教訓として既に記録済み。
+
+#### verify
+- Pre-merge 6件は already-checked で SKIPPED。Post-merge observation (event=auto-run) は **PASS** — `docs/reports/orchestration-recoveries.md` の 2026-08-08 22:08 UTC エントリが、`run-merge.sh` の early-kill window 内 retry-on-kill 発火と記録を実運用で確認済みであることを直接示す。
+
+### Improvement Proposals
+- N/A — review retrospective に既に記録済みの推奨事項 (sourceable helper 追加時の周辺 bats チェック) 以外、新規の観察はない。
