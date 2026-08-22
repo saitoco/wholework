@@ -272,11 +272,13 @@ For Basic authentication in `browser_check` / `browser_screenshot`, refer to the
 
 `lighthouse_check` supports the same environment variables via the lighthouse adapter's own Basic Authentication Setup step (`--extra-headers` Authorization injection); see `modules/lighthouse-adapter.md`.
 
+**Resolving `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` when unset (direct `/review` execution):** if both variables are unset, the calling skill has already loaded `HAS_PR_PREVIEW_CAPABILITY` and its value is `true`, and `.wholework.yml` declares `preview-basic-auth-command`, run `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh basic-auth "<caller-supplied PR number>" 2>/dev/null` in a single Bash tool call (`2>/dev/null` is required — mixing the resolver's informational/warning stderr text into stdout would make the resolved value indistinguishable from that text, the same reason Step 8.0's `preview-url-command` resolution redirects stderr). If stdout is non-empty, it is the path to a curl config file (already in the `user = "<escaped>"` form curl's `--config` expects) — do not read or display its contents, pass it straight to `curl --config "<path>"`, and after the command completes (success or failure) `rm -f "<path>"`. If stdout is empty, skip `--config` injection and run curl unauthenticated (existing fail-open behavior, unchanged). **Caller scope (exhaustive):** `HAS_PR_PREVIEW_CAPABILITY` is currently loaded only by `skills/review/SKILL.md` Step 8 — `/code`, `/verify`, and `/auto` do not load it and therefore never reach this resolution step, leaving their existing behavior (credentials must already be exported) unchanged.
+
 For the curl-based URL commands (`http_status` / `html_check` / `api_check` / `http_header` / `http_redirect`), the same `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` environment variables are read directly by verify-executor before running curl. If both are set, build a temporary `--config` file instead of passing credentials as a `-u`/`--header` command-line argument (which would be exposed to `ps`):
 
 ```bash
 mkdir -p .tmp
-config_file="$(mktemp .tmp/curl-auth-XXXXXX.cfg)"
+config_file="$(mktemp .tmp/curl-auth-XXXXXX)"
 printf 'user = "%s:%s"\n' "$PREVIEW_BASIC_USER" "$PREVIEW_BASIC_PASS" > "$config_file"
 ```
 
