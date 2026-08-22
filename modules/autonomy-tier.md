@@ -81,6 +81,18 @@ Autonomy tier controls how far a skill may write GitHub state. For the exhaustiv
 
 `L1`'s `advisory` action reuses the same path A (Advisory) semantics as the operate-route table above: only a `Recommend:`-prefixed terminal print, never an Issue write. `ambiguous` maps to `advisory` regardless of tier — this is a fail-safe, not a tier gate: false-positive auto-checks (a checkbox marked satisfied for a condition the run did not actually satisfy) are harder to undo than a missed advisory print, so an unclear match must never reach `auto-check` at any tier.
 
+### Tier × Verify Level 3 Auto-Retire
+
+`scripts/apply-verify-retire.sh` (see `skills/audit/SKILL.md` § Retire-Proposal Comment Posting) gates whether a `phase/verify` Issue at escalation Level 3 (90+ day dwell) has its unchecked `observation`/`opportunistic` post-merge conditions auto-retired, or only proposed via the existing decision-prompt comment:
+
+| Tier | Level 3 action |
+|---|---|
+| **L1 Report** | `propose` — post the existing decision-prompt comment; no L0 write |
+| **L2 Assisted** | `retire` — auto-retire eligible conditions; transition to `phase/done` when none remain |
+| **L3 Unattended** | `retire` — same as L2 |
+
+Same shape as Tier × Run-Fact AC Match above: `L1` never writes to L0 at Level 3, `L2`/`L3` behave identically (no separate opt-in config key). Levels 0-2 are unaffected by this gate — see `skills/audit/SKILL.md` § Retire-Proposal Comment Posting for that routing.
+
 ## `.wholework.yml` Schema
 
 ```yaml

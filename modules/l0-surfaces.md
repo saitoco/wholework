@@ -25,8 +25,8 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 | L0 surface | Operations | Primary callers | Mutation kind | Consumed by skills |
 |------------|-----------|-----------------|---------------|-------------------|
 | Issue title | edit | `/issue`, `/triage` | mutable | yes |
-| Issue body | edit | `/issue`, `/spec`, `/verify` | mutable | yes |
-| Issue state (OPEN/CLOSED) | close, reopen | `/verify`, `/auto` | mutable | yes |
+| Issue body | edit | `/issue`, `/spec`, `/verify`, `/audit` (`apply-verify-retire.sh`) | mutable | yes |
+| Issue state (OPEN/CLOSED) | close, reopen | `/verify`, `/auto`, `/audit` (`apply-verify-retire.sh`) | mutable | yes |
 | Labels (`phase/*`, `audit/*`, ...) | add, remove | `gh-label-transition.sh` | mutable | yes |
 | Issue comments | append + read | `gh-issue-comment.sh` (write); all skills (read — introduced here) | append-only | yes (introduced in #705) |
 | PR comments | append + read | `/review` (write); `/code`, `/review` (read) | append-only | yes (introduced in #705) |
@@ -285,7 +285,11 @@ sweep runs over time.
 it auto-retires one or more unchecked post-merge acceptance conditions under autonomy tier L2/L3.
 Attributes: `phase=audit`, `issue=<N>`, `dwell=<days>` (dwell days at time of retire), `ac=<i,j,...>`
 (comma-separated 1-based indices into the Issue body's full AC enumeration, same convention as
-`gh-issue-edit.sh --checkbox`, of the conditions retired by this run), `verify-types=observation,opportunistic`
+`gh-issue-edit.sh --checkbox`, **as it stood immediately before this retire** — the retire itself
+removes those checkbox lines from `### Post-merge` and every later index in the body shifts down,
+so these indices are a pre-retire snapshot and are not resolvable against the post-retire body; use
+the `### Retired Post-merge Conditions` section, not these indices, to identify the conditions after
+the fact), `verify-types=observation,opportunistic`
 (the fixed, exhaustive set of verify-type values eligible for auto-retire — `manual`/`auto` are never
 retired, see `skills/audit/SKILL.md` § Retire-Proposal Comment Posting for why). Example:
 ```
@@ -306,6 +310,10 @@ happened (the retired conditions themselves are visible in the Issue body's
 so a consumer can find *when* and *under what dwell* a given retire happened without re-parsing
 body diffs). A consumer only needs to check whether **at least one** marker exists for a given
 Issue (or Issue+AC-index pair), the same check `type=batch-verify-dispatch`'s consumer performs.
+As with `type=batch-verify-dispatch`, the consumer (`scripts/apply-verify-retire.sh`'s own callers)
+resolves this marker directly via `gh issue view` rather than through the Comment Consumption
+Procedure, so no change to the Cross-phase marker exception in Processing Steps is needed for this
+marker type either.
 
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
