@@ -133,3 +133,34 @@ All three literal-pattern directions from the Issue's Proposal were checked agai
 ### Notes for Next Phase
 - `/verify` should confirm Post-merge state: this Issue's Post-merge section is "なし" (no post-merge acceptance conditions), so `/verify` is expected to complete with nothing to check.
 - Issue #1440 is expected to auto-close via `closes #1440` in the PR body (base branch is `main`); Step 6 fallback verification will confirm actual state.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。SKIP率測定 (99.8% SKIP、22セッション横断) は実データに基づいており、Notes セクションに適切に記録されている。
+
+#### design
+- N/A (spec と統合)。
+
+#### code
+- 実装は Spec の Implementation Step 1 を忠実に実装したが、Spec 自体に `.route` と `.size` のフィールド名混同という設計ギャップがあった (review retrospective 参照)。
+
+#### review
+- review retrospective で2件のフォローアップ提案が既に記録されている (下記 Improvement Proposals に転記)。AC1 の rubric 検証命令が Spec-only evidence を参照しており、rubric grader の Spec 除外設計と構造的に相性が悪い点も記録されている。
+
+#### merge
+- 特記事項なし。conflict なし、pre-merge AC gate は両条件 checked 済みでスムーズに通過。
+
+#### verify
+- 特記事項なし。Post-merge なしで両 Pre-merge AC は既にチェック済みのため追加検証は発生しなかった。
+
+### Retry Count
+
+(N/A — auto-retry は発火していない)
+
+### Improvement Proposals
+- `scripts/opportunistic-search.sh` の greedy `sed 's/ *<!--.*-->//g'` (413行目) を non-greedy またはコメントスパン単位の反復除去に置き換える (review retrospective より転記)。
+- `rubric` acceptance criteria のうち、主要な証跡が Spec のみに存在するケース (investigation/measurement 系 AC) 向けの文書化された規約を確立する — 例えば Issue/PR body に測定結果のコピー/要約を含めることを必須化する、または `rubric` の "files explicitly named" 例外を Spec ファイル名にも拡張するオプトイン機構を導入する (review retrospective より転記)。
+- `scripts/check-language-convention.py` の CJK 除外パターンがダブルクォート文字列のみを対象とし、シングルクォート文字列を対象外としている非対称性がある (review retrospective より転記)。同種の提案は既に #1439 として起票済みの可能性が高く、重複チェックで確認する。
