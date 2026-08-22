@@ -131,6 +131,7 @@ N/A ( 上記の `comm` → `grep -Fxq` の置き換えは、シェル上での�
 #### verify
 - pre-merge 5 件はすべて review/merge フェーズで確定済みのため SKIPPED。post-merge 1 件は observation 未発火 (`auto-run` の検出コメントなし) で SKIPPED
 - 本 Issue が追加した `scripts/filter-session-verified-issues.sh` は、この batch 自身が in-session verify イベント (#1197 / #1162) を持つため batch 完了時の observation scan で実際に効く見込みだが、`session=next` のとおり親セッションは変更前の `skills/auto/SKILL.md` を読み込んでいるため本 verify では観測できない
+- **2026-08-22 の再評価 (`session=next` 充足、`event=auto-run` 発火) — PASS**: 新しいセッション (session_id=73915-1787388370) 内で issue #1429/#1139/#1141/#1154/#1159 に対して順に `/verify` を実行し、それぞれ `phase_start`/`phase_complete` (phase=verify) イベントを emit 済みの状態を作った上で、`{1429,1139,1141,1154,1159,1162}` を候補として `scripts/filter-session-verified-issues.sh --session 73915-1787388370` を直接実行したところ、出力は未 verify の `1162` のみとなり、既 verify 済み5件が正しく除外されることを確認した。実装が意図どおりに機能している
 
 ### Improvement Proposals
 
