@@ -272,28 +272,35 @@ Background / 対応方針セクション内の「`manual` を含めるか否か�
 
 Implementation Step 8 が新規分岐ロジックを導入するため、受入条件 7 (`command "bats tests/"`) は既存スイート PASS に加えて新規テストケースの追加を伴う。必須 3 ケース (Level 3 × L2/L3 → retire、Level 3 × L1 → 提案のみ、Level 2 以下 → retire しない) + 追加 6 ケース (verify-type 限定、fenced code block 除外、冪等性、`transitioned=false`、fail-closed、引数バリデーション) を `tests/audit-retention.bats` へ追加する。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1–9 を Spec の記述順どおりに実装した。順序の入れ替え・省略・統合は発生していない。
+
+### Design Gaps/Ambiguities
+
+- Implementation Step 4 の「`### Post-merge` 節に `- [` で始まる行が 1 つも残らない場合のみプレーン散文行を挿入する」という条件判定は、Spec 本文では fenced code block の除外に明示的に触れていなかった。実装時、手動テストで「実条件はすべて retire 対象だが、fenced code block 内のサンプル `- [ ]` 行だけが Post-merge 節に残る」ケースを検証したところ、fence 内容を除外せずに `- [` を素朴にスキャンする実装では散文行が誤って挿入されず (fenced sample を「実条件が残っている」と誤認)、`### Post-merge` 節が箇条書きなしの裸プロークで終わる不整合が起きることを発見した。`modules/l0-surfaces.md` § AC Enumeration Convention (b) の fence 除外規約はこの判定にも一律適用されるべきという前提を Spec は明文化していなかったため、Implementation Step 3 の fence 追跡 (in_fence) をこの残数判定にも流用する形で対処した (awk に `fence_state[NR]` 配列を追加)。同種の「fence 除外はどの判定に適用されるか」を Spec に書く際は、AC Enumeration Convention への参照だけでなく、具体的にどの計算箇所に適用が及ぶかを明示すると実装時の手戻りを防げる
+
+### Rework
+
+- 上記の fence 除外漏れは、`scripts/apply-verify-retire.sh` を書き上げた直後の手動統合テスト (`.tmp/manual-test/` に一時的なモック環境を作り、Post-merge 節の全条件が fenced sample を除いて retire される fixture を用意して実行) で発見した。修正は awk の main ブロックに `fence_state[NR] = in_fence` を追加し、END ブロックの `remaining_pm_checkbox` ループで `fence_state[i]` が真の行をスキップするよう変更する 1 箇所のみで、bats テスト (`fenced sample checkbox is excluded from retire targets` および他の既存ケース) は影響を受けなかった
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- Level 3 の判断ロジックを `scripts/apply-verify-retire.sh` へ切り出す。受入条件 6 が bats による 3 ケース検証を求めており、LLM prose では充足できないため。`scripts/apply-run-fact-match.sh` と同型 (決定的な autonomy-tier ゲート / `action=` 標準出力 / `--dry-run` / fail-open / `WHOLEWORK_SCRIPT_DIR` モック) に揃える
-- 自動 retire の対象は verify-type が `observation` / `opportunistic` の条件に限定する。`manual` は「人間が見ると明示的に判断された」ため、`auto` は「1 回の `/verify` で満たせる条件を捨てることになる」ため、いずれも Level 3 の提案動作に留める
-- ゲートは autonomy tier のみ。`retention-auto-retire.enabled` のような設定キーは追加しない (`recoveries-auto-fire` が追加キーを持つのは新規 Issue 作成を伴うためで、本機能は可逆な body 編集のみ)
-- `auto-retired` 等の追跡ラベルは追加しない。`stale-verify` が Level 2 で付与済みであり、retire の事実は `<!-- wholework-event: type=verify-ac-retired ... -->` marker コメントで機械可読に記録される
-- 依存コマンド失敗時の方向を非対称にする。`compute-escalation-level.sh` 失敗は fail-closed (retire しない)、`gh` 系の失敗は fail-open (`/audit` 全体を中断しない)
+- `scripts/apply-verify-retire.sh` を Spec の設計どおり `apply-run-fact-match.sh` と同型 (決定的な autonomy-tier ゲート / `action=` 標準出力 / `--dry-run` / fail-open-fail-closed 非対称 / `WHOLEWORK_SCRIPT_DIR` モック) で実装した。body 書き換えは awk の 1 パス目でメタデータ (`pm_start`/`pm_end`/`rt_start`/`rt_end`/`prose_needed`) と retire 対象行 (行番号・グローバル AC index・verify-type・条件文) を同時抽出し、bash 側で 3 スライス (Post-merge 前半・Retired section・残り) を連結して新規 body を組み立てる方式にした
+- `skills/audit/SKILL.md` の Retire-Proposal Comment Posting 節を `apply-verify-retire.sh` の `action=` 出力で分岐する手順に書き換え、`action=retire` のときは呼び出し側 (SKILL.md) が追加コメントを投稿しないことを明記した (スクリプト自身の監査証跡コメントが完全な記録であるため)
+- 562 行目の Section 10 相互参照文 (Section 8/9 の Retire-Proposal Comment Posting と対比する一文) を、auto-retire がコメント投稿だけでなく body 編集・ラベル遷移も行うようになった事実を反映するよう更新した
 
-### Deferred Items
+### Deviations from Design
 
-- `scripts/collect-verify-path-done-rate.sh` (Section 12) の done 率に「検証によらない done」が混入する相互作用。Issue 本文の受入条件を変更しない方針のため本 Issue では対処せず、`type=verify-ac-retired` marker で後から除外可能な形に留める。`/verify` フェーズの Improvement Proposal 候補
-- Issue 本文 Notes が指摘する `/audit stats --retention` の Manual waiting 計数への影響 (Issue 本文自身が「本 Issue の対象範囲外」と明記) — なお当該指摘の前提である `scripts/scan-pending-ac.sh` の緩い抽出パターンは既に修正済みで、指摘自体が陳腐化している (Spec の Notes 参照)
-- 1 回の実行あたりの retire 件数上限。本 Issue の目的と矛盾するため設けないが、実運用で問題が出た場合は別 Issue で再評価する
-- `docs/stats/2026-06-27.md:112` が記録する「Level 2 の 130 件一括投稿は safety scope 超過」という過去判断。Level 2 側の動作は本 Issue では変更しない
+N/A — Spec の Implementation Steps を順序どおり実装。詳細は本 Spec の `## Code Retrospective` を参照
 
 ### Notes for Next Phase
 
-- 受入条件 1 の `section_contains` は h4 見出し `#### Retire-Proposal Comment Posting` から次の h4 以上の見出し (現状 `### Step 4: Save`) の直前までを判定範囲とする。`auto-retire` の語をこの範囲内に置くこと。frontmatter の `description` に書いても PASS しない
-- verify-type の抽出は必ず HTML コメント限定パターン (`/<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/`) を使う。Issue 本文 Notes が引用する `scripts/scan-pending-ac.sh:134` の緩いパターンの記述は陳腐化しており、現在の同スクリプト 181 行目は既に HTML コメント限定形になっている
-- body 書き換えでは `in_fence` を必ず追跡する (`scripts/check-pre-merge-ac.sh:59-61` が参照実装)。fenced code block 内のサンプル `- [ ]` 行を retire 対象にしてはならない
-- `gh-issue-edit.sh` の失敗時は marker コメント投稿とラベル遷移を実行しないこと。着地していない retire を主張する記録を残さないための順序ゲート
-- `tests/audit-retention.bats` は現在 `WHOLEWORK_SCRIPT_DIR` を使っていない。新規テストの `setup` 内でのみ export し、既存 16 ケースに影響を与えないこと
+- `/review` は `scripts/apply-verify-retire.sh` の 9 bats テストケース (Level 3×L2/L3 retire 2 件、Level 3×L1 propose、Level 2 以下 none 2 件、verify-type 限定、fenced code block 除外、冪等性、fail-closed、引数バリデーション 3 件、gh-issue-edit.sh 失敗時の fail-open) が Spec Implementation Step 8 の必須 3 ケース + 追加 6 ケースをすべてカバーしていることを確認できる (`tests/audit-retention.bats` の `apply-verify-retire:` prefix テスト群)
+- `## Code Retrospective` の Design Gaps/Ambiguities に、fenced code block 除外が「どの判定に適用されるか」を Spec が明示していなかったために生じた手戻り (`prose_needed` 判定への fence 除外漏れ) を記録した。同種の Spec がある場合、次回はこの実例を参照できる
+- Post-merge 条件 3 件 (post-merge AC) は `verify-type: observation event=auto-run session=next` のままで、今回の PR ではチェックしていない (post-merge のため次回 `/verify` フェーズで判定される)
