@@ -304,20 +304,18 @@ N/A — Implementation Steps 1–9 を Spec の記述順どおりに実装した
 - verify command は 6/7 件が `rubric` で、いずれも「設計が文書化されているか」を問う形だった。実装の正確性 (body 書き換えロジックの境界条件) を問う verify command は Issue 側に存在せず、bats テストの充実度に依存していた。本 PR のように body/comment 生成を伴うスクリプトでは、rubric に加えて「境界条件を bats がカバーしているか」を問う verify command を追加する余地があった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `scripts/apply-verify-retire.sh` の body 書き換えに 2 つの構造ガード (`multi_pm`: 複数 `### Post-merge` 見出し、`reordered`: `### Retired Post-merge Conditions` が `### Post-merge` より前に出現) を追加し、いずれかが真の場合は body-fetch failure と同じ fail-open shape (`action=retire` / `retired=0` / 警告のみ) にフォールバックする設計を採用した。body を書き換えず何もしない方が、誤った構造の body を書き換えて悪化させるより安全という判断
-- `action=` の決定を LEVEL×TIER 判定直後ではなく、body を読み込んで retire 対象数を数えた後に確定するよう変更した (`RETIRED_COUNT == 0` のとき `action=propose` を出力)。これにより SKILL.md 側の「`action=retire` のときは追加コメントを投稿しない」というルールが、実際に retire が起きなかったケースを誤って飲み込まなくなる
-- `verify-type` タグの抽出を `modules/verify-classifier.md` § Tag Extraction Rule の canonical full-span pattern (`<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+([^-]|-[^-]|--[^>])*-->`) に統一した。bare-tag-value pattern (閉じタグ未検証) から切り替えることで、閉じタグを欠いた壊れたコメントを「タグなし」として安全に扱えるようにした
+- PR #1436 は pre-merge AC 7 件全チェック済み、`review_incomplete_fallback` なしでゲートを通過したため、非対話モードのオーバーライド無しでそのまま squash merge した
+- `mergeable=true` / `reason=clean` (CI success, review approved) だったため conflict 解決ステップは発生せず、rebase やテスト再実行は不要だった
 
-### Deviations from Design
+### Deferred Items
 
-N/A — 今回の修正はすべて Spec が既に述べていた設計意図 (manual/auto は提案のまま・#1165 形式の踏襲・fail-open/fail-closed の非対称性) を実装が正しく満たすようにするバグ修正であり、設計自体の変更ではない
+- None
 
 ### Notes for Next Phase
 
-- `/verify` は本 Issue の Post-merge 条件 3 件 (`verify-type: observation event=auto-run session=next`) を引き続き判定対象とする。実装は `/review` の 2 回の追加コミット (バグ修正 + ドキュメント同期) を経ているため、post-merge の実測 (`scripts/collect-verify-retention-stats.sh --window 2026-05-07` の再実行) はこの最終状態を基準にする
-- 未対応で残した CONSIDER 2 件 (`docs/guide/autonomy.md` の L2 説明更新、`set -euo pipefail` 下での awk/cut/paste 未ガード時の異常終了リスク) は、実際に問題が顕在化した場合にフォローアップ Issue で対処する想定。特に後者は、今回のレビューで実行検証しても再現するトリガーが見つからなかったため、現時点では理論上のリスクに留まる
-- `tests/audit-retention.bats` に 6 件の回帰テストを追加し (35 件中)、既存アサーション 3 件を `[[ ]]` (macOS bash 3.2 の `set -e` では実質的に無効化される) から `[ ]` の完全一致比較に切り替えた。今後同ファイルにテストを追加する際は `[[ ]]` の単独文をアサーションとして使わない (`[ ]` または `run` の `$status` チェックを使う) ことを推奨する
+- `/verify` は Spec Notes for Next Phase (review handoff由来) が既に指摘している Post-merge 条件 3 件 (`verify-type: observation event=auto-run session=next`) を引き続き判定対象とする。実測基準は `/review` の最終コミット状態 (2 回の追加コミット: バグ修正 + ドキュメント同期) を含む
+- `scripts/collect-verify-retention-stats.sh --window 2026-05-07` を実行し、90 日超待機の合計・`phase/verify` 総件数の減少を確認すること (Issue #1271 Verification (post-merge) 節)
