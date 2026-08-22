@@ -255,24 +255,26 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - Implementation Steps 1 (helper の 5 分岐) と 3 (Count mode step 6 の 3 分岐) がいずれも新規分岐ロジックのため、`tests/should-stop-at-phase.bats` に 12 ケース、`tests/auto-batch.bats` の Count mode section に 5 ケースの新規テストを追加したうえでスイート全体が PASS することを受入基準 6 に要求した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1-9 を記載順にそのまま実装した。逸脱なし。
-- 受入基準 6 の verify command が直列実行で 60 秒 timeout を超過することを Step 10 で検出し、`--jobs $(nproc || sysctl -n hw.logicalcpu)` を追加する形で Issue 本文と Spec の両方を修正した (詳細は Code Retrospective 参照)。
-- Phase Handoff (spec) の Deferred Items のうち `modules/detect-config-markers.md` の fallback 文言整合性を確認し、変更不要と確定した。
+- Pre-merge AC 10 件は全て PASS と判定し checked 済み。MUST 2 件 (docs/structure.md / docs/ja/structure.md のファイル数コメント 93→94) と SHOULD 2 件 (should-stop-at-phase.sh の空文字 stop-at 値の Spec/実装不一致、AC 6 の `command`→`github_check` 切替) を修正し、review 内で fix + re-check まで完了した。
+- MUST の根本原因は、本 PR のブランチが既にマージ済みの別 PR (#1428/#1432) より前に分岐しており、両 PR が独立に同じファイル数コメントを `92→93` に更新していたこと。`origin/main` をこのブランチにマージして実測値 94 に修正した。
+- SHOULD 2 件は review-bug の 2-stage 検証で 1 件 REJECT (fail-open on helper execution failure — 意図的な設計と判明) となり、review-spec 由来の 2 件のみ修正対象とした。
 
 ### Deferred Items
 
 - `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外 (spec phase から引き継ぎ、未着手のまま)。将来 stop-at 値を追加する際に再評価する。
 - List mode step 7 の gate を phase 順序判定へ広げる案は本 Issue の対象外 (spec phase から引き継ぎ、Issue 本文で明示)。必要なら別 Issue とする。
+- ファイル数コメント AC の並行 PR 耐性、および `command` verify type の early detection は review retrospective の Improvement Proposals として記録 (Issue 起票はしない、`/verify` での集約に委ねる)。
 
 ### Notes for Next Phase
 
-- 受入基準 6 の verify command は `--jobs` 付きの並列形に修正済み (実測 37 秒、60 秒 timeout 内)。`/review`/`/verify` で再確認する際は修正後の Issue 本文記載のコマンドを使うこと。
-- full suite (`bats --jobs 18 tests/`) は 1939 件全て PASS。`should-stop-at-phase.bats` 12 件、`auto-batch.bats` の Count mode 5 件を含む。
-- `docs/structure.md`/`docs/ja/structure.md`/`docs/workflow.md`/`docs/ja/workflow.md` は本フェーズで更新済み。`docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`docs/ja/guide/xl-decomposition.md` 未更新) は本 Issue と無関係の既存差分のため未対応。
+- 受入基準 8/9 (ファイル数コメント) は `(94 files)`/`(94 ファイル)` に修正済み。`/merge`/`/verify` で再確認する際は修正後の Issue 本文記載のコマンドを使うこと。
+- 受入基準 6 (helper テスト PASS) は `github_check` (CI 参照形、対象ジョブ `Run bats tests`) に切替済み。
+- full suite (`bats --jobs 18 tests/`) は review 修正後の再チェックで 1960 件全て PASS (1939 + 新規空文字config テスト 1 件)。CI も再push後 15/15 SUCCESS、`gh pr view --json mergeable,mergeStateStatus` は MERGEABLE/CLEAN。
+- `docs/structure.md`/`docs/ja/structure.md`/`docs/workflow.md`/`docs/ja/workflow.md` は spec/code フェーズで更新済み。`docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`docs/ja/guide/xl-decomposition.md` 未更新) は本 Issue と無関係の既存差分のため未対応。
 
 ## Code Retrospective
 
@@ -291,3 +293,23 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 ### Deferred Items 引き継ぎの解決
 
 - Phase Handoff (spec) の Deferred Items 3 件目「`modules/detect-config-markers.md` の fallback 文言が現状と整合しているか `/code` で最終判断」: 整合を確認した。`detect-config-markers.md` は `auto-stop-at` の fallback を `"verify"` (フルパイプライン) と明記しており、`scripts/should-stop-at-phase.sh` の fallback 実装 (未知値・取得失敗いずれも `verify` 相当の順序 5 にフォールバック) と一致する。記述変更は不要と確定した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `[stop-at-value]` が空文字の場合の挙動について、Spec の分岐表 (旧分岐 4) は「`verify` へ直接 fallback」と記載していたが、実装は空文字を省略時と同一視して `.wholework.yml` から解決していた (`[[ -z "$stop_at" ]]` 判定)。3 エージェント中 1 エージェント (review-spec) がこの不一致を検出し、Spec 分岐表を 4a/4b に分割して実装と整合させ、header comment・テスト (config 存在時の空文字ケースを新規追加) も揃えた。影響は実害としては小さい (`run-auto-sub.sh` は常に非空の `$AUTO_STOP_AT` を渡す) が、fail-safe critical と Spec 自身が位置づける gate で Spec/実装/テストが食い違っていた点は、実装完了後の Design Gaps セクションで捕捉されなかった (Code Retrospective の Design Gaps は AC 6 の timeout 問題のみを記録し、この空文字挙動には触れていなかった)。
+- Base Branch Conflict Pre-check (`git merge-tree` による事前検知) が意図通り機能した事例: このブランチは既にマージ済みの別 PR (#1428/#1432) より前に分岐しており、両 PR が独立に `docs/structure.md`/`docs/ja/structure.md` のスクリプト件数コメントを `92→93` へ更新していた (異なる新規スクリプトの追加による)。同一文字列への変更のため git は非競合として解決してしまい、真の post-merge 値である `94` が失われるところだった。3 エージェント全員が独立にこの問題を検出し (`git ls-tree`/`git merge-tree --write-tree` による実測)、アダプティブ検証エージェントも CONFIRMED と判定した。`GitHub の mergeable=MERGEABLE/mergeStateStatus=CLEAN` だけでは検出できない種類の欠陥であり、Base Branch Conflict Pre-check の存在意義を裏付けた。
+
+### Recurring issues
+
+- AC 6 (`bats` full suite の verify command) が同一 Issue 内で 2 回、同じ根本原因のクラスの問題を起こした: (1) `/code` フェーズで直列実行が 60 秒 timeout を超過し `--jobs` を追加して対処、(2) `/review` フェーズでも `modules/verify-executor.md` の Timeout Coverage Audit が明記する「`command` は full suite 実行に不向き」に抵触していることが判明し `github_check` へ切替。`--jobs` 追加は timeout を先送りしただけで根本解決になっておらず、`/code` の Step 10 miscalibrated hint 処理時点で `github_check` への切替を検討すべきだった可能性がある。今後、`command` verify で `bats`/`pytest` 等の複数ファイルテストスイートを指定する AC を Spec 作成時点で見つけた場合、`modules/verify-patterns.md` §24 の CI 参照形を最初から採用するようガイダンスを強化する余地がある。
+
+### Acceptance criteria verification difficulty
+
+- 特になし。Pre-merge AC 10 件はいずれも rubric / section_contains / file_contains / command (→ github_check に修正) の verify command が過不足なく整備されており、UNCERTAIN は発生しなかった。
+
+## Improvement Proposals
+
+1. **ファイル数コメント AC の並行 PR 耐性**: `file_contains "docs/structure.md" "(N files)"` のようなリテラル数値ピン留め型 AC は、本 Issue のように同時期にマージされる別 PR が同じファイルの同じ行を独立に更新するケースで、git の非競合解決により誤った値が残るリスクを構造的に持つ (#1047 の MUST 所見)。動的にファイル数を再計算する `command "test $(find scripts -maxdepth 1 -type f | wc -l) -eq $(grep -oP '\(\K[0-9]+(?= files\))' docs/structure.md)"` 相当のガード、または `docs/structure.md` 自体を件数コメントなしのフォーマットに変更するなど、Steering Documents 側の設計見直しを検討する価値がある。
+2. **`command` verify type の early detection**: 複数ファイル bats/pytest スイートを対象とする `command` verify command は、`modules/verify-executor.md` の Timeout Coverage Audit で明示的に非推奨とされているにも関わらず、本 Issue では `/code`→`/review` の 2 フェーズを経てようやく `github_check` へ切り替わった。`/spec` フェーズの AC 作成時点 (または `/issue` の AC tagging 時点) で複数ファイルパスを含む `command` verify command を検出し警告する軽量チェックがあれば、同種の手戻りを削減できる可能性がある。
