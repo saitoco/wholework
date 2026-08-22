@@ -85,7 +85,7 @@ wholework/
 
 > **Maintenance rule**: Keep the tables and lists in this section aligned with the actual files. When a file listed below is added, removed, renamed, or has its role/description changed, update the corresponding entry here in the same change. `/audit drift` detects divergence but manual upkeep is still expected.
 >
-> When adding or removing a file in `modules/` or `scripts/`, also update the file count comment (e.g., `(29 files)`) in the Directory Layout section above, and include a verify command in the PR's acceptance criteria to confirm the count (e.g., `<!-- verify: grep "(29 files)" "docs/structure.md" -->`).
+> When adding or removing a file in `modules/` or `scripts/`, also update the file count comment (e.g., `(29 files)`) in the Directory Layout section above. Avoid pinning the new count as a literal value in the verify command — it does not survive concurrent PRs that touch the same line. Instead use a post-merge dynamic comparison; see `modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience" for the pattern and rationale.
 
 ### Skills
 
