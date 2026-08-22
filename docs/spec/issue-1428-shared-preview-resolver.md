@@ -212,3 +212,33 @@ No new comments since last phase.
 ### Notes for Next Phase
 - Post-merge AC (「`preview-url-command` を宣言した実プロジェクトで `--auto` なしの `/review` を直接実行し観察」) は `verify-type: manual` のため、`/verify` は自動確認できない。人手による観察結果の記録が必要
 - 全 bats テストスイートは merge フェーズ実行時点で CI 上 SUCCESS 済みであることを `gh-pr-merge-status.sh` の `ci_status: success` で確認済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec Uncertainty 節に記録した `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用は、Code Retrospective で静的な契約突き合わせにより確認され (実プロジェクトでの実地確認は本 Issue の non-interactive 実行では実施不可のため best-effort 代替)、既存 Deployments API 経路にも同じ特性がある既知の特性として妥当に処理された。Spec 自身がこの疑問点を先回りして記録していたことが、Code/Review フェーズでの手戻りを防いだ
+
+#### design
+- Alternatives Considered / Notes セクションが事前に判断根拠を記録済みだったため、実装中に新たな曖昧点は発生しなかった (Code Retrospective「Design Gaps/Ambiguities: なし」)
+- 一方で Spec の Changed Files は `docs/guide/customization.md` / `docs/guide/adapter-guide.md` を対象に含めていたが、同種の SSoT である `docs/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` ゲート一覧行と `docs/structure.md` の Key Files 一覧本体 (件数コメントのみ含めていた) が漏れていた
+
+#### code
+- 実装ステップは Spec 記述どおりに完了し設計逸脱なし
+- bats テストのモック生成 (`mock_config_value()`) で、未クオート heredoc 内に呼び出し元の任意文字列を直接展開するパターンが二重引用符を含む値で構文的に破綻するバグが発生・修正された。値をファイル経由で渡す方式へ変更して解消
+
+#### review
+- Parser/Validator Edge Case Pre-check の実測実行で、Spec の「既存実装をそのまま踏襲」という記述だけでは見つからない実装レベルの逸脱 (SIGPIPE 回帰・正規表現末尾アンカー欠如・PR 番号検証の緩さ) を検出した。関数を独立スクリプト化する際の `set -e`/pipefail コンテキスト変化が原因で、静的読解だけでは見つからず実コード実行によるエッジケース検証が有効だった
+- Steering Docs 同期漏れ 2 件 (`docs/tech.md`、`docs/structure.md` Key Files) を review で検出・修正 (commit `6d49fcd6` / `89db1fca`)
+
+#### merge
+- Pre-merge AC 7 件全て checked 済み、review-incomplete-fallback も未検出のため通常経路で squash merge 実行。特筆すべき問題なし
+
+#### verify
+- Pre-merge AC 7 件はいずれも `/review`/`/merge` 時点で既に checked 済みのため verify 実行時は再検証不要 (already-checked skip rule)。Post-merge manual AC 1 件は実プロジェクトでの観察が必要なため Claude 実行不可と判定し、`phase/verify` を維持した
+
+### Improvement Proposals
+
+1. **共有スクリプト化パターンの Spec 手順への反映**: 関数から独立スクリプトへの切り出しを伴う Issue では、Spec の Implementation Steps に「移行前後で `set -e`/errexit の有効/無効コンテキストが変わらないか」を明示的なチェック項目として含める。本 Issue の review で検出された SHOULD/CONSIDER 12 件中 5 件 (SIGPIPE 回帰・regex 末尾アンカー・PR 番号検証・`cat` ガード欠落・wrapper の暗黙 return 1) が共通してこの問題に起因していた
+2. **複数 SSoT への同一変更反映時のドキュメント列挙補強**: 本 Issue で `docs/guide/customization.md`/`docs/guide/adapter-guide.md` は正しく Changed Files に含めたが、同種の SSoT である `docs/tech.md`/`docs/structure.md` Key Files 本体が漏れた。Steering Docs sync candidate check の grep 範囲または Spec 作成者のドキュメント列挙プロセスに、同一トピックを扱う複数ドキュメントの網羅性チェックを補強する余地がある
