@@ -22,3 +22,32 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec なし (XS patch route)。
+
+#### design
+- N/A (XS patch route)。
+
+#### code
+- commit 1件のみで完了。rework なし。
+
+#### review
+- N/A (XS patch route、review フェーズなし)。
+
+#### merge
+- N/A (XS patch route、merge フェーズなし)。
+
+#### verify
+- AC3 の `github_check "gh run list ... --jq '.[0].conclusion'" "success"` verify command で、#1442 と同様に CI が in_progress の間 `.conclusion` が空文字列となり `in_progress` の文字列一致で検出できない事象を再度観測した (`.status` を別途確認して待機・再実行)。同一の構造的ギャップであり、#1444 で改善提案として起票済みのため、本 Issue では新規起票せず再発事例として記録するに留める。
+
+### Retry Count
+
+(N/A — auto-retry は発火していない)
+
+### Improvement Proposals
+- N/A (同種の提案は既に #1444 として起票済み)
