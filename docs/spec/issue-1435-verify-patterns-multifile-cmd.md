@@ -38,4 +38,6 @@
 - **新規テストケース要否の判断**: `modules/verify-patterns.md` は LLM が Read して従うプレーンテキストのガイドラインであり、スクリプト/モジュールへの新規分岐ロジック追加ではないため、「新規ブランチロジックに対する新規テストケース要件」チェックの対象外と判断した (既存の `tests/verify-heuristics.bats` 等は `grep -q` による存在確認のみで、セクション数を数えるものではなく、本追加によって既存テストが失敗することはない)。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- saito / MEMBER / first-class / Issue Retrospective — AC1 の rubric 対象ファイル優先順位を `modules/verify-patterns.md` に決定した判断根拠、Post-merge セクション追加、タイトル変更 (`spec-test-guidelines:` → `verify-patterns:`) の記録 / https://github.com/saitoco/wholework/issues/1435#issuecomment-5379608577
+- saito / MEMBER / first-class / Triage AC audit — AC1 の rubric が既存の §24 (Behavioral Changes) の記述だけで満たされていると誤判定されるリスク (§24 は意味的トリガー、本 Issue は構文的トリガーで独立) を指摘。実装時に §24 とは別の新規パターン行として追加し独立性を明記するよう推奨 (本 Spec の Implementation Steps・Notes に反映済み) / https://github.com/saitoco/wholework/issues/1435#issuecomment-5379629300
