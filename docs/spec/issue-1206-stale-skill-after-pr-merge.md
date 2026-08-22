@@ -4,6 +4,22 @@
 
 cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T14:53:25Z`。cutoff 以降の新規コメントは 0 件。cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の再走査でも該当なし。No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1206#issuecomment-5210354070
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5212270135
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5225319078
+- saito / MEMBER / first-class / ## 本 Issue の post-merge AC #5 に該当する実測 (session `46468-1786195191`) / https://github.com/saitoco/wholework/issues/1206#issuecomment-5228084214
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5229261625
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5235406245
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5246563366
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5255756345
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5296387255
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5304276253
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5310550184
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5327732832
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5341243660
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5354379457
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5369696071
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1206#issuecomment-5378424933
 ## Overview
 
 pr route で `skills/*/SKILL.md` を修正する Issue を merge した直後、同一セッション内で別 Issue のフェーズがその skill を呼ぶと、ローカル main が origin に追従していないために修正前の版が実行されうる (`gh pr merge` は origin のみを進め、ローカル main を直接更新しない)。
