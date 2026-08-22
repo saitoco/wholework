@@ -233,6 +233,21 @@ if [ -n "$FACTS_PATH" ]; then
     fi
 fi
 
+# HAS_XL_FACTS: gate for the XL-scope pre-filter below (opportunistic mode only). A
+# candidate whose condition text names an XL/parallel-sub-issue scenario can only be
+# judged non-SKIP when this run's own facts show XL route processing actually occurred;
+# excluding it otherwise avoids a guaranteed-SKIP downstream emit_event call (Issue
+# #1440). Fail-open on any jq failure (missing jq, malformed JSON, empty .issues[]) --
+# same direction as every other --facts-derived gate in this script (FACT_TOKENS_LOWER
+# above, when=route: clauses below).
+HAS_XL_FACTS=false
+if [ -n "$FACTS_PATH" ] && [ -f "$FACTS_PATH" ]; then
+    if jq -e 'any(.issues[]?; .route == "xl")' "$FACTS_PATH" >/dev/null 2>&1; then
+        HAS_XL_FACTS=true
+    fi
+fi
+XL_SCOPE_PATTERN='XL (Issue|[Ss]ub-issue)|並列.{0,20}[Ss]ub-issue|[Ss]ub-issue.{0,20}並列'
+
 # resolve_run_facts: lazily resolve run facts JSON, once per process. Called on demand by
 # the first `when=`-tagged AC line encountered in the match loop below. Result is cached in
 # RUN_FACTS_JSON (empty string means the gate is disabled — fail-open).
@@ -426,6 +441,17 @@ for N in $ISSUE_NUMBERS; do
                         ;;
                 esac
             done <<< "$FACT_TOKENS_LOWER"
+        fi
+
+        # XL-scope pre-filter (opportunistic mode only): skip candidates whose condition text
+        # names an XL/parallel-sub-issue scenario when this run's own facts show no XL route
+        # processing occurred -- see HAS_XL_FACTS/XL_SCOPE_PATTERN above. Event mode already has
+        # an equivalent, more general opt-in mechanism (when=route:xl, see
+        # modules/observation-trigger.md) and is left untouched here.
+        if [ -z "$EVENT_NAME" ] && [ "$HAS_XL_FACTS" = false ]; then
+            if echo "$CONDITION" | grep -qE "$XL_SCOPE_PATTERN"; then
+                continue
+            fi
         fi
 
         # Condition check gate: skip lines whose keyword= attribute does not
