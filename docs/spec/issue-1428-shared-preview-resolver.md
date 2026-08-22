@@ -166,19 +166,49 @@ No new comments since last phase.
 
 - `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式 (Deployments API 経路・preview-url-command 経路の両方) の相互作用は、コードベース調査で新たに発見した未解決の疑問点。既存 (Deployments API) 経路にも同じ特性があり #1428 固有の新規欠陥ではないと判断し、Pre-merge AC には含めず Uncertainty として記録した。`/code` 実装後に実地確認し Code Retrospective に記録する運用とした
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-10 は Spec の記述どおりに実装した (インターフェース・挿入位置・ゲート条件を含め設計からの逸脱なし)
+
+### Design Gaps/Ambiguities
+- なし。Spec の Alternatives Considered / Notes が事前に判断根拠を記録済みだったため、実装中に新たな曖昧点は発生しなかった
+
+### Rework
+- `tests/resolve-preview-env.bats` の 2048 文字超テストで、`mock_config_value()` ヘルパーが未クオートの heredoc (`<<MOCK`) 内で `echo "$1"` の形にコマンド文字列を直接展開していたため、`$1` に二重引用符 (`python3 -c "print(...)"`) が含まれるケースで生成されるモックスクリプトのクオートが壊れて構文的に破綻した。値を別ファイルへ `printf '%s' "$1" > file` で書き出し、heredoc 側は `<<'MOCK'` (クオート済み) にして `cat` で読み込む方式に変更して解消した — bats のモック生成で「呼び出し元の任意文字列をそのまま heredoc に埋め込む」パターンは、値に `"` を含むケースで一般に壊れる点に注意
+
+### Uncertainty resolution (`--when="test -n \"$PREVIEW_URL\""` との相互作用)
+- Spec Uncertainty 節の疑問点をコードベース調査で確認した (実プロジェクトでの実地確認ではなく、静的な契約の突き合わせによる確認 — 本 Issue の non-interactive 実行では `capabilities.pr-preview: true` を宣言した実プロジェクトが手元になく、実地確認は実施できなかったため best-effort で代替した)
+- `modules/verify-executor.md` は `--when` 条件を実際の Bash サブプロセスで評価する。Step 8.0 の Deployments API 経路 (既存) と本 Issue が追加した preview-url-command 経路は、いずれも解決した URL を `{{base_url}}` へ**リテラル文字列として代入**するのみで、実際に `PREVIEW_URL` を shell に `export` するわけではない
+- そのため `--when` 評価用のサブプロセスには `$PREVIEW_URL` は存在せず、`test -n "$PREVIEW_URL"` は偽と評価され、`--when` ガード付き AC は「Fast path (env 既存)」以外の2経路 (Deployments API・preview-url-command) では SKIP される
+- Spec の想定どおり、これは Deployments API 経路に既に (#1428 以前から) 存在していた特性であり、preview-url-command 経路固有の新規欠陥ではない。本 Issue のスコープでは修正しない (Spec の Uncertainty 節・Out of Scope の判断を踏襲)
+- 修正が必要と判断された場合は別 Issue とする (Spec の判断をそのまま維持)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Parser/Validator Edge Case Pre-check の実測実行で、`scripts/resolve-preview-env.sh` に Spec の Implementation Steps には現れなかった実装レベルの逸脱が複数見つかった: (a) `printf | head -n 1 | tr -d` のパイプが `set -euo pipefail` 配下の独立スクリプト化で SIGPIPE 経由の異常終了を起こしうる (移行元は errexit 無効化された関数本体だったため顕在化していなかった)、(b) URL 検証正規表現が末尾アンカーを持たず同一行の末尾ゴミを許容してしまう、(c) PR 番号検証が `grep` の行単位マッチで複数行入力に対して移行元の bash 正規表現 (全体マッチ) より緩い。いずれも Spec の Implementation Step 1 が「既存 #1410 実装をそのまま踏襲」と記述していた箇所で、"そのまま移植" が独立スクリプト化という文脈変化 (関数 → 独立 `set -e` スクリプト) と組み合わさることで新規リグレッションを生んだ。実コード実行によるエッジケース検証 (静的読解だけでは見つからない) が有効だった事例
+- Steering Documents (`docs/tech.md`・`docs/structure.md`) の同期漏れが 2 件重複して発生した: Spec の Changed Files / Pre-merge AC はいずれも `docs/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` ゲート一覧行、および `docs/structure.md` の Key Files 一覧 (件数コメントのみ更新、一覧本体は未更新) を対象に含めていなかった。`docs/guide/customization.md` / `docs/guide/adapter-guide.md` は Spec 対象に含まれ実際に更新されたが、同種の SSoT である `docs/tech.md`/`docs/structure.md` Key Files が漏れた — 「同じ変更内容を複数の SSoT に反映する」タスクで対象ドキュメントの列挙が不完全になりやすいパターン
+
+### Recurring issues
+
+- 本 PR のレビューで検出した SHOULD/CONSIDER 12 件のうち 5 件 (SIGPIPE 回帰・regex 末尾アンカー・PR 番号検証・`cat` ガード欠落・wrapper の暗黙 return 1) は共通して「`set -e`/`pipefail` 環境下でのエラーハンドリングの契約が、コードを移動 (関数 → 独立スクリプト) する際に暗黙のうちに変化する」という同一クラスの問題だった。今後同様の「既存ロジックを共有スクリプト化して切り出す」設計の Issue では、Spec の Implementation Steps に "移行前後で `set -e`/errexit の有効/無効コンテキストが変わらないか" を明示的なチェック項目として含めることが有効と考えられる
+
+### Acceptance criteria verification difficulty
+
+- 特になし。Pre-merge AC 7 件はいずれも `rubric` / `file_exists` / `grep` / `file_not_contains` / `github_check` の verify command が過不足なく整備されており、UNCERTAIN や verify command の不備は発生しなかった
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_resolve_preview_url_command()` を薄いラッパー化する際、既存コメント文言に `preview-url-command` の文字列を意図的に保持し、#1410 の既存 verify command (`grep "preview-url-command" "scripts/run-review.sh"`) を壊さない設計にした
-- 共有スクリプトは呼び出し元 CWD に依存せず `git worktree list --porcelain` で MAIN_REPO_ROOT を自前解決する設計にした — worktree 内で動く `/review` 直接実行と main repo root で動く `run-review.sh` の信頼境界を揃えるため
-- インターフェースを `--key` フラグなしの `url` サブコマンド固定に簡略化した (Basic Auth は #1429 が別サブコマンドで追加する設計のため)
+- Parser/Validator Edge Case Pre-check (実行ベースの検証) で見つかった SIGPIPE 回帰・regex 末尾アンカー欠如・PR 番号検証緩和の 3 件は、いずれもレビュー段階で fix まで実施した (レビューコメント投稿 → 修正 → 再テスト → コミットの順で、Refs リンク付きで追跡可能にした)
+- Post-merge AC (`--when` ガード付き preview AC の SKIP 挙動との相互作用) は、Code Retrospective で著者自身が既に out-of-scope と判断していたため、レビューでは修正せず General Comment として記録するに留めた (Step 12.2 の「out-of-scope 明記済み項目は fix しない」規則に従った)
 
 ### Deferred Items
-- `--when="test -n \"$PREVIEW_URL\""` ガードとリテラル値代入方式の相互作用の実地確認 (Uncertainty 節参照) — `/code` が実装後に確認し Code Retrospective に記録する
-- `modules/lighthouse-adapter.md` / `modules/visual-diff-adapter.md` での Basic Auth 解決は `#1429` の Known Gap として既に対象外 (本 Issue はそもそも Basic Auth を扱わない)
+- `--when="test -n \"$PREVIEW_URL\""` ガード付き auto-subcase の preview AC が、`preview-url-command` 経路でも `export PREVIEW_URL` されないため実質 SKIP され続ける件は、本 PR のスコープ外として据え置き。修正する場合は別 Issue で `/review` 側に `export PREVIEW_URL` を追加する設計を検討する必要がある (`modules/l0-surfaces.md` や `skills/review/SKILL.md` Step 8.0 双方への影響を要確認)
 
 ### Notes for Next Phase
-- `tests/run-review.bats` の既存13テスト (L511-741付近) が薄いラッパー化後も同じ出力文言・exit code で PASS することを必ず確認すること — メッセージ文言を1文字でも変えると壊れる
-- `scripts/resolve-preview-env.sh` は fail-safe critical (fail-open設計) — 依存コマンド失敗時に fail-closed 化しないこと
-- `docs/ja/guide/customization.md` / `docs/ja/guide/adapter-guide.md` / `docs/ja/structure.md` の ja ミラー更新を忘れないこと (`docs/translation-workflow.md` の同期手順に従う)
+- 全 1942 bats テスト・`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-translation-sync.sh` をレビュー中の fix 後に再実行し、PASS/クリーンを確認済み
+- CI (15 checks) は fix コミットの push 後に再度全て SUCCESS

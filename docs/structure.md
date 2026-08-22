@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (92 files)
+├── scripts/             # Utility scripts used by skills and agents (93 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -205,6 +205,7 @@ Key modules:
 - `scripts/get-auto-session-report.sh` — emit the `## Metrics` markdown section (`--metrics-only`) of a /auto session retrospective from `.tmp/auto-events.jsonl` (filtered by session_id), for embedding into `session.md` and for `/audit auto-session`
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
 - `scripts/resolve-preview-ac-fallback.sh` — resolve the latest `type=preview-ac-unverified` marker from Issue comments and print the 1-based AC indices needing `/verify` fallback (empty when none)
+- `scripts/resolve-preview-env.sh` — shared resolver for a project-declared `preview-url-command` (`url` subcommand): 30s-bounded `bash -c` execution with empty/non-zero/2048-char/URL-format guards, fail-open (empty stdout + exit 0) so callers fall back to the GitHub Deployments API; called by `scripts/run-review.sh`'s preview-wait gate and `skills/review/SKILL.md` Step 8.0
 - `scripts/verify-executability-marker.sh` — generate (`format`) and resolve (`resolve`, latest-wins) `type=verify-executability` markers recording `/verify` Step 8b's Claude-executability judgment for manual post-merge AC
 - `scripts/check-pre-merge-ac.sh` — scan an Issue body's `### Pre-merge` subsection for unchecked checkboxes and output global 1-based indices + text as JSON; used by `skills/merge/SKILL.md` Step 1's pre-merge AC gate
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern

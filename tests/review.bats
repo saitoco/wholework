@@ -95,6 +95,36 @@ step12_2_section() {
     step8_section | grep -q -F "human-check against the preview URL is required"
 }
 
+@test "Step 8.0: preview-url-command resolution heading present between Fast path and Deployments API" {
+    step8_section | grep -q -F "preview-url-command resolution"
+}
+
+@test "Step 8.0: preview-url-command resolution gated on HAS_PR_PREVIEW_CAPABILITY and PREVIEW_URL unset" {
+    step8_section | grep -q -F "HAS_PR_PREVIEW_CAPABILITY"
+    step8_section | grep -q -F "PREVIEW_URL\` is not exported"
+}
+
+@test "Step 8.0: preview-url-command resolution calls the shared resolve-preview-env.sh script" {
+    step8_section | grep -q -F 'scripts/resolve-preview-env.sh url "$NUMBER"'
+}
+
+@test "Step 8.0: preview-url-command resolution substitutes a literal value, not a shell PREVIEW_URL reference" {
+    step8_section | grep -q -F "literal value"
+    step8_section | grep -q -F "Bash tool calls do not persist exported env vars across invocations"
+}
+
+@test "Step 8.0: preview-url-command resolution falls through to Deployments API when stdout is empty" {
+    step8_section | grep -q -F "If stdout is empty, fall through to the Deployments API path below unchanged"
+}
+
+@test "Step 8.0: preview-url-command resolution is ordered before the Deployments API steps" {
+    resolution_line=$(step8_section | grep -n -F "preview-url-command resolution" | head -1 | cut -d: -f1)
+    branch_line=$(step8_section | grep -n -F "1. Get the PR branch name" | head -1 | cut -d: -f1)
+    [ -n "$resolution_line" ]
+    [ -n "$branch_line" ]
+    [ "$resolution_line" -lt "$branch_line" ]
+}
+
 @test "Non-Interactive Mode Behavior: foreground execution required for test/build commands" {
     non_interactive_mode_behavior_section | grep -q "前景"
     non_interactive_mode_behavior_section | grep -q -F "run_in_background"
