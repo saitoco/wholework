@@ -55,3 +55,6 @@ PR #1332 は `scripts/guard-prefix.sh` に background-notification-wait 禁止�
 - 監査/実査型 Issue 判定 (`/spec` Step 6 記載の判定基準に基づく): **該当しない** と判断。本 Issue は単一インシデントの根本原因調査であり、複数の既存項目を定義済みカテゴリへ分類する実査 (#1274/#1276 のような per-AC-line 監査) ではない。そのため「引用参照の存在確認」要件は形式上は適用対象外だが、上記で引用した全ファイル/行番号 (`run-review.sh:107`、`run-review.sh:251-257`、`execution-context.md:97-141`、`skills/review/SKILL.md:39`、`orchestration-recoveries.md` 2026-08-22 10:10 UTC エントリ) はいずれも Spec 調査時に grep/Read で直接確認済みであり、記憶からの転記ではない。
 - 未解決の不確実性 (light depth のため意図的に深追いしていない): Claude Code の `Task`/`Agent` sub-agent dispatch ツールが、非対話 `claude -p --non-interactive` セッション内で同期的 (呼び出し元ターンが全結果の返却をブロックして待つ) か、それとも通知ベースの完了を伴うバックグラウンド既定かは、本調査では一次情報から確認できていない。Root Cause の Step 10 仮説は構造分析に基づく尤もらしい候補であり、直接証拠による確認ではない — `agents/orchestration-recovery.md` の Tier 3 sub-agent が受け取るのは wrapper の stdout/stderr `log_tail` のみで、review セッション内部のツール呼び出しトレースは含まれないため、現状これを裏付け/反証できる証拠源がない。今後の再発診断で正確なステップが特定できた場合はこの Note を更新すること。
 - Steering Docs 同期: `docs/tech.md` は意図的に変更対象から外した。`modules/execution-context.md` § Wrapper-Level Constraint Injection が本件と同じ話題を扱う、より狭くスコープされた既存の SSoT であるため (`docs/tech.md` の Architecture Decisions は多数の無関係な話題を横断する広いリストである一方)、結論はそちらに一本化し、同一内容を 2 箇所に重複記載することを避けた。
+
+## Consumed Comments
+No new comments since last phase.
