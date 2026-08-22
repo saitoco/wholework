@@ -435,6 +435,8 @@ In both cases, do not fix the violation inline in this PR.
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
 
+**Foreground dispatch reminder (orchestrator's own `Task(...)`/Agent calls, distinct from the sub-agents' internal commands):** this step's fan-out (`Task(...)` calls in 10.0/10.1–10.3, and the Workflow path in `skills/review/workflow-guidance.md`) is the orchestrator dispatching sub-agents and then consuming their results before continuing — not a command the review sub-agents run internally. The `## Non-Interactive Mode Behavior` section above ("Foreground (前景) execution for test/build commands, including commands run by Step 10's review sub-agents") covers only the latter. In every execution surface without a re-invocation guarantee (`--non-interactive`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), this dispatch must also be handled synchronously within the same turn: launch the fan-out and consume every sub-agent's result before ending the turn — do not end the turn as if waiting for a background completion notification for this dispatch itself.
+
 ### Base Branch Conflict Pre-check
 
 Run this section first, before evaluating either branch-decision paragraph below (Workflow path / light mode) — this applies to every review path (light, full, and Workflow) equally. CI runs on the branch alone and stays green even when the branch and the base have edited the same line in conflicting ways; `git merge-tree` is the only step in `/review` that inspects the base branch's own concurrent changes, so it must run first regardless of which review path follows.

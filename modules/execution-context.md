@@ -140,6 +140,29 @@ same rule present in the prompt yet violated 2/2. The wrapper position raises sa
 head, every phase) but does not remove the need for the detection/recovery side (#1323 detector
 signatures, `run-*.sh` auto-retry).
 
+**Recurrence check (2026-08-22, Issue #1443):** `background-notification-wait` recurred in the
+review phase (Issue #1271, `docs/reports/orchestration-recoveries.md` 2026-08-22 10:10 UTC entry),
+12 days after PR #1332 (this section's iteration 2 injection) merged. Re-confirmed that
+`scripts/run-review.sh` unconditionally sources `guard-prefix.sh` and prepends `GUARD_PREFIX` to
+`PROMPT` on every `claude -p` invocation (`run-review.sh:251-257`), with no bypass branch — so
+#1271's execution path did receive the guard; this is not the same coverage gap as #1130 (where
+`/spec` carried no guard text at all before iteration 2). Quantitative background: in the 12-day
+window between PR #1332's merge (2026-08-10T06:55:56Z) and #1271, roughly 51 PRs were created in
+this repository (`gh pr list --state all --search "created:2026-08-10..2026-08-22" --limit 300`),
+and this pattern recurred exactly once, recovered automatically by Tier 3 recovery
+(`agents/orchestration-recovery`, cause=`background-notification-wait`, Outcome: success) with no
+manual intervention and no lost work. **Verdict: maintain.** This residual rate is consistent with
+what this section already states — the injected paragraph is prompt-level guidance, not mechanical
+enforcement, and #1168 already demonstrated non-zero violation even when present — so a single
+Tier-3-recovered recurrence in 51 PRs does not indicate the three-tier detection/recovery design is
+insufficient. One narrow, separately-addressed gap was found during this check: `/review` Step 10
+dispatches the orchestrator's own `Task(...)` sub-agent calls, and no SKILL.md guidance explicitly
+named that dispatch as requiring foreground/synchronous handling — the existing Step 10-adjacent
+prose (`## Non-Interactive Mode Behavior`) only covered commands run *by* the review sub-agents
+themselves. See `skills/review/SKILL.md` Step 10 for the added reminder. Re-evaluation trigger:
+reassess this verdict if `background-notification-wait` recurs again in any phase, or if the
+observed rate materially exceeds this window's ~1-in-51 approximation.
+
 ## How to Reference
 
 In a skill's SKILL.md, reference this module at the step where context affects behavior:
