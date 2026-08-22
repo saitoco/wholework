@@ -85,6 +85,23 @@ GitHub GraphQL API の `PullRequestReviewDecision` enum は `APPROVED` / `CHANGE
 
 新規コメントなし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1106#issuecomment-5143666112
+- saito / MEMBER / first-class / ## Post-merge AC 充足の記録 (#1164 より) / https://github.com/saitoco/wholework/issues/1106#issuecomment-5211902937
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5212266802
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5225317536
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5229260372
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5235404218
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5246559519
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5255750257
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5296382655
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5304274257
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5310547774
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5327727617
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5341237004
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5354372384
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5369690285
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1106#issuecomment-5378422798
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1106#issuecomment-5379810748
 ## Autonomous Auto-Resolve Log
 
 - **`phase/ready` ラベル不在 (code phase Step 3)**: Issue は既に `phase/code` ラベルが付与されており `phase/ready` が存在しなかった。`reconcile-phase-state.sh code-patch 1106 --check-precondition` も `matches_expected: false` (`issue #1106 does not have phase/ready label`) を返したが、Spec ファイル (`docs/spec/issue-1106-merge-precondition-selfhost.md`) 自体は存在し内容も完備しているため「Spec 欠落」には該当しない。`git log --grep=1106` / `gh pr list --search 1106` で確認した限り実装コミットも PR も存在せず、直前の `/code` 実行が Step 4 (ラベル遷移) 直後で中断し実装未着手のまま終了した状態と判断した。非対話モードの auto-resolve ポリシーに従い、既存 Spec を正として実装を続行する。
