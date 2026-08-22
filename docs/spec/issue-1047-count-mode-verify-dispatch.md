@@ -253,26 +253,39 @@ gate は List mode step 7 と同じリテラル比較 (`AUTO_STOP_AT == "merge"`
 - Implementation Steps 1 (helper の 5 分岐) と 3 (Count mode step 6 の 3 分岐) がいずれも新規分岐ロジックのため、`tests/should-stop-at-phase.bats` に 12 ケース、`tests/auto-batch.bats` の Count mode section に 5 ケースの新規テストを追加したうえでスイート全体が PASS することを受入基準 6 に要求した。
 
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 共通ヘルパー `scripts/should-stop-at-phase.sh` の適用範囲は `scripts/run-auto-sub.sh` の bash 条件式 6 箇所に限定し、`skills/auto/SKILL.md` の LLM prose 8 箇所は対象外とした (prose を subprocess 呼び出しに置き換えても編集箇所数が減らず、実行コストと失敗面のみ増えるため)。
-- helper のインターフェースは exit code 規約 (0=stop / 1=continue / 2=usage error) とし、stdout には何も出さない。既存 predicate `_spec_is_diffless()` と同じ 0/1 規約に揃えた。
-- 未知の stop-at 値・`get-config-value.sh` 失敗はいずれも `verify` へ fallback する fail-open 設計とした。既存の直接比較が未知値で false = continue になる挙動を保存する唯一の選択であるため。
-- Count mode の verify gate はリテラル比較 (`AUTO_STOP_AT == "merge"`) を維持し、helper の phase 順序判定には広げない (List mode との挙動統一が本 Issue の目的のため)。
-- Count mode は batch checkpoint を持たないため、移植した verify orchestration ブロックから `auto-checkpoint.sh update_batch` 呼び出しをすべて除いた。
+- Spec の Implementation Steps 1-9 を記載順にそのまま実装した。逸脱なし。
+- 受入基準 6 の verify command が直列実行で 60 秒 timeout を超過することを Step 10 で検出し、`--jobs $(nproc || sysctl -n hw.logicalcpu)` を追加する形で Issue 本文と Spec の両方を修正した (詳細は Code Retrospective 参照)。
+- Phase Handoff (spec) の Deferred Items のうち `modules/detect-config-markers.md` の fallback 文言整合性を確認し、変更不要と確定した。
 
 ### Deferred Items
 
-- `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外。将来 stop-at 値を追加する際に再評価する。
-- List mode step 7 の gate を phase 順序判定へ広げる案は本 Issue の対象外 (Issue 本文で明示)。必要なら別 Issue とする。
-- `modules/detect-config-markers.md` は Steering Docs sync candidate として列挙したが、記述変更は不要の見込み。`/code` フェーズで fallback 文言が現状と整合しているか最終判断すること。
+- `skills/auto/SKILL.md` の `EFFECTIVE_STOP_AT` prose 判定 8 箇所の共通化は本 Issue のスコープ外 (spec phase から引き継ぎ、未着手のまま)。将来 stop-at 値を追加する際に再評価する。
+- List mode step 7 の gate を phase 順序判定へ広げる案は本 Issue の対象外 (spec phase から引き継ぎ、Issue 本文で明示)。必要なら別 Issue とする。
 
 ### Notes for Next Phase
 
-- CI 制約: `scripts/` と `skills/` への追加行は英語であること (`scripts/check-language-convention.py` が diff の CJK を検出。日本語は二重引用符内文字列とインラインコードスパンのみ許容)。`skills/auto/SKILL.md` 本文には半角感嘆符と 3 連バッククォートを含めないこと。`scripts/*.sh` は macOS の bash 3.2 で `bash -n` が通ること。
-- `tests/run-auto-sub.bats` は `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定しているため、実物の `should-stop-at-phase.sh` を `$MOCK_DIR` に copy しないと既存の `auto-stop-at` 系テスト 3 件が helper 不在で失敗する (Implementation Steps 5)。
-- `docs/structure.md` / `docs/ja/structure.md` の件数は `find scripts -maxdepth 1 -type f | wc -l` の値 (= 実装後 93) を使うこと。`ls scripts/ | wc -l` は `scripts/git-hooks/` を含むため一致しない。
-- 置換の等価性は Spec の「run-auto-sub.sh 置換対応表 (exhaustive)」に 6 行すべて記載済み。置換後に `AUTO_STOP_AT` の直接比較が残っていないことを確認すること (代入行と helper への引数渡しは残る)。
-- `docs/ja/workflow.md` / `docs/ja/structure.md` は `docs/translation-workflow.md` の同期義務対象。code fence 数の一致確認まで行うこと。
+- 受入基準 6 の verify command は `--jobs` 付きの並列形に修正済み (実測 37 秒、60 秒 timeout 内)。`/review`/`/verify` で再確認する際は修正後の Issue 本文記載のコマンドを使うこと。
+- full suite (`bats --jobs 18 tests/`) は 1939 件全て PASS。`should-stop-at-phase.bats` 12 件、`auto-batch.bats` の Count mode 5 件を含む。
+- `docs/structure.md`/`docs/ja/structure.md`/`docs/workflow.md`/`docs/ja/workflow.md` は本フェーズで更新済み。`docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`docs/ja/guide/xl-decomposition.md` 未更新) は本 Issue と無関係の既存差分のため未対応。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A。Implementation Steps 1-9 は Spec の仕様通りに実装した (helper 分岐仕様、run-auto-sub.sh 置換対応表、Count mode 追加ブロック仕様、新規テストケース一覧のいずれも記載通り)。
+
+### Design Gaps/Ambiguities
+
+- 受入基準 6 の verify command (`command "bats tests/should-stop-at-phase.bats tests/run-auto-sub.bats tests/auto-batch.bats"`) は直列実行で実測 65 秒かかり、`command` verify type の 60 秒 timeout を超過することを Step 10 で発見した (`modules/verify-executor.md` の Timeout Coverage Audit が明記する「`command` は full suite 実行に不向き」と同型の事例)。`--jobs $(nproc || sysctl -n hw.logicalcpu)` を追加した並列形なら実測 37 秒で収まることを確認し、Issue 本文と Spec の両方の verify command を修正した (Step 10 miscalibrated hint 扱い)。Spec 記述時点では対象テストファイルが 3 件・合計テスト数が確定していなかったため、この所要時間は実装完了まで具体的に見積もれなかった。
+
+### Rework
+
+- N/A。
+
+### Deferred Items 引き継ぎの解決
+
+- Phase Handoff (spec) の Deferred Items 3 件目「`modules/detect-config-markers.md` の fallback 文言が現状と整合しているか `/code` で最終判断」: 整合を確認した。`detect-config-markers.md` は `auto-stop-at` の fallback を `"verify"` (フルパイプライン) と明記しており、`scripts/should-stop-at-phase.sh` の fallback 実装 (未知値・取得失敗いずれも `verify` 相当の順序 5 にフォールバック) と一致する。記述変更は不要と確定した。
