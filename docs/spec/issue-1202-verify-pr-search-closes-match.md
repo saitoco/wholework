@@ -125,6 +125,7 @@
 #### verify
 - Pre-merge 3 件すべて PASS。実装記述が negative case (「候補ゼロを含め一致がなければ `PR_NUMBER` は空 = patch route」) を明示しており、AC3 の「実装またはテストで確認できる」を実装側で満たす
 - **本 Issue が直した経路を、本 verify 自身が実行している**。Step 2 の PR 検索は今回 patch route (PR なし) で走り、候補なし → `PR_NUMBER` 空 → `BASE_BRANCH=main` に解決された。修正後の挙動が実地で 1 回通ったことになるが、post-merge observation AC が求める「無関係な PR がマッチする状況での観察」ではないため、AC の判定材料には使えない
+- **2026-08-23 `/auto --batch` (session `82358-1787407637`) の再 `/verify` 実行で post-merge observation AC が PASS 判定された**。本 Issue #1202 自身の Step 2 で `gh pr list --search "closes #1202"` が実際に無関係な PR #1311 (closes #1300) を返したが、`gh-extract-issue-from-pr.sh` による issue_number 突き合わせで正しく除外され、PR_NUMBER は空のまま patch 経路として解決された。同一セッション内の他 7 件の `/verify` 実行 (patch route 4件・pr route 3件) でも突き合わせが一貫して正しく機能し、無関係な PR の誤採用は一度も発生しなかった。これで「候補ゼロ」ケースに加え「候補あり・不一致」ケースの両方が実地で確認できた
 
 ### Improvement Proposals
 
