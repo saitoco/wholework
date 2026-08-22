@@ -1,0 +1,7 @@
+# Issue batch-35820-1787388297: L3 Session Retrospective Bridge
+
+## Auto Retrospective
+
+### Improvement Proposals
+- **Session pointer misattribution when a `/verify` dispatch's Step 1 ordering is not followed exactly** (Issue #1112 in this session): `persist_auto_session_pointer` must run before `EnterWorktree`, since `source`-based calls are blocked inside a worktree session and there is no way to correct the omission from inside the worktree without an extra Exit/re-Enter round trip. Consider making this ordering constraint more prominent in `skills/verify/SKILL.md` Step 1 (e.g., an explicit warning callout), or providing a non-`source` wrapper for `persist_auto_session_pointer`/`restore_auto_session_pointer` that works inside a worktree, so a mid-run recovery does not require exiting the worktree.
+- **`opportunistic-search.sh` (skill=verify) candidate population appears structurally over-broad**: across 7 `/verify` invocations in this session, ~30 candidates were returned each time (network of ~70+ underlying candidates truncated to 30 by the facts-based cap) and all were judged SKIP as out of each specific run's observation scope. Worth investigating whether the candidate population for `skill=verify` could be pre-filtered more aggressively (e.g., by excluding candidates whose target Issue references a different repository, an XL-only scenario, or literal user-confirmation language) to reduce the near-100% SKIP rate observed.
