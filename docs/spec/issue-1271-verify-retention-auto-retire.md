@@ -228,3 +228,72 @@ Implementation Step 8 が新規分岐ロジック (Level 3 × tier のルーテ�
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — verify command 2 件の修復 (常時 PASS の `grep -n "Level 3" ...` → `section_contains ... "auto-retire"`、常時 UNCERTAIN の `ls tests/` → `rubric`)、post-merge 条件 3 件への `session=next` 付与、および「`manual` の扱い / 追跡ラベル / config key 名は `/spec` へ意図的に委譲」の記録 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5378996458
+
+## issue retrospective
+
+(`/issue` フェーズの retrospective コメントから転記。verify command の原文マーカーは、Spec 内で実マーカーとして解釈されないよう記法を崩して引用している)
+
+### 修正内容
+
+前回の triage AC audit コメント (2026-08-08、`saito`、first-class) で指摘された verify command の不具合 2 件を修正した:
+
+1. **常時 PASS バグ**: `grep -n "Level 3" skills/audit/SKILL.md` 形式の verify command は `skills/audit/SKILL.md` が現時点で既に "Level 3" を含むため実装 0 行で PASS してしまう。`section_contains "skills/audit/SKILL.md" "Retire-Proposal Comment Posting" "auto-retire"` へ変更 (指摘コメントの修復案どおり)。加えて、修正前の verify command 自体が `modules/verify-executor.md` の `grep "pattern" "path"` 構文 (2 引数、フラグなし) に反していた点も同時に是正した。
+2. **常時 UNCERTAIN バグ**: `ls tests/` 形式は `ls` が未定義のコマンド名で恒久的に UNCERTAIN になる。テスト対象ファイルが実装時点で未確定 (`tests/audit-retention.bats` への追加か新規ファイルかは Spec が判断) なため、存在しないファイルを前提とする `file_contains` は使わず、`rubric` のみで置き換えた。
+
+### session=next の付与
+
+`skills/audit/SKILL.md` を変更対象とし、post-merge 条件 3 件がいずれも `verify-type: observation` だったため、`scripts/check-skill-change-observation-ac.sh` が `session=next` の欠落を検出 (exit 2)。3 件すべてに `session=next` を付与した。
+
+### Ambiguity Detection
+
+Background / 対応方針セクション内の「`manual` を含めるか否か」「追跡用ラベルの要否」「config key 名」は、いずれも Issue 本文で既に「実装時に判断し Spec に記録する」と明示的に委譲されている。`/issue` (What) / `/spec` (How) の責務境界に沿った意図的な委譲と判断し、追加のクラリフィケーションは行わなかった。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文が「実装時に判断する」と明示的に委譲した論点が 3 件あり、`/issue` フェーズ側でも意図的な委譲として記録されていた。委譲の意図が両フェーズで一致していたため `/spec` 側の判断が宙に浮かず、Notes へ判断 1-3 として直接書き下せた。委譲を Issue 本文と retrospective の両方に書き残す運用は機能している
+- Issue 本文 Notes の実装参照 1 件 (`scripts/scan-pending-ac.sh:134` の緩い verify-type 抽出パターン) が起票後の修正で陳腐化していた。Issue 本文の「対象範囲外」記述はそのまま残っていたため、grep で実物を確認しなければ `/code` が古い前提を引き継ぐ経路があった。Issue 本文が引用する行番号付き実装参照は、対象範囲外と明記されていても spec フェーズで実在確認する価値がある
+- `docs/stats/2026-06-27.md:112` に「Level 2 の 130 件一括コメント投稿は unattended 実行の safety scope を超える」という過去判断が記録されていた。同種の一括処理を扱う本 Issue で上限を設けない判断をするにあたり、この記録が対比材料として直接使えた。`docs/stats/` の過去レポートは数値だけでなく判断の記録としても再利用価値がある
+
+### Judgment rationale
+
+- 受入条件 6 が bats による 3 ケース検証を要求している時点で、Level 3 の判断ロジックを LLM prose のままにする選択肢は消える。「テスト可能性の要求が実装形態を決める」という制約の向きを最初に確定させたことで、スクリプト切り出しの是非を議論せずに済んだ
+- `retention-auto-retire.enabled` 設定キーを追加しない判断は、`recoveries-auto-fire` との差分 (あちらは新規 Issue を作成する = matrix が L3 限定とする行に該当、こちらは可逆な body 編集のみ) を見て決めた。「先例と同型に見えるが、ゲートが必要だった理由が異なる」ケースを、先例の表面形ではなく成立理由まで遡って比較したのが分岐点
+- 対象 verify-type から `auto` を外した理由は `manual` とは別系統である。`manual` は「人間が見ると明示的に判断された」ため、`auto` は「1 回の `/verify` で満たせる = retire すると回復可能な検証機会を捨てる」ため。Issue 本文は `manual` の扱いだけを論点として提示していたが、`auto` も同じ判断軸で明示的に除外する必要があった
+
+### Uncertainty resolution
+
+- `section_contains` の判定範囲 (h4 見出しから次の h4 以上の見出しまで) を `modules/verify-executor.md:70` で確認し、`auto-retire` の語を置くべき範囲を Implementation Step 6 に確定させた。あわせて `grep -c "auto-retire" skills/audit/SKILL.md` が 0 であることを確認し、受入条件 1 が常時 PASS にならないことを裏取りした
+- `### Post-merge` 節が空になったときに `scripts/check-ac-checkbox-format.sh` の形式ガードへ抵触しないかは、awk 本体を読んで「`^- ` で始まり `^- \[[ xX]\]` に合致しない行のみを違反とする」「任意の `^### ` 見出しで `in_section` が 0 に戻る」の 2 点を確認して解決した。Issue #706 の実 body でも同形式が使われていることを `gh issue view` で併せて確認している
+- 本 Spec の新規実装が使う verify-type 抽出パターンは、`modules/verify-classifier.md` § Tag Extraction Rule と 2 つの参照実装 (`scripts/collect-verify-retention-stats.sh:159-161`、`scripts/scan-pending-ac.sh:181`) を突き合わせて HTML コメント限定形に確定した
+
+### 新規テストケース要件
+
+Implementation Step 8 が新規分岐ロジックを導入するため、受入条件 7 (`command "bats tests/"`) は既存スイート PASS に加えて新規テストケースの追加を伴う。必須 3 ケース (Level 3 × L2/L3 → retire、Level 3 × L1 → 提案のみ、Level 2 以下 → retire しない) + 追加 6 ケース (verify-type 限定、fenced code block 除外、冪等性、`transitioned=false`、fail-closed、引数バリデーション) を `tests/audit-retention.bats` へ追加する。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- Level 3 の判断ロジックを `scripts/apply-verify-retire.sh` へ切り出す。受入条件 6 が bats による 3 ケース検証を求めており、LLM prose では充足できないため。`scripts/apply-run-fact-match.sh` と同型 (決定的な autonomy-tier ゲート / `action=` 標準出力 / `--dry-run` / fail-open / `WHOLEWORK_SCRIPT_DIR` モック) に揃える
+- 自動 retire の対象は verify-type が `observation` / `opportunistic` の条件に限定する。`manual` は「人間が見ると明示的に判断された」ため、`auto` は「1 回の `/verify` で満たせる条件を捨てることになる」ため、いずれも Level 3 の提案動作に留める
+- ゲートは autonomy tier のみ。`retention-auto-retire.enabled` のような設定キーは追加しない (`recoveries-auto-fire` が追加キーを持つのは新規 Issue 作成を伴うためで、本機能は可逆な body 編集のみ)
+- `auto-retired` 等の追跡ラベルは追加しない。`stale-verify` が Level 2 で付与済みであり、retire の事実は `<!-- wholework-event: type=verify-ac-retired ... -->` marker コメントで機械可読に記録される
+- 依存コマンド失敗時の方向を非対称にする。`compute-escalation-level.sh` 失敗は fail-closed (retire しない)、`gh` 系の失敗は fail-open (`/audit` 全体を中断しない)
+
+### Deferred Items
+
+- `scripts/collect-verify-path-done-rate.sh` (Section 12) の done 率に「検証によらない done」が混入する相互作用。Issue 本文の受入条件を変更しない方針のため本 Issue では対処せず、`type=verify-ac-retired` marker で後から除外可能な形に留める。`/verify` フェーズの Improvement Proposal 候補
+- Issue 本文 Notes が指摘する `/audit stats --retention` の Manual waiting 計数への影響 (Issue 本文自身が「本 Issue の対象範囲外」と明記) — なお当該指摘の前提である `scripts/scan-pending-ac.sh` の緩い抽出パターンは既に修正済みで、指摘自体が陳腐化している (Spec の Notes 参照)
+- 1 回の実行あたりの retire 件数上限。本 Issue の目的と矛盾するため設けないが、実運用で問題が出た場合は別 Issue で再評価する
+- `docs/stats/2026-06-27.md:112` が記録する「Level 2 の 130 件一括投稿は safety scope 超過」という過去判断。Level 2 側の動作は本 Issue では変更しない
+
+### Notes for Next Phase
+
+- 受入条件 1 の `section_contains` は h4 見出し `#### Retire-Proposal Comment Posting` から次の h4 以上の見出し (現状 `### Step 4: Save`) の直前までを判定範囲とする。`auto-retire` の語をこの範囲内に置くこと。frontmatter の `description` に書いても PASS しない
+- verify-type の抽出は必ず HTML コメント限定パターン (`/<!--[ \t]*verify-type:[ \t]*[a-zA-Z_]+/`) を使う。Issue 本文 Notes が引用する `scripts/scan-pending-ac.sh:134` の緩いパターンの記述は陳腐化しており、現在の同スクリプト 181 行目は既に HTML コメント限定形になっている
+- body 書き換えでは `in_fence` を必ず追跡する (`scripts/check-pre-merge-ac.sh:59-61` が参照実装)。fenced code block 内のサンプル `- [ ]` 行を retire 対象にしてはならない
+- `gh-issue-edit.sh` の失敗時は marker コメント投稿とラベル遷移を実行しないこと。着地していない retire を主張する記録を残さないための順序ゲート
+- `tests/audit-retention.bats` は現在 `WHOLEWORK_SCRIPT_DIR` を使っていない。新規テストの `setup` 内でのみ export し、既存 16 ケースに影響を与えないこと
