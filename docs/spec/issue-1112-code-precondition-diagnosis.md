@@ -55,6 +55,9 @@
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。実装調査 (`_precondition_code_common()`) の結果、当初 Background の「Spec ファイル存在は判定に使われていない」という記述が不正確と判明し対応方針を更新したこと、および 2 回目・3 回目の再発から Purpose/AC に案 D (観測値のその場キャプチャ) を追加したことを報告 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5369204332 |
 | saito | MEMBER | first-class | AC Verify Command Integrity Audit — Pre-merge AC3 の rubric が `modules/phase-state.md` の既存記述で常時 PASS してしまう懸念を指摘し、絞り込みまたは AC1/AC2 への統合を提案 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5369246125 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1112#issuecomment-5369638133
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1112#issuecomment-5369691149
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1112#issuecomment-5378423104
 ## Code Retrospective
 
 ### Deviations from Design
