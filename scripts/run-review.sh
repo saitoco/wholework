@@ -135,6 +135,7 @@ _resolve_preview_url_command() {
   local _resolved
   _resolved=$("$SCRIPT_DIR/resolve-preview-env.sh" url "$PR_NUMBER") || return 0
   [[ -n "$_resolved" ]] && { PREVIEW_URL="$_resolved"; export PREVIEW_URL; }
+  return 0
 }
 
 # Resolve PREVIEW_BASIC_USER/PREVIEW_BASIC_PASS from a project-declared

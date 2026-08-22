@@ -15,7 +15,8 @@
 #     - dependent command times out (30s), exits non-zero, or produces empty
 #       output
 #     - output exceeds 2048 chars
-#     - output does not match ^https?://[^[:space:]/]+ (not an http(s) URL)
+#     - output does not match ^https?://[^[:space:]/]+[^[:space:]]*$ (not an
+#       http(s) URL, or trailing non-whitespace content after a valid URL)
 #   Argument error (unknown mode, non-numeric pr-number): exit 1.
 #
 # bash 3.2+ compatible (no mapfile/associative arrays).
@@ -41,7 +42,7 @@ if [ "$MODE" != "url" ]; then
   exit 1
 fi
 
-if ! echo "$PR_NUMBER" | grep -qE '^[0-9]+$'; then
+if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   echo "Error: PR number must be a positive integer, got: $PR_NUMBER" >&2
   exit 1
 fi
@@ -79,7 +80,7 @@ else
   wait "$_cmd_pid" 2>/dev/null && _resolved_status=0 || _resolved_status=$?
   kill "$_watchdog_pid" 2>/dev/null || true
   wait "$_watchdog_pid" 2>/dev/null || true
-  _resolved=$(cat "$_tmpout" 2>/dev/null)
+  _resolved=$(cat "$_tmpout" 2>/dev/null) || true
   rm -f "$_tmpout"
 fi
 
@@ -88,7 +89,13 @@ if [[ "$_resolved_status" -ne 0 ]]; then
   exit 0
 fi
 
-_resolved=$(printf '%s' "$_resolved" | head -n 1 | tr -d '\r')
+# Pure bash first-line extraction (no pipe) — a pipe here (e.g. `printf ... |
+# head -n 1`) risks SIGPIPE against a large multi-line `_resolved`: `head`
+# exits after line 1, `printf` is killed by SIGPIPE, and `pipefail` (set
+# above) propagates that as a nonzero status that aborts the script under
+# `set -e` before a perfectly valid first line is ever read.
+_resolved="${_resolved%%$'\n'*}"
+_resolved="${_resolved//$'\r'/}"
 _resolved_trimmed="${_resolved#"${_resolved%%[![:space:]]*}"}"
 _resolved_trimmed="${_resolved_trimmed%"${_resolved_trimmed##*[![:space:]]}"}"
 
@@ -100,7 +107,7 @@ if [[ "${#_resolved_trimmed}" -gt 2048 ]]; then
   echo "Warning: preview-url-command output exceeds 2048 chars; falling back to Deployments API polling" >&2
   exit 0
 fi
-if ! [[ "$_resolved_trimmed" =~ ^https?://[^[:space:]/]+ ]]; then
+if ! [[ "$_resolved_trimmed" =~ ^https?://[^[:space:]/]+[^[:space:]]*$ ]]; then
   echo "Warning: preview-url-command output is not an http(s) URL; falling back to Deployments API polling" >&2
   exit 0
 fi
