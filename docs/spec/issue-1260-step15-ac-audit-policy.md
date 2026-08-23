@@ -142,8 +142,9 @@ Nothing to note — rubric 3件・section_contains 1件とも安全モードで�
 - pre-merge AC ゲートで 4 件チェック済み・`review_incomplete_fallback` なしを確認し、追加確認なしで squash merge。conflict・recovery ともになし
 
 #### verify
-- Pre-merge 4 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- 初回 (2026-08-08): Pre-merge 4 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
 - 本 Issue はバッチ内で起票 → triage → 実装 → 着地まで一周した 2 件目 (#1255 に次ぐ)。起票時の懸念 (XS 経路の穴) が Spec で明示的に解消されており、**起票時の記述が設計判断の入力として実際に機能した**ことが確認できる
+- 再走 (2026-08-23): `event=auto-run` 発火を確認し PASS 判定。`docs/spec/issue-1301-extend-spec-watchdog-timeout.md` (2026-08-09、マージ翌日) に、`/issue` Step 15 が起票側 (`/verify 1289` の L3 retrospective) が書いた自己生成 AC の不備2件を検出し、Issue body を自動編集せずコメントで非破壊報告、後続の `/spec` フェーズが引き取って修正した実例を確認。#1260 で確立した「一律非破壊 + repair handoff」方針が実運用で機能していることを確認できた
 
 ### Improvement Proposals
 
