@@ -86,6 +86,10 @@ Implementation Steps はいずれも `modules/size-workflow-table.md`・`skills/
 - saito / MEMBER / first-class / Triage AC audit: `section_contains` の heading 引数から先頭 `###` を除去する修復案 (AC1・AC2 に適用済み、Notes 参照) / https://github.com/saitoco/wholework/issues/1241#issuecomment-5373071696
 - No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1241#issuecomment-5373613996
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1241#issuecomment-5375265508
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1241#issuecomment-5381170661
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1241#issuecomment-5384990022
 ## Code Retrospective
 
 ### Deviations from Design
