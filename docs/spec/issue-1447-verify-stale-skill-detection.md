@@ -85,4 +85,4 @@ Step 18 の 2-axis 再評価で、変更ファイル数 (2件) に加えて「�
 
 ## Consumed Comments
 
-No new comments since last phase.
+- saito / MEMBER / first-class / Size Re-evaluation (S→M, patch→pr route)、AC2 の verify command を `github_check "gh pr checks" "Run bats tests"` 形式へ修正 (Spec Notes に既に反映済み) / https://github.com/saitoco/wholework/issues/1447#issuecomment-5383520575
