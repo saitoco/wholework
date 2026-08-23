@@ -97,3 +97,22 @@
 ### Notes for Next Phase
 - `/verify` は AC3 (CI job `Run bats tests` の conclusion) を確認すること。ローカルでは `bats --jobs 18 tests/` (1904 件) が全件 PASS 済み
 - `gh-label-transition.sh` をラッパー経由で呼ぶと auto mode classifier に拒否される事象を観測した (直接 `gh issue edit --remove-label/--add-label` で回避)。再発する場合は別 Issue で調査が必要かもしれない
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特筆事項なし。#719 の既存テスト再利用による追加実装ゼロという判断は、`/spec 1167` の先行調査を正しく引き継いでいた。
+
+#### code
+- Code Retrospective に記録済みの `gh-label-transition.sh` ラッパー経由呼び出しの auto mode classifier 拒否は、原因未特定・単発事象であり、本フェーズでは新規 Issue 起票の閾値 (再発性シグナル 2件以上) に達していない。直接 `gh issue edit` での回避が機能しており実害もない。
+
+#### merge
+- 該当なし (patch route のため PR マージなし。`(closes #1245)` により直接コミットで自動クローズ)。
+
+#### verify
+- FAIL・UNCERTAIN なし。Pre-merge 5件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は、`scripts/collect-verify-retention-stats.sh` の実装確認 (`phase/verify` ラベル母集団のみが Manual waiting 対象) と #708/#719 双方の `phase/done` 遷移実測により PASS。
+
+### Improvement Proposals
+- N/A — `gh-label-transition.sh` ラッパー拒否事象は原因未特定・単発のため Tier 3 (one-time memo) 相当。既に Code Retrospective に記録済みで、再発時の調査材料として十分。
