@@ -83,6 +83,51 @@ Step 18 の 2-axis 再評価で、変更ファイル数 (2件) に加えて「�
 
 `tests/verify.bats` に Step 1 の自己整合性チェック (マーカー同期・配置) と Step 9 の警告差し込みを検証する新規テストケース (計3件) を追加し、既存スイートと合わせて全PASSすることを Implementation Step 4 で要求した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — implementation followed Implementation Steps 1-4 as written, with no reordering, omission, or consolidation of steps.
+
+### Design Gaps/Ambiguities
+
+N/A — the Spec's `### 自己参照チェックの正しさに関する重要な実装上の注意` note already flagged the exact pitfall (re-fetching the marker value with a new tool call would turn the comparison into a tautology) before implementation started, so no gap was discovered during coding.
+
+### Rework
+
+N/A — no rework occurred.
+
+### Test Verification
+
+Confirmed pre-implementation FAIL for 3 new tests (stashed `skills/verify/SKILL.md` only, ran `bats tests/verify.bats --filter "Issue #1447"`, restored via `git stash pop`). Full suite (`bats --jobs 18 tests/`) passed at 2010/2010 after restoring the implementation.
+
 ## Consumed Comments
 
-No new comments since last phase.
+- saito / MEMBER / first-class / Size Re-evaluation (S→M, patch→pr route)、AC2 の verify command を `github_check "gh pr checks" "Run bats tests"` 形式へ修正 (Spec Notes に既に反映済み) / https://github.com/saitoco/wholework/issues/1447#issuecomment-5383520575
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the PR diff matches the Spec's Implementation Steps 1-4 exactly (marker placement, Step 1 self-consistency check ordering before the dirty-file classifier, Step 9 warning insertion point). No structural divergence found.
+
+### Recurring issues
+
+Nothing to note — this is the first PR for this Issue; no repeated issue category surfaced during this review pass.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — both Pre-merge conditions verified cleanly. AC1's `rubric` command judged PASS without ambiguity because the Spec's own Notes section already documented and accepted the line-count heuristic's known limitation (same-line-count edits are undetectable), so the grader had explicit context for why this approximation satisfies the Issue's Purpose (imperfect detection is explicitly acceptable). AC2's `github_check "gh pr checks" "Run bats tests"` matched cleanly against this PR's own CI run (Size was already re-evaluated S→M / patch→pr in the code phase, so the verify command's pr-route form was already correct at review time — no further adjustment needed).
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Both Pre-merge AC (rubric, `github_check`) verified PASS in Step 8; Issue checkboxes updated to `[x]` for both.
+- `review-light` (light mode, Size M) ran all 4 perspectives in one agent and found no MUST/SHOULD/CONSIDER issues — no fix cycle was needed.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- `/merge` can proceed directly — no unresolved review issues, all CI green, both Pre-merge AC checked.

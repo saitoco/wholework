@@ -8,6 +8,8 @@ allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git 
 
 # Acceptance Test
 
+<!-- skill-body-lines: 1057 -->
+
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
 If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
@@ -21,6 +23,13 @@ Always interactive — runs in the caller's context (no wrapper script). `AskUse
 **Do not use compound commands (`&&`, `|`).**
 
 ### Step 1: Check Working Directory Safety
+
+**Self-consistency check (stale skill body detection):** Before anything else in this step, compare the cached instruction text against the on-disk file to detect whether this session is executing a stale, session-cached copy of this SKILL.md (see Issue #1447 — `/verify` has no wrapper, so its body can be cached for an entire conversation session even after a later `/code` merge changes it on disk).
+
+- **Cached side (left-hand value)**: read the numeric value from the `<!-- skill-body-lines: N -->` marker in the instruction text you are *currently executing* — transcribe it directly from what is already in context. **Do not** re-fetch this value with a new Read/Grep/Bash call: doing so would always return the current on-disk value for both sides, turning the comparison into a tautology and silently disabling stale detection.
+- **Disk side (right-hand value)**: run `wc -l < "${CLAUDE_PLUGIN_ROOT}/skills/verify/SKILL.md"` to get the live line count.
+- **Mismatch**: set `STALE_SKILL_BODY_DETECTED=true`, retain both values (cached N, on-disk M), and output a terminal warning: "Warning: skills/verify/SKILL.md may be stale in this session (cached N lines / on-disk M lines). The instructions currently executing may not reflect the latest merged content. Recommend re-running `/verify $NUMBER` in a new conversation session."
+- **Match**: set `STALE_SKILL_BODY_DETECTED=false` and continue silently (no output).
 
 Run the dirty file classifier:
 
@@ -476,11 +485,14 @@ Do not include checkbox format in the comment body. Do not duplicate Issue body 
 
 **Executability marker lines (when Step 8b recorded judgments):** If `EXECUTABILITY_RECORDS` (built in Step 8b) is non-empty, generate one marker line per record by running `${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh format $NUMBER <ac_index> <executable> [reason] [capability=<key>|detail=<text>]` for each entry, and place all resulting lines at the very top of the comment body, before the `## Acceptance Test Results` heading. If `EXECUTABILITY_RECORDS` is empty (no manual post-merge condition was judged in this run), add no marker lines. Do not post these markers as a separate comment — they are embedded in this Step's single existing comment, per `modules/l0-surfaces.md` § Machine-Readable Event Marker (`type=verify-executability`).
 
+**Stale skill body warning line (when Step 1 detected `STALE_SKILL_BODY_DETECTED=true`):** insert one line of plain, visible Markdown text (not an HTML comment — this must be readable in unattended/non-interactive runs that never observe terminal output) directly before the `## Acceptance Test Results` heading, after any executability marker lines: "⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/verify/SKILL.md` (cached N lines / on-disk M lines) — consider re-running `/verify $NUMBER` in a new conversation session." If `STALE_SKILL_BODY_DETECTED=false`, add no such line.
+
 Use the following format for the comment body:
 
 ```
 <!-- wholework-event: type=verify-executability phase=verify issue=<N> ac=<index> executable=<true|false> [reason=<slug>] [capability=<key>] [detail="<text>"] -->
 (one marker line per EXECUTABILITY_RECORDS entry — omit this block entirely when EXECUTABILITY_RECORDS is empty)
+(stale skill body warning line here, plain Markdown text — omit entirely when STALE_SKILL_BODY_DETECTED=false)
 
 ## Acceptance Test Results
 

@@ -49,6 +49,12 @@ step9_section() {
     awk '/^### Step 9: /{found=1} /^### Step / && !/Step 9: /{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### Step 1: Check Working Directory Safety" section from SKILL.md.
+# The section ends at the next level-3 (### Step ) heading.
+step1_section() {
+    awk '/^### Step 1: /{found=1} /^### Step / && !/Step 1: /{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
     guard_line=$(step2_section | grep -n -F "detect-foreign-worktree.sh" | head -1 | cut -d: -f1)
     checkout_line=$(step2_section | grep -n -F 'git checkout "${BASE_BRANCH}"' | head -1 | cut -d: -f1)
@@ -179,4 +185,24 @@ step9_section() {
 @test "Step 9: embeds executability markers via verify-executability-marker.sh, no new comment" {
     step9_section | grep -q -F "verify-executability-marker.sh"
     step9_section | grep -q -F "Do not post these markers as a separate comment"
+}
+
+@test "skill-body-lines marker stays in sync with wc -l (Issue #1447)" {
+    marker_value=$(grep "skill-body-lines:" "$SKILL_FILE" | head -1 | grep -o '[0-9]\+')
+    actual_lines=$(wc -l < "$SKILL_FILE")
+    [ -n "$marker_value" ]
+    [ "$marker_value" -eq "$actual_lines" ]
+}
+
+@test "Step 1: self-consistency check block precedes check-verify-dirty.sh invocation (Issue #1447)" {
+    self_check_line=$(step1_section | grep -n -F "Self-consistency check" | head -1 | cut -d: -f1)
+    dirty_classifier_line=$(step1_section | grep -n -F "check-verify-dirty.sh" | head -1 | cut -d: -f1)
+    [ -n "$self_check_line" ]
+    [ -n "$dirty_classifier_line" ]
+    [ "$self_check_line" -lt "$dirty_classifier_line" ]
+}
+
+@test "Step 9: inserts stale skill body warning as visible Markdown when STALE_SKILL_BODY_DETECTED is true (Issue #1447)" {
+    step9_section | grep -q -F "STALE_SKILL_BODY_DETECTED"
+    step9_section | grep -q -F "stale skill body warning"
 }
