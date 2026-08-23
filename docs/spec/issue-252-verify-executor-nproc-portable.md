@@ -82,3 +82,5 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=252 --> / https://github.com/saitoco/wholework/issues/252#issuecomment-5300661174
 - saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=252 ac=3 exec / https://github.com/saitoco/wholework/issues/252#issuecomment-5300665945
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=252 --> / https://github.com/saitoco/wholework/issues/252#issuecomment-5305212642
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=252 ac=3 exec / https://github.com/saitoco/wholework/issues/252#issuecomment-5305221926
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=252 --> / https://github.com/saitoco/wholework/issues/252#issuecomment-5383438018
