@@ -229,6 +229,9 @@ Implementation Step 8 が新規分岐ロジック (Level 3 × tier のルーテ�
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — verify command 2 件の修復 (常時 PASS の `grep -n "Level 3" ...` → `section_contains ... "auto-retire"`、常時 UNCERTAIN の `ls tests/` → `rubric`)、post-merge 条件 3 件への `session=next` 付与、および「`manual` の扱い / 追跡ラベル / config key 名は `/spec` へ意図的に委譲」の記録 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5378996458
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1271#issuecomment-5379723282
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5379759357
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5384000484
 ## issue retrospective
 
 (`/issue` フェーズの retrospective コメントから転記。verify command の原文マーカーは、Spec 内で実マーカーとして解釈されないよう記法を崩して引用している)
