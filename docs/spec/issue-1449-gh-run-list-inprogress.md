@@ -82,19 +82,17 @@
 - None.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Kept the rubric AC verdict as PASS: the AC's wording only asks whether the stale `--json conclusion --jq '.[0].conclusion'` pattern was replaced with the status-synthesizing form, not whether the replacement's internal quote-escaping is syntactically correct. Treated the escaping defect as a separate code-review finding rather than an AC failure.
-- Fixed all MUST/SHOULD findings before posting the Response Summary rather than deferring any to a follow-up Issue: the 9 unescaped-quote instances are the same defect class and low-risk to fix uniformly (`replace_all` on 2 exact substrings covered 9 of 9 locations across 2 files), and the CI-blocking `Language Convention check` failure required a fix regardless.
-- Resolved the CI blocker by translating 2 "修復案" labels to "Suggested fix" (English) within `skill-dev-verify-audit.md`'s Comment Format Template block only — not the file's other ~10 pre-existing Japanese occurrences, which remain untouched and out of scope.
+- Squash-merged PR #1450 to main with no conflicts (mergeable=true, all CI green, review approved) — no rebase or conflict resolution was needed.
+- Pre-merge AC gate confirmed the rubric AC was already `[x]` and review completion was organic (not fallback-origin), so no override marker was needed.
 
 ### Deferred Items
-- The `check-language-convention.py` fence-tracking limitation itself (loses state when a fenced code block's opening marker falls outside the diff's default 3-line context) was not fixed — worked around at the call-site instead. See review retrospective below for a follow-up proposal.
+- None — the two candidate follow-up Issues noted in the review retrospective below (Known Pitfalls table addition for nested-quote escaping; `check-language-convention.py` fence-tracking limitation) are left for `/verify` to aggregate per this skill's convention.
 
 ### Notes for Next Phase
-- `/merge` should find the PR clean: all 15 CI checks SUCCESS, rubric AC already `[x]`, no other Pre-merge conditions.
-- The Spec's Design Gaps/Ambiguities note (above) was corrected in this phase — it previously rationalized the unescaped form as intentional for table cells, which the PR's own diff contradicted.
+- `/verify` should find no post-merge acceptance conditions (Spec's Verification section states "なし" for Post-merge).
 
 ## review retrospective
 
