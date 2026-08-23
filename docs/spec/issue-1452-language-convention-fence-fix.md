@@ -76,3 +76,29 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (Autonomous Auto-Resolve Log): `/issue` フェーズでのコンテキスト拡大アプローチ採用の判断根拠を記録。Issue 本文の `## Auto-Resolved Ambiguity Points` に既に反映済みで追加対応不要。 https://github.com/saitoco/wholework/issues/1452#issuecomment-5385872333
 - saito / MEMBER / first-class / Triage AC audit: Pre-merge AC3 (`command "bats tests/check-language-convention.bats"`) が新規テスト追加なしでも常時 PASS するリスク (Pattern 2) を指摘、`bats --filter` への絞り込みを提案。本 Spec の `## Notes` の通り、`--filter` 単体は0件マッチ時に exit 0 となるリスクがあるため不採用とし、`grep` (存在確認) + フルスイート実行の2段構えパターンへ具体化して Issue 本文にも反映済み。 https://github.com/saitoco/wholework/issues/1452#issuecomment-5385886533
+- (code phase) 新規コメントなし (cutoff: 2026-08-23T12:17:59Z、`phase/ready` ラベル付与時点)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1・2 とも Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- Step 9 の Behavioral Change Detection が、`tests/visual-diff-adapter.bats` 内のコメント (`.github/workflows/test.yml` は Node ランタイムを提供する、という無関係な文脈での言及) を検出してフルスイート実行 (`bats --jobs 18 tests/`, 全2011テスト) を要求した。実際には `language-convention` ジョブとは無関係な参照だったが、Behavioral Change Detection のロジックはコメント行と実コード参照を区別しないため、この判定通りフルスイートを実行した (全件 PASS、10分の Bash tool ceiling 内で完走)。Spec 自体には影響なし。
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 記載通り、`.github/workflows/test.yml` の2箇所の `git diff` に `-U100000` を追加。スクリプト自体 (`scripts/check-language-convention.py`) は変更しない方針を踏襲。
+- 新規回帰テストは「exit 0 になるべき」ではなく「hunk 外に開始マーカーがある場合は現状通り exit 1 (誤検知) になる」ことを固定化する目的のテストとして追加 (Spec Implementation Step 2 の意図通り)。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Behavioral Change Detection がフルスイート実行 (全2011テスト) を要求したが、これは `tests/visual-diff-adapter.bats` のコメント言及による広めの判定であり、実装自体への影響はない。`/review` で再確認する場合も同様に無関係な参照として扱ってよい。
+- Pre-merge AC は4件すべて PASS 済み、Issue チェックボックスも更新済み。Post-merge AC は「なし」。
