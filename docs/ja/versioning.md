@@ -120,7 +120,7 @@ Claude Code の応答フロー:
 
 | # | ゲート | 確認方法 |
 |---|-------|---------|
-| 1 | base branch の CI が緑 | `gh run list --branch main --workflow Test --limit 10 --json conclusion` — `failure` がないこと |
+| 1 | base branch の CI が緑 | `gh run list --branch main --workflow Test --limit 10 --json conclusion,status` — `failure` がなく、`status` がすべて `completed` であること (実行中の run を緑と誤認しないため) |
 | 2 | 未リリースの成果を抱えた open PR がない | `gh pr list --state open` — 空、またはレビュー/CI 待ちの PR のみ |
 | 3 | 既知のテスト FAIL・リグレッションがない | 出荷面で再現する failure を記述した open Issue が解消済み、または理由を記録した上で明示的に見送られていること |
 | 4 | ドキュメント drift チェックが通る | 下記 4 項目を参照 |
