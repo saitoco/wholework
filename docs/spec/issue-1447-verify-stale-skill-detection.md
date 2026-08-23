@@ -105,18 +105,29 @@ Confirmed pre-implementation FAIL for 3 new tests (stashed `skills/verify/SKILL.
 
 - saito / MEMBER / first-class / Size Re-evaluation (S→M, patch→pr route)、AC2 の verify command を `github_check "gh pr checks" "Run bats tests"` 形式へ修正 (Spec Notes に既に反映済み) / https://github.com/saitoco/wholework/issues/1447#issuecomment-5383520575
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the PR diff matches the Spec's Implementation Steps 1-4 exactly (marker placement, Step 1 self-consistency check ordering before the dirty-file classifier, Step 9 warning insertion point). No structural divergence found.
+
+### Recurring issues
+
+Nothing to note — this is the first PR for this Issue; no repeated issue category surfaced during this review pass.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — both Pre-merge conditions verified cleanly. AC1's `rubric` command judged PASS without ambiguity because the Spec's own Notes section already documented and accepted the line-count heuristic's known limitation (same-line-count edits are undetectable), so the grader had explicit context for why this approximation satisfies the Issue's Purpose (imperfect detection is explicitly acceptable). AC2's `github_check "gh pr checks" "Run bats tests"` matched cleanly against this PR's own CI run (Size was already re-evaluated S→M / patch→pr in the code phase, so the verify command's pr-route form was already correct at review time — no further adjustment needed).
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Adopted Proposal 1 from the Issue (line-count self-consistency check) exactly as scoped in the Spec's Notes — no deviation during implementation.
-- Marker value transcription rule (compare cached instruction text vs. a fresh `wc -l`, never re-fetch the cached side) implemented literally per the Spec's explicit caution to avoid a tautological comparison.
-- Warning surfaced in two channels: terminal (Step 1, immediate) and the Step 9 Issue comment as plain visible Markdown (not an HTML comment) so non-interactive/unattended runs that never observe terminal output still get the signal.
+- Both Pre-merge AC (rubric, `github_check`) verified PASS in Step 8; Issue checkboxes updated to `[x]` for both.
+- `review-light` (light mode, Size M) ran all 4 perspectives in one agent and found no MUST/SHOULD/CONSIDER issues — no fix cycle was needed.
 
 ### Deferred Items
-- AC2 (`github_check "gh pr checks" "Run bats tests"`) left unchecked per the CI verification AC exclusion rule — no PR existed yet when Step 10 ran. `/review` will verify it against this PR's actual checks.
-- Generalizing the self-reference line-count marker pattern to other wrapper-less skills or files is explicitly out of scope (see Spec Notes § スコープ) — left as a future Issue candidate, not tracked here.
+- None.
 
 ### Notes for Next Phase
-- `/review` should confirm CI (`gh pr checks`) is green and check AC2, since Step 10 could not evaluate it pre-PR.
-- The new marker `<!-- skill-body-lines: 1057 -->` must be kept in sync manually whenever `skills/verify/SKILL.md` is next edited — a regression bats test (`skill-body-lines marker stays in sync with wc -l`) will catch drift but does not auto-fix it.
+- `/merge` can proceed directly — no unresolved review issues, all CI green, both Pre-merge AC checked.
