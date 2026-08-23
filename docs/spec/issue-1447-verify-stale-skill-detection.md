@@ -43,7 +43,7 @@
 ### Pre-merge
 
 - <!-- verify: rubric "採用した方針が実装され、/verify が会話セッション単位でキャッシュされた stale な skill 本文を実行した場合に、検出または警告が行われるようになっている" --> stale な skill 実行が検出または警告される
-- <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> bats テストが全PASSしている (patch route)
+- <!-- verify: github_check "gh pr checks" "Run bats tests" --> bats テストが全PASSしている (pr route)
 
 ### Post-merge
 
@@ -62,6 +62,10 @@ Issue 本文 (候補 1〜3) および `docs/spec/issue-1202-verify-pr-search-clo
 ### 自己参照チェックの正しさに関する重要な実装上の注意
 
 Implementation Step 2 の比較は「現在実行中の指示文中に書かれているマーカー値」対「`wc -l` によるディスク上の現在値」でなければならない。マーカー値を Bash/Read/Grep 等の新規ツール呼び出しで取得すると、両辺とも常にディスクの現在値になり比較が恒真式になって stale 検出が機能しなくなる。`/code` 実装時にこの点を落とさないよう Implementation Step 2 に明記した。
+
+### Size 再評価に伴う verify command 修正 (Step 18)
+
+Step 18 の 2-axis 再評価で、変更ファイル数 (2件) に加えて「新規アーキテクチャパターンの導入 (行数マーカーによる自己整合性チェックは本リポジトリに類似実装が存在しない)」という複雑度加算要因に該当したため、Size を S (patch route) から M (pr route) に更新した (Project field 更新済み)。この結果、Verification > Pre-merge の bats テスト AC が patch route 前提の `github_check "gh run list ...--branch=main..."` 形式のままだと pr route では意味を持たなくなる (main 上の無関係な直近 CI 結果を見てしまい、この PR 自体の CI 結果を見ない) ため、`github_check "gh pr checks" "Run bats tests"` 形式に修正し、Issue 本文の Acceptance Criteria も同期させた。
 
 ### スコープ
 
