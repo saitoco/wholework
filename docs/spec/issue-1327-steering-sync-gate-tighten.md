@@ -6,6 +6,10 @@
   intent: `/issue` フェーズの Issue Retrospective コメント。2 件の自動解決 (識別力フィルタ (B) の grep 対象ディレクトリを `docs/ tests/ scripts/` から `docs/ tests/ scripts/ modules/` の 4 ディレクトリに修正、キーワード優先順位 (A) の Medium 段に `modules/{name}.md` を追加) を記録。いずれも Issue 本文の「対応方針 (案)」コードブロックと「## Auto-Resolved Ambiguity Points」に反映済みで、`/spec` 側での追加対応は不要と判断した。
   url: https://github.com/saitoco/wholework/issues/1327#issuecomment-5368249134
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1327#issuecomment-5368783034
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1327#issuecomment-5369704132
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1327#issuecomment-5378428220
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1327 --> / https://github.com/saitoco/wholework/issues/1327#issuecomment-5383474392
 ## Overview
 
 `skills/spec/SKILL.md` の **Steering Docs sync candidate check** (Step 10) は、発火した Spec 127 本中 122 本 (96%) が「変更不要」判定に着地しており、実質的にゲートとして機能していない。原因は (1) `skills/{name}/SKILL.md` → キーワード `{name}` という抽出規則が `spec`/`code`/`auto` 等の一般語を生み `docs/` 全体に大量ヒットすること、(2) `docs/migration-notes.md` のような履歴記録ファイルが構造的に毎回ヒットし続けることの 2 点。
