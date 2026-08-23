@@ -90,16 +90,26 @@
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。PR diff (`.github/workflows/test.yml` の2箇所、`tests/check-language-convention.bats` の新規回帰テスト1件) は Spec の Implementation Steps 1・2 と完全に一致していた。
+
+### Recurring issues
+- なし。同種の指摘の再発は見られなかった。
+
+### Acceptance criteria verification difficulty
+- なし。4件の Pre-merge AC のうち3件 (rubric, grep, grep) は safe mode で決定的に判定でき、残り1件 (`command "bats tests/check-language-convention.bats"`) も CI ジョブ `Run bats tests` の実行範囲 (`bats --jobs $(nproc) tests/`) が対象テストファイルを含むことを identity confirmation で確認したうえで CI 参照フォールバック経由の PASS に到達できた。UNCERTAIN は0件。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec 記載通り、`.github/workflows/test.yml` の2箇所の `git diff` に `-U100000` を追加。スクリプト自体 (`scripts/check-language-convention.py`) は変更しない方針を踏襲。
-- 新規回帰テストは「exit 0 になるべき」ではなく「hunk 外に開始マーカーがある場合は現状通り exit 1 (誤検知) になる」ことを固定化する目的のテストとして追加 (Spec Implementation Step 2 の意図通り)。
+- 4件の Pre-merge AC を safe mode で全て決定的に判定 (rubric 1件、grep 2件、CI参照フォールバック経由の command 1件)。UNCERTAIN・FAIL なし。
+- review-light エージェント (4観点統合) による軽量レビューを実施し、MUST/SHOULD 相当の指摘なしを確認。CONSIDER 2件 (`-U100000` の将来的な境界条件、ドキュメント根拠の Spec 依存) はインラインコメントとして記録したが、スコープ最小化の方針により今回は対応を見送った。
 
 ### Deferred Items
-- None
+- None (CONSIDER 2件は見送りとして記録済みで、追加のフォローアップ Issue 化は行っていない)
 
 ### Notes for Next Phase
-- Behavioral Change Detection がフルスイート実行 (全2011テスト) を要求したが、これは `tests/visual-diff-adapter.bats` のコメント言及による広めの判定であり、実装自体への影響はない。`/review` で再確認する場合も同様に無関係な参照として扱ってよい。
-- Pre-merge AC は4件すべて PASS 済み、Issue チェックボックスも更新済み。Post-merge AC は「なし」。
+- `/merge 1453` で問題なくマージ可能。Pre-merge AC 4件全て PASS 済み、Issue チェックボックスも更新済み。Post-merge AC は「なし」。
