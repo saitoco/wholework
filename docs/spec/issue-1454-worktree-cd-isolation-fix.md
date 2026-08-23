@@ -97,3 +97,28 @@ All 4 Pre-merge conditions resolved cleanly: 3 via `rubric`/`file_contains` agai
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Design は実インシデント (batch session `66442-1787484138` の `/verify 1266`) の再現手順から一意に導出されており、AC1 の "検知・警告・block のいずれか" という OR 表現も Auto-Resolved Ambiguity Points で block を明示的に推奨していた。実装は Spec の判断をそのまま踏襲しており、spec 段階での曖昧さ・欠落は確認できなかった。
+
+#### code
+- Code Retrospective に記録済みの「Stale Test Assertion Check module のギャップ」(既存テストの `[ ! -f "$GIT_LOG" ]` という call-count 型のアサーションが code-motion リファクタで無効化されたが、当該 module は削除済み文字列の検出にしか対応しておらず、この種の破壊は検出できない) — この Issue 自身の code フェーズで新たに顕在化した観測であり、以前の Verify Retrospective では未記録。
+- Rework 1件 (bash 3.2 bare-bracket-assertion pitfall) は既存の Additional validation pass (Step 9) で捕捉されており、想定通りの安全網動作。
+
+#### review
+- 特記事項なし (Spec との乖離なし、recurring issue なし、AC 検証も UNCERTAIN ゼロ)。
+
+#### merge
+- Squash merge、conflict なし。
+
+#### verify
+- 全4 pre-merge AC は `/code` フェーズで既に `[x]`、post-merge 条件はなし。FAIL・UNCERTAIN ゼロ。
+
+### Improvement Proposals
+
+- **Stale Test Assertion Check module が call-count 型アサーションの破壊を検出できない (Tier 2 相当 — 記録のみ)**: 対象 module は削除済みリテラル文字列の検出のみを行い、`[ ! -f "$GIT_LOG" ]` のような「この経路では特定の副作用が起きないこと」を検証する call-count 型アサーションは、リファクタで暗黙の前提が壊れても検出できない。今回は実害ゼロ (テスト実行時に落ちて発覚し、その場で修正) だったが、同種の code-motion リファクタで再発しうる。単発の code フェーズ内観測であり、複数ファイルへのリップルや過去 Issue の複数回引用は確認できないため、単独 Issue 起票は見送る。同種の call-count アサーション破壊が別 Issue で再度観測された場合は Tier 1 (module 側の検出範囲拡張) への引き上げを検討する。
+
