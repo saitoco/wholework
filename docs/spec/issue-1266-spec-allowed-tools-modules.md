@@ -12,6 +12,21 @@
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective — AC3 の検証コマンドを自己一致していた `"skills/*/SKILL.md"` パターンから `"grep -rl"` に修正済み、Post-merge AC に `session=next` を付与済みであることを確認。曖昧性検出・タイトルドリフトともになし。(https://github.com/saitoco/wholework/issues/1266#issuecomment-5226595466)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1266#issuecomment-5226874897
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5226962959
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5230976160
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5235407854
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5246566187
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5255761367
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5296390601
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5304277450
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5310551828
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5327736889
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5341249464
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5354384247
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5369700393
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5378426723
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1266#issuecomment-5384000406
 ## Changed Files
 
 - `skills/spec/SKILL.md`: Step 10 の `#### allowed-tools impact chain check` サブ節を拡張 — 発火条件に `modules/*.md` を追加し、"Case 1" (既存の新規スクリプト判定、変更なし) と "Case 2" (module 経由の新規呼び出し判定) に分割、skip 条件を更新 — bash 3.2+ 互換 (対象は Markdown 文書のみで bash コードは含まないため該当なし)
