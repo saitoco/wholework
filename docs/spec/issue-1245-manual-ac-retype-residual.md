@@ -64,6 +64,10 @@
 | saito | MEMBER | first-class | Issue Retrospective — `/issue` フェーズでの stale blocked-by (`#1167`) 除去、verify command 設計改善 (rubric の一次証跡誘導、phase ラベル整合性を github_check へ変更)、観測型 AC への `session=next` 付与を記録 | https://github.com/saitoco/wholework/issues/1245#issuecomment-5365253973 |
 | saito | MEMBER | first-class | Triage AC audit — Pre-merge AC3 (`command "bats tests/"` の 60 秒 timeout 不足) と AC4 (`grep -n` の非対応フラグ・path 未クォート) の verify command 修正を `/spec` に依頼。本フェーズで両修正を Issue 本文へ適用済み (詳細は Notes 参照) | https://github.com/saitoco/wholework/issues/1245#issuecomment-5365284937 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1245#issuecomment-5365634921
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1245#issuecomment-5369699121
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1245#issuecomment-5378426245
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1245#issuecomment-5384000039
 ## Code Retrospective
 
 ### Deviations from Design
