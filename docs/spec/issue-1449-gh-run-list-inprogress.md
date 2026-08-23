@@ -70,6 +70,32 @@
 - **対象外ファイル**: `docs/spec/*.md` (使い捨て Spec、Issue 本文で明示的に対象外) および `docs/reports/*.md` / `docs/ja/reports/*.md` (過去の実行記録・レポート — 当時の事実の記録であり「将来コピーされる例示/ガイダンス」ではないため、Issue の Purpose の範囲外と判断)。`modules/verify-classifier.md` と `modules/verify-executor.md` L125 の制約説明文、`skills/verify/SKILL.md` L248、`skills/spec/SKILL.md` L690 は #1444 で既に canonical パターンに更新済みのため変更不要。
 - **新規テストケース要否**: 本 Issue はドキュメント/Skill 本文中の例示文字列の修正のみであり、スクリプトへの新規分岐ロジック追加を伴わないため、bats 新規テストケースの追加要件は非該当 (`tests/` 配下に旧パターン文字列を assert するテストは無いことを grep で確認済み)。
 
+## Code Retrospective
+
+### Deviations from Design
+- None — implemented exactly per the Spec's Implementation Steps 1–5. Actual line numbers in `modules/verify-patterns.md` / `modules/verify-executor.md` shifted slightly from the Spec's recorded numbers (pre-existing drift from other edits between Spec write and Code execution), but the same 11 + 2 target locations were all found and updated via content match rather than line number.
+
+### Design Gaps/Ambiguities
+- Markdown table cells (`modules/verify-patterns.md` L217/L907, job-level rows) required escaping the jq pipe as `\|` to avoid breaking the table structure, while the `"completed"`/`"in_progress"` double quotes inside the single-quoted jq expression needed no additional backslash-escaping in that context (table cell, not a `\"`-escaped markdown line). Plain-text bullets/code fences elsewhere used the `\"`-escaped form matching `modules/verify-classifier.md`'s canonical template. Both forms are correct for their respective markdown contexts; noting this so a future similar edit doesn't assume one escaping style applies everywhere.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's replacement rules exactly: workflow-level `--json conclusion --jq '.[0].conclusion'` → `--json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'`; job-level analog for the `gh run view --json jobs` sub-form.
+- Included `modules/verify-executor.md`'s own "Job-Level Conclusion Sub-Form" examples (outside the Issue's named file list) per the Spec's Notes rationale — same-file risk of the SSoT itself carrying a stale example.
+- `docs/versioning.md` / `docs/ja/versioning.md` got an adapted fix (not a literal template swap) since that line is a multi-run "no failure" gate check, not a single-run verify command.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- All 5 rubric-named files plus the 2 additional `modules/verify-executor.md` locations were re-grepped after edits and confirmed clean of the old pattern (`json conclusion --jq`) — `/review` and `/verify` should not need to re-derive target locations, just confirm the rubric AC checkbox state and PR diff.
+- Full bats suite (2010 tests) passed with `--jobs 18`; `modules/verify-patterns.md`, `modules/verify-executor.md`, `skills/issue/SKILL.md`, and `skills/issue/spec-test-guidelines.md` triggered the behavioral-change full-suite override (referenced by tests beyond their direct counterpart).
+
 ## Consumed Comments
 
 No new comments since last phase.
