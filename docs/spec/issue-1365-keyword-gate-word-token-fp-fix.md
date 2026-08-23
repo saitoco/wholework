@@ -5,6 +5,9 @@
 - saito / MEMBER / first-class / `/issue` フェーズ自身の Issue Retrospective。`/verify 476` re-run #19 で観測した第四のサブパターン (ベアファイル名参照) を Background に参考情報として追記した旨を記録。Purpose/AC 文言は変更なし / https://github.com/saitoco/wholework/issues/1365#issuecomment-5306089283
 - (code phase) No new comments since last phase.
 - (review phase) No new comments since last phase.
+- (verify phase, re-run) saito / MEMBER / first-class / 前回 `/verify 1365` 自身が投稿した Acceptance Test Results (post-merge observation は当時未発火で SKIPPED 記録) / https://github.com/saitoco/wholework/issues/1365#issuecomment-5306511755
+- (verify phase, re-run) saito / MEMBER / first-class (wholework-event bot 相当の自動投稿、`type=observation-trigger` マーカー) / observation event `pr-review-light` が 2026-08-21 に発火した旨の通知 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5365112099
+- (verify phase, re-run) saito / MEMBER / first-class (wholework-event bot 相当の自動投稿、`type=observation-trigger` マーカー) / 同イベントが 2026-08-23 (今回 `/review 1450` の Event-based observation scan) にも発火した旨の通知 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5384892143
 
 ## Overview
 
@@ -149,5 +152,9 @@ Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-
 - Post-merge の observation AC (`event=pr-review-light keyword=workflow`) は未発火のため SKIPPED。`phase/verify` に留め、次回イベント発火時に再評価する。
 - `/auto --batch` の `run-auto-sub.sh` 実行が code phase 開始直後にバックグラウンドタスクとして外部要因 (status: killed、数値 exit code 観測なし) で停止した。`worktree-code+issue-1365` ブランチと stale worktree が残存していたため、再実行 (`run-auto-sub.sh 1365`) 時に `code_phase_milestone` の resume 機構が `pre-commit` マイルストーンを観測し、stale worktree/branch をクリーンアップした上で code phase を正常に再実行、PR #1384 を作成し review→merge まで完走した。再発時のために `docs/reports/orchestration-recoveries.md` に manual-recovery-respawn として記録済み (cause: `background-task-killed-mid-code-phase`)。
 
+#### verify (re-run, 2026-08-23, dispatched from `/review 1450`'s Event-based observation scan)
+- Post-merge の observation AC (`event=pr-review-light keyword=workflow`) がついに発火 (2026-08-21, 2026-08-23) したが、評価の結果 SKIPPED とした。理由: この AC は「Issue #476 自身の post-merge AC が恒久的判定経路に到達すること」を観測する設計だが、Issue #476 は本 Issue のマージ前 (2026-08-16 以前) から既に `phase/done` へ遷移済みであり、`opportunistic-search.sh` の母集団取得 (`phase/verify` ラベル現存が条件) には二度と含まれない。今回発火したのは Issue #476 自身の条件ではなく、**Issue #1365 自身の post-merge AC 文言** (同じ `event=pr-review-light keyword=workflow`) に対してであり、#476 の状態について新しい証拠を何も提供しない。この AC は文字通りには恒久的に観測不能であることが実地で確定した (Spec の Notes/Phase Handoff Deferred Items で予期されていた懸念が的中)。
+- この事例は、observation-type AC が「別 Issue 自身の post-merge 状態」を観測対象とする設計パターン一般に対する教訓を示す: 参照先 Issue が観測完了前に `phase/verify` を離脱 (phase/done へ遷移) すると、観測条件自体が永久に発火不能になる。今回は Issue 作成時点で既にこのリスクが Spec の Notes に明記されていたため実害は限定的だったが、同種の「他 Issue の状態を観測する」AC を今後設計する際は、観測対象 Issue が先に `phase/verify` を離脱するリスクを Issue 本文または Spec に明記するガイドラインが有用と考えられる (Improvement Proposals 参照)。
+
 ### Improvement Proposals
-- N/A
+- 他 Issue の post-merge 状態 (`phase/verify` ラベルの現存に依存する observation 条件など) を観測対象とする observation-type AC を設計する際、観測対象 Issue が `phase/verify` を離脱 (phase/done へ遷移等) した場合に条件が恒久的に観測不能になるリスクを、Issue 作成時 (`/issue`) または Spec 作成時 (`/spec`) にガイドラインとして明記することを検討する価値がある。本件 (#1365 の post-merge AC が #476 の状態を観測する設計) はこのリスクが事前に文書化されていたため実害は限定的だったが、一般的なガイドラインとして明文化されていれば同種の設計ミスを未然に防げる可能性がある。
