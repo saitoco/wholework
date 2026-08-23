@@ -159,7 +159,8 @@ Implementation Steps はいずれも `modules/size-workflow-table.md`・`skills/
 - 該当なし (patch route のため PR マージなし。`(closes #1241)` により直接コミットで自動クローズ)。
 
 #### verify
-- FAIL・UNCERTAIN なし。Pre-merge 4件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は未発火のため SKIPPED。
+- 初回 (2026-08-22): FAIL・UNCERTAIN なし。Pre-merge 4件は already-checked で SKIPPED。Post-merge observation (event=auto-run, session=next) 1件は未発火のため SKIPPED。
+- 再走 (2026-08-23): `event=auto-run` は発火済みだが、本 Issue が想定する狭いシナリオ (XL 分割 + 親集約成果物パターン、#1158型・#1270型) を伴う `/auto` 実行が修正後に確認できず UNCERTAIN。直近の L3 session (`82358-1787407637` / `99508-1787375493`、いずれも 2026-08-22 修正後) は route mix `xl: 0`。本 Issue の修正はドキュメント/手順ガイダンスのみで機械テスト不可のため、該当シナリオの実発生を待って再評価が必要 — これは実装の誤りではなく、observation AC の性質上の遅延であることを明記しておく。
 
 ### Improvement Proposals
 - N/A — Code Retrospective が記録した rubric AC4 のファイルパス指名不足は、既に同フェーズで意図的に scope 外と判断・記録済みであり、新たな Issue 起票や追加のメモリ提案を要する新規の観察ではない。
