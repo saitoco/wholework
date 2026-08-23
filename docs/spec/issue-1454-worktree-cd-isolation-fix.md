@@ -72,23 +72,28 @@ worktree isolation セッション中に単純な `cd /path/to/main/repo` (compo
 ### Rework
 - One rework cycle: the new `--no-push` + main-tree bats test initially used a bare `[[ "$output" == *"ERROR"* ]]` assertion (copying the surrounding file's existing style), caught by `skills/code/skill-dev-validation.md`'s bash-3.2 bare-bracket-assertion pitfall during the Additional validation pass (Step 9) — not by `check-bare-bracket-assertions.sh` itself, which is informational-only and does not block. Rewrote to `echo "$output" | grep -q "ERROR"` before committing.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — the diff matched Implementation Steps 1–4 exactly (confirmed independently by the review-light agent's Spec Deviation perspective); no structural divergence found.
+
+### Recurring issues
+Nothing to note — a single SHOULD-severity finding (stale "always exits 0" claim in the script header and `skills/verify/SKILL.md:189`, made inaccurate by this PR's own new `_in_main_tree` abort path) was the only issue, and it does not match any recurring pattern seen in this Issue's review history.
+
+### Acceptance criteria verification difficulty
+All 4 Pre-merge conditions resolved cleanly: 3 via `rubric`/`file_contains` against the diff, 1 (`bats tests/`) via the Step 9 CI reference fallback (`Run bats tests` job SUCCESS) rather than direct execution — no UNCERTAIN, no verify command gaps or inaccuracies observed.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Chose a script-side defensive check (abort in `append-consumed-comments-section.sh`) over hook-side `cd` parsing in `hook-worktree-path-guard.sh`, per the Spec's rationale: no existing hook in this repo parses Bash `tool_input.command`, and reliable parsing of compound commands/subshells/aliases is fragile there, while the script already resolves `_repo_root` and reuses that pattern.
-- Positioned the `NO_PUSH && _in_main_tree` abort check immediately after `_repo_root`/`_git_dir`/`_git_common_dir` resolution — before any Spec file read or write — so a blocked run never leaves a partial file edit behind.
-- Scoped the defensive check to `append-consumed-comments-section.sh` only, matching the Issue's Auto-Resolved Ambiguity Points; other git-write scripts (`apply-fallback.sh`, `worktree-merge-push.sh`, etc.) are explicitly out of scope for this Issue.
+- Fixed the SHOULD finding in-line (documentation-only, low risk) rather than deferring: updated both the script header comment and `skills/verify/SKILL.md:189` to describe the new conditional exit-1 path instead of the stale "always exits 0" claim.
 
 ### Deferred Items
-- Extending the same main-tree defensive check to other git-write scripts is deferred to a follow-up Issue if the same failure mode recurs there (Issue body Auto-Resolved Ambiguity Points, "スコープを `append-consumed-comments-section.sh` に限定した判断").
-- hook-side `cd` detection in `hook-worktree-path-guard.sh` was considered and explicitly not implemented (AC1's "検知・警告・block のいずれか" wording permits the script-side-only approach chosen here).
+- None.
 
 ### Notes for Next Phase
-- Confirm the new `### Do not \`cd\` back to the parent repository` subsection in `modules/worktree-lifecycle.md` reads cleanly in its inserted position (between "Edit/Write path conventions in worktree sessions" and "Main-repo-only Steps inside a worktree session").
-- The script's abort message cites `modules/worktree-lifecycle.md § "Do not \`cd\` back to the parent repository"` by heading text — if the heading is renamed, update the message to match.
-- `tests/run-verify.bats`'s "section exists" test assertion was narrowed during this phase (see Code Retrospective's Design Gaps/Ambiguities) — worth a second look to confirm the narrowed assertion still captures the property it's meant to guard.
-- Full suite verified locally: `bats --jobs 18 tests/` → 2012/2012 PASS.
+- `/merge 1455` can proceed directly — no MUST issues, CI green (15/15), all 4 Pre-merge AC already checked `[x]` on the Issue.
 
 ## Consumed Comments
 No new comments since last phase.
