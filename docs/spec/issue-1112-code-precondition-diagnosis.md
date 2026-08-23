@@ -58,6 +58,8 @@
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1112#issuecomment-5369638133
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1112#issuecomment-5369691149
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1112#issuecomment-5378423104
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1112#issuecomment-5379811900
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1112 --> / https://github.com/saitoco/wholework/issues/1112#issuecomment-5383457825
 ## Code Retrospective
 
 ### Deviations from Design
