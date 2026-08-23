@@ -206,7 +206,7 @@ Detection approach:
 Fix: Replace `github_check "gh pr checks"` with a `github_check "gh run list"` form,
 for example:
 ```
-github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"
+github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"
 ```
 
 If multiple workflow files exist under `.github/workflows/`, add `--workflow=<filename>`
@@ -314,11 +314,11 @@ If no patterns match, skip without posting.
 
 - AC: `<!-- verify: grep "skills/triage/SKILL.md" "some pattern" -->`
   - Pattern: grep の引数順誤り（第 1 引数がパス様文字列）
-  - 修復案: `<!-- verify: grep "some pattern" "skills/triage/SKILL.md" -->`
+  - Suggested fix: `<!-- verify: grep "some pattern" "skills/triage/SKILL.md" -->`
 
 - AC: `<!-- verify: github_check "gh pr checks" "Run bats tests" -->`
   - Pattern: patch route（Size S）× `gh pr checks` 不整合
-  - 修復案: `<!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success" -->`
+  - Suggested fix: `<!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success" -->`
 ```
 
 ### Posting the Comment

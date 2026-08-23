@@ -36,7 +36,7 @@ Skills that Read this file should design verify command patterns following these
 | Verifying regex implementation pattern strings with `grep` | Regex patterns (e.g., `Step [0-9]+\.[0-9]+`) will FAIL if implementation uses equivalent but different notation (e.g., `\d+\.\d+`) (occurred in #593) | Grep for the function name using the regex, not the pattern string itself. Function names are stable verification targets | ❌ `grep "Step [0-9]+\\.[0-9]+" "scripts/validate-skill-syntax.py"` → ✅ `grep "validate_decimal_steps" "scripts/validate-skill-syntax.py"` |
 | Using `section_contains` / `file_contains` for OR search | Both commands use fixed-string matching; `|` is treated as a literal character, not OR. Passing `"patA|patB"` searches for the exact string `"patA|patB"` — it does not match `patA` or `patB` individually (occurred in #72) | Split OR conditions into separate commands, one per pattern | ❌ `section_contains "f" "## H" "A|B"` → ✅ `section_contains "f" "## H" "A"` + `section_contains "f" "## H" "B"` (same for `file_contains`) |
 | Including shell quoting / variable references in `file_contains` / `section_contains` search strings for script invocations | When verifying a script call like `"$SCRIPT_DIR/get-config-value.sh" autonomy L1`, specifying the search string with surrounding quotes or variable references (e.g., `get-config-value.sh autonomy L1`) FAILs because `.sh` is followed by `"` in the actual code, breaking the fixed-string match (occurred in #385) | For script invocation patterns, use only the **argument substring** as the search string. This avoids false negatives from shell quoting differences (`"`, `'`) and variable reference variants (`$SCRIPT_DIR/`, `${CLAUDE_PLUGIN_ROOT}/`, bare path) | ❌ `file_contains "scripts/foo.sh" "get-config-value.sh autonomy L1"` (FAIL when actual code is `"$SCRIPT_DIR/get-config-value.sh" autonomy L1`) → ✅ `file_contains "scripts/foo.sh" "autonomy L1"` (matches regardless of quoting/variable form) |
-| `node_modules`-dependent binary `command` verify fails inside worktree | `command` verify commands using `pnpm exec`, `npx`, or other `node_modules/.bin/` binaries (e.g., `pnpm exec astro check`, `npx tsc`) become UNCERTAIN/FAIL inside a worktree because `node_modules/` only exists in the parent repo — `git worktree add` does not copy or link it | Switch to `github_check` to reference CI results instead, or add a symlink step to `.claude/hooks/worktree-init.sh` (see `modules/worktree-lifecycle.md` Entry Section Step 4). Do not add `--branch=main` — a worktree's branch is the feature/PR/patch branch, not `main`; filtering to `--branch=main` would reference `main`'s run instead of the worktree branch's own run | ❌ `command "pnpm exec astro check"` (FAIL inside worktree — `astro: command not found`) → ✅ `github_check "gh run list --workflow=ci.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"` |
+| `node_modules`-dependent binary `command` verify fails inside worktree | `command` verify commands using `pnpm exec`, `npx`, or other `node_modules/.bin/` binaries (e.g., `pnpm exec astro check`, `npx tsc`) become UNCERTAIN/FAIL inside a worktree because `node_modules/` only exists in the parent repo — `git worktree add` does not copy or link it | Switch to `github_check` to reference CI results instead, or add a symlink step to `.claude/hooks/worktree-init.sh` (see `modules/worktree-lifecycle.md` Entry Section Step 4). Do not add `--branch=main` — a worktree's branch is the feature/PR/patch branch, not `main`; filtering to `--branch=main` would reference `main`'s run instead of the worktree branch's own run | ❌ `command "pnpm exec astro check"` (FAIL inside worktree — `astro: command not found`) → ✅ `github_check "gh run list --workflow=ci.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
 
 ### 2. Prefer `grep` Over `file_contains` for Text Presence Checks
 
@@ -174,7 +174,7 @@ Combine `file_contains` (config content existence) with `github_check "gh run li
 
 ```
 <!-- verify: file_contains ".github/workflows/dco.yml" "tim-actions/dco" --> Configuration content exists
-<!-- verify: github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success" --> CI run succeeded
+<!-- verify: github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success" --> CI run succeeded
 ```
 
 `.github/workflows/dco.yml` triggers on `pull_request` only, so this is a PR-route example — do not add `--branch=main` here (its runs are never associated with branch `main`). For a patch-route DCO-style check, see the `--branch=main` canonical form in `modules/verify-classifier.md` § "Patch Route CI Verification Note".
@@ -197,7 +197,7 @@ For patch route Issues (no PR), `gh pr checks` is not available. Always use `gh 
 Preferred pattern 1 — specific workflow (scope limited to a single workflow file):
 
 ```
-<!-- verify: github_check "gh run list --workflow=<specific>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success" -->
+<!-- verify: github_check "gh run list --workflow=<specific>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success" -->
 ```
 
 **Do not add `--branch=main` here** — this is PR route, so CI runs are triggered on the PR's own head branch, not `main`; filtering to `--branch=main` would reference an unrelated `main` run instead of the PR's. (Contrast with the patch route canonical form in `modules/verify-classifier.md` § "Patch Route CI Verification Note", where `--branch=main` is correct because patch route commits land directly on `main`.)
@@ -214,7 +214,7 @@ Preferred pattern 2 — direct test execution (scope limited to a single test fi
 |----------------|-------|-------------|
 | `gh pr checks` | Entire PR — all CI jobs | When all CI jobs must pass together (e.g., release gate); accept out-of-scope failure risk |
 | `gh run list --workflow=<specific>.yml` | Single workflow file | When only a specific workflow's success matters; avoids pre-existing failures in unrelated jobs |
-| `gh run view ... --json jobs --jq '.jobs[] \| select(.name=="<job>") \| if .status != "completed" then "in_progress" else .conclusion end'` | Single named job within a workflow | When unrelated jobs in the same workflow have pre-existing failures; scoped to one job, no false positives from other jobs |
+| `gh run view ... --json jobs --jq '.jobs[] \| select(.name=="<job>") \| if .status != \"completed\" then \"in_progress\" else .conclusion end'` | Single named job within a workflow | When unrelated jobs in the same workflow have pre-existing failures; scoped to one job, no false positives from other jobs |
 | `command "bats tests/<specific>.bats"` | Single test file | When testing a specific bats file directly; fully decoupled from CI state |
 
 **Job-level conclusion sub-form (github_check variant):**
@@ -904,10 +904,10 @@ Use narrow scope only when the implementation is purely additive (new files, no 
 
 | Framework | Narrow scope (direct `command`) | Full suite (CI reference) |
 |-----------|---------------------|---------------------|
-| bats | `command "bats tests/run-code.bats"` | `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] \| select(.name==\"Run bats tests\") \| if .status != "completed" then "in_progress" else .conclusion end'" "success"` (this repository's `.github/workflows/test.yml` bats job) |
-| pytest | `command "pytest tests/test_foo.py"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"` (workflow-level, if the workflow runs only pytest) |
-| Node.js (pnpm) | `command "pnpm test -- foo.test.ts"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"` |
-| Node.js (npm) | `command "npm test -- foo.test.js"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"` |
+| bats | `command "bats tests/run-code.bats"` | `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] \| select(.name==\"Run bats tests\") \| if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"` (this repository's `.github/workflows/test.yml` bats job) |
+| pytest | `command "pytest tests/test_foo.py"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` (workflow-level, if the workflow runs only pytest) |
+| Node.js (pnpm) | `command "pnpm test -- foo.test.ts"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
+| Node.js (npm) | `command "npm test -- foo.test.js"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
 
 For the pr route, use the job-level (or workflow-level) form as-is — the run belongs to the PR branch. For the patch route (direct commit to `main`, no PR), add `--branch=main` to the underlying `gh run list`/`gh run view` lookup per `modules/verify-classifier.md` § "Patch Route CI Verification Note", since there is no PR to scope the run to.
 
@@ -1145,7 +1145,7 @@ A `command` verify command whose argument targets more than one file — a singl
 
 **Example**:
 - ❌ `command "bats tests/new-foo.bats tests/new-bar.bats"` — both files are newly added (exempt from §24's purely-additive exclusion), but the argument names two files, so this check still fires.
-- ✅ `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success"`
+- ✅ `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"`
 
 ## Output
 
