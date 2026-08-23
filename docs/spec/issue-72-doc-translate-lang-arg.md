@@ -138,3 +138,5 @@ Pre-merge 全11件は変更なし PASS。Post-merge 4件のうち2件 (`/doc tra
 ## Consumed Comments
 - saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/72#issuecomment-4217673809
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=72 --> / https://github.com/saitoco/wholework/issues/72#issuecomment-5305306122
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=72 ac=12 exec / https://github.com/saitoco/wholework/issues/72#issuecomment-5305310134
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=72 --> / https://github.com/saitoco/wholework/issues/72#issuecomment-5383500941
