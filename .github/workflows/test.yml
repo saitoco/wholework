@@ -111,9 +111,9 @@ jobs:
       - name: Check language convention
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git diff "origin/${{ github.base_ref }}...HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
+            git diff -U100000 "origin/${{ github.base_ref }}...HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
           else
-            git diff "HEAD^..HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
+            git diff -U100000 "HEAD^..HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
           fi
 
   macos-shell:
