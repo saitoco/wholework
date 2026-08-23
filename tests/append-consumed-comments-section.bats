@@ -324,7 +324,7 @@ MOCK
 
     run "$SCRIPT" 42 code --no-push
     [ "$status" -ne 0 ]
-    [[ "$output" == *"ERROR"* ]]
+    echo "$output" | grep -q "ERROR"
     ! grep -q "^## Consumed Comments" "$SPEC_FILE"
     run grep -q "commit" "$REPO_ROOT/git.log"
     [ "$status" -ne 0 ]
