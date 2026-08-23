@@ -76,6 +76,13 @@
 - saito / MEMBER / first-class / Triage AC audit: bats テスト AC (`command "bats tests/run-auto-sub.bats"`) が既存93ケース全PASSにより依然 Pattern 2 (常時 PASS) であると指摘し、`grep "operate" "tests/run-auto-sub.bats"` (新規テストケース検出) と既存の `command` AC (回帰保護) への2分割を提案。本フェーズで Issue body および本 Spec の Verification に反映済み / https://github.com/saitoco/wholework/issues/1240#issuecomment-5326773760
 - No new comments since last phase. (review フェーズ開始時点、cutoff=2026-08-18T10:49:03Z 以降の新規 Issue/PR コメントなし)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1240#issuecomment-5327759080
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5329380773
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5341247730
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5354382818
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5369698793
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5378426089
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1240#issuecomment-5383999943
 ## Code Retrospective
 
 ### Deviations from Design
