@@ -132,8 +132,9 @@
 - PR #1269 を squash merge。conflict なし、recovery 発火なし
 
 #### verify
-- Pre-merge 2 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- 初回 (2026-08-08): Pre-merge 2 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
 - `gh pr list --search "closes #1255"` が無関係な PR #1267 (実体は `closes #1233`) も候補に返したが、Step 2 の exact-match 検証 (#1197 対策) が正しく #1269 を選択した。フルテキスト検索の順位に依存しない設計が機能した実例
+- 再走 (2026-08-23): `event=auto-run` は発火済みだが、CI 側の retry step (`steps.bats.outcome == 'failure'` → `bats --filter-status failed`) が実際に発火した記録 (並列限定 FAIL が発生し、単独再実行で区別された実例) を修正マージ後のセッションログ・`orchestration-recoveries.md` で確認できず UNCERTAIN。関連する残余ギャップ (local フルスイート実行はこの切り分け対象外) は #1260 の実測として既にコメント記録済みだが、CI 側の観測対象とは別軸。該当シナリオの実発生を待って再評価が必要 — 実装の誤りではなく、CI で並列限定 FAIL がまだ発生していないことによる自然な遅延
 
 ### Improvement Proposals
 
