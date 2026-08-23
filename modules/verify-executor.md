@@ -112,6 +112,20 @@ github_check "gh run view $(gh run list --workflow=<file>.yml --limit=1 --json d
 | False-positive risk | High when unrelated jobs fail | None — scoped to the specific job |
 | When to use | All jobs must pass together | Only a specific job's success matters |
 
+### github_check: `gh run list` In-Progress Detection Constraint
+
+The `in_progress` string-match rule in the main table above (`If output contains \`in_progress\` → PENDING`) is calibrated for `gh pr checks`, whose `--json name,state` output includes the literal string `IN_PROGRESS` in the `state` column. It does **not** detect an in-progress run for `gh run list`/`gh run view` commands scoped to `--json conclusion` alone: while a run is in progress, GitHub returns an empty string for `.conclusion` (not the literal string `in_progress`), so the contains-`in_progress` rule never matches, and the empty output falls straight through to the `expected_value` comparison — producing a false FAIL, or (once the display-name fallback also misses) UNCERTAIN, instead of PENDING.
+
+**Required pattern for `gh run list`/`gh run view` verify commands:** synthesize `status` into the jq output instead of extracting `.conclusion` alone, so an in-progress run reports the literal string `in_progress` and is caught by the existing detection rule:
+
+```
+--json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'
+```
+
+See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the canonical `gh run list` verify command template using this pattern. This constraint also applies to the job-level sub-form above (`gh run view --json jobs`): each job object carries the same empty-while-in-progress `.conclusion` field, so the same `status`-synthesis fix (`select(.name=="<job_name>") | if .status != "completed" then "in_progress" else .conclusion end`) applies there too if job-level PENDING detection is needed.
+
+**Constraint scope:** a bare `--json conclusion --jq '.[0].conclusion'` (or the job-level equivalent without `status`) must not be used as a `gh run list`/`gh run view` verify command going forward — it cannot distinguish an in-progress run from a run whose conclusion happens to not match `expected_value`.
+
 ### grep Verify Command: ERE vs BRE Reference
 
 The `grep` verify command uses the Grep tool (ripgrep), which defaults to **ERE (Extended Regular Expressions)**. BRE (Basic Regular Expressions) metacharacter syntax is **not** the default — in ERE, `\|` matches a literal `|` character rather than serving as an OR operator.

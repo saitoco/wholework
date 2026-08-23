@@ -8,7 +8,7 @@ allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git 
 
 # Acceptance Test
 
-<!-- skill-body-lines: 1057 -->
+<!-- skill-body-lines: 1059 -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
@@ -245,10 +245,12 @@ Example replacement:
 github_check "gh pr checks" "Run bats tests"
 
 # After (patch route compatible)
-github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"
 ```
 
 **Note:** the `expected_value` must change from the job name to `"success"`. `gh run list` outputs run-level rows with no job name column — keeping the job name causes false FAIL even when CI is green. `gh pr checks` outputs a job-level table (job name + conclusion) so job names work there; `gh run list` outputs a run-level table (conclusion only) so `"success"` is the correct `expected_value`.
+
+**Note:** the jq expression synthesizes `status` alongside `conclusion` so an in-progress run reports the literal string `in_progress` (caught by the `in_progress` PENDING rule above) instead of an empty `.conclusion` that would otherwise misjudge as FAIL/UNCERTAIN — see `modules/verify-executor.md` § "github_check: `gh run list` In-Progress Detection Constraint".
 
 Do not attempt to run `github_check "gh pr checks"` conditions in patch-route or operate-route Issues — mark as UNCERTAIN immediately and skip execution.
 
