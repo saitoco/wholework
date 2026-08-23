@@ -197,6 +197,14 @@ the return value from `EnterWorktree` points to the worktree path before calling
 
 **Enforcement**: This convention is mechanically enforced by `scripts/hook-worktree-path-guard.sh` (registered as a PreToolUse hook in `hooks/hooks.json`), which blocks Edit/Write/Read calls whose `file_path` is an absolute parent-repo path while the session is inside a worktree. **Scope limit**: the hook matches the Edit/Write/NotebookEdit/Read tools — Bash-based edits, including the `.claude/` file workaround above, are not covered, so the worktree-local-path discipline must still be applied manually there.
 
+### Do not `cd` back to the parent repository
+
+`hook-worktree-path-guard.sh` only inspects `Edit`/`Write`/`NotebookEdit`/`Read` tool calls (see Scope limit above) — it does not parse Bash `tool_input.command`. A single, non-compound Bash command such as `cd /path/to/main/repo` (no `-C` flag, no redirect) is therefore invisible to the hook: nothing blocks the `cd` itself, and every CWD-relative command issued afterward — including `git commit` — then runs against the main repository's currently checked-out branch instead of the worktree.
+
+This is exactly the failure mode Issue #1454 identifies: during a worktree session, running `cd /path/to/main/repo && bash scripts/append-consumed-comments-section.sh <N> <phase> --no-push` slips past the hook, and the script's own main-tree defensive check (see the script's `_in_main_tree` guard, added for this Issue) is the only thing standing between that mistake and a commit landing directly on `main`.
+
+**If a Step genuinely needs to run against the parent repository** (e.g. a gitignored path per "Main-repo-only Steps inside a worktree session" below), use `ExitWorktree(action: "keep")` instead of `cd` — it returns the session to the main repository cleanly, without leaving the worktree session itself in an inconsistent state, and `EnterWorktree(path: ".claude/worktrees/{WORKTREE_NAME}")` resumes the worktree afterward. Do not `cd` to the parent repository path from inside an active worktree session for any reason.
+
 ### Main-repo-only Steps inside a worktree session
 
 Some Spec Implementation Steps must run against the main repository rather than the worktree — most commonly when the Step targets a path excluded from version control (e.g. `.tmp/auto-events.jsonl`), which therefore does not exist inside the worktree's own checkout. Treat this as a deliberate, narrowly-scoped exception: only the specific Step(s) that touch such a path need it, not the surrounding skill run.
