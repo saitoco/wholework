@@ -61,5 +61,34 @@ worktree isolation セッション中に単純な `cd /path/to/main/repo` (compo
 - **block (非ゼロ終了) を採用した判断**: Issue 本文の Auto-Resolved Ambiguity Points で既に決定済み。実インシデントで警告のみでは commit を止められなかったことが実証されているため。
 - **新規テストケース要否**: Implementation Step 1 が `append-consumed-comments-section.sh` に新規分岐 (main tree + `--no-push` の abort) を追加するため、Implementation Step 3 で新規 `@test` を追加する (Verification Pre-merge 3件目に対応)。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 were followed as designed with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- **Moving the main-tree detection earlier broke a pre-existing test's implicit assumption**: Implementation Step 1 moved `_git_dir`/`_git_common_dir` resolution to immediately after `_repo_root`, per the Spec's design. This is a read-only `git rev-parse` call, but it now runs unconditionally, including on the "section already exists, nothing new to add" fast-exit path. `tests/run-verify.bats`'s "section exists: skip and exit 0 without adding another section" test asserted `[ ! -f "$GIT_LOG" ]` (no git call at all on that path), which the Spec did not anticipate as an impacted file (it only listed `tests/append-consumed-comments-section.bats` in Changed Files). Fixed by narrowing the assertion to "no write/commit call happened" rather than "no git call happened at all", which is what the test actually intends to verify. Takeaway: a Spec's Changed Files list for a shared-helper function's refactor may not exhaustively predict every test file the change touches; the Stale Test Assertion Check module only scans for removed literal strings, not for behavior-based assertions like "call count" that a code-motion refactor can invalidate without removing any string.
+
+### Rework
+- One rework cycle: the new `--no-push` + main-tree bats test initially used a bare `[[ "$output" == *"ERROR"* ]]` assertion (copying the surrounding file's existing style), caught by `skills/code/skill-dev-validation.md`'s bash-3.2 bare-bracket-assertion pitfall during the Additional validation pass (Step 9) — not by `check-bare-bracket-assertions.sh` itself, which is informational-only and does not block. Rewrote to `echo "$output" | grep -q "ERROR"` before committing.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Chose a script-side defensive check (abort in `append-consumed-comments-section.sh`) over hook-side `cd` parsing in `hook-worktree-path-guard.sh`, per the Spec's rationale: no existing hook in this repo parses Bash `tool_input.command`, and reliable parsing of compound commands/subshells/aliases is fragile there, while the script already resolves `_repo_root` and reuses that pattern.
+- Positioned the `NO_PUSH && _in_main_tree` abort check immediately after `_repo_root`/`_git_dir`/`_git_common_dir` resolution — before any Spec file read or write — so a blocked run never leaves a partial file edit behind.
+- Scoped the defensive check to `append-consumed-comments-section.sh` only, matching the Issue's Auto-Resolved Ambiguity Points; other git-write scripts (`apply-fallback.sh`, `worktree-merge-push.sh`, etc.) are explicitly out of scope for this Issue.
+
+### Deferred Items
+- Extending the same main-tree defensive check to other git-write scripts is deferred to a follow-up Issue if the same failure mode recurs there (Issue body Auto-Resolved Ambiguity Points, "スコープを `append-consumed-comments-section.sh` に限定した判断").
+- hook-side `cd` detection in `hook-worktree-path-guard.sh` was considered and explicitly not implemented (AC1's "検知・警告・block のいずれか" wording permits the script-side-only approach chosen here).
+
+### Notes for Next Phase
+- Confirm the new `### Do not \`cd\` back to the parent repository` subsection in `modules/worktree-lifecycle.md` reads cleanly in its inserted position (between "Edit/Write path conventions in worktree sessions" and "Main-repo-only Steps inside a worktree session").
+- The script's abort message cites `modules/worktree-lifecycle.md § "Do not \`cd\` back to the parent repository"` by heading text — if the heading is renamed, update the message to match.
+- `tests/run-verify.bats`'s "section exists" test assertion was narrowed during this phase (see Code Retrospective's Design Gaps/Ambiguities) — worth a second look to confirm the narrowed assertion still captures the property it's meant to guard.
+- Full suite verified locally: `bats --jobs 18 tests/` → 2012/2012 PASS.
+
 ## Consumed Comments
 No new comments since last phase.
