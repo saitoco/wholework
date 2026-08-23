@@ -1147,6 +1147,37 @@ A `command` verify command whose argument targets more than one file — a singl
 - ❌ `command "bats tests/new-foo.bats tests/new-bar.bats"` — both files are newly added (exempt from §24's purely-additive exclusion), but the argument names two files, so this check still fires.
 - ✅ `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"`
 
+### 33. Nested-Quote Escaping in `github_check "..."` Arguments
+
+When a `github_check "..."` verify command's argument contains a `--jq '...'` expression with jq string literals (e.g. `"completed"`, `"in_progress"`), every inner double quote must be backslash-escaped (`\"completed\"`, `\"in_progress\"`) — the escaping is a property of the bash double-quoted argument itself, not of the surrounding markdown context. The same rule applies uniformly whether the example appears in a fenced code block, a markdown table cell, or a plain-text bullet; there is no context where the inner `"` can be left un-escaped.
+
+This defect recurred 9 times across 2 files in the #1449 verify retrospective, because the escaping requirement was never stated as an explicit rule anywhere reachable at authoring time — it existed only as an unlabeled convention inside the canonical template (`modules/verify-classifier.md` § "Patch Route CI Verification Note"). An initial theory that table-cell contexts don't need `\"` escaping was tried and still produced the same defect, confirming the requirement does not vary by markdown context.
+
+**Detection heuristic:** any `github_check "..."` argument that embeds a `--jq '...'` expression with jq string literals must have every inner `"` written as `\"`. A raw un-escaped `"completed"` (or any other jq string literal) inside a `github_check "..."` argument silently truncates the outer argument at the first un-escaped quote — this is a defect regardless of the surrounding markdown context.
+
+**Examples (fenced code block, table cell, plain bullet — same escaping in all three):**
+
+Fenced code block:
+```
+<!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success" -->
+```
+
+Table cell:
+
+| Verify command |
+|----------------|
+| `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
+
+Plain bullet:
+- `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"`
+
+❌ Missing escaping (breaks the outer argument boundary at the first un-escaped quote):
+```
+<!-- verify: github_check "gh run list --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'" "success" -->
+```
+
+See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the canonical, correctly-escaped template this pattern derives from.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
