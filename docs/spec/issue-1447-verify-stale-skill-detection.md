@@ -83,6 +83,40 @@ Step 18 の 2-axis 再評価で、変更ファイル数 (2件) に加えて「�
 
 `tests/verify.bats` に Step 1 の自己整合性チェック (マーカー同期・配置) と Step 9 の警告差し込みを検証する新規テストケース (計3件) を追加し、既存スイートと合わせて全PASSすることを Implementation Step 4 で要求した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — implementation followed Implementation Steps 1-4 as written, with no reordering, omission, or consolidation of steps.
+
+### Design Gaps/Ambiguities
+
+N/A — the Spec's `### 自己参照チェックの正しさに関する重要な実装上の注意` note already flagged the exact pitfall (re-fetching the marker value with a new tool call would turn the comparison into a tautology) before implementation started, so no gap was discovered during coding.
+
+### Rework
+
+N/A — no rework occurred.
+
+### Test Verification
+
+Confirmed pre-implementation FAIL for 3 new tests (stashed `skills/verify/SKILL.md` only, ran `bats tests/verify.bats --filter "Issue #1447"`, restored via `git stash pop`). Full suite (`bats --jobs 18 tests/`) passed at 2010/2010 after restoring the implementation.
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Size Re-evaluation (S→M, patch→pr route)、AC2 の verify command を `github_check "gh pr checks" "Run bats tests"` 形式へ修正 (Spec Notes に既に反映済み) / https://github.com/saitoco/wholework/issues/1447#issuecomment-5383520575
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted Proposal 1 from the Issue (line-count self-consistency check) exactly as scoped in the Spec's Notes — no deviation during implementation.
+- Marker value transcription rule (compare cached instruction text vs. a fresh `wc -l`, never re-fetch the cached side) implemented literally per the Spec's explicit caution to avoid a tautological comparison.
+- Warning surfaced in two channels: terminal (Step 1, immediate) and the Step 9 Issue comment as plain visible Markdown (not an HTML comment) so non-interactive/unattended runs that never observe terminal output still get the signal.
+
+### Deferred Items
+- AC2 (`github_check "gh pr checks" "Run bats tests"`) left unchecked per the CI verification AC exclusion rule — no PR existed yet when Step 10 ran. `/review` will verify it against this PR's actual checks.
+- Generalizing the self-reference line-count marker pattern to other wrapper-less skills or files is explicitly out of scope (see Spec Notes § スコープ) — left as a future Issue candidate, not tracked here.
+
+### Notes for Next Phase
+- `/review` should confirm CI (`gh pr checks`) is green and check AC2, since Step 10 could not evaluate it pre-PR.
+- The new marker `<!-- skill-body-lines: 1057 -->` must be kept in sync manually whenever `skills/verify/SKILL.md` is next edited — a regression bats test (`skill-body-lines marker stays in sync with wc -l`) will catch drift but does not auto-fix it.
