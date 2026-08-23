@@ -119,3 +119,5 @@ Post-merge manual 条件4件のうち3件 (`/doc` status display 除外確認、
 ## Consumed Comments
 No new comments since last phase.
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=71 --> / https://github.com/saitoco/wholework/issues/71#issuecomment-5305293113
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=71 ac=7 execu / https://github.com/saitoco/wholework/issues/71#issuecomment-5305298465
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=71 --> / https://github.com/saitoco/wholework/issues/71#issuecomment-5383496706
