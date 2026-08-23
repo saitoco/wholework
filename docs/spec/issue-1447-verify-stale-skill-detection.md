@@ -120,14 +120,15 @@ Nothing to note — this is the first PR for this Issue; no repeated issue categ
 Nothing to note — both Pre-merge conditions verified cleanly. AC1's `rubric` command judged PASS without ambiguity because the Spec's own Notes section already documented and accepted the line-count heuristic's known limitation (same-line-count edits are undetectable), so the grader had explicit context for why this approximation satisfies the Issue's Purpose (imperfect detection is explicitly acceptable). AC2's `github_check "gh pr checks" "Run bats tests"` matched cleanly against this PR's own CI run (Size was already re-evaluated S→M / patch→pr in the code phase, so the verify command's pr-route form was already correct at review time — no further adjustment needed).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Both Pre-merge AC (rubric, `github_check`) verified PASS in Step 8; Issue checkboxes updated to `[x]` for both.
-- `review-light` (light mode, Size M) ran all 4 perspectives in one agent and found no MUST/SHOULD/CONSIDER issues — no fix cycle was needed.
+- Pre-merge AC gate: both Pre-merge AC on issue #1447 were already `[x]` at merge time (`check-pre-merge-ac.sh` reported `unchecked_count: 0`); merge proceeded without an override marker.
+- `reconcile-phase-state.sh --check-completion` confirmed review completion was organic (Review Response Summary found), not fallback-origin — no `review_incomplete_fallback` gate condition applied.
+- PR was clean-mergeable (`mergeable=true`, CI success, review approved) — merged directly via squash without a conflict-resolution rebase.
 
 ### Deferred Items
 - None.
 
 ### Notes for Next Phase
-- `/merge` can proceed directly — no unresolved review issues, all CI green, both Pre-merge AC checked.
+- `/verify` should confirm the post-merge Issue state (auto-close via `closes #1447`, `phase/verify` label) reached its expected state; no Post-merge AC is defined for this Issue (Verification > Post-merge: なし).
