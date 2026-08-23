@@ -44,6 +44,18 @@ No new comments since last phase. Cross-phase marker exception scan (`type=verif
 
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1213#issuecomment-5236945503
 - saito / MEMBER / first-class / ## AC16 手動再確認 (2026-08-10) / https://github.com/saitoco/wholework/issues/1213#issuecomment-5237545411
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1213#issuecomment-5237556689
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5246563851
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5255757311
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5296387819
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5304276473
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5310550526
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5327733626
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5341244510
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5354380217
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5369696730
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5378425211
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5383999235
 ## Changed Files
 
 - `skills/code/SKILL.md`: Step 9 の実行サーフェス制約を、Behavioral Change Detection 分岐内 (旧位置: check 2 の `bats tests/` コードフェンス直後) から、Step 9 冒頭 (`**Operate route**: ...` 行の直後、Behavioral Change Detection 見出しより前) の分岐非依存な位置へ移動。旧位置の記述は "See the execution surface constraint above" 形の短い参照へ置換 (`run_in_background` という語自体は旧位置から除去)
