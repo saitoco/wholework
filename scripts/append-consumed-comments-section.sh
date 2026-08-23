@@ -8,7 +8,10 @@
 # responsible for propagating the commit to base via its own Exit path (see
 # modules/worktree-lifecycle.md § "Spec file write destination").
 #
-# Best-effort: always exits 0. Failures are logged to stderr without blocking the caller.
+# Best-effort: always exits 0, except when --no-push is combined with main-tree
+# execution (the --no-push contract violation this script now aborts on rather
+# than silently committing to main — see Issue #1454). Other failures are
+# logged to stderr without blocking the caller.
 # Bash 3.2+ compatible.
 
 set -uo pipefail
