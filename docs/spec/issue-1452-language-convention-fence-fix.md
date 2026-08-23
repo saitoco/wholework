@@ -77,6 +77,7 @@
 - saito / MEMBER / first-class / Issue Retrospective (Autonomous Auto-Resolve Log): `/issue` フェーズでのコンテキスト拡大アプローチ採用の判断根拠を記録。Issue 本文の `## Auto-Resolved Ambiguity Points` に既に反映済みで追加対応不要。 https://github.com/saitoco/wholework/issues/1452#issuecomment-5385872333
 - saito / MEMBER / first-class / Triage AC audit: Pre-merge AC3 (`command "bats tests/check-language-convention.bats"`) が新規テスト追加なしでも常時 PASS するリスク (Pattern 2) を指摘、`bats --filter` への絞り込みを提案。本 Spec の `## Notes` の通り、`--filter` 単体は0件マッチ時に exit 0 となるリスクがあるため不採用とし、`grep` (存在確認) + フルスイート実行の2段構えパターンへ具体化して Issue 本文にも反映済み。 https://github.com/saitoco/wholework/issues/1452#issuecomment-5385886533
 - (code phase) 新規コメントなし (cutoff: 2026-08-23T12:17:59Z、`phase/ready` ラベル付与時点)
+- (review phase) 新規コメントなし (cutoff: 2026-08-23T12:24:37Z、`phase/review` ラベル付与時点)
 
 ## Code Retrospective
 
