@@ -130,6 +130,7 @@
 - **実際に発火した分岐の特定**: `scripts/reconcile-phase-state.sh` の `_precondition_code_common` が `matches_expected: false` を返す分岐は (1) `phase/ready` 不在、(2) Spec 不在かつ Size ≠ XS の 2 つのみ。`skills/code/SKILL.md` では precondition check が Step 3 (`:165`)、ラベル遷移が Step 4 (`:187`) であり、`run-auto-sub.sh` / `run-code.sh` はいずれも `gh-label-transition.sh` を呼ばない (grep ヒット 0)。したがって分岐 1 は構造的に成立不能で、発火したのは分岐 2 (Spec 不在、Size は S) である
 - Spec ファイルは最終的に読めており実装は Implementation Steps に沿っているため、Step 3 の時点でのみ worktree から見えていなかったことになる。その時間窓が生じた理由 (worktree の base ref と `/spec` の push 伝播タイミング) は本 verify では未確定
 - `/verify` Step 2 の PR 検索は `closes #1266` で PR #1090 を返したが、`gh-extract-issue-from-pr.sh` による実参照確認で `closes #1061` と判明し正しく除外された。#1202 で入った全文検索の誤ヒット対策が実際に機能した事例
+- **再走 (2026-08-23)**: post-merge observation AC (`session=next`) を再評価。`docs/spec/issue-1273-verify-type-tag-scoping.md` (2026-08-17、本 Issue のマージ 2026-08-09 より後) の `### allowed-tools impact chain check` 節に、Case 2 (`modules/*.md` 変更) の発火実績が記録されている — `modules/verify-classifier.md` への変更を `grep -rl "modules/verify-classifier\.md" skills/*/SKILL.md` で検出し6件の reader SKILL.md を洗い出した上で、「引用であって新規スクリプト呼び出しではないため allowed-tools 追加は不要」と過剰発火も回避して正しく判定していた。**PASS**
 
 ### Improvement Proposals
 
