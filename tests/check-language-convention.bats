@@ -54,3 +54,9 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/check-languag
   [ "$status" -eq 1 ]
   [[ "$output" == *"modules/example.md:"* ]]
 }
+
+@test "false positive: fence opener beyond diff context is not visible in the hunk exits 1" {
+  run bash -c "printf '+++ b/skills/verify/SKILL.md\n@@ -50,3 +50,3 @@\n Print advisory:\n-old english line\n+新しい日本語の行 (再試行)\n \`\`\`\n' | python3 '$SCRIPT'"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"skills/verify/SKILL.md:"* ]]
+}
