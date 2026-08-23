@@ -102,14 +102,14 @@
 - なし。4件の Pre-merge AC のうち3件 (rubric, grep, grep) は safe mode で決定的に判定でき、残り1件 (`command "bats tests/check-language-convention.bats"`) も CI ジョブ `Run bats tests` の実行範囲 (`bats --jobs $(nproc) tests/`) が対象テストファイルを含むことを identity confirmation で確認したうえで CI 参照フォールバック経由の PASS に到達できた。UNCERTAIN は0件。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 4件の Pre-merge AC を safe mode で全て決定的に判定 (rubric 1件、grep 2件、CI参照フォールバック経由の command 1件)。UNCERTAIN・FAIL なし。
-- review-light エージェント (4観点統合) による軽量レビューを実施し、MUST/SHOULD 相当の指摘なしを確認。CONSIDER 2件 (`-U100000` の将来的な境界条件、ドキュメント根拠の Spec 依存) はインラインコメントとして記録したが、スコープ最小化の方針により今回は対応を見送った。
+- PR #1453 を squash merge し、リモートブランチを削除した。pre-merge AC ゲートは4件全て `[x]` 済みで unchecked なし、review-incomplete-fallback も該当なしのため、確認なしで通過した。
+- `origin/main` へ fast-forward 後、Comment Consumption (merge phase) を実行したが新規コメントはなく、Spec への追記は不要だった。
 
 ### Deferred Items
-- None (CONSIDER 2件は見送りとして記録済みで、追加のフォローアップ Issue 化は行っていない)
+- None (Post-merge AC は Issue 本文の通り「なし」)
 
 ### Notes for Next Phase
-- `/merge 1453` で問題なくマージ可能。Pre-merge AC 4件全て PASS 済み、Issue チェックボックスも更新済み。Post-merge AC は「なし」。
+- `/verify 1452` は Post-merge AC が「なし」のため、Issue クローズ状態と `phase/verify` ラベルの確認のみで完了する見込み。
