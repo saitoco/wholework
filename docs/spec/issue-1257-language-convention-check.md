@@ -182,8 +182,9 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 
 #### verify
 
-- Pre-merge 4 件は既チェックのため既定どおり skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- 初回 (2026-08-08): Pre-merge 4 件は既チェックのため既定どおり skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
 - 実体をスポット確認した: `scripts/check-language-convention.py` は存在・実行可能、bats 7 件すべて PASS。呼び出し元は `.github/workflows/test.yml:85,87` のみで `skills/` / `modules/` からの参照はゼロのため、`allowed-tools` への追加が不要な構成であることも確認した (#1266 で拡張した allowed-tools impact chain check の Case 1 は新規 `scripts/*.sh` を対象とするが、本 Issue の新規スクリプトは `.py` かつ CI 専用のため対象外で正しい)
+- 再走 (2026-08-23): `event=auto-run` 発火を確認し PASS 判定。`docs/spec/issue-1302-audit-ref-existence-check.md` (2026-08-16) に、`skills/spec/SKILL.md` への生の CJK プローズ混入を CI の Language Convention check が実際に検出し `/review` で修正した記録があり、本 Issue の post-merge observation が要求する「転記経由の日本語混入検出」の直接的な実例として確認できた
 
 ### Improvement Proposals
 
