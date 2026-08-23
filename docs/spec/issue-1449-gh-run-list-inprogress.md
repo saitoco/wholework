@@ -105,6 +105,32 @@ The identical defect (unescaped `"completed"`/`"in_progress"` literals nested in
 ### Acceptance criteria verification difficulty
 The rubric AC's wording ("旧パターンの例示が...推奨パターンに更新されている") verified pattern *presence* (old string gone, new string present) but not the replacement's own *syntactic correctness* (escaping). This is a plausible gap pattern for any rubric AC phrased as "replace X with Y": a grader confirming Y's presence does not by itself confirm Y is well-formed. Separately, this PR's fix commit exposed a real, reproducible false-positive in `scripts/check-language-convention.py`: its fence-tracking is diff-context-scoped (default 3 lines) and cannot see a fenced code block's opening marker when an edit lands more than ~3 lines past it, causing a pre-existing Japanese template line to fail CI purely because an unrelated part of the same line was touched. Both are candidate follow-up Issues (not filed here per this skill's "record in review retrospective only" convention — proposals are aggregated in `/verify`).
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Scope was well-bounded: Issue Background already enumerated the target files, and the Spec's own investigation caught 2 additional gaps (job-level patterns beyond the Issue's workflow-level examples, and `modules/verify-executor.md`'s own unmigrated Job-Level Conclusion Sub-Form example) before Code started, avoiding a fix-cycle.
+
+#### design
+- N/A — Spec did not use a separate design sub-phase for this Issue.
+
+#### code
+- Design Gaps/Ambiguities recorded an escaping-style theory ("table cells don't need `\"`-escaping") that was both self-contradicted by the same PR's own diff and simply incorrect — see review below. No fixup/amend commits were needed; the mistake was caught at `/review` on the initial pass.
+
+#### review
+- Review was effective: it caught a real, reproducible correctness defect (unescaped nested quotes) recurring across 9 locations in 3 markdown contexts, and additionally surfaced a `check-language-convention.py` false-positive unrelated to this Issue's own change (fence-tracking is diff-context-scoped and misses a fenced block's opening marker when an edit lands >~3 lines past it).
+
+#### merge
+- Clean squash-merge, no conflicts, pre-merge AC gate confirmed organically (rubric AC already `[x]`, review completion not fallback-origin).
+
+#### verify
+- No FAIL; the sole Pre-merge AC was already checked at merge time and required no re-verification (already-checked AC skip rule). No post-merge AC (Verification section states "なし" for Post-merge, confirmed via Phase Handoff).
+
+### Improvement Proposals
+- `modules/verify-patterns.md`'s own "Known Pitfalls" table lacks a "nested-quote escaping" row for `github_check "..."` examples that embed jq string literals (`\"completed\"`/`\"in_progress\"`). The escaping rule is currently only derivable by example from `modules/verify-classifier.md:277`; the identical defect recurred independently across 9 locations in this PR (2 files, 3 markdown contexts: fenced blocks, table cells, a plain bullet), suggesting the rule is not obvious enough at point-of-authoring. Adding an explicit row to the same file this PR edits would give future authors a direct, canonical reference.
+- `scripts/check-language-convention.py`'s fence-tracking is diff-context-scoped (default 3 lines) and cannot see a fenced code block's opening marker when an edit lands more than ~3 lines past it — this caused a pre-existing Japanese template line to fail CI purely because an unrelated part of the same line was touched, a reproducible false positive independent of this Issue's actual change.
+
 ## Consumed Comments
 
 No new comments since last phase.
