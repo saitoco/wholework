@@ -82,19 +82,30 @@
 - None.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Followed the Spec's replacement rules exactly: workflow-level `--json conclusion --jq '.[0].conclusion'` → `--json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'`; job-level analog for the `gh run view --json jobs` sub-form.
-- Included `modules/verify-executor.md`'s own "Job-Level Conclusion Sub-Form" examples (outside the Issue's named file list) per the Spec's Notes rationale — same-file risk of the SSoT itself carrying a stale example.
-- `docs/versioning.md` / `docs/ja/versioning.md` got an adapted fix (not a literal template swap) since that line is a multi-run "no failure" gate check, not a single-run verify command.
+- Kept the rubric AC verdict as PASS: the AC's wording only asks whether the stale `--json conclusion --jq '.[0].conclusion'` pattern was replaced with the status-synthesizing form, not whether the replacement's internal quote-escaping is syntactically correct. Treated the escaping defect as a separate code-review finding rather than an AC failure.
+- Fixed all MUST/SHOULD findings before posting the Response Summary rather than deferring any to a follow-up Issue: the 9 unescaped-quote instances are the same defect class and low-risk to fix uniformly (`replace_all` on 2 exact substrings covered 9 of 9 locations across 2 files), and the CI-blocking `Language Convention check` failure required a fix regardless.
+- Resolved the CI blocker by translating 2 "修復案" labels to "Suggested fix" (English) within `skill-dev-verify-audit.md`'s Comment Format Template block only — not the file's other ~10 pre-existing Japanese occurrences, which remain untouched and out of scope.
 
 ### Deferred Items
-- None.
+- The `check-language-convention.py` fence-tracking limitation itself (loses state when a fenced code block's opening marker falls outside the diff's default 3-line context) was not fixed — worked around at the call-site instead. See review retrospective below for a follow-up proposal.
 
 ### Notes for Next Phase
-- All 5 rubric-named files plus the 2 additional `modules/verify-executor.md` locations were re-grepped after edits and confirmed clean of the old pattern (`json conclusion --jq`) — `/review` and `/verify` should not need to re-derive target locations, just confirm the rubric AC checkbox state and PR diff.
-- Full bats suite (2010 tests) passed with `--jobs 18`; `modules/verify-patterns.md`, `modules/verify-executor.md`, `skills/issue/SKILL.md`, and `skills/issue/spec-test-guidelines.md` triggered the behavioral-change full-suite override (referenced by tests beyond their direct counterpart).
+- `/merge` should find the PR clean: all 15 CI checks SUCCESS, rubric AC already `[x]`, no other Pre-merge conditions.
+- The Spec's Design Gaps/Ambiguities note (above) was corrected in this phase — it previously rationalized the unescaped form as intentional for table cells, which the PR's own diff contradicted.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+The Spec's own Code Retrospective (`### Design Gaps/Ambiguities`, corrected above) asserted an escaping-style rule ("table cell → no backslash-escaping needed") that turned out to be both self-contradicted by the same PR's diff (2 non-table-cell instances were also left unescaped) and simply incorrect (the escaping requirement is driven by the outer `github_check "..."` double-quote wrapping, not by markdown context). This is a Spec/Code self-review gap rather than a Spec-vs-implementation scope divergence: the Code phase's own retrospective reasoning was wrong, and nothing in the Spec→Code handoff caught it before `/review`.
+
+### Recurring issues
+The identical defect (unescaped `"completed"`/`"in_progress"` literals nested inside a double-quoted `github_check "..."` argument) recurred independently across 9 locations in a single PR, split across 2 files and 3 distinct markdown contexts (fenced `<!-- verify: -->` blocks, table cells, and a plain bullet). This suggests the escaping requirement is not obvious enough at point-of-authoring to reliably self-apply across many similar edits in one pass — a candidate follow-up is adding an explicit "nested-quote escaping" row to `modules/verify-patterns.md`'s own "Known Pitfalls" table (the same file this PR edits), so future authors of `github_check` examples embedding jq string literals have a direct, canonical reference instead of re-deriving the rule from `modules/verify-classifier.md:277` by example.
+
+### Acceptance criteria verification difficulty
+The rubric AC's wording ("旧パターンの例示が...推奨パターンに更新されている") verified pattern *presence* (old string gone, new string present) but not the replacement's own *syntactic correctness* (escaping). This is a plausible gap pattern for any rubric AC phrased as "replace X with Y": a grader confirming Y's presence does not by itself confirm Y is well-formed. Separately, this PR's fix commit exposed a real, reproducible false-positive in `scripts/check-language-convention.py`: its fence-tracking is diff-context-scoped (default 3 lines) and cannot see a fenced code block's opening marker when an edit lands more than ~3 lines past it, causing a pre-existing Japanese template line to fail CI purely because an unrelated part of the same line was touched. Both are candidate follow-up Issues (not filed here per this skill's "record in review retrospective only" convention — proposals are aggregated in `/verify`).
 
 ## Consumed Comments
 
