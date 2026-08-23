@@ -91,13 +91,13 @@ A **job-level variant** of `github_check` references a specific CI job's conclus
 **Usage form:**
 
 ```
-github_check "gh run view $(gh run list --workflow=<file>.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"<job_name>\").conclusion'" "success"
+github_check "gh run view $(gh run list --workflow=<file>.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"<job_name>\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"
 ```
 
 **Example (verifying only the `Run bats tests` job):**
 
 ```
-<!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success" -->
+<!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success" -->
 ```
 
 **Applicability:** Use in multi-job CI workflows when only a specific job's success matters and unrelated jobs have pre-existing failures that would falsely FAIL a workflow-level check.

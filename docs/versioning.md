@@ -129,7 +129,7 @@ A trigger opens the question; it does not by itself authorize the tag. Run the g
 
 | # | Gate | How to check |
 |---|------|--------------|
-| 1 | Base branch CI is green | `gh run list --branch main --workflow Test --limit 10 --json conclusion` — no `failure` |
+| 1 | Base branch CI is green | `gh run list --branch main --workflow Test --limit 10 --json conclusion,status` — no `failure`, and no `status` other than `completed` (an in-progress run must not be read as green) |
 | 2 | No open PR carrying unreleased work | `gh pr list --state open` — empty, or only PRs still in review/CI |
 | 3 | No known test failure or regression | Open Issues describing a reproducible failure in the shipped surface are resolved or explicitly deferred with a recorded reason |
 | 4 | Documentation drift check passes | See the four checks below |
