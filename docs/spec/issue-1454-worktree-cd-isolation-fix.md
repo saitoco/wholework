@@ -84,16 +84,16 @@ Nothing to note — a single SHOULD-severity finding (stale "always exits 0" cla
 All 4 Pre-merge conditions resolved cleanly: 3 via `rubric`/`file_contains` against the diff, 1 (`bats tests/`) via the Step 9 CI reference fallback (`Run bats tests` job SUCCESS) rather than direct execution — no UNCERTAIN, no verify command gaps or inaccuracies observed.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the SHOULD finding in-line (documentation-only, low risk) rather than deferring: updated both the script header comment and `skills/verify/SKILL.md:189` to describe the new conditional exit-1 path instead of the stale "always exits 0" claim.
+- Squash-merged PR #1455 into main with no conflicts (`mergeable=true, reason=clean`); no rebase or manual conflict resolution was needed.
 
 ### Deferred Items
 - None.
 
 ### Notes for Next Phase
-- `/merge 1455` can proceed directly — no MUST issues, CI green (15/15), all 4 Pre-merge AC already checked `[x]` on the Issue.
+- `/verify 1454` should confirm the Issue transitions to `phase/verify` and closes automatically via `closes #1454`; no post-merge Acceptance Criteria are defined for this Issue (Verification § Post-merge: なし).
 
 ## Consumed Comments
 No new comments since last phase.
