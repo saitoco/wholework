@@ -94,6 +94,20 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | Issue Retrospective: Background 事実確認 (訂正なし)、AC2 を「選択した実装成果物への記載」に明確化した Auto-Resolve Log、post-merge observation AC への `session=next` 付与根拠、案 A/B 選択判断は `/spec` フェーズへの委譲を確認 | https://github.com/saitoco/wholework/issues/1257#issuecomment-5227226402 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1257#issuecomment-5227671103
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5228485571
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5235407578
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5246565737
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5255760595
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5296389977
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5304277249
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5310551596
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5327736181
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5341248616
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5354383510
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5369699770
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5378426447
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1257#issuecomment-5384000217
 ## Code Retrospective
 
 ### Deviations from Design
