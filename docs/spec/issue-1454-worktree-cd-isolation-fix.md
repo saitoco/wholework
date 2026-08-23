@@ -60,3 +60,6 @@ worktree isolation セッション中に単純な `cd /path/to/main/repo` (compo
 - **スコープを `append-consumed-comments-section.sh` に限定した判断**: Issue 本文の Auto-Resolved Ambiguity Points で既に決定済み。`git -C`/`git add|commit|push` を含む他スクリプトへの横展開は再発時に別 Issue で扱う。
 - **block (非ゼロ終了) を採用した判断**: Issue 本文の Auto-Resolved Ambiguity Points で既に決定済み。実インシデントで警告のみでは commit を止められなかったことが実証されているため。
 - **新規テストケース要否**: Implementation Step 1 が `append-consumed-comments-section.sh` に新規分岐 (main tree + `--no-push` の abort) を追加するため、Implementation Step 3 で新規 `@test` を追加する (Verification Pre-merge 3件目に対応)。
+
+## Consumed Comments
+No new comments since last phase.
