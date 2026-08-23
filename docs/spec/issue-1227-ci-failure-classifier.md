@@ -145,6 +145,21 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — 非対話モードでの Auto-Resolve Log (AC3 の rubric text を既存 PENDING リトライ機構を明示的に除外する形へ具体化、Post-merge observation AC に `session=next` を付与)。AC1/AC2 の rubric と AC4 は修正不要と確認済み / https://github.com/saitoco/wholework/issues/1227#issuecomment-5216881303
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1227#issuecomment-5218792189
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5225319750
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5229262073
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5235407120
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5246564943
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5255759370
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5296389012
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5304276927
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5310551043
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5327734858
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5341246305
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5354381593
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5369697883
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5378425711
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5383999657
 ## issue retrospective
 
 **Non-interactive mode**: `--non-interactive` で実行。ambiguity 検出では Issue レベルで判断が必要な新規の曖昧ポイントは見つからず (Background の事実主張はすべてコードベースと一致確認済み、AC1/AC2 の実装先ファイル選択は `/issue` (What) と `/spec` (How) の責務境界に従い `/spec` に委譲するのが適切と判断)、以下 2 件は監査コメント/機械チェックに基づく一意に解決可能な修正として自動適用した。
