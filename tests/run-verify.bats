@@ -118,8 +118,13 @@ MOCK
     COUNT=$(grep -c "^## Consumed Comments" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md")
     [ "$COUNT" -eq 1 ]
 
-    # git should not have been called (section already existed → skip before any write)
-    [ ! -f "$GIT_LOG" ]
+    # Read-only git-dir/git-common-dir calls now happen early (main-tree detection,
+    # Issue #1454) even on this no-op path, but no write/commit call should follow
+    # (section already existed → skip before any write).
+    if [ -f "$GIT_LOG" ]; then
+        run grep -q "commit\|add\|diff" "$GIT_LOG"
+        [ "$status" -ne 0 ]
+    fi
 }
 
 @test "verify-fail marker comment included regardless of cutoff" {
