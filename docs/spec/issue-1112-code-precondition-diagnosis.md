@@ -111,3 +111,15 @@ N/A
 |-------|-------------------|-----------|-----------|-----|
 | saito | MEMBER | first-class | #1102 での 2 回目の再発を報告し、timeline 実測との矛盾・Phase Handoff への伝播を記録。フェーズ開始時点の値を保持して retrospective に渡す観点を提起 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5205213361 |
 | saito | MEMBER | first-class | #1108 での 3 回目の再発を報告し、ラベル読み取り結果自体が記録されていたことから「ラベル付与とラベル読み取りの順序が逆転している」可能性を指摘 | https://github.com/saitoco/wholework/issues/1112#issuecomment-5213033471 |
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+
+- Post-merge observation 条件 (`event=auto-run session=next`) を評価。`auto-run` イベント自体は発火済みだが、修正マージ (a7ecd358, 2026-08-21 21:02 JST) 以降に作成/更新された Spec (#1047, #1435, #1109, #1106, #1107 等) を調査した限り、本 Issue が対象とする「Step 3 の phase/ready 欠如による false-state」シナリオそのものが一度も再現していない。イベント発火 (= 何らかの `/auto` 実行が完了した) と、この観測条件が確認したい「該当シナリオが発生した」は別物であり、後者の母集団がまだ観測されていないため UNCERTAIN と判定した。次回この false-state シナリオが実際に発生した際に再評価が必要
+- opportunistic 条件 (phase/ready 無し状態での `/code` 診断文言確認) は、人為的な不完全実行の構築が opportunistic タグの趣旨 (自然発生時の捕捉) にそぐわないため SKIP とした
+
+### Improvement Proposals
+- N/A
