@@ -346,6 +346,7 @@ N/A — Implementation Steps 1–9 を Spec の記述順どおりに実装した
 #### verify
 - FAIL/UNCERTAIN なし。Post-merge 条件 3 件は `event=auto-run` 未発火のため SKIPPED (`session=next` の判定は次回発火時、かつ本セッションとは別セッションでの評価が必要)。
 - review phase で watchdog silent 5400s 超過 → Tier 3 recovery (`action=retry`) が発火し `run-review.sh` の再実行で回復。`docs/reports/orchestration-recoveries.md` (Issue #1271, phase: review) に既に記録済みのため、本セクションでは重複記録しない。
+- **再走 (2026-08-23)**: `event=auto-run` が発火し `session=next` の再評価対象として dispatch された。しかし `scripts/apply-verify-retire.sh` / `/audit stats --retention` が本 Issue のマージ (2026-08-22T10:12:08Z) 以降に実行された証跡が見つからない — `docs/stats/` に新規レポートなし、他 Issue への `type=verify-ac-retired` marker コメントなし、`.tmp/auto-events.jsonl` に audit/retire 関連イベントなし。`event=auto-run` は「次回いずれかの /auto セッション」を示す粗い発火条件であり、Level 3 自動 retire 機構そのものの実行 (`/audit stats --retention` の明示実行が必要) はまだ機会を得ていない。3 条件とも **SKIPPED** を維持
 
 ### Improvement Proposals
 
