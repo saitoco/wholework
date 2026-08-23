@@ -295,3 +295,37 @@ MOCK
     grep -q "CALLED --base main" "$REPO_ROOT/merge-push.log"
     ! grep -q "push origin HEAD" "$REPO_ROOT/git.log"
 }
+
+@test "--no-push with main tree execution: aborts before writing Spec or committing" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$*" >> "$REPO_ROOT/git.log"
+if [[ " \$* " == *" diff "* ]] && [[ " \$* " == *" --quiet "* ]]; then
+    exit 1
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$REPO_ROOT"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --git-dir"* ]]; then
+    echo "$REPO_ROOT/.git"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --git-common-dir"* ]]; then
+    echo "$REPO_ROOT/.git"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run "$SCRIPT" 42 code --no-push
+    [ "$status" -ne 0 ]
+    echo "$output" | grep -q "ERROR"
+    ! grep -q "^## Consumed Comments" "$SPEC_FILE"
+    run grep -q "commit" "$REPO_ROOT/git.log"
+    [ "$status" -ne 0 ]
+}

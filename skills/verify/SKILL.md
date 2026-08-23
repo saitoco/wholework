@@ -186,7 +186,7 @@ After completing the Comment Consumption Procedure, run the deterministic bash f
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER verify --no-push
 ```
 
-(best-effort; always exits 0 — the call is mandatory but failures do not block the skill)
+(best-effort; the call is mandatory, but a non-zero exit only occurs when `--no-push` is combined with main-tree execution — an isolation-guard violation the script now aborts on rather than silently committing to `main` (see Issue #1454) — any other failure does not block the skill)
 
 **Phase Handoff read** (verify is the last execution phase — read only, no write):
 

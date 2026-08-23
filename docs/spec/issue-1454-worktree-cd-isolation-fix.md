@@ -61,5 +61,39 @@ worktree isolation セッション中に単純な `cd /path/to/main/repo` (compo
 - **block (非ゼロ終了) を採用した判断**: Issue 本文の Auto-Resolved Ambiguity Points で既に決定済み。実インシデントで警告のみでは commit を止められなかったことが実証されているため。
 - **新規テストケース要否**: Implementation Step 1 が `append-consumed-comments-section.sh` に新規分岐 (main tree + `--no-push` の abort) を追加するため、Implementation Step 3 で新規 `@test` を追加する (Verification Pre-merge 3件目に対応)。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 were followed as designed with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- **Moving the main-tree detection earlier broke a pre-existing test's implicit assumption**: Implementation Step 1 moved `_git_dir`/`_git_common_dir` resolution to immediately after `_repo_root`, per the Spec's design. This is a read-only `git rev-parse` call, but it now runs unconditionally, including on the "section already exists, nothing new to add" fast-exit path. `tests/run-verify.bats`'s "section exists: skip and exit 0 without adding another section" test asserted `[ ! -f "$GIT_LOG" ]` (no git call at all on that path), which the Spec did not anticipate as an impacted file (it only listed `tests/append-consumed-comments-section.bats` in Changed Files). Fixed by narrowing the assertion to "no write/commit call happened" rather than "no git call happened at all", which is what the test actually intends to verify. Takeaway: a Spec's Changed Files list for a shared-helper function's refactor may not exhaustively predict every test file the change touches; the Stale Test Assertion Check module only scans for removed literal strings, not for behavior-based assertions like "call count" that a code-motion refactor can invalidate without removing any string.
+
+### Rework
+- One rework cycle: the new `--no-push` + main-tree bats test initially used a bare `[[ "$output" == *"ERROR"* ]]` assertion (copying the surrounding file's existing style), caught by `skills/code/skill-dev-validation.md`'s bash-3.2 bare-bracket-assertion pitfall during the Additional validation pass (Step 9) — not by `check-bare-bracket-assertions.sh` itself, which is informational-only and does not block. Rewrote to `echo "$output" | grep -q "ERROR"` before committing.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — the diff matched Implementation Steps 1–4 exactly (confirmed independently by the review-light agent's Spec Deviation perspective); no structural divergence found.
+
+### Recurring issues
+Nothing to note — a single SHOULD-severity finding (stale "always exits 0" claim in the script header and `skills/verify/SKILL.md:189`, made inaccurate by this PR's own new `_in_main_tree` abort path) was the only issue, and it does not match any recurring pattern seen in this Issue's review history.
+
+### Acceptance criteria verification difficulty
+All 4 Pre-merge conditions resolved cleanly: 3 via `rubric`/`file_contains` against the diff, 1 (`bats tests/`) via the Step 9 CI reference fallback (`Run bats tests` job SUCCESS) rather than direct execution — no UNCERTAIN, no verify command gaps or inaccuracies observed.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the SHOULD finding in-line (documentation-only, low risk) rather than deferring: updated both the script header comment and `skills/verify/SKILL.md:189` to describe the new conditional exit-1 path instead of the stale "always exits 0" claim.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- `/merge 1455` can proceed directly — no MUST issues, CI green (15/15), all 4 Pre-merge AC already checked `[x]` on the Issue.
+
 ## Consumed Comments
 No new comments since last phase.

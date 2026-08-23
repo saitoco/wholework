@@ -8,7 +8,10 @@
 # responsible for propagating the commit to base via its own Exit path (see
 # modules/worktree-lifecycle.md § "Spec file write destination").
 #
-# Best-effort: always exits 0. Failures are logged to stderr without blocking the caller.
+# Best-effort: always exits 0, except when --no-push is combined with main-tree
+# execution (the --no-push contract violation this script now aborts on rather
+# than silently committing to main — see Issue #1454). Other failures are
+# logged to stderr without blocking the caller.
 # Bash 3.2+ compatible.
 
 set -uo pipefail
@@ -37,6 +40,29 @@ done
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 _repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# Detect main-tree execution early: --git-dir and --git-common-dir are equal
+# only in the main tree; they differ inside any linked worktree. A failure to
+# resolve either (e.g. non-git environment) leaves both empty, so
+# _in_main_tree stays false (fail-open) rather than blocking on an
+# indeterminate state.
+_git_dir="$(git rev-parse --git-dir 2>/dev/null || true)"
+_git_common_dir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+_in_main_tree=false
+if [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
+  _in_main_tree=true
+fi
+
+# --no-push is a contract: "this call runs inside an isolated worktree, and
+# the caller's own Exit path is responsible for propagating the commit to
+# base" (modules/worktree-lifecycle.md § "Spec file write destination"). When
+# that contract is violated (main tree execution, e.g. via a stray `cd` back
+# to the parent repo — see Issue #1454), abort before touching the Spec file
+# or creating a commit rather than warning and continuing.
+if [[ "$NO_PUSH" == "true" && "$_in_main_tree" == "true" ]]; then
+  echo "append-consumed-comments-section.sh: ERROR — --no-push given while running in the main tree (not an isolated worktree); this breaks the --no-push contract (modules/worktree-lifecycle.md § \"Do not \`cd\` back to the parent repository\"). Aborting before any Spec write or commit." >&2
+  exit 1
+fi
 
 # Get spec directory (pass config path explicitly to avoid CWD sensitivity)
 SPEC_DIR=$(WHOLEWORK_CONFIG_PATH="$_repo_root/.wholework.yml" \
@@ -183,11 +209,11 @@ else
 fi
 
 # Defense-in-depth: warn if not running inside an isolated worktree (was
-# skills/verify/SKILL.md Step 3 skipped?). --git-dir and --git-common-dir
-# are equal only in the main tree; they differ inside any linked worktree.
-_git_dir="$(git rev-parse --git-dir 2>/dev/null || true)"
-_git_common_dir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
-if [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
+# skills/verify/SKILL.md Step 3 skipped?). The --no-push + main-tree
+# combination already aborted above; this covers the remaining case
+# (no --no-push, main tree) where continuing is still the existing
+# best-effort behavior.
+if [[ "$_in_main_tree" == "true" ]]; then
   echo "append-consumed-comments-section.sh: WARNING — not running inside an isolated worktree (was skills/verify/SKILL.md Step 3 skipped?); commit/push below lands directly on the current branch" >&2
 fi
 
@@ -201,7 +227,7 @@ if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
     if [[ "$NO_PUSH" == "true" ]]; then
       : # commit only, push is the caller's responsibility (in-session mandatory call path)
-    elif [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
+    elif [[ "$_in_main_tree" == "true" ]]; then
       # Main tree: route through the locked merge-push script instead of a bare push.
       # Bound the lock wait (default 300s) to a short timeout: this call site is reached
       # from the bash-wrapper post-processor fallback (run-code.sh / run-spec.sh, after the
