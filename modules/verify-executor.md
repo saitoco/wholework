@@ -144,7 +144,7 @@ Bare `|` alternation is the standard pattern for multi-option OR checks across C
 - `git diff` of the implementation
 - Files explicitly named in the rubric "text" argument
 
-Spec files are not passed to the grader. This enforces the Issue=WHAT / Spec=HOW separation: graders assess whether the implementation satisfies the stated acceptance condition (WHAT), not whether it follows the implementation plan (HOW). Passing Spec to the grader would introduce confirmation bias toward the plan.
+Spec files are not passed to the grader. This enforces the Issue=WHAT / Spec=HOW separation: graders assess whether the implementation satisfies the stated acceptance condition (WHAT), not whether it follows the implementation plan (HOW). Passing Spec to the grader would introduce confirmation bias toward the plan. **Narrow exception**: see "Spec-only evidence for investigation/measurement AC" below for a diff-less-investigation opt-in that names a Spec file explicitly in rubric text.
 
 **Adversarial stance:**
 The grader system prompt explicitly instructs adversarial judgment: enumerate gaps strictly, prefer UNCERTAIN over PASS when ambiguous. This guards against the bias of an LLM judging its own outputs favorably.
@@ -195,6 +195,45 @@ rubric "docs/reports/manual-ac-retype-summary.md's counts match the per-sub-issu
 ```
 
 Naming the file(s) directs the grader's input scope to the actual evidence instead of leaving it to infer correctness from an aggregate summary alone.
+
+**Spec-only evidence for investigation/measurement AC (opt-in exception to the Spec exclusion):**
+An investigation/measurement Issue (e.g., "measure X and record the finding") often produces no
+implementation diff to judge — the record of what was found IS the deliverable, and by convention
+that record is written into the Spec's `## Notes` section rather than duplicated into the Issue
+body (see `docs/spec/issue-1440-opportunistic-search-prefilter.md` § Notes for a worked example: a
+multi-session SKIP-rate measurement recorded only there). Under the blanket rule in "Grader input
+scope" above, a rubric AC whose evidence lives only in that section is structurally unverifiable —
+the grader has no path to it, and correctly returns UNCERTAIN regardless of whether the underlying
+finding is sound (see Issue #1440's own `/review` run, and the Background of #1446 which
+generalizes it).
+
+**Guideline**: prefer, in order:
+1. **Copy the finding into the Issue body or PR body.** When the measurement result is short, restate
+   it directly in the acceptance condition's evidence trail (Issue body edit, or PR body Summary)
+   instead of leaving it Spec-only. This keeps the AC verifiable under the default grader input
+   scope with no exception needed.
+2. **Name the Spec file and section explicitly in the rubric text**, only when the finding is too
+   long to duplicate (raw data, a multi-row table, per-session breakdowns). This is a narrow,
+   explicit extension of "Primary evidence outside git diff / Issue body" above to cover Spec
+   files: naming the file in rubric text is what makes it eligible grader input, the same
+   opt-in mechanism as that section — it does not relax the blanket Spec exclusion for any rubric
+   that leaves the Spec unnamed.
+
+Example (option 2):
+```
+rubric "docs/spec/issue-1440-opportunistic-search-prefilter.md's ## Notes section records that the
+skill=/verify opportunistic SKIP rate was measured across multiple sessions and confirmed to be
+consistently high"
+```
+
+**Why this does not weaken Issue=WHAT / Spec=HOW separation**: the separation exists to stop a
+grader from confirming an implementation against its own plan (HOW) instead of the stated outcome
+(WHAT) — confirmation bias risk. That risk assumes the Spec describes a plan distinct from the
+outcome being judged. It does not apply here: for a diff-less investigation/measurement AC, the
+named Spec section *is* the WHAT-level outcome (the finding itself), not a plan for producing it.
+Restrict this exception accordingly — do not name Spec files in rubric text for AC that verifies
+implemented code; use `git diff` / Issue body evidence, or the ordinary non-Spec "Primary evidence"
+pattern above, for those.
 
 **Slash (`/`) notation in rubric condition text:**
 When listing multiple sub-cases with `/` (slash), the intent is ambiguous — it may mean an OR condition (two independent triggers) or an example enumeration (sub-patterns under one condition). Always make the interpretation explicit so grader judgment is consistent.
