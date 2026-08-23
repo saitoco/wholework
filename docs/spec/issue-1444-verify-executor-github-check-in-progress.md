@@ -18,3 +18,4 @@ No new comments since last phase.
 
 ## Consumed Comments
 No new comments since last phase.
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1444#issuecomment-5383980097
