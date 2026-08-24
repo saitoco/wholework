@@ -119,3 +119,5 @@ Pre-merge 5件は変更なし PASS。Post-merge opportunistic 条件のうち AC
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=65 --> / https://github.com/saitoco/wholework/issues/65#issuecomment-5305281189
 - saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=65 ac=6 execu / https://github.com/saitoco/wholework/issues/65#issuecomment-5305285552
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=65 --> / https://github.com/saitoco/wholework/issues/65#issuecomment-5383493823
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=65 ac=7 execu / https://github.com/saitoco/wholework/issues/65#issuecomment-5383495514
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=65 --> / https://github.com/saitoco/wholework/issues/65#issuecomment-5391764450
