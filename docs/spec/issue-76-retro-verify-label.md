@@ -61,3 +61,8 @@ Post-merge の 4 条件すべてに `<!-- verify-type: opportunistic -->` タグ
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## 受け入れテスト結果 / https://github.com/saitoco/wholework/issues/76#issuecomment-4218721631
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /spec execution) / https://github.com/saitoco/wholework/issues/76#issuecomment-4221156195
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=76 --> / https://github.com/saitoco/wholework/issues/76#issuecomment-5391817388
