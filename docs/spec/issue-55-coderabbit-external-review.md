@@ -232,3 +232,5 @@ Pre-merge 11件は変更なし PASS。Post-merge manual 条件4件は live 外�
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=55 --> / https://github.com/saitoco/wholework/issues/55#issuecomment-5305250956
 - saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=55 ac=12 exec / https://github.com/saitoco/wholework/issues/55#issuecomment-5305255010
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=55 --> / https://github.com/saitoco/wholework/issues/55#issuecomment-5383485622
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=55 ac=12 exec / https://github.com/saitoco/wholework/issues/55#issuecomment-5383487443
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=55 --> / https://github.com/saitoco/wholework/issues/55#issuecomment-5391692309
