@@ -85,6 +85,14 @@ Risk Notes の実装前検証として、`.claude/settings.json` の hot-reload 
 ### Improvement Proposals
 - The `.claude/settings.json` hot-reload behavior finding (session-cached, not reloaded dynamically) is a useful operational insight worth documenting in project docs (e.g., `docs/notes.md` or similar). This would help future developers understand why settings changes require a session restart to take effect, and why in-session probe testing of permission patterns is unreliable.
 
+### 2026-08-24 再確認 (/audit verify-backlog セッションから)
+
+Post-merge manual 条件 (`~/` 展開が実際に機能するかの実地検証) は、セッション再起動後の実地検証により **FAIL 確定** していたことを確認した (`ad5862d03f06` を含む plugin cache パスへの直接呼び出しでプロンプトが発生、`.tmp/permission-log.txt` で記録済み)。原因は permission pattern が literal string match で処理され `~/` の tilde 展開が判定層で行われないため。対応として commit `ea770ad` は `ed471c7` で revert 済みであり、`.claude/settings.json` はハードコードされた `/Users/saito/` パターンに復元されている。
+
+後継 Issue #82 (`install.sh` によるテンプレート展開方式) は `phase/done` で CLOSED 済みであり、本 Issue が目指したポータブルな permission pattern という目的自体は #82 の別アプローチで達成されている。したがって本 Issue の post-merge manual 条件を FAIL として reopen サイクルに載せることは、既に放棄されたアプローチの蒸し返しになり実益がない — **SKIPPED** として扱い、`phase/verify` を維持したまま reopen しない判断とする。
+
+改善提案 (hot-reload 挙動の文書化) は `docs/tech.md` および `docs/spec/issue-82-install-sh-template.md` で既に反映済みであることを確認 (重複提案なし)。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Post-merge 検証結果: FAIL（revert 済み） / https://github.com/saitoco/wholework/issues/80#issuecomment-4219871707
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=80 --> / https://github.com/saitoco/wholework/issues/80#issuecomment-5391866931
