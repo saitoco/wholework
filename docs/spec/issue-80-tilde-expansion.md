@@ -84,3 +84,7 @@ Risk Notes の実装前検証として、`.claude/settings.json` の hot-reload 
 
 ### Improvement Proposals
 - The `.claude/settings.json` hot-reload behavior finding (session-cached, not reloaded dynamically) is a useful operational insight worth documenting in project docs (e.g., `docs/notes.md` or similar). This would help future developers understand why settings changes require a session restart to take effect, and why in-session probe testing of permission patterns is unreliable.
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Post-merge 検証結果: FAIL（revert 済み） / https://github.com/saitoco/wholework/issues/80#issuecomment-4219871707
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=80 --> / https://github.com/saitoco/wholework/issues/80#issuecomment-5391866931
