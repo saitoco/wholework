@@ -53,3 +53,7 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/78#issuecomment-4218567955
+- saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=78 --> / https://github.com/saitoco/wholework/issues/78#issuecomment-5391840351
