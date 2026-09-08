@@ -8,7 +8,7 @@ allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git 
 
 # Acceptance Test
 
-<!-- skill-body-lines: 1059 -->
+<!-- skill-body-lines: 996 -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
