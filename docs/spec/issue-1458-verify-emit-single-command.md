@@ -26,7 +26,7 @@ Background に記載された「Step 1 の `persist_auto_session_pointer` 呼び
 
 - `scripts/emit-verify-event.sh`: 新規追加。event emission (`<issue> <event> [--require-session-id|--unconditional] [key=value ...]`) とセッションポインタ永続化 (`--persist-session <sid-or-empty> <issue>`) の両方を単一コマンドで実行できるようにするラッパースクリプト。bash 3.2+ 互換。実行権限 (`chmod +x`) を付与する
 - `tests/emit-verify-event.bats`: 新規追加。上記スクリプトの bats テスト
-- `skills/verify/SKILL.md`: 14 箇所の event emission 複合スニペットと Step 1 の persist 複合スニペット (計 15 箇所) を `scripts/emit-verify-event.sh` への単一コマンド呼び出しに置換。`allowed-tools` frontmatter に `${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*` を追加し、直接呼び出しがなくなる `${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` エントリを削除 (同一位置で置き換え)
+- `skills/verify/SKILL.md`: 14 箇所の event emission 複合スニペットと Step 1 の persist 複合スニペット (計 15 箇所) を `scripts/emit-verify-event.sh` への単一コマンド呼び出しに置換。`allowed-tools` frontmatter に `${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*` を追加。`${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` エントリは `modules/opportunistic-verify.md`/`modules/retro-proposals.md` (Scope 外の別 compound command) が直接呼び出すため削除せず併記 (Code Retrospective 参照)
 - `modules/event-emission.md`: [Steering Docs sync candidate — 直接読解による検出] § "Non-Wrapper Emitters" が「Every `AUTO_EVENTS_LOG`-gated emit site in `skills/verify/SKILL.md` calls `source emit-event.sh` + `restore_auto_session_pointer $NUMBER` immediately before the guard」および「`persist_auto_session_pointer` with it immediately after the phase banner」「all 11 `restore_auto_session_pointer $NUMBER` emit sites」と、本 Issue で置き換える旧メカニズムを直接記述している。`scripts/emit-verify-event.sh` 経由の新メカニズムを反映するよう更新する
 - `docs/structure.md`: [Steering Docs sync candidate — 直接読解による検出] Scripts セクションの `scripts/emit-event.sh` エントリの説明末尾「`skills/verify/SKILL.md` (explicit bash call, no wrapper)」が本 Issue で不正確になる (直接呼び出しがなくなるため)。`scripts/emit-verify-event.sh` の新規エントリを追加し、`emit-event.sh` 側の説明を更新する (Key Files 節の保守規約に基づく)
 - `docs/ja/structure.md`: `docs/translation-workflow.md` の Sync Procedure に基づき、`docs/structure.md` の変更を日本語ミラーに反映する
@@ -109,7 +109,7 @@ Background に記載された「Step 1 の `persist_auto_session_pointer` 呼び
    | Step 11 tier-gated auto-retry: `verify_retry_fire` | standard | `bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_retry_fire iteration=${NEXT_ITERATION} trigger_reason=ac_fail budget_remaining_tokens=unknown` |
    | Step 15 (recovery threshold 自動起票): `recoveries_threshold_fire` | unconditional | `bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER recoveries_threshold_fire --unconditional symptom={group-key} count={count} issue_number={new_issue_number}` |
 
-   frontmatter `allowed-tools` の `${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` を `${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*` に置き換える (同一位置)。
+   frontmatter `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*` を追加する (`${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` は削除しない — Code Retrospective 参照)。
 
 4. ドキュメント同期 (after 1, parallel with 2/3) (→ 受入条件は無いが Changed Files 記載の整合性維持のため必須)
 
@@ -142,3 +142,57 @@ Background に記載された「Step 1 の `persist_auto_session_pointer` 呼び
 - **`recoveries_threshold_fire` のガード欠如を意図的に保存**: 現状この箇所には `restore_auto_session_pointer` 呼び出しも `AUTO_EVENTS_LOG` ガードも存在しない。`docs/spec/issue-702-verify-recoveries-auto-file.md` の原設計では、この emit 行に到達する時点で既に `AUTONOMY_TIER=L2/L3 AND RECOVERIES_AUTO_FIRE_ENABLED=true` という上位条件で到達性がガードされているため、ローカルガードが省略されたとみられる。本 Issue の目的はコマンド形の単一化であり挙動変更ではないため、`--unconditional` フラグでこの既存挙動をそのまま保存する
 - **新規スクリプトのテストカバレッジ**: `scripts/emit-verify-event.sh` は完全新規ファイルのため「既存ブランチへの新規ロジック追加」チェックの直接対象ではないが、同等の要求として Implementation Step 2 に 3 モード (`standard`/`--require-session-id`/`--unconditional`) + `--persist-session` の全分岐をテストする方針を明記した
 - **Steering Docs sync candidate**: `docs/structure.md`/`modules/event-emission.md` は Step 10 の keyword discriminating-power filter (機械的スイープ) ではなく、Step 6 でのコードベース直接読解によって検出した。詳細は Changed Files 節末尾を参照
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **`allowed-tools` から `emit-event.sh:*` を削除せず併記**: Implementation Step 3 は「`${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` を `${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*` に置き換える (同一位置で置き換え)」と指示していたが、`validate-skill-syntax.py` のクロスファイル検証で `modules/opportunistic-verify.md` と `modules/retro-proposals.md` (共に `/verify` 自身の実行内で読み込まれる module) が `scripts/emit-event.sh` を直接 `source` していることが判明した。この 2 module は本 Issue の Scope 外 (Root Cause で列挙した 15 箇所には含まれない別の compound command) であり、置き換えるとクロスファイル検証がエラーになる。そのため `emit-verify-event.sh:*` を追加しつつ `emit-event.sh:*` も残す形に変更した。`modules/opportunistic-verify.md`/`modules/retro-proposals.md` 自体も同じ `source` 複合コマンドで worktree isolation guard に拒否され得るが、これは別の潜在的な改善候補であり本 Issue のスコープには含めていない。
+- **`skill-body-lines` マーカーの追従更新**: Spec には記載がなかったが、`skills/verify/SKILL.md` の圧縮 (91 行削除・28 行追加、正味 63 行減) によって `tests/verify.bats` の `skill-body-lines marker stays in sync with wc -l` 回帰テストが FAIL した。マーカー値 (`<!-- skill-body-lines: N -->`) を `wc -l` の実測値に合わせて更新した。
+
+### Design Gaps/Ambiguities
+
+- Background の「SKILL.md 内 14 箇所」という記述は実際には `restore_auto_session_pointer $NUMBER` が 12 箇所 (`phase_complete` が 5 箇所、Background の「4箇所」記述より 1 多い — FAIL reopen 分岐内の `phase_complete` が未計上だった) + `verify_reopen_cycle` (printf 形、restore あり) + `recoveries_threshold_fire` (restore なし) の計 14 ブロックだった。実装は Background の数値表記ではなく実ファイルを直接走査して全 14 ブロック (+ persist 1 箇所の計 15 箇所) を置換したため、Pre-merge AC (`file_not_contains "restore_auto_session_pointer $NUMBER"`) は正しく満たされている。
+
+### Rework
+
+- N/A
+
+### New Verification-Test Pre-implementation FAIL Check
+
+Confirmed pre-implementation FAIL for 11 new test(s) (`tests/emit-verify-event.bats` — `scripts/emit-verify-event.sh` did not exist yet, so all 11 asserts failed with exit 127 before the implementation).
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- Posted 2 non-blocking findings as PR inline comments (0 MUST, so `event=COMMENT`, not `REQUEST_CHANGES`): a SHOULD on `modules/worktree-lifecycle.md:285` (stale "no rewrite avoids `source`" claim, now contradicted by this PR's own wrapper-script fix) and a CONSIDER on `scripts/emit-verify-event.sh:34` (pre-existing, unmodified-by-this-PR sanitization gaps in `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event`).
+- Decided not to fix either finding inline in this PR: both are scope-adjacent (a shared module doc update; a pre-existing helper's hardening) rather than part of this Issue's stated command-form-only Scope, and neither is a regression this PR introduced.
+- Ran the Parser/Validator Edge Case Pre-check against `scripts/emit-verify-event.sh` (new CLI-argument-parsing script) via a sub-agent that actually executed the script with adversarial fixtures; confirmed the flagged behavior originates entirely from `scripts/emit-event.sh` (unchanged by this PR), so classified it CONSIDER rather than MUST.
+
+### Deferred Items
+
+- `modules/worktree-lifecycle.md`'s "no rewrite that avoids `source`" language should be updated in a follow-up Issue to describe the wrapper-script pattern this PR shipped, referencing `scripts/emit-verify-event.sh` as the worked example (SHOULD, not blocking).
+- `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event` should validate/sanitize the `issue` and `event` values in a follow-up Issue (path-traversal-shaped issue values and unescaped event/issue JSON fields); pre-existing, not introduced by this PR (CONSIDER, not blocking).
+- `modules/opportunistic-verify.md` and `modules/retro-proposals.md` still embed their own `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` compound snippets and could hit the same worktree isolation guard rejection under the same conditions that triggered this Issue (carried forward unchanged from the Code phase's own Deferred Items).
+
+### Notes for Next Phase
+
+- Post-merge AC is `verify-type: opportunistic` — the next real `/verify N` worktree run is the actual confirmation that the guard no longer rejects these calls; no additional action needed beyond letting that run happen naturally.
+- All 5 Pre-merge AC re-verified PASS in this review pass (4 `command`-type + 1 `rubric`-type); no unchecked Pre-merge conditions remain, so `/merge`'s pre-merge AC gate should pass cleanly.
+- CI: all 15 checks SUCCESS; no `Forbidden Expressions check` baseline-attribution branch was triggered.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. The implementation matches the Spec's Implementation Steps and Changed Files table exactly (verified line-by-line against `.tmp/pr-diff-1460.txt`); the one legitimate deviation (keeping `emit-event.sh:*` in `allowed-tools` instead of replacing it) is already documented in this Spec's own Code Retrospective section above, discovered via `validate-skill-syntax.py`'s cross-file check rather than left silent.
+
+### Recurring issues
+
+One notable finding: `modules/worktree-lifecycle.md` § "`source`-based shell function calls are blocked by the worktree isolation guard" states "There is no rewrite that avoids `source` for a function call" and offers only defer/skip fallbacks — but this PR's own fix (a single-command wrapper script that `source`s the helper internally) is exactly the rewrite that module claims doesn't exist. This is a module-drift pattern: a shared module documents a constraint as absolute, a later Issue finds a workaround, and the module is never updated to reflect it — so the next engineer hitting the same guard rejection reads stale advice and reaches for an inferior defer/skip fallback instead of the wrapper-script pattern that already shipped and is tested. Filed as a SHOULD in this review's line comments (`modules/worktree-lifecycle.md:285`); recommend a small follow-up Issue to update that module's language, both for this specific passage and as a general reminder to grep shared `modules/*.md` for claims a fix might be invalidating.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. All 5 Pre-merge conditions (4 `command`-type, 1 `rubric`-type) verified cleanly to PASS with no UNCERTAIN — the `command` hints were directly executable (`test -x`, `grep`/`file_contains`, `file_not_contains`, `bats`), and the `rubric` condition (Step 1 persist call in single-command form) was unambiguous to judge from the diff.
