@@ -96,7 +96,7 @@ If `.wholework.yml` does not exist, all settings are treated as default (disable
 
 ### 5. `/merge` — Merge
 
-Executes squash merge and deletes the remote branch. Attempts automatic conflict resolution if conflicts exist. Before merging, verifies that the target Issue's pre-merge acceptance criteria are all checked, presenting and blocking on any unchecked condition unless a recorded override exists. Details: [`skills/merge/SKILL.md`](../skills/merge/SKILL.md)
+Merges the PR (strategy configurable via `merge-strategy` in `.wholework.yml`, default `squash`) and deletes the remote branch. Attempts automatic conflict resolution if conflicts exist. Before merging, verifies that the target Issue's pre-merge acceptance criteria are all checked, presenting and blocking on any unchecked condition unless a recorded override exists. Details: [`skills/merge/SKILL.md`](../skills/merge/SKILL.md)
 
 ### 6. `/verify` — Acceptance Testing
 
