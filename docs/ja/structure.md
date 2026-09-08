@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (128 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (130 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
