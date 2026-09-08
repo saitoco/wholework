@@ -163,25 +163,23 @@ Background に記載された「Step 1 の `persist_auto_session_pointer` 呼び
 Confirmed pre-implementation FAIL for 11 new test(s) (`tests/emit-verify-event.bats` — `scripts/emit-verify-event.sh` did not exist yet, so all 11 asserts failed with exit 127 before the implementation).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Posted 2 non-blocking findings as PR inline comments (0 MUST, so `event=COMMENT`, not `REQUEST_CHANGES`): a SHOULD on `modules/worktree-lifecycle.md:285` (stale "no rewrite avoids `source`" claim, now contradicted by this PR's own wrapper-script fix) and a CONSIDER on `scripts/emit-verify-event.sh:34` (pre-existing, unmodified-by-this-PR sanitization gaps in `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event`).
-- Decided not to fix either finding inline in this PR: both are scope-adjacent (a shared module doc update; a pre-existing helper's hardening) rather than part of this Issue's stated command-form-only Scope, and neither is a regression this PR introduced.
-- Ran the Parser/Validator Edge Case Pre-check against `scripts/emit-verify-event.sh` (new CLI-argument-parsing script) via a sub-agent that actually executed the script with adversarial fixtures; confirmed the flagged behavior originates entirely from `scripts/emit-event.sh` (unchanged by this PR), so classified it CONSIDER rather than MUST.
+- Squash-merged PR #1460 into `main` (`gh pr merge --squash --delete-branch`); non-interactive pre-merge AC gate found all 5 Pre-merge conditions already checked and `review_incomplete_fallback` not set, so the merge proceeded without needing an override marker.
+- No conflicts encountered — `mergeable=true, reason=clean` on first check, so Step 3 (Resolve Conflicts) was skipped entirely.
 
 ### Deferred Items
 
-- `modules/worktree-lifecycle.md`'s "no rewrite that avoids `source`" language should be updated in a follow-up Issue to describe the wrapper-script pattern this PR shipped, referencing `scripts/emit-verify-event.sh` as the worked example (SHOULD, not blocking).
-- `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event` should validate/sanitize the `issue` and `event` values in a follow-up Issue (path-traversal-shaped issue values and unescaped event/issue JSON fields); pre-existing, not introduced by this PR (CONSIDER, not blocking).
-- `modules/opportunistic-verify.md` and `modules/retro-proposals.md` still embed their own `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` compound snippets and could hit the same worktree isolation guard rejection under the same conditions that triggered this Issue (carried forward unchanged from the Code phase's own Deferred Items).
+- `modules/worktree-lifecycle.md`'s "no rewrite that avoids `source`" language should be updated in a follow-up Issue to describe the wrapper-script pattern this PR shipped, referencing `scripts/emit-verify-event.sh` as the worked example (SHOULD, not blocking; carried forward from review).
+- `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event` should validate/sanitize the `issue` and `event` values in a follow-up Issue; pre-existing, not introduced by this PR (CONSIDER, not blocking; carried forward from review).
+- `modules/opportunistic-verify.md` and `modules/retro-proposals.md` still embed their own `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` compound snippets and could hit the same worktree isolation guard rejection under the same conditions that triggered this Issue (carried forward unchanged since Code phase).
 
 ### Notes for Next Phase
 
 - Post-merge AC is `verify-type: opportunistic` — the next real `/verify N` worktree run is the actual confirmation that the guard no longer rejects these calls; no additional action needed beyond letting that run happen naturally.
-- All 5 Pre-merge AC re-verified PASS in this review pass (4 `command`-type + 1 `rubric`-type); no unchecked Pre-merge conditions remain, so `/merge`'s pre-merge AC gate should pass cleanly.
-- CI: all 15 checks SUCCESS; no `Forbidden Expressions check` baseline-attribution branch was triggered.
+- Issue #1458 is expected to auto-close via `closes #1458` in the PR body (base branch is `main`); `/merge` Step 6 will verify this and apply a fallback if it doesn't happen within the retry window.
 
 ## review retrospective
 
