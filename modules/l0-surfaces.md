@@ -428,8 +428,10 @@ fires where it can safely reach that branch:
   immediately — its Size XS/S early-exit branch can end the skill before reaching the
   unconditional `## Retrospective` push, so deferring the push there is not safe. `/merge`
   (Step 4, inside the existing Phase Handoff write subsection) also calls the script, but only
-  after the PR branch has already been merged and deleted (`gh pr merge "$NUMBER" $MERGE_FLAG
-  --delete-branch`, earlier in the same Step) and the worktree fast-forwarded to `origin/main`
+  after the PR branch has already been merged and deleted (`gh pr merge "$NUMBER"
+  <strategy-flag> --delete-branch`, the flag resolved by
+  `scripts/resolve-merge-strategy.sh --flag` — see `skills/merge/SKILL.md` Step 2 — earlier in
+  the same Step) and the worktree fast-forwarded to `origin/main`
   — by the time the call runs, the working branch's content is `main`, not the (now-gone) PR
   branch. `/merge` passes `--no-push` and rides the same push as its Step 4 Phase Handoff
   commit (`git push origin HEAD:main`). `/issue` has no Primary layer: no Spec exists at that

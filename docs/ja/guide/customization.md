@@ -90,6 +90,9 @@ capabilities:
 # always-pr: true           # Size に関わらず PR route を強制（XS/S も branch + PR 経由）
 # auto-stop-at: review      # review phase 完了後に /auto を停止、手動で /merge を実行
 
+# /merge が発行する gh pr merge の戦略（デフォルト: squash）
+# merge-strategy: merge     # squash | merge | rebase
+
 # /triage 分類用のプロジェクト固有 theme label カタログ (block mapping: name: description)
 # 未設定の場合、scripts/setup-labels.sh は theme/* ラベルを一切作成しない — 既定/フォールバックの
 # カタログは存在しない。色は 006B75 固定（テーマごとの指定は不可）。
@@ -146,8 +149,8 @@ capabilities:
 | `recoveries-auto-fire.threshold` | integer | `3` | 自動起票のトリガーとなる symptom 発生回数の閾値。0 以下または非数値の場合は `3` にフォールバック。 |
 | `always-pr` | boolean | `false` | Size に関わらず PR route (branch + PR) を強制する。通常 main に直接 commit する XS/S Issues も PR 経由になる。`--patch` と同時指定した場合は `--patch` を無視して PR route を使用する。`autonomy:` tier と直交（パイプラインのルートを制御し、意思決定自律度には影響しない）。 |
 | `auto-stop-at` | string | `"verify"` | `/auto` が停止するフェーズを宣言する。有効値: `spec`、`code`、`review`、`merge`、`verify`。デフォルト `verify` はフルパイプライン実行（現状の動作）。merge = 公開になる website 系プロジェクトでは `review` を推奨（人間が gate した後 `/merge` を手動実行）。per-invocation override: `--stop-at=<phase>`。`autonomy:` tier と直交。 |
-| `merge-strategy` | string | `"squash"` | `/merge` が発行する `gh pr merge` の戦略: `squash` / `merge` / `rebase`。不正値・空値は `squash` にフォールバックし、警告をターミナルに出力する (永続化はしない)。リポジトリ側のマージボタン設定 (例: `allow_squash_merge: false`) との不一致は自動検出せず、マージ実行時に GitHub API エラーとして表面化する。 |
-| `themes` | block mapping | `{}` | `scripts/setup-labels.sh` が読み込むプロジェクト固有の `theme/*` ラベルカタログ (`{name}: {description}`)。未設定の場合 `theme/*` ラベルは一切作成されない — 既定/フォールバックのカタログは存在しない (wholework 自身のドッグフーディング用テーマは、組み込みの既定値ではなく本リポジトリ自身の `.wholework.yml` に存在する)。色は全テーマ共通で `006B75` 固定、テーマごとの指定は不可。`/triage` Step 6a の分類ロジックは生成された `theme/*` ラベルを `gh label list` で動的取得するのみで、このキーの影響を直接受けない。使用可能な名前の文字は `A-Z a-z 0-9 . _ -` のみで、それ以外の文字を含む行は無視される。description は ` #` 以降が (クォートされていても) 除去されるため、description に `#` を含めない。テーマ名は `.wholework.yml` の他のトップレベル設定キー名 (例: `autonomy`, `spec-path`) と衝突させないこと — 衝突すると `scripts/get-config-value.sh` のフラットキー検索がそのキー本来の値ではなくテーマの description を返してしまう。 |
+| `merge-strategy` | string | `"squash"` | `/merge` が発行する `gh pr merge` の戦略: `squash` / `merge` / `rebase`。不正値 (空でなく 3 値のいずれとも一致しない値) は `squash` にフォールバックし、警告をターミナルに出力する (永続化はしない)。真に空の値は警告なしで `squash` にフォールバックする (config リーダー自身のデフォルト置換により警告ロジックに到達する前に吸収されるため)。リポジトリ側のマージボタン設定 (例: `allow_squash_merge: false`) との不一致は自動検出せず、マージ実行時に GitHub API エラーとして表面化する。 |
+| `themes` | block mapping | `{}` | `scripts/setup-labels.sh` が読み込むプロジェクト固有の `theme/*` ラベルカタログ (`{name}: {description}`)。未設定の場合 `theme/*` ラベルは一切作成されない — 既定/フォールバックのカタログは存在しない (wholework 自身のドッグフーディング用テーマは、組み込みの既定値ではなく本リポジトリ自身の `.wholework.yml` に存在する)。色は全テーマ共通で `006B75` 固定、テーマごとの指定は不可。`/triage` Step 6a の分類ロジックは生成された `theme/*` ラベルを `gh label list` で動的取得するのみで、このキーの影響を直接受けない。使用可能な名前の文字は `A-Z a-z 0-9 . _ -` のみで、それ以外の文字を含む行は無視される。description は ` #` 以降が (クォートされていても) 除去されるため、description に `#` を含めない。テーマ名は `.wholework.yml` の他のトップレベル設定キー名 (例: `autonomy`, `spec-path`, `merge-strategy`) と衝突させないこと — 衝突すると `scripts/get-config-value.sh` のフラットキー検索がそのキー本来の値ではなくテーマの description を返してしまう。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 
