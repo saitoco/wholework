@@ -360,11 +360,11 @@ preview-url-command: ".wholework/adapters/resolve-preview-url.sh {pr}"
 
 ### `preview-basic-auth-command` — 汎用的な CI シークレットテンプレート (イラスト的・実運用未検証)
 
-上記の Amplify レシピと異なり、このテンプレートには **実運用での採用実績がまだ無い** —
-`preview-basic-auth-command` 自体がより新しいキーであり、まだ採用された実装例が無いため。
-これは特定のホスティングプロバイダに紐づくレシピではなく、provider 非依存のイラスト的な例で
-あり、CI が注入するシークレット環境変数を読み取り `username:password` 形式で出力する。
-そのまま使えるスクリプトとしてではなく、自分のプロジェクトの実際のシークレット供給元
+下記の Amplify `.env` レシピと異なり、このテンプレートは実運用実績のある
+`preview-basic-auth-command` 実装が登場する以前からあるもので、それ自体の実運用での
+採用実績は無い。これは特定のホスティングプロバイダに紐づくレシピではなく、provider 非依存の
+イラスト的な例であり、CI が注入するシークレット環境変数を読み取り `username:password` 形式で
+出力する。そのまま使えるスクリプトとしてではなく、自分のプロジェクトの実際のシークレット供給元
 (secrets manager、password manager CLI 等) に合わせて書き換えるための出発点として扱うこと。
 
 **`.wholework/adapters/resolve-preview-basic-auth.sh`**:
@@ -396,9 +396,72 @@ CI シークレットが利用できない場合、スクリプトは非零終�
 `preview-basic-auth-command` のドキュメント化された失敗時フォールバック
 (両変数が未設定のまま残り、既存の非認証フォールバックが維持される) と整合する。
 
-他 provider 向けの実運用検証済み `preview-url-command` レシピが増えた場合や、
-実運用実績を伴う `preview-basic-auth-command` の実装が出てきた場合は、キーごと・
-provider ごとに見出しを分けてこの節に追記すること。
+### `preview-basic-auth-command` — AWS Amplify Hosting (実運用実績あり)
+
+AWS Amplify Hosting には Basic 認証情報用の組み込み CI シークレットが存在しないため、この
+レシピはリポジトリ直下の `.env` ファイル (gitignore 済み) から `AMPLIFY_PREVIEW_BASIC_AUTH=user:pass`
+を読み取る — ローカルスクリプト (例: `node --env-file=.env` で動くスクリーンショット比較
+スクリプト) と同じ供給元を共有できる。AWS 認証情報は不要。
+
+前提条件: `AMPLIFY_PREVIEW_BASIC_AUTH=user:pass` を含むリポジトリ直下の `.env` ファイル
+(gitignore 済み、コミットしないこと)。
+
+**`.wholework/adapters/resolve-preview-basic-auth.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# Returns Basic auth credentials for the preview as `user:pass`.
+# Looks up AMPLIFY_PREVIEW_BASIC_AUTH in the environment, then in .env (current dir,
+# then the main worktree — wholework may run phases inside .claude/worktrees/, where
+# untracked .env does not exist). Exits non-zero when not found (unauthenticated fallback).
+set -euo pipefail
+
+if [ -n "${AMPLIFY_PREVIEW_BASIC_AUTH:-}" ]; then
+  echo "$AMPLIFY_PREVIEW_BASIC_AUTH"
+  exit 0
+fi
+
+read_env_value() {
+  grep -E '^AMPLIFY_PREVIEW_BASIC_AUTH=' "$1" | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+}
+
+main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}' || true)
+
+for dir in "." "$main_worktree"; do
+  [ -n "$dir" ] && [ -f "$dir/.env" ] || continue
+  value=$(read_env_value "$dir/.env")
+  if [ -n "$value" ]; then
+    echo "$value"
+    exit 0
+  fi
+done
+
+exit 1
+```
+
+`.` / `$main_worktree` の探索順により、このスクリプトはメイン作業ツリーから実行された場合
+(`resolve-preview-env.sh` はどの adapter を呼ぶ前にもメイン作業ツリーへ `cd` 済み — 詳細は
+`docs/guide/customization.md` の「`preview-basic-auth-command` による Basic 認証情報解決の
+自動化」参照) でも、デバッグ目的で PR worktree から直接実行された場合でも正しい `.env` を
+見つけられる。後者では `.` に未追跡の `.env` が存在しないため、メイン作業ツリー側に
+フォールバックする。
+
+`.wholework.yml` での宣言:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"
+```
+
+このレシピは、ある downstream プロジェクト (HOTEL THE MITSUI 公式サイト) の Amplify
+ホスティングされたプレビューに対する実運用で機能実証済みであり、未認証のリクエストは
+プレビューに対して 401 を返し、このスクリプトが解決した認証情報を使ったリクエストは
+200 を返すことを確認している。
+
+他 provider 向けの実運用検証済み `preview-url-command` レシピが増えた場合や、他 provider 向けの
+`preview-basic-auth-command` 実装が追加で出てきた場合は、キーごと・provider ごとに見出しを
+分けてこの節に追記すること。
 
 ---
 

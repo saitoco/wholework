@@ -363,9 +363,9 @@ previews, extracting the `*.amplifyapp.com` URL from the bot comment without AWS
 
 ### `preview-basic-auth-command` — generic CI secret template (illustrative, unproven)
 
-Unlike the Amplify recipe above, this template has **no confirmed production track record** —
-`preview-basic-auth-command` itself is a newer key with no adopted implementation yet. It is a
-provider-agnostic illustration, not a recipe tied to a specific hosting provider: it reads
+Unlike the Amplify `.env` recipe below, this template predates any production-proven
+`preview-basic-auth-command` implementation and has no production track record of its own. It
+is a provider-agnostic illustration, not a recipe tied to a specific hosting provider: it reads
 CI-injected secret environment variables and prints them in `username:password` format. Treat
 it as a starting point to rewrite against your project's actual secret source (a secrets
 manager, a password-manager CLI, etc.) rather than as a ready-to-use script.
@@ -399,8 +399,69 @@ If the CI secrets are unavailable, the script exits non-zero, matching
 `preview-basic-auth-command`'s documented failure fallback (both variables left unset,
 existing unauthenticated fallback preserved).
 
-As more providers accumulate production-proven `preview-url-command` recipes, or a
-production-proven `preview-basic-auth-command` implementation emerges, add them as
+### `preview-basic-auth-command` — AWS Amplify Hosting (production-proven)
+
+AWS Amplify Hosting has no built-in CI secret for Basic Auth credentials, so this recipe reads
+`AMPLIFY_PREVIEW_BASIC_AUTH=user:pass` from a repository-root `.env` file (gitignored) instead —
+the same source local scripts (e.g. a `node --env-file=.env` screenshot-comparison script) can
+share. No AWS credentials are required.
+
+Prerequisites: a repository-root `.env` file (gitignored, never committed) containing
+`AMPLIFY_PREVIEW_BASIC_AUTH=user:pass`.
+
+**`.wholework/adapters/resolve-preview-basic-auth.sh`**:
+
+```bash
+#!/usr/bin/env bash
+# Returns Basic auth credentials for the preview as `user:pass`.
+# Looks up AMPLIFY_PREVIEW_BASIC_AUTH in the environment, then in .env (current dir,
+# then the main worktree — wholework may run phases inside .claude/worktrees/, where
+# untracked .env does not exist). Exits non-zero when not found (unauthenticated fallback).
+set -euo pipefail
+
+if [ -n "${AMPLIFY_PREVIEW_BASIC_AUTH:-}" ]; then
+  echo "$AMPLIFY_PREVIEW_BASIC_AUTH"
+  exit 0
+fi
+
+read_env_value() {
+  grep -E '^AMPLIFY_PREVIEW_BASIC_AUTH=' "$1" | head -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+}
+
+main_worktree=$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}' || true)
+
+for dir in "." "$main_worktree"; do
+  [ -n "$dir" ] && [ -f "$dir/.env" ] || continue
+  value=$(read_env_value "$dir/.env")
+  if [ -n "$value" ]; then
+    echo "$value"
+    exit 0
+  fi
+done
+
+exit 1
+```
+
+The `.` / `$main_worktree` lookup order means the script finds the right `.env` whether it runs
+from the main working tree (where `resolve-preview-env.sh` already `cd`s before invoking any
+adapter — see "Automating Basic Auth credential resolution with `preview-basic-auth-command`" in
+`docs/guide/customization.md`) or is invoked directly from inside a PR worktree, where `.` has no
+untracked `.env` and the script falls through to the main worktree instead.
+
+Declare it in `.wholework.yml`:
+
+```yaml
+capabilities:
+  pr-preview: true
+preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {pr}"
+```
+
+This recipe has been exercised in real usage against a downstream project's Amplify-hosted
+previews (HOTEL THE MITSUI official site): unauthenticated requests to the preview return 401,
+and requests using the credentials this script resolves return 200.
+
+As more providers accumulate production-proven `preview-url-command` recipes, or additional
+`preview-basic-auth-command` implementations emerge for other providers, add them as
 additional subsections here, grouped by key and by provider.
 
 ---

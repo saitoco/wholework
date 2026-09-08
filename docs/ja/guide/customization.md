@@ -221,6 +221,8 @@ preview-basic-auth-command: ".wholework/adapters/resolve-preview-basic-auth.sh {
 
 カバー範囲: このキーは `scripts/run-review.sh` の preview 待ちゲート (`/auto`・スケジュール実行・wrapper 直接実行) と、`/review` を skill として直接呼び出す経路 (`modules/verify-executor.md` および `modules/browser-adapter.md`、共有リゾルバ `scripts/resolve-preview-env.sh` 経由) の両方から参照されます。
 
+**実行ディレクトリの契約**: `scripts/resolve-preview-env.sh` は `preview-url-command` と `preview-basic-auth-command` のどちらも、呼び出し元自身の CWD ではなく、`git worktree list --porcelain` の先頭エントリから解決したメイン作業ツリーをカレントディレクトリとして実行します。これが重要な理由は、Wholework の各フェーズ (`/code`、`/review`、`/verify` など) がしばしば `.claude/worktrees/` 配下の linked worktree 内で実行され、そこには未追跡ファイル (gitignore 済みの `.env` など) が存在しないためです。そのようなファイルを読む adapter — `docs/guide/adapter-guide.md` の `.env` ベースの `preview-basic-auth-command` レシピなど — は、`scripts/run-review.sh`/`scripts/resolve-preview-env.sh` 経由で実行される場合も、デバッグ目的で worktree 内から直接実行される場合も、worktree 側ではなくメイン作業ツリー側の `.env` を参照して解決します。この解決経路の外で adapter を単体実行する場合 (無関係な別ツールへコピーした場合など) は、この `cd` を自動では得られないため、メイン作業ツリーの未追跡ファイルを見つける必要があるなら同じ `git worktree list --porcelain` の探索ロジックを自前で実装する必要があります。
+
 ## `.wholework/domains/`
 
 Domain ファイルは Wholework 本体を変更せずに、個々のスキルフェーズへプロジェクト固有の指示を追加する仕組みです。

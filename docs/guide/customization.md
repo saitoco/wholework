@@ -232,6 +232,8 @@ The command's stdout first line must be in `username:password` format (split at 
 
 Coverage: this key is consulted by both `scripts/run-review.sh`'s preview-wait gate (`/auto`, scheduled runs, direct wrapper invocation) and `/review`'s own direct-skill-invocation path (`modules/verify-executor.md` and `modules/browser-adapter.md`, via the shared `scripts/resolve-preview-env.sh` resolver).
 
+**Execution directory contract**: `scripts/resolve-preview-env.sh` runs both `preview-url-command` and `preview-basic-auth-command` with the main working tree as the current directory — resolved via the first entry of `git worktree list --porcelain`, not the caller's own CWD. This matters because Wholework phases (`/code`, `/review`, `/verify`, ...) often run inside a linked worktree under `.claude/worktrees/`, where untracked files (e.g. a gitignored `.env`) do not exist. An adapter that reads such a file — like the `.env`-based `preview-basic-auth-command` recipe in `docs/guide/adapter-guide.md` — resolves against the main working tree's copy, not the worktree's, whether it runs through `scripts/run-review.sh`/`scripts/resolve-preview-env.sh` or is invoked directly from inside a worktree for debugging. An adapter run standalone outside of this resolution path (e.g. copied into an unrelated tool) does not get this `cd` for free and must implement the same `git worktree list --porcelain` lookup itself if it needs to find the main working tree's untracked files.
+
 ## `.wholework/domains/`
 
 Domain files let you add project-specific instructions to individual skill phases without modifying Wholework itself.
