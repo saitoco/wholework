@@ -90,7 +90,7 @@ wholework/
 | spec | `skills/spec/SKILL.md` | Issue の仕様化と実装計画 (How レベル) |
 | code | `skills/code/SKILL.md` | ローカル実装 (patch / pr / operate 経路) |
 | review | `skills/review/SKILL.md` | PR レビュー (受入基準 + マルチパースペクティブ) |
-| merge | `skills/merge/SKILL.md` | Squash merge とブランチ削除 |
+| merge | `skills/merge/SKILL.md` | マージ（戦略は `merge-strategy` で設定可能）とブランチ削除 |
 | verify | `skills/verify/SKILL.md` | マージ後の受入テスト |
 | auto | `skills/auto/SKILL.md` | spec→code→review→merge→verify を連鎖するオーケストレーター |
 | triage | `skills/triage/SKILL.md` | タイトル正規化と Type/Size/Priority/Value の割り当て |
@@ -199,6 +199,7 @@ wholework/
 - `scripts/get-verify-iteration.sh` — Issue コメントから最も高い `<!-- verify-iteration: N -->` マーカーを読み取る
 - `scripts/resolve-preview-ac-fallback.sh` — Issue コメントから最新の `type=preview-ac-unverified` マーカーを解決し、`/verify` フォールバックが必要な AC の 1-based インデックスを出力する (なければ空)
 - `scripts/resolve-preview-env.sh` — プロジェクト宣言の preview 環境設定を解決する共有リゾルバ。2 サブコマンド構成: `url` (`preview-url-command` から `PREVIEW_URL` を解決: 30秒制限の `bash -c` 実行、空出力/非ゼロ終了/2048文字超/URL形式のガード付き、fail-open (空 stdout + exit 0) で呼び出し元は GitHub Deployments API にフォールバックする。`scripts/run-review.sh` の preview 待ちゲートと `skills/review/SKILL.md` Step 8.0 から呼ばれる) と `basic-auth` (`preview-basic-auth-command` から `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決: 同様のガードに加え `username:password` 形式チェック。`--format` に応じて `curl-config` または `user-pass` 形式の 600 権限一時ファイルのパスを stdout に出す。いずれかのガードに引っかかった場合は fail-open でファイルも作らない。`scripts/run-review.sh` の preview 待ちゲート、`modules/verify-executor.md`、`modules/browser-adapter.md` から呼ばれる)
+- `scripts/resolve-merge-strategy.sh` — `.wholework.yml` の `merge-strategy` キーを戦略名または `gh pr merge` フラグ (`--flag`) に解決する。空値・不正値・特殊文字は `squash` にフォールバック (stderr に警告)、`get-config-value.sh` 失敗時は無警告で `squash` に fail-closed する。`skills/merge/SKILL.md` Step 4 から呼ばれる
 - `scripts/verify-executability-marker.sh` — 手動のマージ後 AC に対する `/verify` Step 8b の Claude-executability 判断を記録する `type=verify-executability` マーカーを生成 (`format`) および解決 (`resolve`、最新優先) する
 - `scripts/check-pre-merge-ac.sh` — Issue 本文の `### Pre-merge` サブセクションで未チェックのチェックボックスをスキャンし、グローバルな 1-based インデックス + テキストを JSON として出力する。`skills/merge/SKILL.md` Step 1 の pre-merge AC ゲートで使用される
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッションタイトルを自動リネームする

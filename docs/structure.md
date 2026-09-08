@@ -97,7 +97,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 | spec | `skills/spec/SKILL.md` | Issue specification and implementation plan (How-level) |
 | code | `skills/code/SKILL.md` | Local implementation (patch / pr / operate route) |
 | review | `skills/review/SKILL.md` | PR review (acceptance criteria + multi-perspective) |
-| merge | `skills/merge/SKILL.md` | Squash merge and branch deletion |
+| merge | `skills/merge/SKILL.md` | Merge (strategy configurable via `merge-strategy`) and branch deletion |
 | verify | `skills/verify/SKILL.md` | Post-merge acceptance testing |
 | auto | `skills/auto/SKILL.md` | Orchestrator chaining spec→code→review→merge→verify |
 | triage | `skills/triage/SKILL.md` | Title normalization and Type/Size/Priority/Value assignment |
@@ -206,6 +206,7 @@ Key modules:
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
 - `scripts/resolve-preview-ac-fallback.sh` — resolve the latest `type=preview-ac-unverified` marker from Issue comments and print the 1-based AC indices needing `/verify` fallback (empty when none)
 - `scripts/resolve-preview-env.sh` — shared resolver for project-declared preview environment config, with two subcommands: `url` (resolves `PREVIEW_URL` from `preview-url-command`: 30s-bounded `bash -c` execution with empty/non-zero/2048-char/URL-format guards, fail-open (empty stdout + exit 0) so callers fall back to the GitHub Deployments API; called by `scripts/run-review.sh`'s preview-wait gate and `skills/review/SKILL.md` Step 8.0) and `basic-auth` (resolves `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` from `preview-basic-auth-command`, same guard shape plus a `username:password`-format check; writes a 600-permission temp file path to stdout, `curl-config` or `user-pass` per `--format`, fail-open with no file created on any guard failure; called by `scripts/run-review.sh`'s preview-wait gate, `modules/verify-executor.md`, and `modules/browser-adapter.md`)
+- `scripts/resolve-merge-strategy.sh` — resolve `.wholework.yml`'s `merge-strategy` key to a bare strategy name or a `gh pr merge` flag (`--flag`); fail-safe fallback to `squash` (with a stderr warning) for empty/invalid/special-character values, and silent fail-closed to `squash` if `get-config-value.sh` fails; called by `skills/merge/SKILL.md` Step 4
 - `scripts/verify-executability-marker.sh` — generate (`format`) and resolve (`resolve`, latest-wins) `type=verify-executability` markers recording `/verify` Step 8b's Claude-executability judgment for manual post-merge AC
 - `scripts/check-pre-merge-ac.sh` — scan an Issue body's `### Pre-merge` subsection for unchecked checkboxes and output global 1-based indices + text as JSON; used by `skills/merge/SKILL.md` Step 1's pre-merge AC gate
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
