@@ -169,6 +169,7 @@ Do **not** delay a release for any of the following. Each is a standing backgrou
 |----------|---------|-------------------------------------|------------|
 | v0.2.0 → v0.3.0 | 16 days | 108 | Healthy — release notes documented each theme with per-issue detail |
 | v0.3.0 → v0.4.0 | 97 days | 557 | Too large — required theme aggregation instead of issue enumeration, and deferred 5 breaking changes into one upgrade |
+| v0.4.0 → v0.5.0 | 28 days | 105 | Healthy — trigger 1 (100 closed) and trigger 3 (breaking change #1418) fired together, keeping the single breaking change close to when it landed |
 
 Measured throughput over the 90 days preceding v0.4.0 was ~44 closed Issues/week, so trigger 1 is expected to fire roughly every 2–3 weeks at that pace. Recalibrate the thresholds if sustained throughput changes by more than about 2×.
 
