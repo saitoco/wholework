@@ -264,7 +264,7 @@ no Spec write and therefore no worktree requirement.
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 | `/review` | worktree branch (= PR branch) | script's own push (no `--no-push`) → PR merge (`/merge`) |
-| `/merge` | worktree branch, fast-forwarded to `origin/main` after squash merge | Step 4 substep 4's `git push origin HEAD:main` |
+| `/merge` | worktree branch, fast-forwarded to `origin/main` after the merge | Step 4 substep 4's `git push origin HEAD:main` |
 
 Phases that pass `--no-push` to `append-consumed-comments-section.sh` rely on this table's
 propagation path — not a push issued by the script itself — to carry the commit to base;
