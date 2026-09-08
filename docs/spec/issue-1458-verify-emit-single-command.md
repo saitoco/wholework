@@ -163,20 +163,36 @@ Background に記載された「Step 1 の `persist_auto_session_pointer` 呼び
 Confirmed pre-implementation FAIL for 11 new test(s) (`tests/emit-verify-event.bats` — `scripts/emit-verify-event.sh` did not exist yet, so all 11 asserts failed with exit 127 before the implementation).
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Kept `${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` in `skills/verify/SKILL.md`'s `allowed-tools` alongside the new `emit-verify-event.sh:*` entry, deviating from the Spec's literal "replace at same position" instruction, because `modules/opportunistic-verify.md` and `modules/retro-proposals.md` (both loaded within `/verify`'s own execution) still call `scripts/emit-event.sh` directly — confirmed by `validate-skill-syntax.py`'s cross-file check, not by inspection alone.
-- Normalized `verify_reopen_cycle` from a raw `printf` JSON construction to `emit_event()` via the new wrapper's `--require-session-id` mode, per the Spec Notes — same JSON shape, no behavioral change, but now covered by the wrapper's own test suite instead of being untested inline shell.
-- Replaced all 14 `source`-based emit blocks found in the actual file (not just the Background section's "14 箇所" narrative count, which undercounted the FAIL-reopen-branch `phase_complete` by one) plus the Step 1 persist block, for 15 total single-command replacements.
+- Posted 2 non-blocking findings as PR inline comments (0 MUST, so `event=COMMENT`, not `REQUEST_CHANGES`): a SHOULD on `modules/worktree-lifecycle.md:285` (stale "no rewrite avoids `source`" claim, now contradicted by this PR's own wrapper-script fix) and a CONSIDER on `scripts/emit-verify-event.sh:34` (pre-existing, unmodified-by-this-PR sanitization gaps in `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event`).
+- Decided not to fix either finding inline in this PR: both are scope-adjacent (a shared module doc update; a pre-existing helper's hardening) rather than part of this Issue's stated command-form-only Scope, and neither is a regression this PR introduced.
+- Ran the Parser/Validator Edge Case Pre-check against `scripts/emit-verify-event.sh` (new CLI-argument-parsing script) via a sub-agent that actually executed the script with adversarial fixtures; confirmed the flagged behavior originates entirely from `scripts/emit-event.sh` (unchanged by this PR), so classified it CONSIDER rather than MUST.
 
 ### Deferred Items
 
-- `modules/opportunistic-verify.md` and `modules/retro-proposals.md` still embed their own `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` compound snippets and could hit the same worktree isolation guard rejection under the same conditions that triggered this Issue. Explicitly out of scope here (see Out of Scope in the Issue body); a follow-up Issue would need to apply the same `emit-verify-event.sh`-style single-command wrapper to those two modules if the same rejection is observed for them in production.
+- `modules/worktree-lifecycle.md`'s "no rewrite that avoids `source`" language should be updated in a follow-up Issue to describe the wrapper-script pattern this PR shipped, referencing `scripts/emit-verify-event.sh` as the worked example (SHOULD, not blocking).
+- `scripts/emit-event.sh`'s `persist_auto_session_pointer`/`restore_auto_session_pointer`/`emit_event` should validate/sanitize the `issue` and `event` values in a follow-up Issue (path-traversal-shaped issue values and unescaped event/issue JSON fields); pre-existing, not introduced by this PR (CONSIDER, not blocking).
+- `modules/opportunistic-verify.md` and `modules/retro-proposals.md` still embed their own `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` compound snippets and could hit the same worktree isolation guard rejection under the same conditions that triggered this Issue (carried forward unchanged from the Code phase's own Deferred Items).
 
 ### Notes for Next Phase
 
 - Post-merge AC is `verify-type: opportunistic` — the next real `/verify N` worktree run is the actual confirmation that the guard no longer rejects these calls; no additional action needed beyond letting that run happen naturally.
-- If a future change needs to fully retire `scripts/emit-event.sh:*` from `skills/verify/SKILL.md`'s `allowed-tools`, it must first migrate `modules/opportunistic-verify.md`/`modules/retro-proposals.md` off their own direct `source` calls (see Deferred Items above) — removing the entry now would break those two modules' execution inside `/verify`.
-- The `skill-body-lines` marker in `skills/verify/SKILL.md` was resynced to 996 after this change; any further edit to the file must keep it in sync (`tests/verify.bats` enforces this).
+- All 5 Pre-merge AC re-verified PASS in this review pass (4 `command`-type + 1 `rubric`-type); no unchecked Pre-merge conditions remain, so `/merge`'s pre-merge AC gate should pass cleanly.
+- CI: all 15 checks SUCCESS; no `Forbidden Expressions check` baseline-attribution branch was triggered.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. The implementation matches the Spec's Implementation Steps and Changed Files table exactly (verified line-by-line against `.tmp/pr-diff-1460.txt`); the one legitimate deviation (keeping `emit-event.sh:*` in `allowed-tools` instead of replacing it) is already documented in this Spec's own Code Retrospective section above, discovered via `validate-skill-syntax.py`'s cross-file check rather than left silent.
+
+### Recurring issues
+
+One notable finding: `modules/worktree-lifecycle.md` § "`source`-based shell function calls are blocked by the worktree isolation guard" states "There is no rewrite that avoids `source` for a function call" and offers only defer/skip fallbacks — but this PR's own fix (a single-command wrapper script that `source`s the helper internally) is exactly the rewrite that module claims doesn't exist. This is a module-drift pattern: a shared module documents a constraint as absolute, a later Issue finds a workaround, and the module is never updated to reflect it — so the next engineer hitting the same guard rejection reads stale advice and reaches for an inferior defer/skip fallback instead of the wrapper-script pattern that already shipped and is tested. Filed as a SHOULD in this review's line comments (`modules/worktree-lifecycle.md:285`); recommend a small follow-up Issue to update that module's language, both for this specific passage and as a general reminder to grep shared `modules/*.md` for claims a fix might be invalidating.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. All 5 Pre-merge conditions (4 `command`-type, 1 `rubric`-type) verified cleanly to PASS with no UNCERTAIN — the `command` hints were directly executable (`test -x`, `grep`/`file_contains`, `file_not_contains`, `bats`), and the `rubric` condition (Step 1 persist call in single-command form) was unambiguous to judge from the diff.
