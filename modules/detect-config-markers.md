@@ -70,6 +70,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `recoveries-auto-fire.threshold` | `RECOVERIES_AUTO_FIRE_THRESHOLD` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
 | `always-pr` | `ALWAYS_PR` | `true` | `false` |
 | `auto-stop-at` | `AUTO_STOP_AT` | String value as-is | `"verify"` |
+| `merge-strategy` | (none — resolved by `scripts/resolve-merge-strategy.sh`, never derived by a reading skill) | Enum string (`squash`/`merge`/`rebase`) | `squash` |
 | `themes` | (none — read directly by `scripts/setup-labels.sh`, not by any skill) | Block mapping of `{name}: {description}` | `{}` (no `theme/*` labels created) |
 
 Note: `capabilities.pr-preview` is listed as an explicit row (rather than relying on Dynamic Capability Mapping alone) because it has dedicated classification logic in `/issue` Step 4 (pre-merge-preview AC tier).
@@ -102,6 +103,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `recoveries-auto-fire.*` nested keys are interpreted under the `recoveries-auto-fire:` YAML section: `enabled: true/false`, `threshold: <integer>`. Both block format (`recoveries-auto-fire:\n  enabled: true`) and flat key format (`recoveries-auto-fire.enabled: true`) are supported. `threshold` is treated as an integer; use default `3` if ≤0 or non-numeric.
 - `always-pr` is a boolean key with standard mapping: `always-pr: true` → `ALWAYS_PR=true`; `always-pr: false` or unset → `ALWAYS_PR=false`.
 - `auto-stop-at` is an enum string key: extract the value as-is. Valid values are `spec`, `code`, `review`, `merge`, `verify`. If the value is empty, unset, or invalid, fall back to `"verify"` (full pipeline — the current default behavior).
+- `merge-strategy` is an enum string key. Valid values are `squash`, `merge`, `rebase`. **Do not resolve this key yourself** — call `scripts/resolve-merge-strategy.sh` (`--flag` for the `gh pr merge` flag, no argument for the bare name). It is the sole resolver, and the only one whose branching is bats-verified. For reference, its exhaustive fail-safe behavior is: a non-empty value that does not exactly match one of the three falls back to `squash` with a warning on stderr (the offending value truncated to 40 printable characters); a genuinely empty value (`merge-strategy:` with nothing after the colon, or `merge-strategy: ""`) is absorbed by `get-config-value.sh`'s own default-substitution before the warning logic runs, so it resolves to `squash` **silently**, indistinguishable from the key being unset; and a failing or missing `get-config-value.sh` fail-closes to `squash` with a distinct dependency-failure warning.
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
@@ -152,4 +154,5 @@ RECOVERIES_AUTO_FIRE_ENABLED: true if recoveries-auto-fire.enabled: true is set 
 RECOVERIES_AUTO_FIRE_THRESHOLD: integer from recoveries-auto-fire.threshold (default: "3"; falls back to "3" if ≤0 or non-numeric)
 ALWAYS_PR: true if always-pr: true is set (default: false)
 AUTO_STOP_AT: string extracted from auto-stop-at (default: "verify"; falls back to "verify" if empty, unset, or invalid)
+(merge-strategy emits no variable — never derive it here; call scripts/resolve-merge-strategy.sh instead)
 ```

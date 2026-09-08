@@ -714,8 +714,9 @@ run_phase_with_recovery() {
 
   # concurrent_commit_detected: check for commits on origin/main since phase start,
   # excluding this issue's own phase commits (identified via #N in the subject line).
-  # For review/merge phases, `issue` holds the PR number, but self-commits (squash
-  # merge, phase handoffs) reference the originating Issue number instead — callers
+  # For review/merge phases, `issue` holds the PR number, but self-commits (the merge
+  # itself, whichever merge-strategy produced it, plus phase handoffs) reference the
+  # originating Issue number instead — callers
   # set _EXTRA_SELF_ISSUE to that Issue number so both are excluded (issue #974).
   #
   # Per-commit classification is 3-way (issue #1427): a self-issue-number match is

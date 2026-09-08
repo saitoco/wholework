@@ -111,7 +111,8 @@ different phase/Issue whose session crashed or exited without reaching Worktree 
 general inventory and reclaim of worktrees/branches whose corresponding Issue is CLOSED or PR is
 MERGED/CLOSED, use `scripts/reclaim-stale-worktrees.sh` (dry-run by default; `--apply` to perform
 deletion). It applies the same safety guards as this module's own lifecycle (concurrent-session
-exclusion, uncommitted-changes protection) plus safe squash-merge branch deletion. See
+exclusion, uncommitted-changes protection) plus safe branch deletion for branches whose
+merge did not preserve ancestry (`squash` and `rebase`). See
 `docs/spec/issue-1119-reclaim-stale-worktrees.md` for the full design. The same script also
 reclaims orphan `worktree-*` branches left behind on `origin` (e.g. by a `/verify` or `/code` pr
 route session that pushed a worktree branch but exited before deleting it): always enumerated as
@@ -264,7 +265,7 @@ no Spec write and therefore no worktree requirement.
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 | `/review` | worktree branch (= PR branch) | script's own push (no `--no-push`) → PR merge (`/merge`) |
-| `/merge` | worktree branch, fast-forwarded to `origin/main` after squash merge | Step 4 substep 4's `git push origin HEAD:main` |
+| `/merge` | worktree branch, fast-forwarded to `origin/main` after the merge | Step 4 substep 4's `git push origin HEAD:main` |
 
 Phases that pass `--no-push` to `append-consumed-comments-section.sh` rely on this table's
 propagation path — not a push issued by the script itself — to carry the commit to base;

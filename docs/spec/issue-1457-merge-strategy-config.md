@@ -76,6 +76,7 @@
 3. `modules/detect-config-markers.md` を更新する (parallel with 1, 2) (→ acceptance criteria 4):
    - `### Marker Definition Table (fixed mappings)` の `auto-stop-at` 行の直後に `| `merge-strategy` | `MERGE_STRATEGY` | Enum string extracted as-is (`squash`/`merge`/`rebase`) | `squash` (used by `scripts/resolve-merge-strategy.sh`) |` を追加する
    - `**YAML Parsing Rules:**` 箇条書きの `auto-stop-at` の項目の直後に、`merge-strategy` は enum 文字列であること・`squash`/`merge`/`rebase` 以外 (空値を含む) は `squash` にフォールバックして警告をログ出力すること・解決は `scripts/resolve-merge-strategy.sh` が担うことを 1 項目として追加する
+   - `## Output Format` ブロックにも既存キーと同じ形式で `MERGE_STRATEGY: ...` の 1 行を追加する (内部整合性のため。Code Retrospective 参照)
 4. `skills/merge/SKILL.md` を更新する (after 1) (→ acceptance criteria 1, 7):
    - `allowed-tools` frontmatter の `Bash(...)` リストに `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*` を追加する (`${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*` の隣が自然な位置)
    - `### Step 4: Execute Squash Merge` の見出しを `### Step 4: Execute Merge` に変更し、`gh pr merge "$NUMBER" --squash --delete-branch` の直前に戦略解決の呼び出しを挿入する。挿入する内容: `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh --flag` を実行し、出力 (`--squash` / `--merge` / `--rebase` のいずれか 1 行) を `MERGE_FLAG` として記録したうえで `gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch` を発行する、と明記する。`--delete-branch` は 3 戦略すべてで有効なため無条件のまま維持する
@@ -195,31 +196,62 @@
 - **本リポジトリでの Post-merge AC 実施可否**: `gh api repos/{owner}/{repo}` で `allow_merge_commit: true` / `allow_rebase_merge: true` を確認済み。Issue 本文の Auto-Resolve Log が同じ確認を既に済ませていたため、追認のみで済んだ。
 - **`git merge origin/main --ff-only` の 3 戦略での成立性**: git の ancestry 特性からの演繹で解決 (squash = 新規コミット 1 個、merge commit = 第 1 親が旧 main、rebase = 旧 main の上に再構成 — いずれも worktree ブランチ tip が新 `origin/main` の ancestor になる)。実機確認は Post-merge AC が兼ねる形にした。既定の squash 経路は変更しないため、前提が崩れても既定挙動には影響しないという退避線を Uncertainty セクションに明記した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 3 は Marker Definition Table の行追加と YAML Parsing Rules の箇条書き追加のみを指示していたが、同じファイル内の `## Output Format` ブロック (30 件超の既存キーが `KEY: 説明 (default: ...)` 形式で列挙されている) にも `MERGE_STRATEGY` の 1 行を追加した。同一ファイル内の内部整合性を保つための追加で、他ファイルへの波及はない。
+
+### Design Gaps/Ambiguities
+
+- Implementation Step 2 が指定した bats テスト名「empty merge-strategy falls back to squash and warns on stderr」は、Implementation Step 1 が指示した呼び出し形 `get-config-value.sh merge-strategy squash` (デフォルト値 `squash` を渡す) の下では文字どおりの空値では再現できない — `get-config-value.sh` 自身の `[ -z "$VALUE" ]` チェックが、値が本当に空の場合は渡されたデフォルト `squash` に差し替えてしまうため、`merge-strategy: ""` は resolve-merge-strategy.sh に届く前に `squash` へ収束し、warning が発火しない (unset キーと区別がつかない)。`get-config-value.sh` の quote-strip ロジック (2 段の `sed` 適用) を辿ると、クォート付きの単一スペース値 (`merge-strategy: " "`) は長さ 1 の非空文字列として `[ -z ]` チェックを通過し、`squash`/`merge`/`rebase` いずれにも一致しない値として resolve-merge-strategy.sh に届く — このテストケースのみこの入力を採用して warning 経路を再現した。Spec 側にこの `get-config-value.sh` の挙動との相互作用は明記されていなかった。
+
+### Rework
+
+- Implementation Step 2 の「get-config-value failure falls back to squash (fail-closed)」テストは、当初 `run bash "$SCRIPT"` (bats の `--separate-stderr` なし) で書いたところ FAIL した。原因はスクリプトのフォールバック挙動の不具合ではなく、stderr の warning 文字列が `$output` に混入し `[ "$output" = "squash" ]` が一致しなくなったこと。同スイート内の他 3 テストは既に `run --separate-stderr` を使っていたが、このテストにだけ付け忘れていた。`run --separate-stderr` を追加して解決。
+
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- **fail-safe critical の「全列挙」が、検証されない列挙になっていた**。Spec の Implementation Steps 1 は空値・特殊文字・CRLF・依存コマンド失敗を明示列挙し「fail-safe critical」と宣言していたが、そのうち 2 項目 (空値 → 警告あり / 依存失敗 → 無警告) が実装挙動と逆だった。列挙そのものは詳細だったが、列挙の各項目に対応する検証手段が担保されていなかったのが構造的な原因。**教訓: fail-safe critical 指定を付けた Spec では、列挙項目ごとに「その項目を落としたらどのテストが落ちるか」を Implementation Steps 側で明記する**。
+- **Spec 由来の事実誤認がそのまま実装に転写された**。Implementation Steps 9 の「`merge-strategy` が `merge` / `rebase` の場合は ancestry が保存される」は rebase について誤り (GitHub の Rebase and merge は全コミットの SHA を書き換える)。`/code` は Spec を忠実に転写しただけで、欠陥の発生源は Spec 側。外部サービスの挙動に依存する前提を Spec に書く場合、`/spec` 段階での裏取りが必要だった。
+- **セキュリティ境界の見落としは、Spec が「戦略非依存で影響しない箇所」を調査した裏返しで起きた**。Issue 本文は completion signature / Issue 自動クローズ / patch route を調査済みとして列挙したが、「`.wholework.yml` をどのブランチから読むか」という軸は列挙になかった。conflict path で `git checkout headRefName` が同一 worktree 内で走るため、PR 自身が自分のマージ戦略を選べる経路が残っていた。
+
+### 繰り返し発生した問題
+
+- **テスト名と検証内容の不一致が、両方の MUST の共通原因**。`empty merge-strategy falls back to squash and warns on stderr` はクォート付き単一スペースを使い、`get-config-value failure falls back to squash (fail-closed)` は `--separate-stderr` を要求しながら `$stderr` を一切見ていなかった。`/code` の Code Retrospective はこの制約を「発見して記録」していたが、**記録先が Spec の Design Gaps であって、実装かドキュメントの修正には至らなかった**。既知の制約を retrospective に書いて済ませると、レビューまで残る。
+- **断定表現の一括置換で、grep 対象ディレクトリの選定漏れが起きた**。spec retrospective は `grep -rn "squash" docs/` と `modules/` を記録しているが `scripts/` を含めておらず、`scripts/run-auto-sub.sh` が漏れた。さらに `modules/orchestration-fallbacks.md` は同一ファイル内で 552 行目だけ中立化され 487 行目が残るという、ファイル内不整合まで生じた。**教訓: 表現の一括中立化 AC では、grep 対象を「リポジトリ全体マイナス除外リスト」で定義する (対象ディレクトリの列挙にしない)**。
+
+### 受入基準の検証しやすさ
+
+- AC 1〜3 の「新規テスト名の `grep` + フルスイート `command`」2 段構え (Triage AC audit → `/spec` の対応) は**設計意図どおり機能した**。新規テストファイルなので実装前は確実に FAIL し、`bats --filter` の 0 件マッチ問題も回避できている。この precedent (#1103) は今後も有効。
+- 一方で、**この 2 段構えは「テストが存在し、かつ PASS する」ことしか保証しない**。テストが主張どおりの入力を使っているかは検証しない。本 PR の 2 件の MUST はいずれもこの隙間から抜けた。AC が `grep "<test name>"` でテスト名を固定する形式を採る場合、テスト名が実際の fixture と乖離してもゲートは通過する — この構造的ギャップは記録に値する (改善提案としては `/verify` で集約)。
+- UNCERTAIN は 0 件。7 件の Pre-merge AC はすべて決定的に検証でき、verify command の品質自体は高かった。
+- 検出の実効性という点では、**parser/validator edge case pre-check (実コード実行) が最大の貢献**をした。2 件の MUST はいずれも diff の静的読解では出ず、18 種の fixture で実際にスクリプトを走らせて初めて観測できたもの。firing condition (c)「外部由来の文字列を解釈・検証するスクリプト」に正しくマッチした事例。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 戦略解決ロジックを `skills/merge/SKILL.md` の散文ではなく新規スクリプト `scripts/resolve-merge-strategy.sh` に抽出した。散文のままでは bats 検証が不可能で、Issue の `command` 型 AC 3 件が構造的に常時 PASS になるため (`scripts/resolve-preview-env.sh` [#1428/#1429] の先例に一致)。
-- 検証先を Issue 本文指定の `tests/run-merge.bats` から新規 `tests/resolve-merge-strategy.bats` へ変更した。前者の検証対象は `scripts/run-merge.sh` (wrapper) で戦略解決を含まず、かつ実装前から 36 ケース全 PASS するため。
-- AC 1〜3 の verify command を `grep "<新規テスト名>"` + `command "bats <新規ファイル>"` の 2 段構えにした (#1103 precedent)。`bats --filter` 単体は 0 件マッチでも exit 0 になるギャップが #1334/#1363 で指摘済み。
-- squash 断定表現の対象を Issue Scope の 4 ファイルから 11 ファイルへ拡大した (`docs/guide/workflow.md` EN/JA、`docs/structure.md` EN/JA、`modules/` 3 件を追加)。
-- `scripts/resolve-merge-strategy.sh` を fail-safe critical (判定基準 c) と判定し、空 / 特殊文字 / CRLF / 依存コマンド失敗時の期待挙動を Implementation Steps 1 に全列挙した。依存コマンド失敗時は fail-closed で `squash`。
+- MUST 2 件は「実装をドキュメントに合わせる」のではなく「ドキュメントを実測挙動に合わせる」方向で解決した。空値について `get-config-value.sh` へ空デフォルトを渡す案は、未設定と空値が区別できなくなり `merge-strategy` を設定しない全プロジェクトで警告が出るため不採用。
+- セキュリティ指摘 (PR 自身がマージ戦略を選べる) は Step 4 に注意書きを足すのではなく、戦略解決を Step 2 末尾 (worktree Entry 直後、Step 3 の `git checkout headRefName` より前) へ移動して経路ごと除去した。`WHOLEWORK_CONFIG_PATH` でベースブランチの config を指す案は `git show` の `allowed-tools` 追加と一時ファイル書き込みを伴うため、より軽量なこちらを採用。
+- 依存コマンド失敗時に `.wholework.yml` を名指しする誤誘導メッセージを、専用メッセージへ分離した。あわせて警告に載る生値を印字可能 40 文字へ切り詰め (`resolve-preview-env.sh` の 2048 文字上限の先例に合わせた)。呼び出し元が repo-write 権限を持つ LLM エージェントであるため。
+- MUST / SHOULD / CONSIDER の全 19 件を修正し、SKIP は 0 件。テストは 11 → 15 件。
 
 ### Deferred Items
 
-- Post-merge AC (`merge-strategy: merge` を設定した `/auto` 実走) は `verify-type: manual`。実装コミットには `.wholework.yml` への `merge-strategy` 追記を含めない — AC 実施時の一時的な手動設定として切り離した。
-- リポジトリ側の許可設定 (`allow_squash_merge` 等) の自動検出とフォールバックは Issue 本文の Out of scope。設定値と実リポジトリ許可の不一致は GitHub API エラーとして表面化させる。
-- `skills/merge/SKILL.md` Step 4 substep 1 の `git merge origin/main --ff-only` と `scripts/reclaim-stale-worktrees.sh` の headRefOid 照合フォールバックは、既存 squash 経路を壊さないため前提記述の追記のみに留める (挙動変更なし)。
-- Implementation Steps 10 の `modules/` 3 ファイルは [Steering Docs sync candidate] 扱い。`/code` が各ファイルを読んで最終的な include/exclude を判断する。
+- Post-merge AC (`merge-strategy: merge` / `rebase` を設定した `/auto` 実走) は未実施のまま。`verify-type: manual`。
+- `get-config-value.sh` のフラットキー検索が任意のインデントにマッチする件 (`themes:` 配下の `merge-strategy` が top-level 設定として解決される) は全フラットキー共通の既存挙動のため未修正。`docs/guide/customization.md` の themes 衝突注意書きに `merge-strategy` を追記するに留めた。
+- 「AC が `grep "<test name>"` でテスト名を固定しても、テストが主張どおりの入力を使っているかは検証されない」という構造的ギャップは、本 PR の scope 外。改善提案として `/verify` に集約する。
 
 ### Notes for Next Phase
 
-- `tests/resolve-merge-strategy.bats` の `@test` 名は AC の `grep` 型 verify command が参照する。Implementation Steps 2 に列挙した文言を変更しないこと (変更する場合は Issue 本文の AC と Spec の Verification 両方を同時に更新する)。
-- `scripts/resolve-merge-strategy.sh` は `set -euo pipefail` 下で `get-config-value.sh` の失敗を握りつぶす必要がある。`RAW=$(... 2>/dev/null) || RAW=""` の形で受けないと、fail-closed フォールバックが発火する前にスクリプト全体が中断する。
-- `skills/merge/SKILL.md` の `allowed-tools` frontmatter への `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*` 追加を忘れないこと。`scripts/check-allowed-tools.sh` (→ `validate-skill-syntax.py`) が検出する。ワイルドカード (`scripts/*.sh`) では通らない。
-- `.claude/settings.json.template` と `scripts/check-config-schema.sh` はいずれも変更不要 (Changed Files に根拠を記載済み)。`check-config-schema.sh` は `modules/detect-config-markers.md` の表から `KNOWN_KEYS` を awk 導出するため、表への行追加だけで CI に自動登録される。
-- JA ミラー (`docs/ja/*`) は `docs/translation-workflow.md` の Sync Procedure に従い EN と同一コミットで更新すること。`scripts/check-translation-sync.sh` が CI で検出する。
+- `/merge` は**この PR 自身のマージから**新しい経路を通る: 戦略解決は Step 4 ではなく **Step 2 末尾**にある。Step 4 は解決済みの `MERGE_FLAG` を使うだけ。
+- `.wholework.yml` に `merge-strategy` は設定していないため、本 PR のマージ自体は従来どおり `--squash` で行われる。Post-merge AC の実走時のみ一時的に設定する想定。
+- `tests/resolve-merge-strategy.bats` のテスト名は AC の `grep` 型 verify command が参照するため引き続き変更不可。追加した 4 件 (genuinely empty / empty quoted / oversized / extra arg after --help) は AC 非参照なので自由に扱ってよい。
+- 修正後にフルスイート 2027 件 PASS、CI 15/15 SUCCESS を確認済み。
 
 ## Consumed Comments
 
