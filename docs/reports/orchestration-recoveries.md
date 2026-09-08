@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-09-08 07:43 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1457, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: oom-kill-review-full-fanout
+- notification: harness-stop
+- Background wrapper stopped twice at the same point (review --full start) by the harness: 'was stopped because the system is running low on memory'. No numeric exit code observed. State unchanged both times: PR #1459 OPEN, CI green, no Review Response Summary.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 
 ## 2026-08-22 10:10 UTC: review-tier3-recovery
 
