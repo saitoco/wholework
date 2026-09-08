@@ -66,6 +66,7 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "squash" ]
     [ ! -e pwned ]
+    [[ "$stderr" == *"invalid merge-strategy"* ]] || false
 }
 
 @test "merge-strategy value with a trailing carriage return is accepted" {
@@ -87,6 +88,9 @@ MOCK
     run --separate-stderr bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [ "$output" = "squash" ]
+    # The dependency-failure path must name its own cause, not blame .wholework.yml.
+    [[ "$stderr" == *"could not read merge-strategy"* ]] || false
+    [[ "$stderr" != *"invalid merge-strategy"* ]] || false
 }
 
 @test "name mode: merge-strategy merge prints the bare strategy name" {
@@ -106,4 +110,44 @@ MOCK
     run --separate-stderr bash "$SCRIPT" --bogus
     [ "$status" -eq 1 ]
     [[ "$stderr" == *"unknown argument"* ]] || false
+}
+
+
+@test "genuinely empty merge-strategy resolves to squash silently" {
+    # Regression guard for the documented-vs-actual divergence found in review of
+    # PR #1459: an empty value is absorbed by get-config-value.sh's own default
+    # substitution (`squash` is passed as its default) before this script's case
+    # runs, so it resolves silently -- indistinguishable from the key being unset.
+    # The "empty merge-strategy ..." case above cannot observe this: its quoted
+    # single-space fixture survives that substitution and takes the warning path.
+    printf 'merge-strategy:\n' > .wholework.yml
+    run --separate-stderr bash "$SCRIPT" --flag
+    [ "$status" -eq 0 ]
+    [ "$output" = "--squash" ]
+    [ -z "$stderr" ]
+}
+
+@test "empty quoted merge-strategy resolves to squash silently" {
+    printf 'merge-strategy: ""\n' > .wholework.yml
+    run --separate-stderr bash "$SCRIPT" --flag
+    [ "$status" -eq 0 ]
+    [ "$output" = "--squash" ]
+    [ -z "$stderr" ]
+}
+
+@test "oversized merge-strategy value is truncated in the warning" {
+    # The warning is read by an LLM agent holding repo-write credentials, so the
+    # reflected value must be bounded (mirrors resolve-preview-env.sh's 2048 cap).
+    LONG=$(printf 'a%.0s' $(seq 1 5000))
+    printf 'merge-strategy: %s\n' "$LONG" > .wholework.yml
+    run --separate-stderr bash "$SCRIPT" --flag
+    [ "$status" -eq 0 ]
+    [ "$output" = "--squash" ]
+    [ "${#stderr}" -lt 200 ]
+}
+
+@test "error: extra argument after --help" {
+    run --separate-stderr bash "$SCRIPT" --help extra
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"unexpected extra argument"* ]] || false
 }
