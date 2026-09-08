@@ -393,3 +393,15 @@ duplicate — a prior interrupted run's findings.
 
 ### Improvement Proposals
 - When a fix's stated purpose is "eliminate pattern X across file Y," grep the target file directly for **all** extraction call sites reading the raw line (`$line`/`$0`) — not just the ones named in the fix's own Root Cause table — as a completeness check before considering the fix done. This Issue's own fix for unscoped tag extraction in `scripts/opportunistic-search.sh` missed 2 additional call sites (`keyword=`/`config=`, then `when=`/`AC_TAG`), both caught only by `/review` rather than by the implementation's own completeness pass. (Source: review retrospective § Recurring issues)
+- **(2026-09-08 追記 / Tier 2 — memory proposal)** 突き合わせ型の observation AC は、両辺の測定手続きを「完走可能な形」で AC 自身に書く。本 Issue の Post-merge AC は `collect-verify-retention-stats.sh --window 2026-05-07` と `scan-pending-ac.sh` の manual 件数一致を求めているが、(1) 前者が 300 秒超のうえメモリ逼迫でプロセスごと kill され stdout を 1 バイトも返さない、(2) 前者が `--limit 500` cap 警告を出す一方で後者は `--limit 400` で 358 件を cap 警告なしに取得しており母集団が揃う保証がない、の 2 点により、AC の文面どおりに実行しても判定に到達できない。「両者が一致する」型の AC では、母集団を決める引数を両辺で明示し、かつ実行が有界であること (ページングや中間結果の永続化を含む) を AC 側の前提として書き下す必要がある。新規起票はせず、本 Issue 自身が当該 AC を保持したまま `phase/verify` に残るため、詳細は #1273 の 2026-09-08 の `/verify` コメントに記録済み。
+
+### Second Verify Run (2026-09-08)
+
+2026-08-17 の初回 `/verify` 以降、`auto-run` が 8 回発火 (08-17 / 08-18 / 08-19 / 08-20 / 08-21 / 08-22 / 08-23 / 09-08) しながら Post-merge observation AC は未評価のまま 22 日間滞留していた。本セッションの `/auto 1456` 完走後の observation dispatch で初めて実評価に着手した。
+
+#### verify (2 回目)
+
+- Pre-merge 8 件はすべて `[x]` 済みのため SKIPPED。FAIL は 0 件。
+- Post-merge observation AC は `auto-run` 発火済みのため Step 8c で evidence 収集に着手したが、片側 (`collect-verify-retention-stats.sh --window 2026-05-07`) が完走せず **UNCERTAIN**。もう片側 (`scan-pending-ac.sh`) は完走し 358 候補 (manual 180 / observation 77 / opportunistic 101) を返した。
+- AC が不成立であることを示す証拠は得られていない。実装の欠陥ではなく、AC が要求する測定手続きが現環境で有界に完了しないという **AC 側の verifiability の問題**。
+- 発火 8 回に対して評価 1 回という比は、observation AC が「発火通知コメントを L0 に積むが条件は前進しない」状態を 22 日継続していたことを示す。発火ごとに 1 コメントが Issue に積まれるため、L0 のノイズは単調増加する。
