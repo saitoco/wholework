@@ -62,6 +62,15 @@ cutoff: `2026-08-16T05:12:40Z` (直近の `phase/*` ラベル付与)
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1273#issuecomment-5310514087
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5310551947
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5327737203
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5341249967
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5354384614
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5369700691
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5378426842
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5384000588
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5579811573
 ## Changed Files
 
 - `modules/verify-classifier.md`: `### Tag Extraction Rule (consumers)` セクションを新設 — タグは HTML コメント内からのみ読むという正準ルール、awk 形 (`[ \t]*`) と `grep -E` 形 (`[[:space:]]*`) の両方の canonical pattern、および consumer 一覧を記載 (SSoT)
