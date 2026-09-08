@@ -133,6 +133,19 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry
 
 Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 
+**Resolve the merge strategy here, not in Step 4:**
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh --flag
+```
+
+Record the resolved flag (`--squash`, `--merge`, or `--rebase`) as `MERGE_FLAG` and carry it to Step 4.
+
+- **Take the last line of stdout.** On a fallback path the script also writes a `Warning:` line to stderr, and the Bash tool presents stdout and stderr together; the strategy flag is always the final line.
+- **If the command fails, produces no output, or the recorded value is not exactly one of `--squash` / `--merge` / `--rebase`**: output `[merge-strategy] Resolution failed — falling back to --squash.` and set `MERGE_FLAG=--squash`. This matches the script's own fail-closed intent and the fail-open-with-log convention Step 1's pre-merge AC gate already uses.
+
+**Why this runs at the end of Step 2 rather than in Step 4:** `resolve-merge-strategy.sh` reads `.wholework.yml` relative to the CWD, which is the worktree created just above. At this point that worktree is still on its own branch derived from `BASE_BRANCH`, so the base branch's config is what gets read. Step 3 (the conflict path) runs `git checkout "${headRefName}"` **inside this same worktree** — after that point the working tree is the PR head branch, and resolving there would let a PR that edits `.wholework.yml` choose the strategy used to merge itself (e.g. forcing `merge` to land its full unreviewed history in a project whose convention is `squash`). Resolving before Step 3 removes that path structurally.
+
 ### Step 3: Resolve Conflicts (CONFLICTING only)
 
 #### Step 1: Checkout Branch
@@ -238,17 +251,13 @@ Note: Always wrap `headRefName` in double quotes to prevent shell injection.
 
 ### Step 4: Execute Merge
 
-Resolve the configured merge strategy and merge accordingly:
-
-```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh --flag
-```
-
-Record the single-line output (`--squash`, `--merge`, or `--rebase`) as `MERGE_FLAG`, then:
+Merge using `MERGE_FLAG`, the strategy flag already resolved at the end of Step 2:
 
 ```bash
 gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch
 ```
+
+**Substitute the literal flag value** (`--squash` / `--merge` / `--rebase`) into the command — do not emit the string `$MERGE_FLAG` verbatim. Each Bash tool call is a fresh shell, so nothing carries the variable across calls; an unsubstituted `$MERGE_FLAG` expands to empty and `gh` then rejects the command in non-interactive mode (`--merge, --rebase, or --squash required when not running interactively`), aborting the merge phase with no diagnosed cause.
 
 `--delete-branch` applies unconditionally regardless of strategy.
 
