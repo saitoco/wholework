@@ -231,27 +231,22 @@
 - 検出の実効性という点では、**parser/validator edge case pre-check (実コード実行) が最大の貢献**をした。2 件の MUST はいずれも diff の静的読解では出ず、18 種の fixture で実際にスクリプトを走らせて初めて観測できたもの。firing condition (c)「外部由来の文字列を解釈・検証するスクリプト」に正しくマッチした事例。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 2 件は「実装をドキュメントに合わせる」のではなく「ドキュメントを実測挙動に合わせる」方向で解決した。空値について `get-config-value.sh` へ空デフォルトを渡す案は、未設定と空値が区別できなくなり `merge-strategy` を設定しない全プロジェクトで警告が出るため不採用。
-- セキュリティ指摘 (PR 自身がマージ戦略を選べる) は Step 4 に注意書きを足すのではなく、戦略解決を Step 2 末尾 (worktree Entry 直後、Step 3 の `git checkout headRefName` より前) へ移動して経路ごと除去した。`WHOLEWORK_CONFIG_PATH` でベースブランチの config を指す案は `git show` の `allowed-tools` 追加と一時ファイル書き込みを伴うため、より軽量なこちらを採用。
-- 依存コマンド失敗時に `.wholework.yml` を名指しする誤誘導メッセージを、専用メッセージへ分離した。あわせて警告に載る生値を印字可能 40 文字へ切り詰め (`resolve-preview-env.sh` の 2048 文字上限の先例に合わせた)。呼び出し元が repo-write 権限を持つ LLM エージェントであるため。
-- MUST / SHOULD / CONSIDER の全 19 件を修正し、SKIP は 0 件。テストは 11 → 15 件。
+- 本 PR (#1459) 自身のマージは `.wholework.yml` に `merge-strategy` を未設定のまま、従来どおり `--squash --delete-branch` で実行した。新しい戦略解決経路 (Step 2 末尾) は実装済みだが、このマージ自体は挙動確認の対象ではない。
+- `gh pr merge "1459" --squash --delete-branch` は問題なく完了し、mergeable=true / CI success / review approved の状態から追加の conflict resolution は不要だった。
 
 ### Deferred Items
 
-- Post-merge AC (`merge-strategy: merge` / `rebase` を設定した `/auto` 実走) は未実施のまま。`verify-type: manual`。
-- `get-config-value.sh` のフラットキー検索が任意のインデントにマッチする件 (`themes:` 配下の `merge-strategy` が top-level 設定として解決される) は全フラットキー共通の既存挙動のため未修正。`docs/guide/customization.md` の themes 衝突注意書きに `merge-strategy` を追記するに留めた。
-- 「AC が `grep "<test name>"` でテスト名を固定しても、テストが主張どおりの入力を使っているかは検証されない」という構造的ギャップは、本 PR の scope 外。改善提案として `/verify` に集約する。
+- Post-merge AC (`merge-strategy: merge` または `rebase` を実際に設定した状態で `/auto` を実行し、merge フェーズを通過することを確認する) は `verify-type: manual` のまま未実施。次フェーズ (`/verify`) または人手での実施が必要。
+- `get-config-value.sh` のフラットキー検索が任意インデントにマッチする既知の非対称挙動、および「テスト名 grep だけでは入力内容の妥当性を保証しない」という構造的ギャップは、本 PR の scope 外のまま据え置き。
 
 ### Notes for Next Phase
 
-- `/merge` は**この PR 自身のマージから**新しい経路を通る: 戦略解決は Step 4 ではなく **Step 2 末尾**にある。Step 4 は解決済みの `MERGE_FLAG` を使うだけ。
-- `.wholework.yml` に `merge-strategy` は設定していないため、本 PR のマージ自体は従来どおり `--squash` で行われる。Post-merge AC の実走時のみ一時的に設定する想定。
-- `tests/resolve-merge-strategy.bats` のテスト名は AC の `grep` 型 verify command が参照するため引き続き変更不可。追加した 4 件 (genuinely empty / empty quoted / oversized / extra arg after --help) は AC 非参照なので自由に扱ってよい。
-- 修正後にフルスイート 2027 件 PASS、CI 15/15 SUCCESS を確認済み。
+- `/verify` は Post-merge AC (`merge-strategy: merge`/`rebase` 実走確認) が `verify-type: manual` である点に注意。自動検証では PASS/FAIL を確定できないため、人手確認の依頼または明示的な保留記録が必要。
+- 今後 wholework 自身のリポジトリで `merge-strategy` を変更する場合、戦略解決は `skills/merge/SKILL.md` Step 2 末尾 (worktree Entry 直後) で行われる点を踏まえること。
 
 ## Consumed Comments
 
