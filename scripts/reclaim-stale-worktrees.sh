@@ -21,11 +21,15 @@
 #     branches, squash-merged via their own PR) it is a MERGED PR found by
 #     searching "closes #<num>" and verifying the match, same technique as
 #     skills/verify's Step 2 PR search (see docs/spec/issue-1355-reclaim-remote-branches.md).
-#     When the project's `merge-strategy` (see modules/detect-config-markers.md)
-#     is `merge` or `rebase` rather than the default `squash`, ancestry is
-#     preserved end-to-end, so `git branch -d` succeeds on its own and this
-#     headRefOid fallback is never reached -- it remains exclusively the
-#     squash-strategy recovery path.
+#     Only the project's `merge-strategy` value `merge` (see
+#     modules/detect-config-markers.md) preserves ancestry: the merge commit's
+#     second parent IS the PR head, so `git branch -d` succeeds on its own and
+#     the `-D` fallback below is not exercised. `rebase` does NOT preserve
+#     ancestry -- GitHub's "Rebase and merge" rewrites every commit with a new
+#     SHA, so the original branch tip is never an ancestor of the resulting
+#     base branch, exactly as with `squash`. The headRefOid fallback therefore
+#     remains load-bearing under BOTH `squash` and `rebase` (it still works
+#     under `rebase`, because the PR's headRefOid is the pre-rebase tip).
 #
 # Remote branch reclaim (origin/worktree-*, see docs/spec/issue-1355-reclaim-remote-branches.md):
 #   Always enumerated (dry-run report), regardless of --apply-remote. Branches
@@ -42,10 +46,12 @@
 #     the same headRefOid match when a "closes #<num>" MERGED PR is found
 #     (squash-merged /code pr route branches); otherwise they fall back to an
 #     ancestor-of-origin/<default-branch> check (patch route, ff-only merged).
-#     If `merge-strategy` is `merge` or `rebase`, the PR merge itself preserves
-#     ancestry too, so the ancestor-of-origin/<default-branch> check would also
-#     hold for kind=pr branches in that case -- the headRefOid match above
-#     remains as the path that also covers the squash-strategy case
+#     Note the ancestor check is structurally kind=issue-only: the kind=pr
+#     branch below hard-requires `remote_sha = COMPLETION_HEAD_REF_OID` and
+#     `continue`s otherwise, so kind=pr is gated on the exact headRefOid match
+#     under EVERY `merge-strategy`, never on ancestry. Under `merge` a kind=pr
+#     branch would also satisfy an ancestor check, but the code never asks;
+#     under `squash` and `rebase` it would not (both rewrite commit SHAs)
 #
 # bash 3.2 compatible (no associative arrays, no mapfile/readarray) so it runs
 # under macOS system bash.
@@ -136,11 +142,15 @@ classify_name() {
 # actual closes-reference is verified via gh-extract-issue-from-pr.sh before
 # being trusted -- same technique as skills/verify's Step 2 PR search. Sets
 # COMPLETION_HEAD_REF_OID as a side effect; leaves it empty (no fallback
-# available) if no matching MERGED PR is found. This fallback exists for the
-# squash `merge-strategy` (the default); when the project has configured
-# `merge` or `rebase` instead, the PR merge preserves ancestry and the
-# ancestor-of-origin/<default-branch> check above already succeeds, so this
-# function is not reached for that PR.
+# available) if no matching MERGED PR is found. This function itself runs
+# unconditionally for every CLOSED kind=issue branch, on both the local and the
+# remote path -- check_completion() calls it before any `git branch -d` or
+# ancestor check runs, so it is NOT gated on `merge-strategy`. What varies by
+# strategy is whether its RESULT is consumed: the OID is only used by
+# delete_branch_safe()'s `-D` fallback and the remote kind=issue short-circuit,
+# which fire when `git branch -d` (or the ancestor check) is rejected -- i.e.
+# under `squash` and `rebase`, both of which rewrite commit SHAs. Under `merge`
+# ancestry survives, so those paths succeed without ever reading the OID.
 resolve_merged_pr_head_ref_oid() {
   local num="$1"
   local candidates
