@@ -194,3 +194,31 @@ One notable finding: `modules/worktree-lifecycle.md` § "`source`-based shell fu
 ### Acceptance criteria verification difficulty
 
 Nothing to note. All 5 Pre-merge conditions (4 `command`-type, 1 `rubric`-type) verified cleanly to PASS with no UNCERTAIN — the `command` hints were directly executable (`test -x`, `grep`/`file_contains`, `file_not_contains`, `bats`), and the `rubric` condition (Step 1 persist call in single-command form) was unambiguous to judge from the diff.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票者 (親セッション) が Background に書いた 2 系統の主張のうち、主張 2 (「Step 4 の設定値解決が `get-config-value.sh` を bash 経由で連続呼び出しする」) が事実誤認だった。`modules/detect-config-markers.md` の Processing Steps は「`.wholework.yml` を Read ツールで読み、キーを抽出する」と規定しており bash を一切指示していない。`/verify 1456` で guard に拒否されたのは実行エージェントが SKILL.md の指示から逸脱して bash を使ったためで、skill 記述側の問題ではなかった。
+- **`/issue` Step 15 の AC verify command 監査がこれを検出**し、常時 PASS になる rubric AC として非破壊コメントで指摘した。親セッションが独立に確認したうえで Issue 本文を訂正し (Background 主張 2 / Scope 項目 / 対応 AC を削除、経緯を Out of scope に明記)、`/spec` が誤った前提で作業に入る前に是正できた。監査がなければ不要なスコープが実装まで流れていた。
+
+#### spec
+- 起票時の AC 4 (`command "test -f tests/emit-verify-event.bats"`) を `command "bats tests/emit-verify-event.bats"` に強化し、AC 5 を実在する複合コマンド (Step 1 の `persist_auto_session_pointer`) 対象の rubric に差し替えた。新規ファイル対象のため常時 PASS にはならず、Pattern 2 を正しく回避している。
+
+#### code
+- Deviations from Design 2 件はいずれも実装時の実測に基づく妥当な逸脱 (`allowed-tools` の併記、`skill-body-lines` マーカーの追従更新)。手戻りなし。
+
+#### review
+- `--light` で実施。指摘なく通過。
+
+#### merge
+- PR #1460 が正常マージ。`docs/reports/orchestration-recoveries.md` に本 Issue の recovery entry はなく、orchestration anomaly なし。
+
+#### verify
+- Pre-merge 5 件は already-checked skip rule で SKIPPED、Post-merge 1 件は **本実行自体が観察対象**として PASS。worktree 内から `bash scripts/emit-verify-event.sh 1458 verify_worktree_probe phase=verify` が回避策なしで成功し、`session_id` も正しく解決された。修正前の `/verify 1456` では同じ状況で複合コマンドが guard に拒否され `.tmp/` へのヘルパースクリプト書き出しを要していた。
+- **stale skill body 検出が発火** (cached 1059 行 / on-disk 996 行)。本 Issue の実装が `skills/verify/SKILL.md` を 63 行削減した結果であり、#1447 が導入した検出機構が実運用で意図どおり機能した最初の事例。判定への影響はなく、実行中は on-disk の新ラッパーを使用した。
+
+### Improvement Proposals
+
+- **`modules/opportunistic-verify.md` / `modules/retro-proposals.md` の複合 `source` を同方針で単一コマンド化する**: 本 Issue は `skills/verify/SKILL.md` の 15 箇所を `scripts/emit-verify-event.sh` へ置き換えたが、`modules/opportunistic-verify.md` と `modules/retro-proposals.md` は依然として `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` + `restore_auto_session_pointer` の複合コマンドを prescribe している (Code Retrospective の Deviations で「本 Issue のスコープ外」として明示的に残された)。`/verify` 自身の実行では Step 14 / Step 16 が Step 13 の Worktree Exit **後**に走るため guard に当たらないが、この 2 module は `skills/{spec,code,review,issue,audit,verify}/SKILL.md` の 6 skill から参照されており、`/spec` `/code` `/review` は自身の worktree 内でこれらを読む。したがって同じ拒否がそれらの skill で再現しうる。本 Issue と同じ wrapper 方針で解消できる。
