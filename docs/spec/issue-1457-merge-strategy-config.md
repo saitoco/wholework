@@ -157,6 +157,70 @@
 - **patch route verify command チェック**: Size L (pr route) かつ Diff-less Axis の判定基準を満たさない (`## Changed Files` にリポジトリ内ファイル多数、`## Implementation Steps` はすべてファイル編集) ため、`github_check "gh pr checks"` 非互換のチェックは非該当。そもそも本 Spec に `github_check` 型の verify command はない
 - **`docs/migration-notes.md`**: sync candidate から除外。本 Issue は既存スクリプトの CLI シグネチャ・フラグ・引数順を変更しないため (新規スクリプトの追加のみ)、scope rule に従い対象外
 
+## issue retrospective
+
+### 曖昧性解決の判断根拠
+
+- **不正値時の警告出力先**: ターミナルログのみとし、Issue コメント等への永続化は不要と判断。`watchdog-timeout-seconds` / `verify-max-iterations` など `modules/detect-config-markers.md` 内の既存の不正値フォールバックがいずれも「デフォルトにフォールバックしてログ警告を出す」という同一パターンを踏襲しており、`merge-strategy` のみ別扱いにする理由がないため。
+- **Post-merge AC の検証環境**: 外部の別プロジェクトではなく、wholework 自身のリポジトリで検証する方針に決定。`gh api repos/{owner}/{repo}` で確認したところ本リポジトリは `allow_merge_commit: true` / `allow_rebase_merge: true` が有効で squash 以外の戦略も実際に選択可能であり、外部プロジェクトを新設する必要がない。
+
+### Acceptance Criteria の変更理由
+
+元の Issue 本文は Pre-merge / Post-merge を見出しのみで区切ったプレーンな箇条書きだったため、以下を実施:
+
+- 全条件を `- [ ]` チェックボックス形式に変換 (`/verify` 等のダウンストリーム処理が `^- \[[ xX]\]` パターンでパースするため)
+- 機械検証可能な条件に `file_contains` / `command` / `rubric` の verify command を付与
+  - `merge-strategy` 分岐のテスト確認は `tests/run-merge.bats` (既存ファイル、追加ケースで対応) への `command "bats tests/run-merge.bats"` を割り当て
+  - SSoT テーブル追加・customization.md 追記は `file_contains` で機械検証
+  - `docs/workflow.md` 等の squash 断定表現の条件付き化は具体的な文言が `/spec` で決まるため `rubric` を主軸とし、`file_contains "docs/workflow.md" "merge-strategy"` を補助チェックとして追加
+- Post-merge の 1 件に `verify-type: manual` を付与 (実プロジェクトでの `/auto` 実走確認が必要なため)
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の Scope が挙げていた squash 断定表現の対象は `docs/workflow.md` / `docs/tech.md` (JA ミラー含む) の 4 ファイルだったが、`grep -rn "squash" docs/` の実査で `docs/guide/workflow.md:111` / `docs/ja/guide/workflow.md:107` にも同種の user-facing な断定が存在した。`/issue` の Scope 起草時点で `docs/` 配下を再帰的に grep していれば拾えた漏れ。
+- 同じ実査で `docs/structure.md:100` / `docs/ja/structure.md:93` の skills テーブル merge 行 (`Squash merge and branch deletion`) と `modules/` 配下 3 件 (`worktree-lifecycle.md` / `l0-surfaces.md` / `orchestration-fallbacks.md`) にも squash 断定が見つかった。合計すると Issue 本文が想定していた 4 ファイルに対し実際の対象は 11 ファイルで、約 2.75 倍。
+- Steering Docs sync candidate の discriminating-power filter は本 Issue ではほぼ機能しなかった: `merge-strategy` / `resolve-merge-strategy.sh` は新規のため一致 0 件、`detect-config-markers.md` (111 件) と `reclaim-stale-worktrees.sh` (10 件) はいずれも閾値 8 を超えてスキップ。実際の sync candidate は本 Issue 固有の `grep -rn "squash"` スイープで特定した。新規シンボルを導入する Issue では、キーワード検索より「置き換え対象の旧概念語」でのスイープのほうが検出力が高い。
+
+### Judgment rationale
+
+- **Issue 本文の AC が指定した検証先 (`tests/run-merge.bats`) を採用しなかった**: `tests/run-merge.bats` の検証対象は `scripts/run-merge.sh` (bash wrapper) であり、戦略解決を含まない。Issue の AC は「テストで確認できる」という要求を書いていたが、実装対象を SKILL.md の散文に置いたままではその要求自体が満たせない。設計側 (`scripts/resolve-merge-strategy.sh` への抽出) と検証側 (新規 `tests/resolve-merge-strategy.bats`) を同時に変更することで初めて AC が意味を持つ、という構造だった。
+- **`bats --filter` ではなく grep + フルスイートの 2 段構えを選んだ**: Triage AC audit コメントの当初案は `bats --filter` への絞り込み (#1279 が採用した修復パターン) だったが、`--filter` が 0 件マッチでも exit 0 になる同型のギャップが #1334/#1363 で既に指摘されている。#1103 がより新しい precedent として grep + フルスイートを採用しており、そちらに合わせた。audit コメントの提案をそのまま採らなかった判断であり、Notes に理由を明記した。
+- **`.wholework.yml` 本体に `merge-strategy` を書かない**: 本リポジトリの設定ファイルにキーを追記すると、このリポジトリ自身の `/merge` 挙動が実装コミットの時点で変わってしまう。Post-merge AC が要求する設定は AC 実施時の一時的な手動操作として切り離した。self-hosting リポジトリ特有の、実装と検証環境が同一であることに起因する判断。
+
+### Uncertainty resolution
+
+- **`gh pr merge` の戦略フラグと `--delete-branch` の併用可否**: `gh pr merge --help` の実行で `-m/--merge` `-r/--rebase` `-s/--squash` `-d/--delete-branch` がいずれも独立フラグであることを確認し、設計時点で解決。散文推測に頼らず実機の help 出力を取ったのが有効だった。
+- **本リポジトリでの Post-merge AC 実施可否**: `gh api repos/{owner}/{repo}` で `allow_merge_commit: true` / `allow_rebase_merge: true` を確認済み。Issue 本文の Auto-Resolve Log が同じ確認を既に済ませていたため、追認のみで済んだ。
+- **`git merge origin/main --ff-only` の 3 戦略での成立性**: git の ancestry 特性からの演繹で解決 (squash = 新規コミット 1 個、merge commit = 第 1 親が旧 main、rebase = 旧 main の上に再構成 — いずれも worktree ブランチ tip が新 `origin/main` の ancestor になる)。実機確認は Post-merge AC が兼ねる形にした。既定の squash 経路は変更しないため、前提が崩れても既定挙動には影響しないという退避線を Uncertainty セクションに明記した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 戦略解決ロジックを `skills/merge/SKILL.md` の散文ではなく新規スクリプト `scripts/resolve-merge-strategy.sh` に抽出した。散文のままでは bats 検証が不可能で、Issue の `command` 型 AC 3 件が構造的に常時 PASS になるため (`scripts/resolve-preview-env.sh` [#1428/#1429] の先例に一致)。
+- 検証先を Issue 本文指定の `tests/run-merge.bats` から新規 `tests/resolve-merge-strategy.bats` へ変更した。前者の検証対象は `scripts/run-merge.sh` (wrapper) で戦略解決を含まず、かつ実装前から 36 ケース全 PASS するため。
+- AC 1〜3 の verify command を `grep "<新規テスト名>"` + `command "bats <新規ファイル>"` の 2 段構えにした (#1103 precedent)。`bats --filter` 単体は 0 件マッチでも exit 0 になるギャップが #1334/#1363 で指摘済み。
+- squash 断定表現の対象を Issue Scope の 4 ファイルから 11 ファイルへ拡大した (`docs/guide/workflow.md` EN/JA、`docs/structure.md` EN/JA、`modules/` 3 件を追加)。
+- `scripts/resolve-merge-strategy.sh` を fail-safe critical (判定基準 c) と判定し、空 / 特殊文字 / CRLF / 依存コマンド失敗時の期待挙動を Implementation Steps 1 に全列挙した。依存コマンド失敗時は fail-closed で `squash`。
+
+### Deferred Items
+
+- Post-merge AC (`merge-strategy: merge` を設定した `/auto` 実走) は `verify-type: manual`。実装コミットには `.wholework.yml` への `merge-strategy` 追記を含めない — AC 実施時の一時的な手動設定として切り離した。
+- リポジトリ側の許可設定 (`allow_squash_merge` 等) の自動検出とフォールバックは Issue 本文の Out of scope。設定値と実リポジトリ許可の不一致は GitHub API エラーとして表面化させる。
+- `skills/merge/SKILL.md` Step 4 substep 1 の `git merge origin/main --ff-only` と `scripts/reclaim-stale-worktrees.sh` の headRefOid 照合フォールバックは、既存 squash 経路を壊さないため前提記述の追記のみに留める (挙動変更なし)。
+- Implementation Steps 10 の `modules/` 3 ファイルは [Steering Docs sync candidate] 扱い。`/code` が各ファイルを読んで最終的な include/exclude を判断する。
+
+### Notes for Next Phase
+
+- `tests/resolve-merge-strategy.bats` の `@test` 名は AC の `grep` 型 verify command が参照する。Implementation Steps 2 に列挙した文言を変更しないこと (変更する場合は Issue 本文の AC と Spec の Verification 両方を同時に更新する)。
+- `scripts/resolve-merge-strategy.sh` は `set -euo pipefail` 下で `get-config-value.sh` の失敗を握りつぶす必要がある。`RAW=$(... 2>/dev/null) || RAW=""` の形で受けないと、fail-closed フォールバックが発火する前にスクリプト全体が中断する。
+- `skills/merge/SKILL.md` の `allowed-tools` frontmatter への `${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*` 追加を忘れないこと。`scripts/check-allowed-tools.sh` (→ `validate-skill-syntax.py`) が検出する。ワイルドカード (`scripts/*.sh`) では通らない。
+- `.claude/settings.json.template` と `scripts/check-config-schema.sh` はいずれも変更不要 (Changed Files に根拠を記載済み)。`check-config-schema.sh` は `modules/detect-config-markers.md` の表から `KNOWN_KEYS` を awk 導出するため、表への行追加だけで CI に自動登録される。
+- JA ミラー (`docs/ja/*`) は `docs/translation-workflow.md` の Sync Procedure に従い EN と同一コミットで更新すること。`scripts/check-translation-sync.sh` が CI で検出する。
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (曖昧性解決の判断根拠 2 件 [不正値時の警告出力先はターミナルログのみ / Post-merge AC の検証環境は wholework 自身のリポジトリ] と AC のチェックボックス化・verify command 付与の理由を記録) / https://github.com/saitoco/wholework/issues/1457#issuecomment-5579668103
