@@ -20,7 +20,12 @@
 #     for kind=issue (which also covers /code pr route's "<phase>+issue-N"
 #     branches, squash-merged via their own PR) it is a MERGED PR found by
 #     searching "closes #<num>" and verifying the match, same technique as
-#     skills/verify's Step 2 PR search (see docs/spec/issue-1355-reclaim-remote-branches.md)
+#     skills/verify's Step 2 PR search (see docs/spec/issue-1355-reclaim-remote-branches.md).
+#     When the project's `merge-strategy` (see modules/detect-config-markers.md)
+#     is `merge` or `rebase` rather than the default `squash`, ancestry is
+#     preserved end-to-end, so `git branch -d` succeeds on its own and this
+#     headRefOid fallback is never reached -- it remains exclusively the
+#     squash-strategy recovery path.
 #
 # Remote branch reclaim (origin/worktree-*, see docs/spec/issue-1355-reclaim-remote-branches.md):
 #   Always enumerated (dry-run report), regardless of --apply-remote. Branches
@@ -36,7 +41,11 @@
 #     so an ancestor check cannot be used for kind=pr). kind=issue branches use
 #     the same headRefOid match when a "closes #<num>" MERGED PR is found
 #     (squash-merged /code pr route branches); otherwise they fall back to an
-#     ancestor-of-origin/<default-branch> check (patch route, ff-only merged)
+#     ancestor-of-origin/<default-branch> check (patch route, ff-only merged).
+#     If `merge-strategy` is `merge` or `rebase`, the PR merge itself preserves
+#     ancestry too, so the ancestor-of-origin/<default-branch> check would also
+#     hold for kind=pr branches in that case -- the headRefOid match above
+#     remains as the path that also covers the squash-strategy case
 #
 # bash 3.2 compatible (no associative arrays, no mapfile/readarray) so it runs
 # under macOS system bash.
@@ -127,7 +136,11 @@ classify_name() {
 # actual closes-reference is verified via gh-extract-issue-from-pr.sh before
 # being trusted -- same technique as skills/verify's Step 2 PR search. Sets
 # COMPLETION_HEAD_REF_OID as a side effect; leaves it empty (no fallback
-# available) if no matching MERGED PR is found.
+# available) if no matching MERGED PR is found. This fallback exists for the
+# squash `merge-strategy` (the default); when the project has configured
+# `merge` or `rebase` instead, the PR merge preserves ancestry and the
+# ancestor-of-origin/<default-branch> check above already succeeds, so this
+# function is not reached for that PR.
 resolve_merged_pr_head_ref_oid() {
   local num="$1"
   local candidates
