@@ -1,12 +1,12 @@
 ---
 name: merge
-description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
+description: Merge a PR (strategy configurable via `merge-strategy` in `.wholework.yml`; default squash) and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
-# Squash Merge
+# Merge PR
 
 If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
@@ -103,7 +103,7 @@ Key per-step behavior in non-interactive mode:
 Note: Always wrap `$NUMBER` in double quotes.
 
 - **isDraft is true**: Run `gh pr ready "$NUMBER"` to un-draft, then continue
-- **mergeable=true**: Proceed directly to Step 4 (Execute Squash Merge)
+- **mergeable=true**: Proceed directly to Step 4 (Execute Merge)
 - **mergeable=false, reason=conflicts**: Proceed to Step 3 (Resolve Conflicts)
 - **mergeable=false, reason=ci_pending**: CI checks are still running (0 failing, 1+ pending) — this resolves itself by waiting, unlike a genuine failure. Run:
   ```bash
@@ -236,22 +236,32 @@ Note: Always wrap `headRefName` in double quotes to prevent shell injection.
    - Abort → guide: "The local branch is preserved in the post-rebase state. You can reset to the remote state with `git reset --hard "origin/${headRefName}"` or handle manually." then exit
 5. Do not take any further automated action until the user provides explicit instructions
 
-### Step 4: Execute Squash Merge
+### Step 4: Execute Merge
+
+Resolve the configured merge strategy and merge accordingly:
 
 ```bash
-gh pr merge "$NUMBER" --squash --delete-branch
+${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh --flag
 ```
+
+Record the single-line output (`--squash`, `--merge`, or `--rebase`) as `MERGE_FLAG`, then:
+
+```bash
+gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch
+```
+
+`--delete-branch` applies unconditionally regardless of strategy.
 
 If the PR body contains `closes #N` and `BASE_BRANCH` is `main`, the Issue will be auto-closed on merge (no manual close needed).
 
 If `BASE_BRANCH` is not `main`, inform the user after merge:
 "Since the base branch is `{BASE_BRANCH}`, `closes #N` will not auto-close the Issue. The Issue will be closed when `{BASE_BRANCH}` is merged to main. You may manually run `gh issue close {ISSUE_NUMBER}` if needed."
 
-**Phase Handoff write** (after squash merge, before label transition):
+**Phase Handoff write** (after the merge, before label transition):
 
 merge is an intermediate phase — write the Phase Handoff so verify can read it.
 
-1. Align the worktree branch with origin/main (which now contains the squash commit):
+1. Align the worktree branch with origin/main (which now contains the merge result):
    ```bash
    git fetch origin
    git merge origin/main --ff-only
@@ -263,7 +273,7 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    ```
    `--no-push` is correct here — substep 5 below pushes to `main`, and this Consumed Comments commit rides along with it in the same push. This depends on substep 5 pushing even when the Phase Handoff write itself has nothing new to commit (see substep 5's guard, updated to check for unpushed commits rather than only staged changes).
 
-   **Why this call sits here, post-squash, rather than at the start of the skill (Step 1-2) like the other phases:** `gh pr merge --squash --delete-branch` above already ran at the top of this Step, deleting the PR branch — any commit made before that point on the now-deleted branch would be lost. Pushing early (before the squash merge) is also unsafe: it would re-trigger CI and could invalidate the mergeability state Step 1 already confirmed. Running post-squash, direct to `main`, avoids both risks while still landing before Step 5's `phase/verify` transition — the same "before this phase's own label transition" ordering the other phases follow. At the point this call runs, the most recent `phase/*` label on the Issue is still `phase/review` (`/merge`'s own `phase/verify` transition happens in Step 5, not yet reached).
+   **Why this call sits here, post-merge, rather than at the start of the skill (Step 1-2) like the other phases:** `gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch` above already ran at the top of this Step, deleting the PR branch — any commit made before that point on the now-deleted branch would be lost. Pushing early (before the merge) is also unsafe: it would re-trigger CI and could invalidate the mergeability state Step 1 already confirmed. Running post-merge, direct to `main`, avoids both risks while still landing before Step 5's `phase/verify` transition — the same "before this phase's own label transition" ordering the other phases follow. At the point this call runs, the most recent `phase/*` label on the Issue is still `phase/review` (`/merge`'s own `phase/verify` transition happens in Step 5, not yet reached).
 2. Glob `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` to locate the Spec (now on main):
    - The target Spec file is the worktree-local copy under `.claude/worktrees/merge+pr-$NUMBER/` (the CWD established by EnterWorktree in Step 2). All Edit and commit operations target this worktree path — not the main repo working directory.
    - If not found: output `[phase-handoff] No Spec found — skipping handoff write.` and continue
@@ -336,7 +346,7 @@ When `BASE_BRANCH` is `main`:
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove section" to exit the worktree.
 
-`gh pr merge --squash --delete-branch` in Step 4 has already merged and deleted the remote branch, so call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
+`gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch` in Step 4 has already merged and deleted the remote branch, so call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
 
 ## Completion Report
 
