@@ -27,7 +27,7 @@ teardown() {
 @test "--persist-session writes the issue-scoped pointer file" {
     run bash -c "cd \"$WORKDIR\" && bash \"$SCRIPT\" --persist-session sid-abc 1075 && cat .tmp/auto-session-issue-1075"
     [ "$status" -eq 0 ]
-    [[ "$output" == "sid-abc" ]]
+    [ "$output" = "sid-abc" ]
 }
 
 @test "--persist-session with empty sid deletes the pointer file" {
@@ -35,7 +35,7 @@ teardown() {
     echo "stale-session" > "$WORKDIR/.tmp/auto-session-issue-1075"
     run bash -c "cd \"$WORKDIR\" && bash \"$SCRIPT\" --persist-session '' 1075 && { test -f .tmp/auto-session-issue-1075 && echo EXISTS || echo GONE; }"
     [ "$status" -eq 0 ]
-    [[ "$output" == "GONE" ]]
+    [ "$output" = "GONE" ]
 }
 
 @test "standard mode is a no-op when AUTO_EVENTS_LOG is unset" {
@@ -49,11 +49,11 @@ teardown() {
     [ "$status" -eq 0 ]
     run jq -r '.event' "$WORKDIR/events.jsonl"
     [ "$status" -eq 0 ]
-    [[ "$output" == "phase_start" ]]
+    [ "$output" = "phase_start" ]
     run jq -r '.phase' "$WORKDIR/events.jsonl"
-    [[ "$output" == "verify" ]]
+    [ "$output" = "verify" ]
     run jq -r '.issue' "$WORKDIR/events.jsonl"
-    [[ "$output" == "42" ]]
+    [ "$output" = "42" ]
 }
 
 @test "--require-session-id is a no-op when AUTO_SESSION_ID is unset" {
@@ -66,11 +66,11 @@ teardown() {
     run bash -c "cd \"$WORKDIR\" && export AUTO_EVENTS_LOG=\"\$PWD/events.jsonl\" AUTO_SESSION_ID=sid-1 && bash \"$SCRIPT\" 42 verify_reopen_cycle --require-session-id iteration=1 reopen_reason=pre_merge_ac_fail"
     [ "$status" -eq 0 ]
     run jq -r '.event' "$WORKDIR/events.jsonl"
-    [[ "$output" == "verify_reopen_cycle" ]]
+    [ "$output" = "verify_reopen_cycle" ]
     run jq -r '.iteration' "$WORKDIR/events.jsonl"
-    [[ "$output" == "1" ]]
+    [ "$output" = "1" ]
     run jq -r '.reopen_reason' "$WORKDIR/events.jsonl"
-    [[ "$output" == "pre_merge_ac_fail" ]]
+    [ "$output" = "pre_merge_ac_fail" ]
 }
 
 @test "--unconditional emits even when AUTO_EVENTS_LOG is unset (defaults to .tmp/auto-events.jsonl)" {
@@ -78,20 +78,20 @@ teardown() {
     [ "$status" -eq 0 ]
     [ -f "$WORKDIR/.tmp/auto-events.jsonl" ]
     run jq -r '.event' "$WORKDIR/.tmp/auto-events.jsonl"
-    [[ "$output" == "recoveries_threshold_fire" ]]
+    [ "$output" = "recoveries_threshold_fire" ]
     run jq -r '.symptom' "$WORKDIR/.tmp/auto-events.jsonl"
-    [[ "$output" == "foo" ]]
+    [ "$output" = "foo" ]
 }
 
 @test "key=value arguments are reflected in the emitted JSON (verify_executability shape)" {
     run bash -c "cd \"$WORKDIR\" && export AUTO_EVENTS_LOG=\"\$PWD/events.jsonl\" && bash \"$SCRIPT\" 42 verify_executability ac_index=3 executable=true reason="
     [ "$status" -eq 0 ]
     run jq -r '.ac_index' "$WORKDIR/events.jsonl"
-    [[ "$output" == "3" ]]
+    [ "$output" = "3" ]
     run jq -r '.executable' "$WORKDIR/events.jsonl"
-    [[ "$output" == "true" ]]
+    [ "$output" = "true" ]
     run jq -r '.reason' "$WORKDIR/events.jsonl"
-    [[ "$output" == "" ]]
+    [ "$output" = "" ]
 }
 
 @test "usage error exits 1 when the event name is missing" {
