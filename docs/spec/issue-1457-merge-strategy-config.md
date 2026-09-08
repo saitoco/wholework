@@ -210,25 +210,48 @@
 
 - Implementation Step 2 の「get-config-value failure falls back to squash (fail-closed)」テストは、当初 `run bash "$SCRIPT"` (bats の `--separate-stderr` なし) で書いたところ FAIL した。原因はスクリプトのフォールバック挙動の不具合ではなく、stderr の warning 文字列が `$output` に混入し `[ "$output" = "squash" ]` が一致しなくなったこと。同スイート内の他 3 テストは既に `run --separate-stderr` を使っていたが、このテストにだけ付け忘れていた。`run --separate-stderr` を追加して解決。
 
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- **fail-safe critical の「全列挙」が、検証されない列挙になっていた**。Spec の Implementation Steps 1 は空値・特殊文字・CRLF・依存コマンド失敗を明示列挙し「fail-safe critical」と宣言していたが、そのうち 2 項目 (空値 → 警告あり / 依存失敗 → 無警告) が実装挙動と逆だった。列挙そのものは詳細だったが、列挙の各項目に対応する検証手段が担保されていなかったのが構造的な原因。**教訓: fail-safe critical 指定を付けた Spec では、列挙項目ごとに「その項目を落としたらどのテストが落ちるか」を Implementation Steps 側で明記する**。
+- **Spec 由来の事実誤認がそのまま実装に転写された**。Implementation Steps 9 の「`merge-strategy` が `merge` / `rebase` の場合は ancestry が保存される」は rebase について誤り (GitHub の Rebase and merge は全コミットの SHA を書き換える)。`/code` は Spec を忠実に転写しただけで、欠陥の発生源は Spec 側。外部サービスの挙動に依存する前提を Spec に書く場合、`/spec` 段階での裏取りが必要だった。
+- **セキュリティ境界の見落としは、Spec が「戦略非依存で影響しない箇所」を調査した裏返しで起きた**。Issue 本文は completion signature / Issue 自動クローズ / patch route を調査済みとして列挙したが、「`.wholework.yml` をどのブランチから読むか」という軸は列挙になかった。conflict path で `git checkout headRefName` が同一 worktree 内で走るため、PR 自身が自分のマージ戦略を選べる経路が残っていた。
+
+### 繰り返し発生した問題
+
+- **テスト名と検証内容の不一致が、両方の MUST の共通原因**。`empty merge-strategy falls back to squash and warns on stderr` はクォート付き単一スペースを使い、`get-config-value failure falls back to squash (fail-closed)` は `--separate-stderr` を要求しながら `$stderr` を一切見ていなかった。`/code` の Code Retrospective はこの制約を「発見して記録」していたが、**記録先が Spec の Design Gaps であって、実装かドキュメントの修正には至らなかった**。既知の制約を retrospective に書いて済ませると、レビューまで残る。
+- **断定表現の一括置換で、grep 対象ディレクトリの選定漏れが起きた**。spec retrospective は `grep -rn "squash" docs/` と `modules/` を記録しているが `scripts/` を含めておらず、`scripts/run-auto-sub.sh` が漏れた。さらに `modules/orchestration-fallbacks.md` は同一ファイル内で 552 行目だけ中立化され 487 行目が残るという、ファイル内不整合まで生じた。**教訓: 表現の一括中立化 AC では、grep 対象を「リポジトリ全体マイナス除外リスト」で定義する (対象ディレクトリの列挙にしない)**。
+
+### 受入基準の検証しやすさ
+
+- AC 1〜3 の「新規テスト名の `grep` + フルスイート `command`」2 段構え (Triage AC audit → `/spec` の対応) は**設計意図どおり機能した**。新規テストファイルなので実装前は確実に FAIL し、`bats --filter` の 0 件マッチ問題も回避できている。この precedent (#1103) は今後も有効。
+- 一方で、**この 2 段構えは「テストが存在し、かつ PASS する」ことしか保証しない**。テストが主張どおりの入力を使っているかは検証しない。本 PR の 2 件の MUST はいずれもこの隙間から抜けた。AC が `grep "<test name>"` でテスト名を固定する形式を採る場合、テスト名が実際の fixture と乖離してもゲートは通過する — この構造的ギャップは記録に値する (改善提案としては `/verify` で集約)。
+- UNCERTAIN は 0 件。7 件の Pre-merge AC はすべて決定的に検証でき、verify command の品質自体は高かった。
+- 検出の実効性という点では、**parser/validator edge case pre-check (実コード実行) が最大の貢献**をした。2 件の MUST はいずれも diff の静的読解では出ず、18 種の fixture で実際にスクリプトを走らせて初めて観測できたもの。firing condition (c)「外部由来の文字列を解釈・検証するスクリプト」に正しくマッチした事例。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1〜10 をすべてそのまま実装した。設計からの逸脱は Output Format ブロックへの 1 行追加のみ (Code Retrospective 参照)。
-- Behavioral Change Detection (`skills/code/SKILL.md` Step 9) が発火 (`skills/merge/SKILL.md` / `modules/detect-config-markers.md` / `modules/orchestration-fallbacks.md` / `docs/tech.md` がいずれも直接対応外のテストから参照されていた) ため、`bats --jobs 18 tests/` でフルスイート 2023 件を実行し全 PASS を確認した。
-- Pre-merge AC 1〜7 はすべて verify command が PASS したため Issue 本文のチェックボックスを更新した (`gh-issue-edit.sh --checkbox 1,2,3,4,5,6,7 --check`)。Post-merge AC 1 件は `verify-type: manual` のため未チェックのまま。
+- MUST 2 件は「実装をドキュメントに合わせる」のではなく「ドキュメントを実測挙動に合わせる」方向で解決した。空値について `get-config-value.sh` へ空デフォルトを渡す案は、未設定と空値が区別できなくなり `merge-strategy` を設定しない全プロジェクトで警告が出るため不採用。
+- セキュリティ指摘 (PR 自身がマージ戦略を選べる) は Step 4 に注意書きを足すのではなく、戦略解決を Step 2 末尾 (worktree Entry 直後、Step 3 の `git checkout headRefName` より前) へ移動して経路ごと除去した。`WHOLEWORK_CONFIG_PATH` でベースブランチの config を指す案は `git show` の `allowed-tools` 追加と一時ファイル書き込みを伴うため、より軽量なこちらを採用。
+- 依存コマンド失敗時に `.wholework.yml` を名指しする誤誘導メッセージを、専用メッセージへ分離した。あわせて警告に載る生値を印字可能 40 文字へ切り詰め (`resolve-preview-env.sh` の 2048 文字上限の先例に合わせた)。呼び出し元が repo-write 権限を持つ LLM エージェントであるため。
+- MUST / SHOULD / CONSIDER の全 19 件を修正し、SKIP は 0 件。テストは 11 → 15 件。
 
 ### Deferred Items
 
-- Post-merge AC (`merge-strategy: merge` を設定した `/auto` 実走) は `verify-type: manual` のため未実施。実装コミットに `.wholework.yml` への `merge-strategy` 追記は含めていない。
-- リポジトリ側の許可設定 (`allow_squash_merge` 等) の自動検出とフォールバックは Issue 本文の Out of scope のまま。
+- Post-merge AC (`merge-strategy: merge` / `rebase` を設定した `/auto` 実走) は未実施のまま。`verify-type: manual`。
+- `get-config-value.sh` のフラットキー検索が任意のインデントにマッチする件 (`themes:` 配下の `merge-strategy` が top-level 設定として解決される) は全フラットキー共通の既存挙動のため未修正。`docs/guide/customization.md` の themes 衝突注意書きに `merge-strategy` を追記するに留めた。
+- 「AC が `grep "<test name>"` でテスト名を固定しても、テストが主張どおりの入力を使っているかは検証されない」という構造的ギャップは、本 PR の scope 外。改善提案として `/verify` に集約する。
 
 ### Notes for Next Phase
 
-- `/review` は Pre-merge AC 1〜7 が既にチェック済みである前提で進めてよい (本 `/code` 実行で全て PASS 確認済み)。
-- `tests/resolve-merge-strategy.bats` の「empty merge-strategy falls back to squash and warns on stderr」テストはクォート付き単一スペース値 (`merge-strategy: " "`) を使ってのみ warning 経路を再現できる — 詳細は Code Retrospective の Design Gaps/Ambiguities を参照。テスト名を変更しないこと (AC の `grep` 型 verify command が参照するため)。
-- `skills/merge/SKILL.md` Step 4 は `MERGE_FLAG` 変数を `resolve-merge-strategy.sh --flag` の出力から都度取得する形に変更済み。以降このファイルを触る場合は squash 断定表現を再導入しないこと。
+- `/merge` は**この PR 自身のマージから**新しい経路を通る: 戦略解決は Step 4 ではなく **Step 2 末尾**にある。Step 4 は解決済みの `MERGE_FLAG` を使うだけ。
+- `.wholework.yml` に `merge-strategy` は設定していないため、本 PR のマージ自体は従来どおり `--squash` で行われる。Post-merge AC の実走時のみ一時的に設定する想定。
+- `tests/resolve-merge-strategy.bats` のテスト名は AC の `grep` 型 verify command が参照するため引き続き変更不可。追加した 4 件 (genuinely empty / empty quoted / oversized / extra arg after --help) は AC 非参照なので自由に扱ってよい。
+- 修正後にフルスイート 2027 件 PASS、CI 15/15 SUCCESS を確認済み。
 
 ## Consumed Comments
 
