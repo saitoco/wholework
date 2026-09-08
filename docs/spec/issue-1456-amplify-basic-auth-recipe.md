@@ -31,3 +31,6 @@ Size XS のため spec フェーズはスキップし、`/auto` の patch route 
 ### Consumed Comments
 
 No new comments since last phase.
+
+## Consumed Comments
+No new comments since last phase.
