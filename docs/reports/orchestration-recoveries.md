@@ -170,7 +170,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-21 17:07 UTC: manual-recovery-respawn
 
@@ -190,7 +190,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-21 08:47 UTC: manual-recovery-respawn
 
@@ -210,7 +210,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-21 08:47 UTC: manual-recovery-respawn
 
@@ -230,7 +230,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-21 04:22 UTC: manual-recovery-respawn
 
@@ -250,7 +250,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-21 03:03 UTC: manual-recovery-respawn
 
@@ -270,7 +270,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-19 10:53 UTC: manual-recovery-verified-already-complete
 
@@ -310,7 +310,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-19 08:59 UTC: manual-recovery-respawn
 
@@ -330,7 +330,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-17 07:02 UTC: review-tier3-recovery
 
@@ -394,7 +394,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1146
 
 ## 2026-08-16 08:22 UTC: manual-recovery-respawn
 
