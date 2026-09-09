@@ -62,6 +62,8 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 
 - **saito** (MEMBER, first-class): `/issue` フェーズの Existing Issue Refinement による Issue Retrospective。AC の verify command 見直し (job 単位 `github_check` の Pre-merge 追加根拠) と Auto-Resolve Log (AC2 の grep パターンがパイプ回避案をカバーしない点への判断) を要約したもので、Issue 本文の `## Auto-Resolved Ambiguity Points` と内容が重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1462#issuecomment-5596921924
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=1462 decision=blo / https://github.com/saitoco/wholework/issues/1462#issuecomment-5598052214
+- saito / MEMBER / first-class / <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=1462 decision=blo / https://github.com/saitoco/wholework/issues/1462#issuecomment-5598708784
 ## Code Retrospective
 
 ### Deviations from Design
