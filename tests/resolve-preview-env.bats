@@ -194,7 +194,11 @@ MOCK
 }
 
 file_mode() {
-    stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1" 2>/dev/null
+    # GNU coreutils stat must be probed first: on GNU, `-f` means --file-system,
+    # so `stat -f '%Lp' FILE` treats '%Lp' and FILE as two operands, prints the
+    # filesystem block for FILE on stdout, and only then exits non-zero -- the
+    # stray stdout would be concatenated with the fallback's output.
+    stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null
 }
 
 @test "basic-auth error: unknown --format value" {
