@@ -57,4 +57,5 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 - **テストファイル探索**: `tests/` 配下を `test.yml` で grep したが、直列再実行ステップの終了コード伝播ロジックそのものを検証する bats テストは存在しない (ヒットした3ファイルはいずれも `gh run list --workflow=test.yml` の呼び出しをモックする文脈で無関係)。追加のテストファイル更新は不要と判断した。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- **saito** (MEMBER, first-class): `/issue` フェーズの Existing Issue Refinement による Issue Retrospective。AC の verify command 見直し (job 単位 `github_check` の Pre-merge 追加根拠) と Auto-Resolve Log (AC2 の grep パターンがパイプ回避案をカバーしない点への判断) を要約したもので、Issue 本文の `## Auto-Resolved Ambiguity Points` と内容が重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1462#issuecomment-5596921924
