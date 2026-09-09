@@ -101,18 +101,17 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 - AC3 (`command "bats tests/"`) は safe mode の CI 参照フォールバック → `ci-failure-classifier.md` の 7 シグネチャいずれにも該当せず `implementation` 判定 → UNCERTAIN、という経路が意図どおりに機能した。verify command 自体の記述に問題はない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 で AC3 (`command "bats tests/"`) を CI 参照フォールバック経由で UNCERTAIN、AC4 (`github_check`) を FAIL と判定した。AC3 はチェックボックスを `[x]` から `[ ]` に戻した (このrunの検証結果が UNCERTAIN であるため、Checkbox Updates 規定の "FAIL/UNCERTAIN → leave as - [ ]" に従った)。
-- `Run bats tests` ジョブの FAILURE を MUST として review body / line comments (`path: null`) の両方に記録し、`gh-pr-review.sh` の `HAS_MUST` 判定により `REQUEST_CHANGES` 相当 (self-review のため実際には `COMMENT` にフォールバック) で投稿した。
-- MUST issue (2件、実質同一原因) は Issue #1462 の Scope が明示的に Out of scope としている `tests/resolve-preview-env.bats` の個別調査に該当するため、本PR内では修正せず Skipped Issues として記録した。
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) を実行した時点では `unchecked_count=0` (4/4 チェック済み) だった。review フェーズの Notes for Next Phase が懸念していた AC4 未チェック状態は、本フェーズ開始前に別途解消されていた (`Run bats tests` ジョブの basic-auth 2件は本フェーズ実行前に既に解消済みと判断)。
+- `review-incomplete-fallback` チェック (`reconcile-phase-state.sh review --check-completion`) は fallback 起因ではなく、PR #1465 上の Review Response Summary を organic completion として検出したため、override マーカーは不要と判断した。
+- マージ戦略は `.wholework.yml` の `merge-strategy` 未設定によりデフォルトの `squash` を採用し、`gh pr merge 1465 --squash --delete-branch` で実行した。
 
 ### Deferred Items
-- `Run bats tests` ジョブの FAILURE (`tests/resolve-preview-env.bats` の basic-auth 2件) — 本PRのスコープ外。別Issueでの調査・修正、または `/merge` の pre-merge-ac-gate override が必要。現時点で該当する既存 Issue は見つからなかった (`gh issue list --search "resolve-preview-env.bats"` で #1441 (CLOSED, 別内容) のみ)。
-- Post-merge AC (意図的に失敗するテストを含むブランチでの `failure` 確認、manual) — 未変更、`/verify` 側で人手判断が必要。
-- Post-merge AC (通常 PR での全 PASS 観察、observation) — 未変更。
+- Post-merge AC (意図的に失敗するテストを含むブランチでの `failure` 確認、manual) — `/verify` 側で人手判断が必要。
+- Post-merge AC (通常 PR での全 PASS 観察、observation) — `/verify` 側で確認。
+- review retrospective に記載された Pre-existing failure exception (Step 9) の汎用化提案 — Issue 起票は `/verify` 側の集約に委ねられたまま未着手。
 
 ### Notes for Next Phase
-- `/merge` は AC4 が未チェックのまま (Pre-merge AC gate によりブロックされる想定)。マージするには (a) 別Issueで basic-auth 2件を先に修正してから rebase、または (b) 明示的な override 判断のいずれかが必要。
-- review retrospective の「Recurring issues」に記載した Pre-existing failure exception の汎用化提案は、Issue 起票を `/verify` 側の集約に委ねている (本フェーズでは起票しない)。
+- `/verify` は Post-merge AC 2件 (manual / observation) の検証に加え、Deferred の汎用化提案の起票要否を確認すること。
