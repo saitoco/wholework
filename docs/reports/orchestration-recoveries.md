@@ -82,6 +82,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-09-09 08:46 UTC: manual-recovery-ci-fix-and-merge-rerun
+
+### Context
+- Issue #1462, phase: merge
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: preexisting-ci-failure-surfaced-by-own-fix
+- Tier 3 returned action=abort at merge; root cause was red CI from two pre-existing failures this issue's own pipefail fix newly surfaced. Parent session fixed both, checked pre-merge AC 3/4, and re-ran run-merge.sh successfully
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-09-09 08:45 UTC: manual-recovery-respawn
 
 ### Context
