@@ -7,10 +7,21 @@ setup() {
   cd "$BATS_TEST_TMPDIR"
 }
 
+# CI installs the Ubuntu-packaged bats (1.10.0), whose parser treats every line
+# starting with `@test` as a test case -- including lines inside a heredoc. The
+# fixtures below therefore inflated the suite's expected test count by 7 and left
+# phantom entries in the run log that `bats --filter-status failed` could never
+# re-run, which kept the serial re-run step failing regardless of real results.
+# Fixtures spell the token AT_TEST; this helper restores it on the way to disk, so
+# the file written for the checker is byte-identical to the previous fixtures.
+write_fixture() {
+  sed 's/^AT_TEST /@test /' > "$1"
+}
+
 @test "clean: single-bracket assertion produces no detection" {
-  cat > tests/clean.bats <<'EOF'
+  write_fixture tests/clean.bats <<'EOF'
 #!/usr/bin/env bats
-@test "clean example" {
+AT_TEST "clean example" {
   run echo "hi"
   [ "$output" = "hi" ]
 }
@@ -24,9 +35,9 @@ EOF
 }
 
 @test "clean: double-bracket assertion with || false produces no detection" {
-  cat > tests/clean2.bats <<'EOF'
+  write_fixture tests/clean2.bats <<'EOF'
 #!/usr/bin/env bats
-@test "clean example with double bracket" {
+AT_TEST "clean example with double bracket" {
   run echo "hi"
   [[ "$output" == "hi" ]] || false
 }
@@ -40,9 +51,9 @@ EOF
 }
 
 @test "detection: bare double-bracket \$output assertion is flagged" {
-  cat > tests/bad.bats <<'EOF'
+  write_fixture tests/bad.bats <<'EOF'
 #!/usr/bin/env bats
-@test "bad example" {
+AT_TEST "bad example" {
   run echo "hi"
   [[ "$output" == "hi" ]]
 }
@@ -60,9 +71,9 @@ EOF
 }
 
 @test "detection: bare double-bracket \$status assertion is flagged" {
-  cat > tests/bad_status.bats <<'EOF'
+  write_fixture tests/bad_status.bats <<'EOF'
 #!/usr/bin/env bats
-@test "bad status example" {
+AT_TEST "bad status example" {
   run echo "hi"
   [[ "$status" -eq 0 ]]
 }
@@ -76,9 +87,9 @@ EOF
 }
 
 @test "clean: backslash-continued || false on next line produces no detection" {
-  cat > tests/clean3.bats <<'EOF'
+  write_fixture tests/clean3.bats <<'EOF'
 #!/usr/bin/env bats
-@test "clean example with continuation" {
+AT_TEST "clean example with continuation" {
   run echo "hi"
   [[ "$output" == "hi" ]] \
     || false
@@ -93,9 +104,9 @@ EOF
 }
 
 @test "detection: backslash continuation without || false on next line is still flagged" {
-  cat > tests/bad_continuation.bats <<'EOF'
+  write_fixture tests/bad_continuation.bats <<'EOF'
 #!/usr/bin/env bats
-@test "bad example with continuation" {
+AT_TEST "bad example with continuation" {
   run echo "hi"
   [[ "$output" == "hi" ]] \
     && echo "matched"
@@ -110,9 +121,9 @@ EOF
 }
 
 @test "self-exclusion: check-bare-bracket-assertions.bats fixture is excluded" {
-  cat > tests/check-bare-bracket-assertions.bats <<'EOF'
+  write_fixture tests/check-bare-bracket-assertions.bats <<'EOF'
 #!/usr/bin/env bats
-@test "self reference example" {
+AT_TEST "self reference example" {
   run echo "hi"
   [[ "$output" == "hi" ]]
 }
