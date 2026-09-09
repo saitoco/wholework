@@ -21,6 +21,8 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 ## Changed Files
 
 - `.github/workflows/test.yml`: `Re-run parallel-only failures serially` ステップの `run:` ブロック先頭に `set -o pipefail` を追加する。`set -o pipefail` は POSIX シェル由来のビルトインで bash 3.2+ でも利用可能 (このステップは `ubuntu-latest` ランナー上の bash で実行されるため、macOS system bash 3.2 互換性は本変更の制約にならない)。
+- `tests/resolve-preview-env.bats` (Scope 追加、`/auto --batch` 実行中にユーザー承認): `file_mode` ヘルパの stat 探索順を GNU 優先に変更する。
+- `tests/check-bare-bracket-assertions.bats` (Scope 追加、`/auto --batch` 実行中にユーザー承認): heredoc 内 fixture の `@test` トークンを `AT_TEST` に置き換え、`write_fixture` ヘルパで書き出し時に復元する。
 
 ## Implementation Steps
 
@@ -63,7 +65,11 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 ## Code Retrospective
 
 ### Deviations from Design
-- N/A — Implementation Steps 1〜3 を Spec の記載どおりに実施した (`set -o pipefail` の追加、ローカル `bats tests/` 全件 PASS 確認、push 後の CI 確認は AC4 除外ルールにより `/review` フェーズに委譲)。
+- Implementation Steps 1〜3 は Spec の記載どおりに実施した (`set -o pipefail` の追加、ローカル `bats tests/` 全件 PASS 確認、push 後の CI 確認は AC4 除外ルールにより `/review` フェーズに委譲)。
+- **Scope 逸脱 (2 件、ユーザー承認済み)**: AC4 (`Run bats tests` ジョブが `success`) を満たすため、`.github/workflows/test.yml` 以外に `tests/` 配下 2 ファイルを変更した。いずれも本 Issue が修正した握り潰しによって**それまで不可視だった既存の恒久的失敗**であり、gate を「機能させる」という本 Issue の目的の必要条件だったため同一 PR に含めた。
+  - `tests/resolve-preview-env.bats` の `file_mode` は BSD `stat -f '%Lp'` を先に試していた。GNU coreutils では `-f` が `--file-system` を意味するため、`'%Lp'` と対象ファイルが 2 つの FILE オペランドとして解釈され、対象のファイルシステム情報を stdout に出力してから非ゼロ終了する。その stray stdout が `stat -c '%a'` フォールバックの出力と連結され、モード比較が Linux CI で常に不一致になっていた (#1429 でヘルパが導入されて以降ずっと失敗)。GNU を先に探索する順序へ変更 (BSD stat は `-c` を stdout を汚さずに拒否するため安全)。
+  - `tests/check-bare-bracket-assertions.bats` は heredoc 内の fixture に行頭 `@test` を含んでいた。CI が導入する Ubuntu パッケージ版 bats 1.10.0 のパーサはこれを実テストとして計上するため、suite の期待値が 2045、実行数が 2038 となり**並列ステップが常時 exit 1**していた。さらに bats の run log に残る phantom 7 件を `--filter-status failed` が再実行できず (`unknown test name`)、**直列再実行も常時 exit 1** していた。この状態では `set -o pipefail` の追加だけで全 PR の bats ジョブが恒久的に赤になるため、本修正なしには AC4 が原理的に達成不能だった。
+- **本 Issue の前提の訂正**: Issue 本文は当該 basic-auth 2 件を「ブランチ固有ないし環境固有の一時的失敗」「現在の main ではローカルで PASS」と記述していたが、実際には Linux で決定的に失敗する移植性バグだった。ローカル (macOS, bats 1.14.0) で PASS していたのは BSD stat 側の分岐が成功していたためで、CI では一貫して失敗していた。
 
 ### Design Gaps/Ambiguities
 - N/A — Spec の Notes で事前に洗い出された論点 (AC2 のカバレッジ、fail-closed 挙動、doc sync 不要判断) はいずれも実装時に問題化しなかった。
