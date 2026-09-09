@@ -55,3 +55,6 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 - **verify-type tag check — observation AC**: Post-merge の observation AC (通常 PR での全 PASS 時の観察) が `modules/verify-classifier.md` の 2-part 構造 (observed event / expected output structure) を満たしていなかったため、Option A (indented sub-bullet) を適用し、Issue 本文・本 Spec の両方に反映した (Issue 本文の `## Auto-Resolved Ambiguity Points` にも判断根拠を追記済み)。
 - **ドキュメント同期 (doc-checker Impact Assessment)**: `modules/doc-checker.md` と `modules/skill-dev-doc-impact.md` の Change Type 表と照合したが、本変更 (CI ワークフローの終了コード伝播修正) はいずれの表にも該当しない。`docs/tech.md` § CI bats Parallel/Serial Split は「a genuine failure is instead surfaced by the serial re-run step's non-zero exit」と既に記述しており、この記述は本修正の適用後にはじめて実態と一致する (修正前は非 0 exit がステップ結果に反映されていなかった)。記述内容自体の変更は不要と判断した。
 - **テストファイル探索**: `tests/` 配下を `test.yml` で grep したが、直列再実行ステップの終了コード伝播ロジックそのものを検証する bats テストは存在しない (ヒットした3ファイルはいずれも `gh run list --workflow=test.yml` の呼び出しをモックする文脈で無関係)。追加のテストファイル更新は不要と判断した。
+
+## Consumed Comments
+No new comments since last phase.
