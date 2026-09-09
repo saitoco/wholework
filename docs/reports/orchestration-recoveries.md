@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-09-09 08:45 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1462, phase: spec
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: harness-oom-stop
+- notification: harness-stop
+- Background command was stopped because the system is running low on memory; spec had already emitted phase_complete, respawn resumed from phase/ready without re-running spec
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-09-08 07:43 UTC: manual-recovery-respawn
 
 ### Context
