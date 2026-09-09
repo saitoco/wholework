@@ -59,3 +59,40 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class): `/issue` フェーズの Existing Issue Refinement による Issue Retrospective。AC の verify command 見直し (job 単位 `github_check` の Pre-merge 追加根拠) と Auto-Resolve Log (AC2 の grep パターンがパイプ回避案をカバーしない点への判断) を要約したもので、Issue 本文の `## Auto-Resolved Ambiguity Points` と内容が重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1462#issuecomment-5596921924
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 を Spec の記載どおりに実施した (`set -o pipefail` の追加、ローカル `bats tests/` 全件 PASS 確認、push 後の CI 確認は AC4 除外ルールにより `/review` フェーズに委譲)。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes で事前に洗い出された論点 (AC2 のカバレッジ、fail-closed 挙動、doc sync 不要判断) はいずれも実装時に問題化しなかった。
+
+### Rework
+- N/A
+
+### Smoke Test
+- Spec に `## Smoke Test` セクションなし — スキップ (no-op)。
+
+### Step 10 Behavioral Change Detection
+- `.github/workflows/test.yml` は既存ファイルの変更であり、`tests/visual-diff-adapter.bats` がコメント内で同ファイルパスに言及していたため機械的な検出ルール上は "behavioral change" と判定された (実際には Node ランタイム設定への言及であり、本変更の対象である直列再実行ステップの pipefail 挙動とは無関係)。判定ルールの字義どおりにフルスイート (`bats --jobs 18 tests/`) を実行し、2038/2038 PASS を確認した。
+
+### Step 10 AC4 exclusion judgment
+- AC4 (`github_check "gh run view $(gh run list --workflow=test.yml ...)" "success"`) は SKILL.md の CI verification AC exclusion 規定が列挙する 2 つの定型文字列 (`github_check "gh run list"` / `github_check "gh pr checks" "<job>"`) のいずれとも完全一致しないが、「この Issue 自身の commit/PR に依存する CI 検証は Step 10 時点で正確に評価できない」という同規定の趣旨は該当する (push 前のため `gh run list` は無関係な直近 run を拾ってしまう)。字義ではなく趣旨に従い、AC4 を Step 10 のチェックボックス更新対象から除外した (`- [ ]` のまま維持)。実際の検証は PR 作成後の `/review` フェーズに委譲する。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implementation Step 1 のとおり `set -o pipefail` を `Re-run parallel-only failures serially` ステップの `run: |` ブロック冒頭に追加した (Scope が許容する 3 案のうち、Spec Root Cause で分析した pipefail 非設定問題に最も直接的に対応する案)。
+- Step 10 の behavioral change detection がコメントのみの参照 (`tests/visual-diff-adapter.bats` 内の Node ランタイム言及) に反応したため、字義どおりフルスイート (`bats --jobs 18 tests/`, 2038件) を実行し PASS を確認した。
+- AC4 (`github_check` job 単位判定) は push 前で評価不能なため Step 10 のチェックボックス対象から除外し、`/review` フェーズでの検証に委譲した (Deferred Items 参照)。
+
+### Deferred Items
+- AC4 (`PR の CI で Run bats tests ジョブが success で完了する`) — push 前のため Step 10 では評価不能。PR #1465 作成後、`/review` フェーズで CI 結果を確認して判定すること。
+- Post-merge AC (意図的に失敗するテストを含むブランチでの `failure` 確認、manual) — Spec Notes のとおり repo への実 side effect を伴うため `/verify` から無条件自動実行させず、`manual` のまま維持している。
+- Post-merge AC (通常 PR での全 PASS 観察、observation) — `/auto` 完了直後の対象 PR で観察する設計のまま。本 Issue 自体の PR #1465 が最初の観察対象候補になり得る。
+
+### Notes for Next Phase
+- `/review` は AC4 の `gh run view $(gh run list --workflow=test.yml --limit=1 ...)` 判定が PR #1465 自身の run を正しく指すことを確認すること (push 直後は in_progress の可能性がある)。
+- 本 PR は `.github/workflows/test.yml` の 1 行追加のみ (`set -o pipefail`)。他の変更ファイルはない。
