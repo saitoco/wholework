@@ -80,19 +80,31 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 ### Step 10 AC4 exclusion judgment
 - AC4 (`github_check "gh run view $(gh run list --workflow=test.yml ...)" "success"`) は SKILL.md の CI verification AC exclusion 規定が列挙する 2 つの定型文字列 (`github_check "gh run list"` / `github_check "gh pr checks" "<job>"`) のいずれとも完全一致しないが、「この Issue 自身の commit/PR に依存する CI 検証は Step 10 時点で正確に評価できない」という同規定の趣旨は該当する (push 前のため `gh run list` は無関係な直近 run を拾ってしまう)。字義ではなく趣旨に従い、AC4 を Step 10 のチェックボックス更新対象から除外した (`- [ ]` のまま維持)。実際の検証は PR 作成後の `/review` フェーズに委譲する。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — 実装 (`set -o pipefail` 1行追加) は Spec の Implementation Step 1〜3、Scope と完全に一致しており、構造的な乖離は見つからなかった。
+
+### Recurring issues
+- **Pre-existing failure exception (baseline attribution) のスコープが `Forbidden Expressions check` 専用に限定されている問題を、別ジョブで再確認した。** 本PR自身のCIで `Run bats tests` ジョブが FAILURE になったが、原因は `tests/resolve-preview-env.bats` の basic-auth 2件 (600-perm assertion) — main ブランチの直近CI runでも同一2件が同一パターンで再現する、本PRのdiffと無関係な既存の環境依存フレークであることを確認した (詳細は Response Summary 参照)。SKILL.md Step 9 の Pre-existing failure exception は `Forbidden Expressions check` ジョブのみを対象としており (#1136/#1138 由来)、`Run bats tests` を含む他ジョブには適用されないため、規定どおり MUST としてブロックした。皮肉なことに、Issue #1462 自身の Purpose (「直列再実行の結果をジョブ結果に反映させ merge gate として機能させる」) が正しく実現された結果として、既存の無関係なフレークが本PR自身の merge を阻害する形になっている。`pre-merge-check.sh` ベースの baseline attribution classifier (`ci-failure-classifier.md` の `implementation` 判定) は既に `Run bats tests` のような他ジョブにも適用可能な汎用ロジックを持っているため、Step 9 の exception 対象を `forbidden-expressions` 単体から汎用化する余地がある (提案として記録のみ。Issue 起票は `/verify` に委ねる)。
+
+### Acceptance criteria verification difficulty
+- AC4 (`github_check` job単位フォーム) は job 名で一意に対象を絞り込めており、`gh run list --workflow=test.yml --limit=1` が本PR自身の最新runを正しく指すことも実測で確認できた (Notes for Next Phase で予告された懸念は解消)。UNCERTAIN化することなく明確に FAIL 判定できた。
+- AC3 (`command "bats tests/"`) は safe mode の CI 参照フォールバック → `ci-failure-classifier.md` の 7 シグネチャいずれにも該当せず `implementation` 判定 → UNCERTAIN、という経路が意図どおりに機能した。verify command 自体の記述に問題はない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Implementation Step 1 のとおり `set -o pipefail` を `Re-run parallel-only failures serially` ステップの `run: |` ブロック冒頭に追加した (Scope が許容する 3 案のうち、Spec Root Cause で分析した pipefail 非設定問題に最も直接的に対応する案)。
-- Step 10 の behavioral change detection がコメントのみの参照 (`tests/visual-diff-adapter.bats` 内の Node ランタイム言及) に反応したため、字義どおりフルスイート (`bats --jobs 18 tests/`, 2038件) を実行し PASS を確認した。
-- AC4 (`github_check` job 単位判定) は push 前で評価不能なため Step 10 のチェックボックス対象から除外し、`/review` フェーズでの検証に委譲した (Deferred Items 参照)。
+- Step 8 で AC3 (`command "bats tests/"`) を CI 参照フォールバック経由で UNCERTAIN、AC4 (`github_check`) を FAIL と判定した。AC3 はチェックボックスを `[x]` から `[ ]` に戻した (このrunの検証結果が UNCERTAIN であるため、Checkbox Updates 規定の "FAIL/UNCERTAIN → leave as - [ ]" に従った)。
+- `Run bats tests` ジョブの FAILURE を MUST として review body / line comments (`path: null`) の両方に記録し、`gh-pr-review.sh` の `HAS_MUST` 判定により `REQUEST_CHANGES` 相当 (self-review のため実際には `COMMENT` にフォールバック) で投稿した。
+- MUST issue (2件、実質同一原因) は Issue #1462 の Scope が明示的に Out of scope としている `tests/resolve-preview-env.bats` の個別調査に該当するため、本PR内では修正せず Skipped Issues として記録した。
 
 ### Deferred Items
-- AC4 (`PR の CI で Run bats tests ジョブが success で完了する`) — push 前のため Step 10 では評価不能。PR #1465 作成後、`/review` フェーズで CI 結果を確認して判定すること。
-- Post-merge AC (意図的に失敗するテストを含むブランチでの `failure` 確認、manual) — Spec Notes のとおり repo への実 side effect を伴うため `/verify` から無条件自動実行させず、`manual` のまま維持している。
-- Post-merge AC (通常 PR での全 PASS 観察、observation) — `/auto` 完了直後の対象 PR で観察する設計のまま。本 Issue 自体の PR #1465 が最初の観察対象候補になり得る。
+- `Run bats tests` ジョブの FAILURE (`tests/resolve-preview-env.bats` の basic-auth 2件) — 本PRのスコープ外。別Issueでの調査・修正、または `/merge` の pre-merge-ac-gate override が必要。現時点で該当する既存 Issue は見つからなかった (`gh issue list --search "resolve-preview-env.bats"` で #1441 (CLOSED, 別内容) のみ)。
+- Post-merge AC (意図的に失敗するテストを含むブランチでの `failure` 確認、manual) — 未変更、`/verify` 側で人手判断が必要。
+- Post-merge AC (通常 PR での全 PASS 観察、observation) — 未変更。
 
 ### Notes for Next Phase
-- `/review` は AC4 の `gh run view $(gh run list --workflow=test.yml --limit=1 ...)` 判定が PR #1465 自身の run を正しく指すことを確認すること (push 直後は in_progress の可能性がある)。
-- 本 PR は `.github/workflows/test.yml` の 1 行追加のみ (`set -o pipefail`)。他の変更ファイルはない。
+- `/merge` は AC4 が未チェックのまま (Pre-merge AC gate によりブロックされる想定)。マージするには (a) 別Issueで basic-auth 2件を先に修正してから rebase、または (b) 明示的な override 判断のいずれかが必要。
+- review retrospective の「Recurring issues」に記載した Pre-existing failure exception の汎用化提案は、Issue 起票を `/verify` 側の集約に委ねている (本フェーズでは起票しない)。
