@@ -115,3 +115,35 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 
 ### Notes for Next Phase
 - `/verify` は Post-merge AC 2件 (manual / observation) の検証に加え、Deferred の汎用化提案の起票要否を確認すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `## Changed Files` は `.github/workflows/test.yml` のみを列挙していたが、AC4 (`Run bats tests` ジョブが `success`) の達成には `tests/` 配下 2 ファイルの追加修正が必要だった。Spec 作成時点では既存 CI 失敗が握り潰されて不可視だったため予見は困難であり、Spec の質の問題というより「gate 修正系 Issue は修正後に gate が実際に緑になるまでが Scope」という一般則の不在に起因する。
+
+#### code
+- 実装は Spec どおりの 1 行 (`set -o pipefail`) で手戻りなし。
+
+#### review
+- CI 赤を素通しせず MUST としてブロックしており、gate としては正しく機能した。
+- ただし失敗の性質判定を誤っている。basic-auth 2 件を「main でも同一パターンで再現する既存の**環境依存フレーク**」と診断したが、実際には `file_mode` ヘルパの GNU stat 移植性バグによる **Linux 決定的失敗** (100% 再現、#1429 の導入以降一貫) だった。「既存の失敗である」点は正しいが「フレーク (非決定的)」は誤りで、この誤診断がそのまま「Pre-existing failure exception の汎用化」提案の根拠になっている。
+- 並列ステップが phantom test 計上により常時 exit 1 していた事実 (期待値 2045 / 実行 2038) は検出できていない。直列再実行の出力のみを見ており、並列ステップの件数不一致警告を読んでいない。
+
+#### merge
+- pre-merge AC 未チェックで正しく停止した (CI は 15/15 緑だったが Issue 本文のチェックボックスが未更新)。予防側の防御として機能。
+- Phase Handoff の Key Decisions「basic-auth 2 件は本フェーズ実行前に既に解消済みと判断」は事実と一致する (親セッションが解消済み)。
+
+#### verify
+- AC5 (manual) は「意図的に失敗するテストを含むブランチ」という特定の検証手段を指定していたが、本 PR 自身の履歴に同一失敗テストに対する before/after 対照 (`c0f4c055` success → `d88e366a` failure) が残っており、合成的な失敗テストを新規投入するより変数の少ない強い証拠が得られた。manual AC が検証手段を固定形で書かれていると、より良い証拠が既に存在する場合に硬直しうる。
+
+#### orchestration
+- spec→code 遷移時に external kill が発生 (task notification: "was stopped because the system is running low on memory")。`detect-external-kill.sh` が `external-kill` を正しく検出し、`phase/ready` ラベルを SSoT とした respawn により spec を再実行することなく code から復帰した。設計どおりの動作。
+- 呼び出し元の並行 `claude` セッションが 8 本以上稼働し空きメモリが約 68MB まで逼迫していた。kill は wholework 側の不具合ではなくホスト資源枯渇に起因する。
+- 再実行後、merge フェーズで Tier 3 が `action=abort` を返した。真因は CI 赤 (本 Issue が顕在化させた既存失敗) であり、Tier 3 が回復不能と判断したのは妥当。以降は親セッションが手動で CI 失敗を修正して merge を再実行した。
+
+### Improvement Proposals
+
+- **`/review` Step 9 の Pre-existing failure exception 汎用化提案は、動機となった事例の誤診断に基づいており、そのまま実装すると本 Issue の目的と正反対の結果を生む。** review retrospective は汎用化を提案しているが、その根拠となった basic-auth 2 件は「フレーク」ではなく Linux 決定的失敗だった。仮に汎用化が実装済みだった場合、本 PR は「既存失敗だから」として exception 適用されマージされ、bats gate は恒久的に赤のまま (全 PR がブロックされるか、あるいは exception により全 PR が素通りするか) になっていた。汎用化するなら「既存失敗であること」だけでなく「非決定的 (フレーク) か決定的か」の判別を必須条件とし、決定的な既存失敗は exception 対象外として blocker のまま扱う必要がある。
+- **`/review` の CI 失敗診断が、並列ステップの件数不一致警告 (`Executed N instead of expected M`) を読んでいない。** 本件では並列ステップが phantom test 計上により常時 exit 1 していたが、review は直列再実行の `not ok` 行のみを根拠に判断し、この構造的失敗を検出できなかった。`bats warning: Executed N instead of expected M` は「テストが失敗した」のではなく「テストが実行されなかった」ことを示す別種のシグナルであり、CI 失敗分類の入力に含める価値がある。
