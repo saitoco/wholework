@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-09-10 02:57 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1461, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: harness-oom-stop
+- notification: harness-stop
+- Killed twice during review --full (Size L fan-out). Respawn resumed correctly via skip-to-review but was killed again under the same memory pressure; detect-external-kill.sh returned no-match because the concatenated run-auto-sub.sh log still carried run-spec.sh's own 'Exit code: 0' trailer (icebox #1093 scope)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-09-09 08:46 UTC: manual-recovery-ci-fix-and-merge-rerun
 
 ### Context
