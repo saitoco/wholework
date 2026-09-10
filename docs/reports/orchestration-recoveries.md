@@ -98,7 +98,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - modules/orchestration-fallbacks.md#manual-recovery-spec-write
 
 ### Outcome
-- success
+- failed (respawn was killed again under the same memory pressure; review phase never completed)
 
 ### Improvement Candidate
 - 未起票
