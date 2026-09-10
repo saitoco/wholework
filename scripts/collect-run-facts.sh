@@ -5,9 +5,11 @@
 # (see modules/run-fact-matching.md).
 #
 # Usage:
-#   scripts/collect-run-facts.sh [--session <session-id>] [--issue <N>] [--no-github]
+#   scripts/collect-run-facts.sh [--session <session-id>] [--issue <N>]
+#                                 [--session-from-issue <N>] [--no-github]
 #
 # Session resolution order: --session <id> > AUTO_SESSION_ID env var >
+#   --session-from-issue <N> (issue-scoped pointer, via restore_auto_session_pointer) >
 #   .tmp/auto-session-current pointer file. Exits 1 if none resolve.
 #
 # --issue <N> narrows output to a single Issue (used by the single-issue /auto
@@ -73,6 +75,7 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 SESSION_ARG=""
 ISSUE_FILTER=""
 NO_GITHUB=false
+SESSION_FROM_ISSUE=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -92,6 +95,14 @@ while [ $# -gt 0 ]; do
       ISSUE_FILTER="$2"
       shift 2
       ;;
+    --session-from-issue)
+      if [ $# -lt 2 ]; then
+        echo "Error: --session-from-issue requires an argument" >&2
+        exit 1
+      fi
+      SESSION_FROM_ISSUE="$2"
+      shift 2
+      ;;
     --no-github)
       NO_GITHUB=true
       shift
@@ -108,16 +119,32 @@ if [ -n "$ISSUE_FILTER" ] && ! echo "$ISSUE_FILTER" | grep -qE '^[0-9]+$'; then
   exit 1
 fi
 
-# Session resolution: --session > AUTO_SESSION_ID env > .tmp/auto-session-current pointer
+if [ -n "$SESSION_FROM_ISSUE" ] && ! echo "$SESSION_FROM_ISSUE" | grep -qE '^[0-9]+$'; then
+  echo "Error: --session-from-issue must be a positive integer: $SESSION_FROM_ISSUE" >&2
+  exit 1
+fi
+
+# Session resolution: --session > AUTO_SESSION_ID env > --session-from-issue (issue-scoped
+# pointer) > .tmp/auto-session-current pointer
 SESSION_ID="$SESSION_ARG"
 if [ -z "$SESSION_ID" ]; then
   SESSION_ID="${AUTO_SESSION_ID:-}"
+fi
+if [ -z "$SESSION_ID" ] && [ -n "$SESSION_FROM_ISSUE" ]; then
+  if [ -f "$SCRIPT_DIR/emit-event.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$SCRIPT_DIR/emit-event.sh"
+    restore_auto_session_pointer "$SESSION_FROM_ISSUE" || true
+    SESSION_ID="${AUTO_SESSION_ID:-}"
+  else
+    echo "Warning: emit-event.sh not found under $SCRIPT_DIR; skipping --session-from-issue resolution" >&2
+  fi
 fi
 if [ -z "$SESSION_ID" ]; then
   SESSION_ID="$(cat .tmp/auto-session-current 2>/dev/null || true)"
 fi
 if [ -z "$SESSION_ID" ]; then
-  echo "Error: could not resolve session id (--session / AUTO_SESSION_ID / .tmp/auto-session-current all empty)" >&2
+  echo "Error: could not resolve session id (--session / AUTO_SESSION_ID / --session-from-issue / .tmp/auto-session-current all empty)" >&2
   exit 1
 fi
 

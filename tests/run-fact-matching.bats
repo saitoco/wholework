@@ -49,6 +49,87 @@ EOF
     [ "$output" = '{"session_id":"sess1","mode":"unknown","issues":[]}' ]
 }
 
+@test "collect-run-facts: --session-from-issue resolves session id from the issue-scoped pointer file" {
+    # restore_auto_session_pointer() returns immediately when AUTO_EVENTS_LOG is
+    # already set (by design — see modules/run-fact-matching.md header), so this
+    # test relies on the default event log path (.tmp/auto-events.jsonl) rather
+    # than exporting AUTO_EVENTS_LOG, to exercise the real pointer-resolution path.
+    # A `git worktree list` mock is required because BATS_TEST_TMPDIR is not
+    # itself a git repository (the real command would exit 128 under
+    # collect-run-facts.sh's `set -e`, short-circuiting before the pointer-file
+    # check is reached).
+    cp "$PROJECT_ROOT/scripts/emit-event.sh" "$MOCK_DIR/"
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+    mkdir -p .tmp
+    cat > ".tmp/auto-events.jsonl" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1461,"event":"phase_start","session_id":"sess-from-pointer","phase":"code-pr"}
+EOF
+    echo "sess-from-pointer" > ".tmp/auto-session-issue-1461"
+
+    run bash "$COLLECT_SCRIPT" --session-from-issue 1461 --no-github
+    [ "$status" -eq 0 ]
+    session_id=$(echo "$output" | jq -r '.session_id')
+    [ "$session_id" = "sess-from-pointer" ]
+}
+
+@test "collect-run-facts: --session-from-issue falls back to .tmp/auto-session-current when the pointer file is absent" {
+    cp "$PROJECT_ROOT/scripts/emit-event.sh" "$MOCK_DIR/"
+    mkdir -p .tmp
+    cat > ".tmp/auto-events.jsonl" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1461,"event":"phase_start","session_id":"sess-current","phase":"code-pr"}
+EOF
+    echo "sess-current" > ".tmp/auto-session-current"
+
+    run bash "$COLLECT_SCRIPT" --session-from-issue 1461 --no-github
+    [ "$status" -eq 0 ]
+    session_id=$(echo "$output" | jq -r '.session_id')
+    [ "$session_id" = "sess-current" ]
+}
+
+@test "collect-run-facts: --session takes priority over --session-from-issue" {
+    cp "$PROJECT_ROOT/scripts/emit-event.sh" "$MOCK_DIR/"
+    mkdir -p .tmp
+    echo "sess-from-pointer" > ".tmp/auto-session-issue-1461"
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1461,"event":"phase_start","session_id":"sess-explicit","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    run bash "$COLLECT_SCRIPT" --session sess-explicit --session-from-issue 1461 --no-github
+    [ "$status" -eq 0 ]
+    session_id=$(echo "$output" | jq -r '.session_id')
+    [ "$session_id" = "sess-explicit" ]
+}
+
+@test "collect-run-facts: --session-from-issue with a non-numeric value exits 1" {
+    run bash "$COLLECT_SCRIPT" --session-from-issue abc --no-github
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Error: --session-from-issue must be a positive integer"* ]] || false
+}
+
+@test "collect-run-facts: --session-from-issue fails open (warns, continues the ladder) when emit-event.sh is missing from WHOLEWORK_SCRIPT_DIR" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1461,"event":"phase_start","session_id":"sess-current","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    mkdir -p .tmp
+    echo "sess-current" > ".tmp/auto-session-current"
+    echo "sess-from-pointer" > ".tmp/auto-session-issue-1461"
+
+    run bash "$COLLECT_SCRIPT" --session-from-issue 1461 --no-github
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: emit-event.sh not found"* ]] || false
+    json_line=$(printf '%s\n' "$output" | grep '^{')
+    session_id=$(echo "$json_line" | jq -r '.session_id')
+    [ "$session_id" = "sess-current" ]
+}
+
 @test "collect-run-facts: route/pr/phases/anomalies/fact_tokens derived from fixture events" {
     EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
     cat > "$EVENTS_FILE" <<'EOF'

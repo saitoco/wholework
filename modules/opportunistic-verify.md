@@ -29,24 +29,20 @@ If the script exists, resolve `--facts` and `--context-file` before calling it:
 - **Separate safety valve**: `opportunistic-search.sh` additionally caps the reordered set at a fixed candidate-count limit (`FACTS_CANDIDATE_LIMIT`, applied only when `--facts` is given and valid). This is a population-size safeguard unrelated to token matching, and it prints a non-silent `Note: truncated ...` warning to stderr when it actually drops candidates — token mismatch by itself never triggers this warning.
 
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer <calling skill's own Issue/PR number>
-if [ -n "${AUTO_SESSION_ID:-}" ]; then
-  "${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh" --session "$AUTO_SESSION_ID"
-fi
+${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh --session-from-issue <calling skill's own Issue/PR number>
 ```
 
-Session id resolution reuses `restore_auto_session_pointer()`'s existing 3-tier fallback (`AUTO_SESSION_ID` env var → `.tmp/auto-session-issue-<N>` pointer file → `.tmp/auto-session-<pgid>` pointer file — see `scripts/emit-event.sh`); no new session-id-passing flag is introduced. The function is idempotent (`[[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0`), so calling it here and again in Step 3 below has no side effect. **Run this as a single Bash tool call**: `restore_auto_session_pointer` only `export`s `AUTO_SESSION_ID` for its own shell process, so if `collect-run-facts.sh` were instead run in a separate Bash tool call, the exported value would not carry over — `collect-run-facts.sh`'s own fallback ladder (`--session` > `AUTO_SESSION_ID` env > `.tmp/auto-session-current`) does not read the issue-scoped pointer file, so a split call would silently fall through to `.tmp/auto-session-current`, the fallback Issue #1224 deliberately removed from `restore_auto_session_pointer()` itself for being structurally unreliable under concurrent `/auto` sessions. Passing the resolved id explicitly via `--session "$AUTO_SESSION_ID"` in the same block avoids reintroducing that failure mode.
+Session id resolution is handled internally by `collect-run-facts.sh --session-from-issue` (issue-scoped pointer file, evaluated before the `.tmp/auto-session-current` fallback — see `modules/event-emission.md` § "Non-Wrapper Emitters" and this script's own header comment for the full resolution-order SSoT).
 
-- **If `AUTO_SESSION_ID` resolved** (the `if` block above produced output): capture that stdout, and write it to `.tmp/facts-${AUTO_SESSION_ID}.json` with the Write tool (same convention as `--context-file` below), then pass `--facts .tmp/facts-${AUTO_SESSION_ID}.json` to `opportunistic-search.sh` below.
-- **If `AUTO_SESSION_ID` did not resolve** (standalone run outside `/auto`, or the session id is otherwise unavailable): the `if` block above is a no-op — omit `--facts` — `opportunistic-search.sh` falls back to its existing unfiltered, backward-compatible behavior.
+- **If the command exits 0 with JSON on stdout**: capture that stdout, and write it to `.tmp/facts-<calling Issue number>.json` with the Write tool (same convention as `--context-file` below), then pass `--facts .tmp/facts-<calling Issue number>.json` to `opportunistic-search.sh` below.
+- **If the command exits non-zero** (session id unresolved — standalone run outside `/auto`, or otherwise unavailable): omit `--facts` — `opportunistic-search.sh` falls back to its existing unfiltered, backward-compatible behavior.
 
 **Resolve `--context-file` (`keyword=` gate — otherwise unreachable, since `opportunistic-search.sh`'s `keyword=` gate only activates when `--context-file` is supplied):**
 
 Write `.tmp/context-<calling skill's own Issue/PR number>.md` with the Write tool, containing the current Issue's body plus, if a Spec exists at `$SPEC_PATH/issue-<calling Issue number>-*.md`, that Spec's `## Changed Files` section — this is the text the `keyword=` gate matches against.
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name> --context-file .tmp/context-<calling Issue number>.md [--facts .tmp/facts-${AUTO_SESSION_ID}.json]
+${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name> --context-file .tmp/context-<calling Issue number>.md [--facts .tmp/facts-<calling Issue number>.json]
 ```
 
 - The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, and unchecked conditions; when `--context-file` is given, the `keyword=` gate additionally excludes non-matching candidates; when `--facts` is given, matched candidates are reordered ahead of unmatched ones (never excluded for the mismatch alone) and the reordered set is capped at `FACTS_CANDIDATE_LIMIT`
@@ -74,19 +70,16 @@ Before emitting events for a candidate Issue's conditions, fetch that Issue's bo
 Within Step 2's judgment loop, immediately after each condition's PASS/FAIL/SKIP result is determined — and before moving on to the next condition — emit one event per condition (do not aggregate — see `modules/event-emission.md`'s `opportunistic_verify_result` entry for the rationale):
 
 ```bash
-source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer <calling skill's own Issue/PR number>
-if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
-  EMIT_ISSUE_NUMBER=<candidate Issue number N this condition belongs to> emit_event "opportunistic_verify_result" \
-    "skill=<calling skill name (e.g., /spec)>" \
-    "result=<PASS|FAIL|SKIP>" \
-    "ac_index=<1-based index>"
-fi
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" <calling skill's own Issue/PR number> opportunistic_verify_result \
+  --emit-issue <candidate Issue number N this condition belongs to> \
+  "skill=<calling skill name (e.g., /spec)>" \
+  "result=<PASS|FAIL|SKIP>" \
+  "ac_index=<1-based index>"
 ```
 
-- **`AUTO_EVENTS_LOG` guard (required)**: skip the emit when `AUTO_EVENTS_LOG` is unset and `restore_auto_session_pointer` could not restore it either (e.g., a standalone run outside `/auto`) — the same policy as other non-wrapper emitters in `modules/event-emission.md`
+- **`AUTO_EVENTS_LOG` guard**: the script applies this guard internally (skips the emit when the session pointer does not resolve, e.g. a standalone run outside `/auto`) — no `if` is needed at the call site
 - **`ac_index`**: the 1-based position of this condition among the candidate Issue's full checkbox enumeration (pre-merge + post-merge, in order) — the same global-index convention used by `scripts/gh-issue-edit.sh --checkbox` and `scripts/check-pre-merge-ac.sh`. Determine it by counting `^- \[[ xX]\]` lines in the Issue body fetched above, excluding lines inside a fenced code block (see `modules/l0-surfaces.md` § AC Enumeration Convention)
-- **`EMIT_ISSUE_NUMBER` and `restore_auto_session_pointer`'s target differ**: `restore_auto_session_pointer` takes the calling skill's own Issue/PR number (for session pointer resolution), while `EMIT_ISSUE_NUMBER` takes the candidate Issue number N being judged (recorded in the event's `issue` field, meaningful for downstream aggregation)
+- **positional `<issue>` and `--emit-issue` differ**: the positional `<issue>` is the calling skill's own Issue/PR number (used for session pointer resolution), while `--emit-issue` takes the candidate Issue number N being judged (recorded in the event's `issue` field, meaningful for downstream aggregation)
 
 ### 4. Update Checkboxes
 

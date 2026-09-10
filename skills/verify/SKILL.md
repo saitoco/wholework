@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -51,12 +51,12 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 If ARGUMENTS contains `--session-id=<SID>`, extract `<SID>` (this is the in-band `AUTO_SESSION_ID` hand-off used when `/auto` dispatches this skill via in-session `Skill(skill="wholework:verify", ...)` — see `modules/event-emission.md` § `persist_auto_session_pointer()`). Otherwise the value is empty. Persist it to the issue-scoped pointer file so every subsequent event emission call in this run resolves to the correct session, and so a standalone `/verify` (no `--session-id`) self-heals any stale pointer left by a prior run:
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" --persist-session "<SID or empty>" "$NUMBER"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" --persist-session "<SID or empty>" "$NUMBER"
 ```
 
 Emit `phase_start` (phase=verify) immediately after the banner (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset, so in-session `Skill()` invocations from `/auto` are not silently excluded — see `restore_auto_session_pointer()` in `modules/event-emission.md`):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_start phase=verify
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_start phase=verify
 ```
 
 **pre-check: all-checked, no-implementation pattern**
@@ -390,7 +390,7 @@ This recording step is independent of whether `AskUserQuestion` is invoked in 2a
 
 Immediately emit `verify_executability` (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset — same structure as the `verify_user_confirm` emit below):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_executability ac_index={N} executable={true|false} reason={slug or empty}
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_executability ac_index={N} executable={true|false} reason={slug or empty}
 ```
 
 **2a. If executable: present per-condition AskUserQuestion**
@@ -404,7 +404,7 @@ For each executable condition, ask:
 
 Immediately after receiving the user's response, emit `verify_user_confirm` (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_user_confirm ac_index={N} "response={the selected option text}"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_user_confirm ac_index={N} "response={the selected option text}"
 ```
 
 If "Claude Execute" is selected: run the command/approach → judge PASS or FAIL → record result for checkbox flip.
@@ -562,7 +562,7 @@ Apply the following judgment based on the verification results (exhaustive):
 
 Emit `phase_complete` (phase=verify; the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete phase=verify
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_complete phase=verify
 ```
 
 - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->`, `<!-- verify-type: observation ... -->`, or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked; observation conditions remain unchecked while unfired, and also remain unchecked if Step 8c evaluates a fired event as FAIL/UNCERTAIN/SKIPPED — only fired-and-PASS observation conditions are checked)
@@ -622,7 +622,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
       ```
     - Emit `verify_reopen_cycle` event (only when running inside `/auto` session — both `AUTO_EVENTS_LOG` and `AUTO_SESSION_ID` must be set; the script restores the pointer and no-ops otherwise):
       ```bash
-      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_reopen_cycle --require-session-id iteration=${NEXT_ITERATION} reopen_reason=pre_merge_ac_fail
+      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_reopen_cycle --require-session-id iteration=${NEXT_ITERATION} reopen_reason=pre_merge_ac_fail
       ```
     - Remove all `phase/*` labels (state-independent):
       ```bash
@@ -648,11 +648,11 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
       ```
     - Emit `verify_fail_marker_posted` event (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
       ```bash
-      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_fail_marker_posted iteration=${NEXT_ITERATION} failed_ac_count=${FAIL_COUNT}
+      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_fail_marker_posted iteration=${NEXT_ITERATION} failed_ac_count=${FAIL_COUNT}
       ```
     - Emit `phase_complete` (phase=verify; the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
       ```bash
-      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete phase=verify
+      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_complete phase=verify
       ```
     - Output guidance for the user:
       ```
@@ -672,7 +672,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
       Else if `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` (i.e., `auto-retry-on-fail.enabled: true` in `.wholework.yml`) AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
         a. Emit `verify_retry_fire` event (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
            ```bash
-           bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_retry_fire iteration=${NEXT_ITERATION} trigger_reason=ac_fail budget_remaining_tokens=unknown
+           bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_retry_fire iteration=${NEXT_ITERATION} trigger_reason=ac_fail budget_remaining_tokens=unknown
            ```
         b. Append `Retry Count: ${NEXT_ITERATION}/${AUTO_RETRY_MAX_ITERATIONS}` to the Spec's
            `## Verify Retrospective` section (handled in Step 12).
@@ -731,11 +731,11 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
       ```
     - Emit `verify_fail_marker_posted` event (the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
       ```bash
-      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER verify_fail_marker_posted iteration=${NEXT_ITERATION} failed_ac_count=${FAIL_COUNT}
+      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER verify_fail_marker_posted iteration=${NEXT_ITERATION} failed_ac_count=${FAIL_COUNT}
       ```
     - Emit `phase_complete` (phase=verify; the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
       ```bash
-      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete phase=verify
+      bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_complete phase=verify
       ```
     - Assign `phase/verify` label (Issue state unchanged):
       ```bash
@@ -751,7 +751,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
 
 Emit `phase_complete` (phase=verify; the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete phase=verify
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_complete phase=verify
 ```
 
 - Assign `phase/verify` label (Issue state unchanged):
@@ -764,7 +764,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete
 
 Emit `phase_complete` (phase=verify; the script restores the pointer and no-ops when `AUTO_EVENTS_LOG` is unset):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER phase_complete phase=verify
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER phase_complete phase=verify
 ```
 
 - Assign `phase/verify` label (Issue state unchanged):
@@ -945,7 +945,7 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
      e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" --body "{body}"` and capture the new issue number from the output URL. Do not assign the `triaged` label to this Issue — see [docs/guide/customization.md](../../docs/guide/customization.md) for this Issue-creation convention.
      f. Emit the event:
         ```bash
-        bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-verify-event.sh" $NUMBER recoveries_threshold_fire --unconditional symptom={group-key} count={count} issue_number={new_issue_number}
+        bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" $NUMBER recoveries_threshold_fire --unconditional symptom={group-key} count={count} issue_number={new_issue_number}
         ```
 
 3b. **Unrecorded external kill / burst detection** (Issue #1387): this step runs after Step 13
