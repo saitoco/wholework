@@ -364,3 +364,67 @@ Issue 本文の起票時の記述と実装に 2 件の矛盾があり、いず�
 - **新規テストケース要求のまとめ**: Implementation Step 2 (`emit-skill-event.sh` の 3 分岐追加) と Step 4 (`collect-run-facts.sh` の解決ラダー 1 ステップ追加) はいずれも既存スクリプトへの新規分岐追加に該当する。受入条件 4 (`github_check "gh pr checks" "Run bats tests"`) は既存スイートの PASS だけでなく、`tests/emit-skill-event.bats` と `tests/run-fact-matching.bats` への新規ケース追加を伴うことを Step 3 / Step 5 に明記した
 - **`skills/verify/SKILL.md` の `skill-body-lines` マーカー**: 本 Issue の変更は文字列置換と frontmatter 1 行の編集のみで行数は変わらない見込みだが、`tests/verify.bats` の回帰テストがあるため Implementation Step 8 に実測確認を含めた (#1458 で同マーカーの追従漏れが実際に FAIL を起こした前例がある)
 - **`docs/migration-notes.md` は対象外**: 本 Issue は CLI シグネチャを変更するが、同ファイルに対象 3 スクリプトの記載は無い (grep 済み)
+
+## issue retrospective
+
+### Ambiguity Resolution (Non-Interactive Auto-Resolve)
+
+#### Autonomous Auto-Resolve Log
+
+- **`scripts/emit-verify-event.sh` の再利用方針** — reason: #1458 の Verify Retrospective (Improvement Proposals) が「本 Issue と同じ wrapper 方針で解消できる」と明記しており、既存スクリプトの再利用・拡張が最も既存パターンと整合する。新規に module 専用スクリプトを作ることはコード重複を生むため不採用。
+  - Other candidates: `modules/opportunistic-verify.md` / `modules/retro-proposals.md` 専用の新規ラッパースクリプトを別途作成する案
+- **`modules/retro-proposals.md` の非数値 `NUMBER` (`batch-<session-id>`) 対応の具体化** — reason: 既存 `scripts/emit-verify-event.sh` は `<issue>` を必須引数として扱うため、非数値ケース (`EMIT_ISSUE_NUMBER=0` + 引数なし `restore_auto_session_pointer`) をサポートするインターフェース拡張の要否・形が未確定。Acceptance Criteria のテキスト (file_not_contains / rubric) はこの実装詳細に依存しないため、具体的なインターフェース設計は `/spec` のコードベース調査に委ねるのが最も低リスク。
+  - Other candidates: 非数値ケースを別コマンド (例: `--session-only`) に分離する案
+- **`allowed-tools` 見直し対象の 7 skill (`audit`/`auto`/`code`/`issue`/`review`/`spec`/`verify`) の個別判定** — reason: Scope は「`skills/*/SKILL.md` の allowed-tools を見直す」と一般化して記載されているが、現在どの skill が `emit-event.sh:*` を frontmatter に宣言しているかは実装時の grep 調査が必要で、Acceptance Criteria テキストには影響しない。Issue 本文への事前列挙は不要と判断し、`/spec` の調査に委ねた。
+  - Other candidates: 7 skill 全てを Scope に明示列挙する案
+
+### Acceptance Criteria Change
+
+- Pre-merge AC 4 の verify command を `command "bats tests/"` から `github_check "gh pr checks" "Run bats tests"` に変更した。本 Issue は Size=L (`get-issue-size.sh` で確認) であり、`modules/size-workflow-table.md` の Size-to-Workflow Mapping Table では L は PR route。`skills/issue/SKILL.md` の AC Writing Guide は Size M/L で `github_check "gh pr checks"` 形を用いることを明記しており、`command` hint のままだと `/review` safe mode で UNCERTAIN 扱いになる。同種の route 不整合修正は `docs/spec/issue-998-operate-completion-signature.md` (Design Gaps/Ambiguities) に前例がある。
+
+### Consumed Comments
+
+No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の「N 個の skill から参照されている」という主張が `grep -l` ベースで、実際の consumer (`validate-skill-syntax.py` の `MODULES_REF_PATTERN`) の判定基準と一致していなかった。参照数の主張は、その数値を実際に消費する仕組みの matching rule で再導出しないと 1 件ずれる (`skills/audit/SKILL.md` が地の文で module 名に言及するだけで reader に計上されていた)。
+- `/issue` Step 5 (Background Factual Claim Verification) は本 Issue の Background の 2 件の事実誤認 (reader 数、worktree 内実行の有無) を検出できなかった。どちらも「5 つの SKILL.md の step 順序を実際に読む」ことでしか判定できず、Background の文面だけでは真偽が決まらない種類の主張だった。
+- `/spec` の "WHOLEWORK_SCRIPT_DIR mock addition check" は「`scripts/` 配下に新規スクリプトを追加する場合」にのみ発火する。今回のように「既存スクリプトに sibling script の `source` を新規追加する」ケースは同じ失敗モード (mock ディレクトリに実体が無く既存スイートが一斉に落ちる) を持つが、チェックの発火条件に含まれていない。
+
+### Judgment rationale
+
+- Issue Scope が `/spec` に委ねた「改名か流用か」は、改名の影響範囲を先に測って (`git grep -l` で 8 ファイル、履歴記録 3 件を除くと 5 ファイル) から決めた。改名コストが機械的置換に収まることを確認したうえで、6 skill から呼ばれる共通 wrapper が `/verify` 専用に見える名前を持つ不整合の方を重く見た。
+- `modules/opportunistic-verify.md` Step 1 のブロックは emit ではなく facts JSON の取得であり、`/issue` の自動解決ログが決めた「既存 emit スクリプトを再利用」をそのまま当てはめると `emit-*.sh` に `--run-facts` モードを足すことになり責務が乖離する。「session id を必要としているのは `collect-run-facts.sh` 自身」という所在に基づいて `--session-from-issue` を同スクリプト側に置いた。
+- `emit-skill-event.sh` は依存欠落で fail-closed (exit 1)、`collect-run-facts.sh` の `--session-from-issue` は fail-open (警告してラダー継続) と、同一 Issue 内で逆方向の判断をしている。前者は `source` がスクリプトの存在理由そのもの、後者は既存ラダーへの追加ステップに過ぎない、という違いに基づく。両方の理由を Implementation Steps に明記した。
+
+### Uncertainty resolution
+
+- worktree isolation guard が複合 `source` コマンドを拒否するという Issue の前提を、本 Spec 作成セッション自身の worktree 内で実測して確認した (拒否メッセージの再現と、単一コマンド形の成功の両方)。推測ではなく一次観測として Reproduction Steps に記録し、出所 (session_id / worktree path / タイムスタンプ) を Uncertainty 節に添えた。
+- #1458 Spec が「`set -e` と `[[ cond ]] && exit 0` の組み合わせは異常終了する既知の落とし穴」と記録していたため、`set -euo pipefail` の `collect-run-facts.sh` から `restore_auto_session_pointer` を呼べるか不明だった。実測の結果、短絡評価が AND リストの最終コマンドでない限り `set -e` は発火せず、正常に exit 0 で完了する。#1458 の注意書きは「新規スクリプトの書き方の指針」としては妥当だが「既存関数を `set -e` 下から呼べない」という意味ではない。
+- 新規分岐ロジックに対する新規テストケース要求のまとめ: Implementation Step 2 (`emit-skill-event.sh` に `--emit-issue` / `--session-id` / 非数値 `<issue>` の 3 分岐を追加) と Step 4 (`collect-run-facts.sh` の session 解決ラダーに 1 ステップ追加) が該当する。受入条件 4 は既存スイートの PASS だけでは不十分で、`tests/emit-skill-event.bats` に 6 ケース (`--emit-issue` 正常 / `--emit-issue` 非数値 / 非数値 positional / `--session-id` / フラグ順不同 / 依存欠落 exit 1)、`tests/run-fact-matching.bats` に 5 ケース (ポインタ解決 / フォールバック / `--session` 優先 / 非数値バリデーション / 依存欠落 fail-open) の新規追加を要する。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `scripts/emit-verify-event.sh` を `scripts/emit-skill-event.sh` へ改名して流用する (新規スクリプトは作らない)。本 Issue 後は 6 skill から呼ばれる共通 wrapper になるため。改名の影響範囲は 5 ファイル (履歴記録を除く) で機械的に完結することを grep で確認済み。
+- 非数値 `<issue>` の判定を LLM 側ではなくスクリプト側 (`^[0-9]+$`) に置く。`modules/retro-proposals.md` から呼び出し形の分岐を消せるうえ、`emit_event()` の unquoted `"issue":${_issue}` による JSON 破損を fail-closed で防げる。
+- `modules/opportunistic-verify.md` Step 1 (facts 解決、emit ではない) は emit wrapper に相乗りさせず、`scripts/collect-run-facts.sh` に `--session-from-issue <N>` を追加して解決する。session id を必要としているのは同スクリプト自身であり、`collect-run-facts.sh:*` は 5 reader すべての `allowed-tools` に登録済みで権限変更も不要。
+- `emit-event.sh:*` は 6 skill (`auto`/`code`/`issue`/`review`/`spec`/`verify`) すべての `allowed-tools` から削除する。参照元が本 Issue で置換する 2 module のみであることを grep で確認済み。`skills/audit/SKILL.md` は reader ではないため対象外。
+
+### Deferred Items
+
+- `emit_event()` の CR (`\r`) 未サニタイズは本 Issue では修正しない。Issue の Out of scope (「`scripts/emit-event.sh` 自体の実装変更」) に該当する。#1458 merge Phase Handoff の「`issue`/`event` 値の validate/sanitize」と同系統の未対応課題として残る。
+- `/spec` の "WHOLEWORK_SCRIPT_DIR mock addition check" が「既存スクリプトへの sibling `source` 新規追加」を発火条件に含んでいない点は、本 Issue のスコープ外。spec retrospective に観測として記録済み (Improvement Proposal の起票は `/verify` フェーズで集約される)。
+- Post-merge AC は `verify-type: opportunistic`。次の `/spec` `/code` `/review` の実行が実際の確認機会であり、本 PR 内で追加対応は不要。
+
+### Notes for Next Phase
+
+- 受入条件 1/2 の `file_not_contains "modules/*.md" "restore_auto_session_pointer"` は **コードブロック外の地の文も対象**。両 module の該当行 (opportunistic-verify: 39/87/89、retro-proposals: 74/75/76/172) の書き換えを忘れると FAIL する。#1458 でも同じ注意が Implementation Step に明記されていた。
+- Implementation Step 4 の `source` は必ず分岐内の遅延実行にすること。トップレベルで無条件 `source` すると `tests/run-fact-matching.bats` が `setup()` で `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を全ケースに適用しているため、既存 20 件超が一斉に失敗する。
+- Step 9 完了後に `python3 scripts/validate-skill-syntax.py skills/` が 0 error であることと、`grep -rn '\${CLAUDE_PLUGIN_ROOT}/scripts/emit-event\.sh' skills/ modules/` が 0 件であることの両方を確認すること。前者は追加漏れ、後者は削除の安全性を担保する。
+- `skills/verify/SKILL.md` の `<!-- skill-body-lines: N -->` マーカーは `tests/verify.bats` の回帰テスト対象。行数が変わった場合は `wc -l` 実測値へ更新する (#1458 で実際に FAIL した前例あり)。
