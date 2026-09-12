@@ -112,6 +112,19 @@ EOF
     [[ "$output" == *"Error: --session-from-issue must be a positive integer"* ]] || false
 }
 
+@test "collect-run-facts: a malformed --session-from-issue does not block when --session already resolves" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1461,"event":"phase_start","session_id":"sess-explicit","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    run bash "$COLLECT_SCRIPT" --session sess-explicit --session-from-issue abc --no-github
+    [ "$status" -eq 0 ]
+    session_id=$(echo "$output" | jq -r '.session_id')
+    [ "$session_id" = "sess-explicit" ]
+}
+
 @test "collect-run-facts: --session-from-issue fails open (warns, continues the ladder) when emit-event.sh is missing from WHOLEWORK_SCRIPT_DIR" {
     EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
     cat > "$EVENTS_FILE" <<'EOF'

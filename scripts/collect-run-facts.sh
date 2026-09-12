@@ -119,11 +119,6 @@ if [ -n "$ISSUE_FILTER" ] && ! echo "$ISSUE_FILTER" | grep -qE '^[0-9]+$'; then
   exit 1
 fi
 
-if [ -n "$SESSION_FROM_ISSUE" ] && ! echo "$SESSION_FROM_ISSUE" | grep -qE '^[0-9]+$'; then
-  echo "Error: --session-from-issue must be a positive integer: $SESSION_FROM_ISSUE" >&2
-  exit 1
-fi
-
 # Session resolution: --session > AUTO_SESSION_ID env > --session-from-issue (issue-scoped
 # pointer) > .tmp/auto-session-current pointer
 SESSION_ID="$SESSION_ARG"
@@ -131,9 +126,22 @@ if [ -z "$SESSION_ID" ]; then
   SESSION_ID="${AUTO_SESSION_ID:-}"
 fi
 if [ -z "$SESSION_ID" ] && [ -n "$SESSION_FROM_ISSUE" ]; then
+  # Validated here (rather than unconditionally alongside --issue above) so a malformed
+  # --session-from-issue value never hard-fails a run that a higher-priority source
+  # (--session / AUTO_SESSION_ID) can already resolve without it.
+  if ! echo "$SESSION_FROM_ISSUE" | grep -qE '^[0-9]+$'; then
+    echo "Error: --session-from-issue must be a positive integer: $SESSION_FROM_ISSUE" >&2
+    exit 1
+  fi
   if [ -f "$SCRIPT_DIR/emit-event.sh" ]; then
     # shellcheck source=/dev/null
     . "$SCRIPT_DIR/emit-event.sh"
+    # NOTE: restore_auto_session_pointer() returns immediately when AUTO_EVENTS_LOG is
+    # already set (see scripts/emit-event.sh), even if AUTO_SESSION_ID is still empty —
+    # in that combination this issue-scoped pointer step is a no-op and resolution falls
+    # through to .tmp/auto-session-current below. Callers whose environment already
+    # exports AUTO_EVENTS_LOG (e.g. run-*.sh wrappers) should not assume the issue-scoped
+    # pointer unconditionally wins over that fallback.
     restore_auto_session_pointer "$SESSION_FROM_ISSUE" || true
     SESSION_ID="${AUTO_SESSION_ID:-}"
   else
