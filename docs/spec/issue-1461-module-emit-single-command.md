@@ -425,18 +425,18 @@ No new comments since last phase.
 
 ### Key Decisions
 
-- `collect-run-facts.sh`'s `restore_auto_session_pointer "$SESSION_FROM_ISSUE"` call is wrapped with `|| true` (not in the original Spec snippet) to preserve fail-open behavior when the function's internal `git worktree list` pipeline fails under `set -euo pipefail` (e.g. outside a git repository). Without this, a git-command failure would abort the entire script instead of falling through to `.tmp/auto-session-current`.
-- Kept `docs/structure.md` / `docs/ja/structure.md` entry position unchanged (in-place rename) rather than moving it to a strict alphabetical slot — the surrounding list is already grouped by theme ("Phase banner:" subheading), not strictly alphabetical, so relocating only this one entry would not actually establish alphabetical order for the section.
-- No PR preview capability is configured for this project (`capabilities.pr-preview` absent from `.wholework.yml`), so Step 13 (Preview Build Verification) did not run; CI verification of the pre-merge AC (`github_check "gh pr checks" "Run bats tests"`) is left to `/review`, per the route-agnostic CI verification AC exclusion.
+- `collect-run-facts.sh` の `restore_auto_session_pointer "$SESSION_FROM_ISSUE"` 呼び出しを (元の Spec スニペットには無かった) `|| true` で包んだ。関数内部の `git worktree list` パイプラインが `set -euo pipefail` 下で失敗するケース (非 git リポジトリなど) でも fail-open 挙動を維持するため。これがないと git コマンドの失敗がスクリプト全体を異常終了させ、`.tmp/auto-session-current` へのフォールスルーが起きない。
+- `docs/structure.md` / `docs/ja/structure.md` のエントリ位置は変更せず (in-place rename) 、厳密なアルファベット順への並べ替えは行わなかった — 周辺リストは既にテーマ別 ("Phase banner:" 見出し) にグループ化されておりアルファベット厳密順ではないため、このエントリ 1 件だけ移動してもセクション全体のアルファベット順は成立しない。
+- 本プロジェクトには PR preview capability が設定されていない (`.wholework.yml` に `capabilities.pr-preview` が無い) ため Step 13 (Preview Build Verification) は実行されなかった。pre-merge AC の CI 検証 (`github_check "gh pr checks" "Run bats tests"`) は route 非依存の CI 検証 AC 除外規約に従い `/review` に委ねる。
 
 ### Deferred Items
 
-- Same as Spec's Deferred Items: `emit_event()`'s CR (`\r`) non-sanitization, and the `/spec` WHOLEWORK_SCRIPT_DIR mock-addition-check gap for "new `source` added to an existing script" — both out of scope for this Issue, unchanged since the spec phase.
-- Post-merge AC (`verify-type: opportunistic`) is unresolved at this point, as designed — the real confirmation happens on a future `/spec`/`/code`/`/review` worktree run.
+- Spec の Deferred Items と同一: `emit_event()` の CR (`\r`) 非サニタイズ、および `/spec` の WHOLEWORK_SCRIPT_DIR mock-addition-check ギャップ (「既存スクリプトへの新規 `source` 追加」) — いずれも本 Issue のスコープ外で、spec フェーズから変更なし。
+- Post-merge AC (`verify-type: opportunistic`) は設計どおり本フェーズ時点では未解決 — 実際の確認は今後の `/spec`/`/code`/`/review` worktree 実行で行われる。
 
 ### Notes for Next Phase
 
-- Full `bats tests/` suite (2049 tests) was run in parallel (`bats --jobs 18 tests/`) per the Behavioral Change Detection override in `skills/code/SKILL.md` Step 9 — all 6 modified `skills/*/SKILL.md` files are referenced by test files beyond their direct counterpart. Exit code 0, no `not ok` lines.
-- `validate-skill-syntax.py skills/` reports 0 errors, and `grep -rn '\${CLAUDE_PLUGIN_ROOT}/scripts/emit-event\.sh' skills/ modules/` returns 0 hits — both confirmed post-Step-9, matching the Spec's Notes for Next Phase guidance.
-- `skills/verify/SKILL.md`'s `<!-- skill-body-lines: N -->` marker (996) did not need updating — the string substitutions (`emit-verify-event.sh` → `emit-skill-event.sh`, `emit-event.sh:*` removal) changed line lengths but not line count.
-- `/review` will need to evaluate the CI-verification AC (`github_check "gh pr checks" "Run bats tests"`) once CI runs against PR #1467.
+- `bats tests/` の全スイート (2049 件) を並列実行 (`bats --jobs 18 tests/`) した。`skills/code/SKILL.md` Step 9 の Behavioral Change Detection override に従ったもの — 変更した 6 つの `skills/*/SKILL.md` はいずれも直接対応するテストファイル以外からも参照されている。終了コード 0、`not ok` 行なし。
+- `validate-skill-syntax.py skills/` は 0 エラー、`grep -rn '\${CLAUDE_PLUGIN_ROOT}/scripts/emit-event\.sh' skills/ modules/` は 0 件ヒット — いずれも Step 9 後に確認済みで、Spec の Notes for Next Phase の指針と一致。
+- `skills/verify/SKILL.md` の `<!-- skill-body-lines: N -->` マーカー (996) は更新不要だった — 文字列置換 (`emit-verify-event.sh` → `emit-skill-event.sh`、`emit-event.sh:*` 削除) で行の長さは変わったが行数は変わっていない。
+- `/review` は PR #1467 に対して CI が実行された後、CI 検証 AC (`github_check "gh pr checks" "Run bats tests"`) を評価する必要がある。
