@@ -421,24 +421,24 @@ No new comments since last phase.
 - `--session-from-issue` の新規テスト 3 件は、既存の `--session`/`--issue` テストの慣習に倣って `AUTO_EVENTS_LOG` を先に export する形で最初に書いたが、これは `restore_auto_session_pointer()` が `AUTO_EVENTS_LOG` 設定済みの場合に即 return する既存仕様 (Spec の Judgment rationale 節に記載済み) と衝突し、実際にはポインタファイル解決ロジックを一度も経由しないテストになっていた。デフォルトの `.tmp/auto-events.jsonl` パスに依拠する形に書き直し、ポインタファイル解決そのものを検証する 1 件には `git worktree list --porcelain` の最小モック (exit 0, 出力なし) を追加した (BATS_TEST_TMPDIR は git リポジトリではないため、モック無しでは上記の `set -e` 異常終了に阻まれてポインタ解決コードへ到達できない)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Workflow path (`capabilities.workflow: true`) は使用せず、静的 Task fan-out (review-spec + review-bug×2) に foreground でフォールバックした — 本セッションが `--non-interactive` のヘッドレス実行で再起動保証がないため (`workflow-guidance.md` の明示的なガード条件に従った)。
-- Parser/Validator Edge Case Pre-check の発火対象 2 ファイル (`scripts/emit-skill-event.sh`, `scripts/collect-run-facts.sh`) は PR 作成者が MEMBER (first-class) だったため実際に実行して検証した。ここで見つかった 2 件 (`--emit-issue` 空値の黙殺、`--session-from-issue` バリデーション順序) はいずれも修正済み。
-- MUST 相当の指摘はゼロだったが、実測で確認された SHOULD 8 件・CONSIDER 1 件のうち、false positive と判定した 2 件を除く 9 件を修正した — Spec/CLAUDE.md との整合性、および将来の呼び出し側が同じ罠 (フラグ位置依存パーサ) を踏むリスクを review 完了時点で解消する判断。
+- `--non-interactive` 実行下で pre-merge AC ゲート (`check-pre-merge-ac.sh`) を確認したところ `unchecked_count=0`、`reconcile-phase-state.sh --check-completion` も `review_incomplete_fallback` フラグなしで、いずれも override マーカー無しでそのままマージへ進んだ。
+- `resolve-merge-strategy.sh --flag` の解決結果は `--squash`。`gh pr merge 1467 --squash --delete-branch` で単一コマンドマージし、リモートブランチも削除した。
+- Phase Handoff の書き込みは `git merge origin/main --ff-only` で worktree を merge 後の main に同期してから実行した (Consumed Comments フォールバックは変更なしで完了)。
 
 ### Deferred Items
 
 - Spec の Deferred Items と同一: `emit_event()` の CR (`\r`) 非サニタイズ、および `/spec` の WHOLEWORK_SCRIPT_DIR mock-addition-check ギャップ — いずれも本 Issue のスコープ外で変更なし。
-- Post-merge AC (`verify-type: opportunistic`) は設計どおり review フェーズ完了時点でも未解決 — 実際の確認は今後の `/spec`/`/code`/`/review` worktree 実行で行われる。
+- Post-merge AC (`verify-type: opportunistic`) は merge 完了時点でも未解決 — 次回の `/spec`/`/code`/`/review` worktree 実行で opportunistic verification の event emission が回避策なしで成功することを観察する必要がある。
 
 ### Notes for Next Phase
 
-- `/merge` 実行前に CI が再度 green であることを確認済み (fix 後の push に対して 15 件全て SUCCESS)。
-- review で追加した修正 (5 コミット) は全て Pre-merge AC の interface を変更しないバグ修正・ドキュメント整合性修正であり、Issue 本文の acceptance criteria 更新は不要と判断した (Step 13 Policy Change Detection の結果)。
-- `docs/spec/issue-1461-module-emit-single-command.md` の `## Phase Handoff` (code フェーズ分) は本ブロックで rotation 済み。`review retrospective` セクションに本フェーズで見つかった Spec/実装の乖離パターンを記録した。
+- `/verify` は Issue #1461 の Post-merge AC (`verify-type: opportunistic`) を評価する際、直近の worktree route 実行 (`/spec`/`/code`/`/review` いずれか) のログを確認すること。まだ該当実行が無ければ SKIP/保留が妥当。
+- Issue の state / `phase/verify` ラベル遷移は Step 5-6 (フォールバック込み) で確認済み。
+- `docs/spec/issue-1461-module-emit-single-command.md` の `## Phase Handoff` (review フェーズ分) は本ブロックで rotation 済み。
 
 ## review retrospective
 
