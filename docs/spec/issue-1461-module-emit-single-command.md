@@ -202,7 +202,7 @@
      if [ -f "$SCRIPT_DIR/emit-event.sh" ]; then
        # shellcheck source=/dev/null
        . "$SCRIPT_DIR/emit-event.sh"
-       restore_auto_session_pointer "$SESSION_FROM_ISSUE"
+       restore_auto_session_pointer "$SESSION_FROM_ISSUE" || true
        SESSION_ID="${AUTO_SESSION_ID:-}"
      else
        echo "Warning: emit-event.sh not found under $SCRIPT_DIR; skipping --session-from-issue resolution" >&2
@@ -406,25 +406,52 @@ No new comments since last phase.
 - #1458 Spec が「`set -e` と `[[ cond ]] && exit 0` の組み合わせは異常終了する既知の落とし穴」と記録していたため、`set -euo pipefail` の `collect-run-facts.sh` から `restore_auto_session_pointer` を呼べるか不明だった。実測の結果、短絡評価が AND リストの最終コマンドでない限り `set -e` は発火せず、正常に exit 0 で完了する。#1458 の注意書きは「新規スクリプトの書き方の指針」としては妥当だが「既存関数を `set -e` 下から呼べない」という意味ではない。
 - 新規分岐ロジックに対する新規テストケース要求のまとめ: Implementation Step 2 (`emit-skill-event.sh` に `--emit-issue` / `--session-id` / 非数値 `<issue>` の 3 分岐を追加) と Step 4 (`collect-run-facts.sh` の session 解決ラダーに 1 ステップ追加) が該当する。受入条件 4 は既存スイートの PASS だけでは不十分で、`tests/emit-skill-event.bats` に 6 ケース (`--emit-issue` 正常 / `--emit-issue` 非数値 / 非数値 positional / `--session-id` / フラグ順不同 / 依存欠落 exit 1)、`tests/run-fact-matching.bats` に 5 ケース (ポインタ解決 / フォールバック / `--session` 優先 / 非数値バリデーション / 依存欠落 fail-open) の新規追加を要する。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 4 のコードスニペットには無かった `|| true` を `restore_auto_session_pointer "$SESSION_FROM_ISSUE"` の呼び出しに追加した。`tests/run-fact-matching.bats` に新規テストを追加する過程で、`collect-run-facts.sh` の `set -euo pipefail` 下で `git worktree list --porcelain 2>/dev/null | awk ...` が非 git リポジトリ (BATS_TEST_TMPDIR) で失敗すると、`pipefail` が git の失敗終了コードをパイプ全体の終了コードとして伝播させ、スクリプト全体が `exit 128` で異常終了することを発見した (`2>/dev/null` は stderr を消すだけで終了コードには無関係)。これは Spec が明記した `--session-from-issue` の fail-open 保証 (「依存欠落時は fail-open」) を壊す実害であり、`restore_auto_session_pointer` 呼び出しを `|| true` で包むことで解消した — bash の `set -e` は `||` に続くコマンドの失敗を免除する仕様のため、呼び出し先の関数内部で失敗したコマンドであっても影響を受けない。
+
+### Design Gaps/Ambiguities
+
+- Uncertainty 節が検証した「`set -e` + `restore_auto_session_pointer` の組み合わせ」は実際の git worktree 内 (git コマンドが成功する環境) で行われていたため、git コマンド自体が失敗するケース (非 git ディレクトリ) は当時カバーされていなかった。本 Issue の bats テスト実行がこの空白を実際に顕在化させた。
+
+### Rework
+
+- `--session-from-issue` の新規テスト 3 件は、既存の `--session`/`--issue` テストの慣習に倣って `AUTO_EVENTS_LOG` を先に export する形で最初に書いたが、これは `restore_auto_session_pointer()` が `AUTO_EVENTS_LOG` 設定済みの場合に即 return する既存仕様 (Spec の Judgment rationale 節に記載済み) と衝突し、実際にはポインタファイル解決ロジックを一度も経由しないテストになっていた。デフォルトの `.tmp/auto-events.jsonl` パスに依拠する形に書き直し、ポインタファイル解決そのものを検証する 1 件には `git worktree list --porcelain` の最小モック (exit 0, 出力なし) を追加した (BATS_TEST_TMPDIR は git リポジトリではないため、モック無しでは上記の `set -e` 異常終了に阻まれてポインタ解決コードへ到達できない)。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `scripts/emit-verify-event.sh` を `scripts/emit-skill-event.sh` へ改名して流用する (新規スクリプトは作らない)。本 Issue 後は 6 skill から呼ばれる共通 wrapper になるため。改名の影響範囲は 5 ファイル (履歴記録を除く) で機械的に完結することを grep で確認済み。
-- 非数値 `<issue>` の判定を LLM 側ではなくスクリプト側 (`^[0-9]+$`) に置く。`modules/retro-proposals.md` から呼び出し形の分岐を消せるうえ、`emit_event()` の unquoted `"issue":${_issue}` による JSON 破損を fail-closed で防げる。
-- `modules/opportunistic-verify.md` Step 1 (facts 解決、emit ではない) は emit wrapper に相乗りさせず、`scripts/collect-run-facts.sh` に `--session-from-issue <N>` を追加して解決する。session id を必要としているのは同スクリプト自身であり、`collect-run-facts.sh:*` は 5 reader すべての `allowed-tools` に登録済みで権限変更も不要。
-- `emit-event.sh:*` は 6 skill (`auto`/`code`/`issue`/`review`/`spec`/`verify`) すべての `allowed-tools` から削除する。参照元が本 Issue で置換する 2 module のみであることを grep で確認済み。`skills/audit/SKILL.md` は reader ではないため対象外。
+- Workflow path (`capabilities.workflow: true`) は使用せず、静的 Task fan-out (review-spec + review-bug×2) に foreground でフォールバックした — 本セッションが `--non-interactive` のヘッドレス実行で再起動保証がないため (`workflow-guidance.md` の明示的なガード条件に従った)。
+- Parser/Validator Edge Case Pre-check の発火対象 2 ファイル (`scripts/emit-skill-event.sh`, `scripts/collect-run-facts.sh`) は PR 作成者が MEMBER (first-class) だったため実際に実行して検証した。ここで見つかった 2 件 (`--emit-issue` 空値の黙殺、`--session-from-issue` バリデーション順序) はいずれも修正済み。
+- MUST 相当の指摘はゼロだったが、実測で確認された SHOULD 8 件・CONSIDER 1 件のうち、false positive と判定した 2 件を除く 9 件を修正した — Spec/CLAUDE.md との整合性、および将来の呼び出し側が同じ罠 (フラグ位置依存パーサ) を踏むリスクを review 完了時点で解消する判断。
 
 ### Deferred Items
 
-- `emit_event()` の CR (`\r`) 未サニタイズは本 Issue では修正しない。Issue の Out of scope (「`scripts/emit-event.sh` 自体の実装変更」) に該当する。#1458 merge Phase Handoff の「`issue`/`event` 値の validate/sanitize」と同系統の未対応課題として残る。
-- `/spec` の "WHOLEWORK_SCRIPT_DIR mock addition check" が「既存スクリプトへの sibling `source` 新規追加」を発火条件に含んでいない点は、本 Issue のスコープ外。spec retrospective に観測として記録済み (Improvement Proposal の起票は `/verify` フェーズで集約される)。
-- Post-merge AC は `verify-type: opportunistic`。次の `/spec` `/code` `/review` の実行が実際の確認機会であり、本 PR 内で追加対応は不要。
+- Spec の Deferred Items と同一: `emit_event()` の CR (`\r`) 非サニタイズ、および `/spec` の WHOLEWORK_SCRIPT_DIR mock-addition-check ギャップ — いずれも本 Issue のスコープ外で変更なし。
+- Post-merge AC (`verify-type: opportunistic`) は設計どおり review フェーズ完了時点でも未解決 — 実際の確認は今後の `/spec`/`/code`/`/review` worktree 実行で行われる。
 
 ### Notes for Next Phase
 
-- 受入条件 1/2 の `file_not_contains "modules/*.md" "restore_auto_session_pointer"` は **コードブロック外の地の文も対象**。両 module の該当行 (opportunistic-verify: 39/87/89、retro-proposals: 74/75/76/172) の書き換えを忘れると FAIL する。#1458 でも同じ注意が Implementation Step に明記されていた。
-- Implementation Step 4 の `source` は必ず分岐内の遅延実行にすること。トップレベルで無条件 `source` すると `tests/run-fact-matching.bats` が `setup()` で `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を全ケースに適用しているため、既存 20 件超が一斉に失敗する。
-- Step 9 完了後に `python3 scripts/validate-skill-syntax.py skills/` が 0 error であることと、`grep -rn '\${CLAUDE_PLUGIN_ROOT}/scripts/emit-event\.sh' skills/ modules/` が 0 件であることの両方を確認すること。前者は追加漏れ、後者は削除の安全性を担保する。
-- `skills/verify/SKILL.md` の `<!-- skill-body-lines: N -->` マーカーは `tests/verify.bats` の回帰テスト対象。行数が変わった場合は `wc -l` 実測値へ更新する (#1458 で実際に FAIL した前例あり)。
+- `/merge` 実行前に CI が再度 green であることを確認済み (fix 後の push に対して 15 件全て SUCCESS)。
+- review で追加した修正 (5 コミット) は全て Pre-merge AC の interface を変更しないバグ修正・ドキュメント整合性修正であり、Issue 本文の acceptance criteria 更新は不要と判断した (Step 13 Policy Change Detection の結果)。
+- `docs/spec/issue-1461-module-emit-single-command.md` の `## Phase Handoff` (code フェーズ分) は本ブロックで rotation 済み。`review retrospective` セクションに本フェーズで見つかった Spec/実装の乖離パターンを記録した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Steps は `--emit-issue` の空値ケースについて「stderr に警告を出して `0` を採用 (同じく fail-closed)」と明記していたが、実装のガード (`if [[ -n "$EMIT_ISSUE_OVERRIDE" ]]`) は「フラグ未指定」と「フラグに空文字を指定」を区別できておらず、空値ケースでは警告なしに既存の `EMIT_ISSUE` を維持していた (Edge Case Execution により実測で確認、review で修正済み)。design 文書に明記された fail-safe 仕様と実装が食い違う典型例で、`[[ -n "$VAR" ]]` 形式のガードは「未指定」と「空文字を明示指定」を区別できないという一般的な罠に起因する。
+- `scripts/collect-run-facts.sh` の `--session-from-issue` バリデーションは Spec の「fail-open (警告してラダー継続)」という設計意図 (Uncertainty resolution 節) に反し、優先度の高い `--session`/`AUTO_SESSION_ID` が既に解決していてもバリデーションのみで exit 1 するコードになっていた。Spec のテキストは「ラダーに 1 ステップ追加する」という抽象度で書かれており、バリデーションの実行タイミング (ラダー到達前 vs ラダー到達時) までは規定していなかったため、実装時にこの粒度の判断が漏れた。
+
+### Recurring issues
+
+- 「フラグパーサが最初の非 `--` トークンで走査を打ち切る」という同一の設計上の特性が、独立した 3 件の指摘 (`--emit-issue` 空値の黙殺、任意の誤配置フラグがペイロード化する頑健性ギャップ、`modules/retro-proposals.md` の `--session-id` 配置未規定によるドキュメント欠落) を生んだ。単一の根本原因が複数の指摘として現れるパターンであり、今後同種の位置依存パーサを新規スクリプトに導入する際は、(a) パーサ自身に末尾引数の形状バリデーションを持たせる、(b) 呼び出し例のコード fence にフラグの正しい位置を必ず示す、の 2 点をセットで設計時に検討すべき。
+- review-bug の 2 エージェント (diff scan / security scan) が独立に `modules/retro-proposals.md:75` の同一指摘に到達し、review-spec も Prose-Literal Inconsistency として同じ箇所を報告した (3 系統の収束)。多角的レビューが同一の高シグナル指摘に収束すること自体は健全だが、今後は review-spec 側で「新規追加された `--flag` を持つコード例に、呼び出し規約を明示するプロンプト検証」を明示的な観点として持たせることで、review-bug 側の指摘と役割分担しやすくなる可能性がある。
+
+### Acceptance criteria verification difficulty
+
+- rubric 型の AC ("両 module の event emission が単一コマンド形の wrapper 呼び出しで記述されている") は、両ファイルを実際に読んで確認するだけで機械的に PASS 判定でき、UNCERTAIN や誤判定の余地はなかった。`github_check` 型の CI 検証 AC も CI ロールアップの直接参照で PASS 判定でき、特筆すべき困難はなし。
