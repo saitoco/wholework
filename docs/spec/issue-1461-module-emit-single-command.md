@@ -421,22 +421,37 @@ No new comments since last phase.
 - `--session-from-issue` の新規テスト 3 件は、既存の `--session`/`--issue` テストの慣習に倣って `AUTO_EVENTS_LOG` を先に export する形で最初に書いたが、これは `restore_auto_session_pointer()` が `AUTO_EVENTS_LOG` 設定済みの場合に即 return する既存仕様 (Spec の Judgment rationale 節に記載済み) と衝突し、実際にはポインタファイル解決ロジックを一度も経由しないテストになっていた。デフォルトの `.tmp/auto-events.jsonl` パスに依拠する形に書き直し、ポインタファイル解決そのものを検証する 1 件には `git worktree list --porcelain` の最小モック (exit 0, 出力なし) を追加した (BATS_TEST_TMPDIR は git リポジトリではないため、モック無しでは上記の `set -e` 異常終了に阻まれてポインタ解決コードへ到達できない)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `collect-run-facts.sh` の `restore_auto_session_pointer "$SESSION_FROM_ISSUE"` 呼び出しを (元の Spec スニペットには無かった) `|| true` で包んだ。関数内部の `git worktree list` パイプラインが `set -euo pipefail` 下で失敗するケース (非 git リポジトリなど) でも fail-open 挙動を維持するため。これがないと git コマンドの失敗がスクリプト全体を異常終了させ、`.tmp/auto-session-current` へのフォールスルーが起きない。
-- `docs/structure.md` / `docs/ja/structure.md` のエントリ位置は変更せず (in-place rename) 、厳密なアルファベット順への並べ替えは行わなかった — 周辺リストは既にテーマ別 ("Phase banner:" 見出し) にグループ化されておりアルファベット厳密順ではないため、このエントリ 1 件だけ移動してもセクション全体のアルファベット順は成立しない。
-- 本プロジェクトには PR preview capability が設定されていない (`.wholework.yml` に `capabilities.pr-preview` が無い) ため Step 13 (Preview Build Verification) は実行されなかった。pre-merge AC の CI 検証 (`github_check "gh pr checks" "Run bats tests"`) は route 非依存の CI 検証 AC 除外規約に従い `/review` に委ねる。
+- Workflow path (`capabilities.workflow: true`) は使用せず、静的 Task fan-out (review-spec + review-bug×2) に foreground でフォールバックした — 本セッションが `--non-interactive` のヘッドレス実行で再起動保証がないため (`workflow-guidance.md` の明示的なガード条件に従った)。
+- Parser/Validator Edge Case Pre-check の発火対象 2 ファイル (`scripts/emit-skill-event.sh`, `scripts/collect-run-facts.sh`) は PR 作成者が MEMBER (first-class) だったため実際に実行して検証した。ここで見つかった 2 件 (`--emit-issue` 空値の黙殺、`--session-from-issue` バリデーション順序) はいずれも修正済み。
+- MUST 相当の指摘はゼロだったが、実測で確認された SHOULD 8 件・CONSIDER 1 件のうち、false positive と判定した 2 件を除く 9 件を修正した — Spec/CLAUDE.md との整合性、および将来の呼び出し側が同じ罠 (フラグ位置依存パーサ) を踏むリスクを review 完了時点で解消する判断。
 
 ### Deferred Items
 
-- Spec の Deferred Items と同一: `emit_event()` の CR (`\r`) 非サニタイズ、および `/spec` の WHOLEWORK_SCRIPT_DIR mock-addition-check ギャップ (「既存スクリプトへの新規 `source` 追加」) — いずれも本 Issue のスコープ外で、spec フェーズから変更なし。
-- Post-merge AC (`verify-type: opportunistic`) は設計どおり本フェーズ時点では未解決 — 実際の確認は今後の `/spec`/`/code`/`/review` worktree 実行で行われる。
+- Spec の Deferred Items と同一: `emit_event()` の CR (`\r`) 非サニタイズ、および `/spec` の WHOLEWORK_SCRIPT_DIR mock-addition-check ギャップ — いずれも本 Issue のスコープ外で変更なし。
+- Post-merge AC (`verify-type: opportunistic`) は設計どおり review フェーズ完了時点でも未解決 — 実際の確認は今後の `/spec`/`/code`/`/review` worktree 実行で行われる。
 
 ### Notes for Next Phase
 
-- `bats tests/` の全スイート (2049 件) を並列実行 (`bats --jobs 18 tests/`) した。`skills/code/SKILL.md` Step 9 の Behavioral Change Detection override に従ったもの — 変更した 6 つの `skills/*/SKILL.md` はいずれも直接対応するテストファイル以外からも参照されている。終了コード 0、`not ok` 行なし。
-- `validate-skill-syntax.py skills/` は 0 エラー、`grep -rn '\${CLAUDE_PLUGIN_ROOT}/scripts/emit-event\.sh' skills/ modules/` は 0 件ヒット — いずれも Step 9 後に確認済みで、Spec の Notes for Next Phase の指針と一致。
-- `skills/verify/SKILL.md` の `<!-- skill-body-lines: N -->` マーカー (996) は更新不要だった — 文字列置換 (`emit-verify-event.sh` → `emit-skill-event.sh`、`emit-event.sh:*` 削除) で行の長さは変わったが行数は変わっていない。
-- `/review` は PR #1467 に対して CI が実行された後、CI 検証 AC (`github_check "gh pr checks" "Run bats tests"`) を評価する必要がある。
+- `/merge` 実行前に CI が再度 green であることを確認済み (fix 後の push に対して 15 件全て SUCCESS)。
+- review で追加した修正 (5 コミット) は全て Pre-merge AC の interface を変更しないバグ修正・ドキュメント整合性修正であり、Issue 本文の acceptance criteria 更新は不要と判断した (Step 13 Policy Change Detection の結果)。
+- `docs/spec/issue-1461-module-emit-single-command.md` の `## Phase Handoff` (code フェーズ分) は本ブロックで rotation 済み。`review retrospective` セクションに本フェーズで見つかった Spec/実装の乖離パターンを記録した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Steps は `--emit-issue` の空値ケースについて「stderr に警告を出して `0` を採用 (同じく fail-closed)」と明記していたが、実装のガード (`if [[ -n "$EMIT_ISSUE_OVERRIDE" ]]`) は「フラグ未指定」と「フラグに空文字を指定」を区別できておらず、空値ケースでは警告なしに既存の `EMIT_ISSUE` を維持していた (Edge Case Execution により実測で確認、review で修正済み)。design 文書に明記された fail-safe 仕様と実装が食い違う典型例で、`[[ -n "$VAR" ]]` 形式のガードは「未指定」と「空文字を明示指定」を区別できないという一般的な罠に起因する。
+- `scripts/collect-run-facts.sh` の `--session-from-issue` バリデーションは Spec の「fail-open (警告してラダー継続)」という設計意図 (Uncertainty resolution 節) に反し、優先度の高い `--session`/`AUTO_SESSION_ID` が既に解決していてもバリデーションのみで exit 1 するコードになっていた。Spec のテキストは「ラダーに 1 ステップ追加する」という抽象度で書かれており、バリデーションの実行タイミング (ラダー到達前 vs ラダー到達時) までは規定していなかったため、実装時にこの粒度の判断が漏れた。
+
+### Recurring issues
+
+- 「フラグパーサが最初の非 `--` トークンで走査を打ち切る」という同一の設計上の特性が、独立した 3 件の指摘 (`--emit-issue` 空値の黙殺、任意の誤配置フラグがペイロード化する頑健性ギャップ、`modules/retro-proposals.md` の `--session-id` 配置未規定によるドキュメント欠落) を生んだ。単一の根本原因が複数の指摘として現れるパターンであり、今後同種の位置依存パーサを新規スクリプトに導入する際は、(a) パーサ自身に末尾引数の形状バリデーションを持たせる、(b) 呼び出し例のコード fence にフラグの正しい位置を必ず示す、の 2 点をセットで設計時に検討すべき。
+- review-bug の 2 エージェント (diff scan / security scan) が独立に `modules/retro-proposals.md:75` の同一指摘に到達し、review-spec も Prose-Literal Inconsistency として同じ箇所を報告した (3 系統の収束)。多角的レビューが同一の高シグナル指摘に収束すること自体は健全だが、今後は review-spec 側で「新規追加された `--flag` を持つコード例に、呼び出し規約を明示するプロンプト検証」を明示的な観点として持たせることで、review-bug 側の指摘と役割分担しやすくなる可能性がある。
+
+### Acceptance criteria verification difficulty
+
+- rubric 型の AC ("両 module の event emission が単一コマンド形の wrapper 呼び出しで記述されている") は、両ファイルを実際に読んで確認するだけで機械的に PASS 判定でき、UNCERTAIN や誤判定の余地はなかった。`github_check` 型の CI 検証 AC も CI ロールアップの直接参照で PASS 判定でき、特筆すべき困難はなし。
