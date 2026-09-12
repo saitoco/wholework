@@ -65,6 +65,7 @@ Called by:
 
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh" <NUMBER> retro_proposal_classified \
+     [--session-id "<literal SESSION_ID>"] \
      "tier=<1|2|3>" \
      "title=<proposal title, first 80 chars>" \
      "reason=<one-line classification rationale>" \
@@ -72,7 +73,7 @@ Called by:
    ```
 
    - **`NUMBER` may be non-numeric (e.g. the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`)**: pass it as-is. The script determines numerically whether it can be used for issue-scoped pointer resolution, and if not, skips that resolution and emits with the event's `issue` field set to `0` (fail-closed, preventing the malformed JSON that an unquoted non-numeric `"issue":${_issue}` would otherwise produce and that would break `get-auto-session-report.sh`'s whole-log `jq -s` read).
-   - **`/auto` parent-session callers (Step 4a step 6 / Step 5 L3 step 6)**: pass `--session-id "<literal SESSION_ID>"` using the same literal `SESSION_ID` value recorded in `/auto` Step 1 — the only reliable path for the L3 `BRIDGE_NUMBER="batch-<session-id>"` case above, since a non-numeric `NUMBER` cannot use the issue-scoped pointer and the PGID/current fallbacks are not guaranteed to hold the calling session's own id under concurrent `/auto` sessions.
+   - **`/auto` parent-session callers (Step 4a step 6 / Step 5 L3 step 6)**: pass `--session-id "<literal SESSION_ID>"` using the same literal `SESSION_ID` value recorded in `/auto` Step 1 — the only reliable path for the L3 `BRIDGE_NUMBER="batch-<session-id>"` case above, since a non-numeric `NUMBER` cannot use the issue-scoped pointer and the PGID/current fallbacks are not guaranteed to hold the calling session's own id under concurrent `/auto` sessions. **Must appear before the first `key=value` argument** (as in the code fence above) — `emit-skill-event.sh`'s flag parser stops recognizing `--` flags at the first non-`--` token, so a `--session-id` placed after `tier=`/`title=`/`reason=`/`action=` would silently become payload data instead of being applied. Callers other than `/auto` omit this flag entirely.
    - **`AUTO_EVENTS_LOG` guard**: the script applies this guard internally (skips the emit entirely when the session pointer does not resolve, e.g. a standalone `/verify` run outside `/auto`) — no `if` is needed at the call site.
    - Regardless of tier, output one terminal summary line covering all proposals classified in this run: `Tier classification: {n1} Tier 1 / {n2} Tier 2 / {n3} Tier 3 (filter hit rate {p}%)`. `p` is the floor of `(n2 + n3) / (n1 + n2 + n3) * 100`; use `0` when the total is 0.
 
