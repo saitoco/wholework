@@ -32,6 +32,7 @@ shift 2
 
 MODE="standard"
 EMIT_ISSUE_OVERRIDE=""
+EMIT_ISSUE_OVERRIDE_SET=""
 SESSION_ID_ARG=""
 while [[ "${1:-}" == --* ]]; do
   case "$1" in
@@ -39,12 +40,22 @@ while [[ "${1:-}" == --* ]]; do
     --unconditional)      MODE="unconditional"; shift ;;
     --emit-issue)
       if [[ $# -lt 2 ]]; then echo "Error: --emit-issue requires an argument" >&2; exit 1; fi
-      EMIT_ISSUE_OVERRIDE="$2"; shift 2 ;;
+      EMIT_ISSUE_OVERRIDE="$2"; EMIT_ISSUE_OVERRIDE_SET=1; shift 2 ;;
     --session-id)
       if [[ $# -lt 2 ]]; then echo "Error: --session-id requires an argument" >&2; exit 1; fi
       SESSION_ID_ARG="$2"; shift 2 ;;
     *) echo "Error: unknown option: $1" >&2; exit 1 ;;
   esac
+done
+
+# Reject a `--`-prefixed or bare (non key=value) leftover argument: the loop above only
+# recognizes flags before the first non-`--` token, so a misplaced/typo'd flag after that
+# point would otherwise be silently passed through to emit_event() as junk payload data.
+for _arg in "$@"; do
+  if [[ "$_arg" == --* || "$_arg" != *=* ]]; then
+    echo "Error: unexpected argument (expected key=value): $_arg" >&2
+    exit 1
+  fi
 done
 
 if [[ -n "$SESSION_ID_ARG" ]]; then
@@ -60,7 +71,7 @@ else
   EMIT_ISSUE="0"
 fi
 
-if [[ -n "$EMIT_ISSUE_OVERRIDE" ]]; then
+if [[ -n "$EMIT_ISSUE_OVERRIDE_SET" ]]; then
   if [[ "$EMIT_ISSUE_OVERRIDE" =~ ^[0-9]+$ ]]; then
     EMIT_ISSUE="$EMIT_ISSUE_OVERRIDE"
   else

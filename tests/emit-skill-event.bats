@@ -152,6 +152,21 @@ teardown() {
     [ ! -f "$WORKDIR/events.jsonl" ] || false
 }
 
+@test "--emit-issue with an explicit empty value warns and falls back to issue=0" {
+    run bash -c "cd \"$WORKDIR\" && export AUTO_EVENTS_LOG=\"\$PWD/events.jsonl\" && bash \"$SCRIPT\" 42 opportunistic_verify_result --emit-issue '' skill=/spec 2>&1 1>/dev/null"
+    [ "$status" -eq 0 ] || false
+    [[ "$output" == *"Warning:"*"--emit-issue"* ]] || false
+    run jq -r '.issue' "$WORKDIR/events.jsonl"
+    [ "$output" = "0" ] || false
+}
+
+@test "a misplaced flag after key=value arguments is rejected instead of becoming payload data" {
+    run bash -c "cd \"$WORKDIR\" && export AUTO_EVENTS_LOG=\"\$PWD/events.jsonl\" && bash \"$SCRIPT\" 42 phase_start phase=verify --emit-issue 7"
+    [ "$status" -eq 1 ] || false
+    [[ "$output" == *"Error:"*"unexpected argument"* ]] || false
+    [ ! -f "$WORKDIR/events.jsonl" ] || false
+}
+
 @test "missing sibling emit-event.sh exits 1 with an error on stderr" {
     EMPTY_DIR="$BATS_TEST_TMPDIR/empty-script-dir"
     mkdir -p "$EMPTY_DIR"
