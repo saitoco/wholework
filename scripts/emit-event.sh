@@ -66,26 +66,30 @@
 #
 # retro_proposal_classified: modules/retro-proposals.md Tier classification result for a single
 # improvement proposal, emitted right after Tier classification is finalized. Called from
-# /verify Step 16 and /auto Step 5 L3 auto-retrospective (see #1159).
+# /verify Step 16 and /auto Step 5 L3 auto-retrospective (see #1159), via
+# scripts/emit-skill-event.sh (#1461).
 #   tier=<1|2|3>                  classification result
 #   title=<text>                  proposal title, truncated to 80 chars
 #   reason=<text>                 one-line classification rationale
 #   action=<issue_created|memory_proposal|spec_only>   downstream action taken for this tier
 #   Numeric EMIT_ISSUE_NUMBER guard: when NUMBER is not a bare integer (e.g. /auto L3's
-#   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
-#   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
+#   BRIDGE_NUMBER="batch-<session-id>"), emit-skill-event.sh itself sets EMIT_ISSUE_NUMBER=0
+#   (derived from a `^[0-9]+$` check on the positional <issue>, or from --emit-issue) —
+#   emit_event() writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the
+#   JSON line.
 #
 # opportunistic_verify_result: emits modules/opportunistic-verify.md's judgment (PASS/FAIL/SKIP)
 # for one condition, right after that condition's result is determined in Step 2 (AI
 # Retrospective) (#1236). One event per condition, not aggregated — see
-# modules/event-emission.md's opportunistic_verify_result entry for the rationale.
+# modules/event-emission.md's opportunistic_verify_result entry for the rationale. Emitted via
+# scripts/emit-skill-event.sh (#1461).
 #   skill=<skill-name>            calling skill name, e.g. /spec, /review, /verify, /issue, /code
 #   result=<PASS|FAIL|SKIP>       this condition's judgment result
 #   ac_index=<n>                  1-based position within the candidate Issue body's full
 #                                  checkbox enumeration (pre-merge + post-merge), same
 #                                  global-index convention as gh-issue-edit.sh --checkbox
 #   EMIT_ISSUE_NUMBER carries the candidate Issue number being judged (may differ from the
-#   calling skill's own Issue number)
+#   calling skill's own Issue number) — set via emit-skill-event.sh's --emit-issue <N>
 #
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
