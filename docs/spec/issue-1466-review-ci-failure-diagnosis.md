@@ -94,17 +94,17 @@
 UNCERTAIN なし。rubric (AC1) は `skills/review/SKILL.md` の該当セクションを目視で確認し明確に PASS 判定できた。grep (AC2) は上記の事前修正により固有文字列にマッチする健全な verify command として機能した。command (AC3、`bats tests/` 全件) は 18 並列実行で 2074 件 PASS・件数不一致なしを確認。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 7 は `.wholework.yml` に `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれも設定されておらず全て `false` のため、7.1–7.6 を全てスキップし Step 8 に進んだ。
-- Step 10 は `REVIEW_DEPTH=light` (ARGUMENTS の `--light` 明示指定、Size=M とも整合) のため、`review-light` エージェント 1 体による軽量統合レビューを実施した。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は unchecked_count=0、review-incomplete-fallback チェックも該当なしのため、override マーカーなしでそのままマージに進んだ。
+- マージ戦略は `resolve-merge-strategy.sh --flag` の解決結果どおり `--squash` を採用した (`.wholework.yml` に `merge-strategy` 未設定、デフォルト)。
 
 ### Deferred Items
-- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外のまま — `/code` フェーズの Deferred Items を引き継ぐ (将来の汎用化 Issue に委ねる)。
+- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外のまま — 将来の汎用化 Issue に委ねる。
 - Post-merge AC (決定的な既存失敗を含む PR での `/review` 実行観察、`verify-type: observation event=auto-run session=next`) は未検証のまま — 次回の `/verify` セッションで観察される。
 
 ### Notes for Next Phase
-- MUST/SHOULD/CONSIDER のいずれも検出されなかったため Step 12 (修正サイクル) は実行していない。`/merge` にそのまま進んで良い。
-- CI は全 15 ジョブ (7 種 × push/pull_request) SUCCESS。Pre-existing failure exception は不発火 (該当ジョブなし)。
-- 本 PR はドキュメント追記のみ (`modules/ci-failure-classifier.md`, `skills/review/SKILL.md`, `docs/tech.md`, `docs/ja/tech.md`) — `scripts/pre-merge-check.sh` や `.github/workflows/test.yml` への変更はない。
+- `/verify` は Post-merge AC (observation, event=auto-run session=next) を確認すること。
+- CI は全 15 ジョブ SUCCESS、マージはコンフリクトなくクリーンに完了した。
+- 本 PR はドキュメント追記のみ (`modules/ci-failure-classifier.md`, `skills/review/SKILL.md`, `docs/tech.md`, `docs/ja/tech.md`)。
