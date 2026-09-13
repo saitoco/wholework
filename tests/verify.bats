@@ -194,6 +194,13 @@ step1_section() {
     [ "$marker_value" -eq "$actual_lines" ]
 }
 
+@test "skill-body-sha marker stays in sync with computed hash (Issue #1468)" {
+    marker_value=$(grep -m1 '<!-- skill-body-sha: ' "$SKILL_FILE" | grep -oE '[0-9a-f]{8}')
+    actual_hash=$(grep -v '<!-- skill-body-' "$SKILL_FILE" | shasum -a 256 | cut -c1-8)
+    [ -n "$marker_value" ]
+    [ "$marker_value" = "$actual_hash" ]
+}
+
 @test "Step 1: self-consistency check block precedes check-verify-dirty.sh invocation (Issue #1447)" {
     self_check_line=$(step1_section | grep -n -F "Self-consistency check" | head -1 | cut -d: -f1)
     dirty_classifier_line=$(step1_section | grep -n -F "check-verify-dirty.sh" | head -1 | cut -d: -f1)
