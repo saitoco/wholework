@@ -362,7 +362,7 @@ gh pr view "$NUMBER" --json statusCheckRollup
 
 - **All jobs SUCCESS (or SKIPPED)**: note CI is successful and proceed
 - **PENDING/IN_PROGRESS jobs** (after wait timeout): note CI wait timed out; list pending checks and proceed with caution
-- **FAILURE jobs**: list failed job names and statuses; suggest fixes where possible. If `scripts/validate-skill-syntax.py` exists, also read `skills/review/skill-dev-recheck.md` and follow the "Step 8: Additional Suggestions on CI Failure" section.
+- **FAILURE jobs**: list failed job names and statuses; suggest fixes where possible. If `scripts/validate-skill-syntax.py` exists, also read `skills/review/skill-dev-recheck.md` and follow the "Step 8: Additional Suggestions on CI Failure" section. When the job log contains a test-count-mismatch pattern (`modules/ci-failure-classifier.md` § Test Count Mismatch Signal), cite that signal explicitly as evidence of the FAILURE — do not rely solely on the presence or absence of `not ok` lines in a serial re-run step.
 
 **Blocking by default**: CI FAILURE joins the same MUST-equivalent gate as
 Step 8's FAIL Blocking Behavior — Step 10 (10.0/10.2) MUST add one
@@ -388,6 +388,30 @@ keeps the unconditional blocking behavior above. Because `push` and
 `pull_request` triggers can each produce a same-named rollup entry for this
 job, treat either one being FAILURE as sufficient to run the classifier
 below (run it once, not once per trigger).
+
+**Scope decision (not generalized)**: This exception's scope is deliberately
+kept to `Forbidden Expressions check` only and is not generalized to other
+unconditionally-scanning jobs. Issue #1466 found that a prior review
+misdiagnosed a genuinely deterministic failure
+(`tests/resolve-preview-env.bats`'s basic-auth checks, caused by a GNU-stat
+portability bug in the `file_mode` helper, #1429) as a "flaky" pre-existing
+failure, based solely on the observation that the same failure reproduced
+across multiple commits on `main`. Cross-commit reproduction is evidence of
+pre-existing-ness only — it is not evidence of non-determinism (flakiness);
+a deterministic failure reproduces identically across every commit under
+the same environment, by definition. Generalizing this exception on that
+conflated basis would have kept the gate permanently non-blocking instead of
+surfacing the underlying bug.
+
+**Required condition for future generalization**: any future proposal to
+generalize this exception beyond `Forbidden Expressions check` must
+independently establish determinism, not merely pre-existing-ness. The
+determinism check: re-run CI once on the same commit SHA (same pattern as
+`modules/orchestration-fallbacks.md#ci-wait-silence-timeout`'s re-run) — a
+consistent result across the re-run classifies the failure as deterministic
+(exception does not apply; keep blocking), while a differing result
+classifies it as flaky (non-blocking candidate). Cross-commit reproduction
+alone must never substitute for this check.
 
 When `Forbidden Expressions check` is FAILURE, run the baseline classifier
 in the foreground before deciding whether to inject a MUST entry:
