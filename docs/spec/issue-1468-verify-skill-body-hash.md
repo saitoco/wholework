@@ -110,20 +110,35 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 - Spec Implementation Step 5 は `docs/structure.md`/`docs/ja/structure.md` の Directory Layout コメント行 (CI ジョブ列挙) のみを対象としていたが、`docs/tech.md` の "Modification Rules" 節 (ラベル追加時は SSoT も同一 PR で更新する規約) と同種の一貫性維持のため、Key Files > Scripts 一覧への `check-skill-body-hash.sh` のエントリ追加、および `scripts/` ファイル数コメント (98→99 files) の更新も同一コミットに含めた。範囲逸脱ではなく、doc-checker の一貫性チェックの範囲内の追記と判断した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec 記載の通り「常時両方比較 (行数 OR ハッシュのいずれかの不一致で stale)」を採用し、二段構え (行数一致時のみハッシュ検証) にはしなかった。
-- ハッシュ計算は `grep -v '<!-- skill-body-'` で両マーカー行を除外してから `shasum -a 256 | cut -c1-8` を適用する設計とし、マーカー自身の自己参照問題を回避した。
-- `check-skill-body-hash.sh` は fail-open (対象ファイル不在→exit 0) / fail-closed (マーカー不在→exit 1) の非対称設計とし、Spec Notes の判断根拠をそのまま実装した。
+- review-light (light mode、REVIEW_DEPTH=light) の4観点統合レビューに加え、`scripts/check-skill-body-hash.sh` を Parser/Validator Edge Case Pre-check の対象 (firing condition (c): 外部から渡された文字列を解釈・検証する新規スクリプト) と判断し、実行ベースのエッジケース検証を事前実施した。
+- 検出された2件の SHOULD (pipefail 起因の無出力中断、CWD 相対デフォルトパス) はいずれも直接実行で再現確認したうえで review 中に修正・push した (MUST 相当ではないが、CI ゲートスクリプトの堅牢性に関わるため fix-then-merge を選択)。
+- Pre-merge 受入基準4件は全て PASS (rubric ×2 / grep / command)。CI は全17ジョブ SUCCESS (`Forbidden Expressions check` を含む)。
 
 ### Deferred Items
-- Post-merge の observation AC (行数を変えない変更が landing した後の `/verify` 実行での stale 検出発火の観察、`session=next`) は未検証のまま — 次回のいずれかの `/verify` 実行で自然に検証される設計。
+- Post-merge の observation AC (行数を変えない変更が landing した後の `/verify` 実行での stale 検出発火の観察、`session=next`) は未検証のまま — 次回のいずれかの `/verify` 実行で自然に検証される設計 (code フェーズからの継続)。
+- 同種の「`set -euo pipefail` 下での `grep -v` 0-match による無出力中断」パターンが他の `scripts/check-*.sh` に存在しないかの横展開調査は本 Issue のスコープ外として見送った。
 
 ### Notes for Next Phase
-- `/review` は `bats tests/` (2083件 PASS) と `validate-skill-syntax.py`/`check-forbidden-expressions.sh`/`check-translation-sync.sh` が全て通過済みであることを確認済み。
-- `skills/verify/SKILL.md` の `skill-body-lines`(997) / `skill-body-sha`(fd821ed4) マーカー値は本 PR のコミット確定後の値。以降このファイルに変更が入る場合、両マーカーの再計算が必要になる (`bash scripts/check-skill-body-hash.sh` で検証可能)。
-- `docs/structure.md`/`docs/ja/structure.md` は Directory Layout コメント行に加え、Key Files > Scripts 一覧のエントリとファイル数コメント (98→99) も同一 PR で更新済み — スコープ逸脱ではなく一貫性維持の追記 (Code Retrospective 参照)。
+- `/merge` 前に `bats --jobs 18 tests/` (2083件 PASS) を review 修正後に再実行済み。`scripts/check-skill-body-hash.sh` の修正後の挙動もエッジケース再実行で確認済み。
+- `docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`check-translation-sync.sh` で検出) は本 PR の変更対象外の既存事項 — merge 判断に影響しない。
+- `skills/verify/SKILL.md` の `skill-body-lines`(997) / `skill-body-sha`(fd821ed4) マーカー値は本 PR 確定時点の値のまま変更していない (review での修正対象は `scripts/check-skill-body-hash.sh` のみ)。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1468#issuecomment-5652635164
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。Implementation Steps 1〜5 は Spec の記述通りに実装されており、review で検出した2件の SHOULD 指摘 (`scripts/check-skill-body-hash.sh` の `pipefail` 起因の無出力中断、CWD 相対デフォルトパス) は Spec からの逸脱ではなく、Spec 自体が想定していなかったエッジケースだった。Spec Notes の「`check-skill-body-hash.sh` の fail-safe critical 判定とエッジケース」節 (c) は「`shasum` 等の依存コマンドが失敗した場合」を fail-closed の根拠としていたが、実際に踏んだのは `shasum` 自体の失敗ではなく `grep -v` が0行にマッチして pipefail 経由でパイプ全体を非ゼロ終了させるケースであり、診断メッセージが出力される前に `set -e` がスクリプトを中断させていた。「fail-closed であること」自体は Spec の意図通りだったが、「診断メッセージが必ず出力される」という暗黙の前提が崩れていた点は Spec のエッジケース検討で見落とされていた。
+
+### Recurring issues
+
+Parser/Validator Edge Case Pre-check (firing condition (c): 外部から渡された文字列を解釈・検証する新規スクリプト) が `scripts/check-skill-body-hash.sh` に対して発火し、実行ベースの検証で2件の SHOULD を検出した。同種の「新規 validator スクリプトが `set -euo pipefail` 下で `grep`/`grep -v` の 0-match を握りつぶさずに落ちる」パターンは本リポジトリの他の `check-*.sh` スクリプトでも起こりうる一般的な形状であり、今回のレビューでの発見は個別修正に留めた (横展開調査は本 Issue のスコープ外)。CWD 相対デフォルトパスについても、`scripts/` 配下の他スクリプトで同種のパターンがないか横展開する価値はあるが、今回は本 PR の変更範囲内のみ対応した。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge 受入基準4件はいずれも明確な verify command (`rubric` ×2, `grep`, `command`) を伴っており、UNCERTAIN は発生しなかった。`command "bats tests/"` は safe mode では CI 参照フォールバック (`gh pr view --json statusCheckRollup`) で PASS 判定でき、identity confirmation (run command containment: `bats --jobs $(nproc) tests/`) も明確だった。verify command の記述・アクセス性に特筆すべき問題はなし。
