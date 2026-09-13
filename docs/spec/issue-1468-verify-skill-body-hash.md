@@ -89,3 +89,6 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 ### Steering Docs sync candidate check
 
 `skill-body-lines`/`STALE_SKILL_BODY_DETECTED` をキーワードに `docs/`, `tests/`, `scripts/`, `modules/` を `grep -rn` したところ、ヒットは `tests/verify.bats` (Implementation Step 4 で対応済み) と、過去 Issue (#1447/#1458/#1461) の disposable Spec ファイル (historical record として同期対象から除外) のみであり、追加の同期対象なし。
+
+## Consumed Comments
+No new comments since last phase.
