@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-09-13 12:21 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1468, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: harness-oom-stop
+- notification: harness-stop
+- Killed twice during review (light); resume via skip-to-review worked both times and the third respawn completed. Same shape as #1461 (2 kills then success on attempt 3), same session, uptime ~7.5 days
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-09-10 02:57 UTC: manual-recovery-respawn
 
 ### Context
