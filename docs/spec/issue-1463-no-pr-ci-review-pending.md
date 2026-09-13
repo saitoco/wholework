@@ -305,22 +305,37 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 - なし。Pre-implementation FAIL 確認は新規 3 テストファイル (`ci-failure-classifier.bats` の新規 3 ケース、`run-review.bats` の新規 4 ケースのうち成功ケース 1 件) で実施し、いずれも一発で意図通りに FAIL/PASS した
 - 新規 bats テストの `$output`/`$status` に対する bare `[[ ... ]]` アサーションは、`skills/code/skill-dev-validation.md` の bash 3.2 非伝播ガイダンスに従って `grep -q` / 否定形の grep 形式に書き直した (既存の類似アサーションは対象外、新規分のみ)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec / Code の設計自体からの構造的逸脱はなかったが、Spec の Uncertainty 節に記載されなかった実装レベルの前提 (`detect-pr-ci-workflows.sh` が呼び出し元の CWD / repo-root 引数省略に依存する) が review-bug ×2 の両エージェントに独立して検出された。Spec の Implementation Steps は「何を検出するか」を記述していたが「どの root を対象に検出するか」という呼び出し契約を明記していなかったため、実装時にも review 時にも見落とされやすい形になっていた
+
+### Recurring issues
+
+- 「repo-root / CWD 依存の判定スクリプトが、呼び出し元によって異なる対象を評価しうる」という指摘は、review-bug の bug-diff エージェントと security-scan エージェントの双方から独立に (角度は異なるが) 提起された。パーサ / バリデータ系の新規スクリプトでは、権限エラー・欠損ディレクトリ・CWD 依存性の 3 点セットが再発しやすいエッジケース群であることを確認 (Parser/Validator Edge Case Pre-check の実行 sub-agent 自身は fixture ベースの機能検証では発見できず、review-bug の diff 読解で発見された — 実行検証と diff レビューが相補的であることの実例)
+- Fail-closed を明記した新規スクリプトでも、「読み取り不能」を「不在」に落とし込む分岐が 1 箇所残っているだけでポリシーに反する。ヘッダコメントで宣言した不変条件は、実装の全分岐を機械的に突合しないと保証されない
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 8 件はすべて verify command (`rubric` / `file_contains` / `command` / `github_check`) 付きで、CI reference fallback (`Run bats tests` ジョブが `bats tests/` フルスイートを実行) により `command` 系 4 件も safe mode のまま PASS 判定できた。verify command 品質に起因する UNCERTAIN は 0 件
+- `github_check "gh pr checks" "Run bats tests"` の 1 件は `/code` フェーズでは意図的に未チェックのまま残されており (Phase Handoff の Notes for Next Phase に明記)、`/review` が実際の CI 結果で検証してチェック済みに更新する運用が想定どおり機能した
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜9 を記載順どおりに実装し、逸脱なし。`scripts/detect-pr-ci-workflows.sh` を新設し、`scripts/run-review.sh` の CI 待ちゲート (`zero_checks=true` かつ `absent` のとき PENDING を返さない) を主修正とした
-- `modules/ci-failure-classifier.md` に verdict `no-ci-configured` を追加し、`skills/auto/SKILL.md` pr route item 8 / Step 6 pre-check、`agents/orchestration-recovery.md` の Tier 3 anomaly table、`modules/orchestration-fallbacks.md` を安全網として同期した
-- 新規テスト 3 ファイル分 (`detect-pr-ci-workflows.bats` 14 件、`run-review.bats` 4 件、`ci-failure-classifier.bats` 3 件) すべてで実装前 FAIL を確認してから実装を復元し、フルスイート (2073 テスト、`--jobs 18`) を PASS させた
-- Issue 本文の Pre-merge AC 7 件をチェック済みにした (`github_check "gh pr checks"` の 1 件は PR 作成後の CI 確認のため未チェックのまま)
+- Step 8 の Pre-merge AC 8 件はすべて PASS (rubric 2 件、file_contains 1 件、command 4 件は CI reference fallback、github_check 1 件は実 CI 結果) と判定し、最後の未チェック AC をチェック済みに更新した
+- Step 10 は `--non-interactive` (fork 実行、re-invocation 保証なし) のため Workflow tool を使わず、static Task fan-out (review-spec + review-bug×2) を Agent tool `run_in_background: false` で foreground 実行した
+- review-bug×2 が独立に提起した「`detect-pr-ci-workflows.sh` の repo-root 引数省略問題」を 2 系統の指摘 (unreadable repo-root → absent / CWD・branch 依存) に整理し、adversarial verification で両方 PASS (SHOULD) と確認。前者はコード修正 (readability チェック追加 + 回帰テスト)、後者は設計変更のコストと発生確率 (repo で最初の CI workflow を追加する PR という稀なケース) を鑑みてドキュメント化 (受容リスクの明記) で対応した
+- CONSIDER 3 件 (ci-failure-classifier.md の root 記述曖昧さ、CI_RESULT_LINE 未使用、Per-Consumer 表の exhaustive 主張の欠落、orchestration-fallbacks.md のケース構造) はいずれも軽量な文書修正で解消可能と判断し、SHOULD と合わせて全 7 件のライン指摘 (MUST 0) を修正した
+- `skills/review/SKILL.md` の allowed-tools 非対称性の指摘は adversarial verification で REJECT (verify-executor §3a 経路は no-ci-configured の前提条件と構造的に両立しないことを確認) — false positive として除外
 
 ### Deferred Items
-- Issue 補足の「`/merge` Phase Handoff が zero checks を CI success と誤記する」問題はスコープ外 (必要なら別 Issue)
-- `.github/workflows` を持たない外部 CI (GitHub App) が猶予期間内に checks を登録しないケースは受容リスク (Spec Uncertainty 参照)
-- `scripts/run-auto-sub.sh` (XL route) には classifier 判定を追加しない。発生源の修正により、本件の exit 2 自体が発生しなくなるため
-- Post-merge observation AC (`/auto` の pr route を PR トリガ CI 不在リポジトリで実行して確認) は次回セッションでのみ観測可能
+- `scripts/run-review.sh` が main repo root (PR head ではない) の `.github/workflows/` を評価する制約は、フルの是正 (PR head 内容の評価への変更) を行わずドキュメント化のみで対応した。リポジトリが初めて CI workflow を追加する PR という稀なケースでのみ顕在化するため、実際に問題が観測されたら別 Issue で再設計を検討する
+- Post-merge observation AC (`/auto` の pr route を PR トリガ CI 不在リポジトリで実行して確認) は引き続き次回セッションでのみ観測可能 (code フェーズからの deferred item を継続)
+- `docs/guide/xl-decomposition.md` の ja ミラードリフトは本 PR のスコープ外のまま未着手
 
 ### Notes for Next Phase
-- `/review` は Pre-merge AC の `github_check "gh pr checks" "Run bats tests"` を実際の CI 結果で検証すること (Step 10 の CI verification AC exclusion によりこの Issue 本文チェックは未実施のまま残している)
-- `docs/guide/xl-decomposition.md` の ja ミラーが既存ドリフト (en: 2026-08-19 / ja: 2026-06-14) のまま残っている。本 Issue の変更範囲外のため未着手 — `bash scripts/check-translation-sync.sh` で確認できる
-- `modules/ci-failure-classifier.md` の Per-Consumer Response (exhaustive) は `grep -rn "ci-failure-classifier.md" skills modules agents scripts` の参照元と突合済み。将来この表に列を追加する際も同じコマンドで再突合すること
+- `/merge` は Pre-merge AC 8 件すべて PASS 済み (チェックボックスも全て `[x]`) のため、AC ゲートで滞留しないはず
+- Post-merge observation AC (`session=next`) は、次に PR トリガ CI が構造的に存在しないリポジトリで `/auto` pr route を実行するセッションで `/verify` が確認すること
