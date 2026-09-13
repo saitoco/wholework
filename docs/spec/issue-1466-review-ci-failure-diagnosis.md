@@ -108,3 +108,31 @@ UNCERTAIN なし。rubric (AC1) は `skills/review/SKILL.md` の該当セクシ�
 - `/verify` は Post-merge AC (observation, event=auto-run session=next) を確認すること。
 - CI は全 15 ジョブ SUCCESS、マージはコンフリクトなくクリーンに完了した。
 - 本 PR はドキュメント追記のみ (`modules/ci-failure-classifier.md`, `skills/review/SKILL.md`, `docs/tech.md`, `docs/ja/tech.md`)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 本 Issue の AC は `/verify` の retro-proposals (#1462 の verify 実行) が自動生成したもので、そのうち AC2 が **常時 PASS** な verify command になっていた。選択肢に含めた `not executed` が、既存の signature 1 説明文 "Test code was not executed" に実装前からマッチしていたため。
+- この不具合は `/auto --batch --until` の Round 2 における bulk `/triage` の AC verify command 監査 (Pattern 2) が検出し、修正された。**自動生成 AC が別フェーズの機械的監査に捕捉された実例**であり、監査機構が意図どおり機能している。
+
+#### spec / code
+- Spec からの逸脱なし、手戻りなし。
+
+#### review
+- 特筆事項なし。CI 全緑で通過。
+
+#### merge
+- 特筆事項なし。
+
+#### verify
+- Pre-merge 3 件 SKIPPED (already checked)、Post-merge 1 件 SKIPPED (observation 未発火 + `session=next`)。FAIL / UNCERTAIN 0 件。
+- **AC2 の修正効果を確認できた**: 修正後の grep パターンは実装前 0 件マッチ、本実行時点で 1 件マッチ。実装によって初めて PASS しており、安全網としての検証シグナルが復活している。修正前のままであれば実装の有無に関わらず PASS していた。
+
+#### orchestration
+- kill・recovery なしのクリーンな実行 (uptime 約 7.4 日)。
+
+### Improvement Proposals
+
+- N/A — 検出された AC 不具合は同一セッション内の監査機構が捕捉し修正済み。監査の二重化 (`/triage` bulk 監査と `/issue` Existing Issue Refinement Step 15) が働く設計になっており、機構側の改善点は見つからなかった。
