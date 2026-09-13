@@ -334,3 +334,34 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 
 ### Notes for Next Phase
 - `/verify` は Post-merge observation AC (`session=next`) を、次に PR トリガ CI が構造的に存在しないリポジトリで `/auto` pr route を実行するセッションで確認すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 8 件すべてに verify command が付与され、`rubric` / `file_contains` / `command` / `github_check` が適材適所で使い分けられていた。verify command 品質に起因する UNCERTAIN は 0 件。
+
+#### spec
+- Implementation Steps は「何を検出するか」を規定していたが、`scripts/detect-pr-ci-workflows.sh` が「どの root を対象に検出するか」という**呼び出し契約**を明記していなかった。review retrospective が指摘したとおり、この欠落が実装時にも review 時にも見落とされやすい形を作っている。
+
+#### code
+- Spec からの構造的逸脱なし、手戻りなし。Pre-implementation FAIL 確認も一発で意図どおりに機能した。
+
+#### review
+- review-bug の 2 エージェント (bug-diff / security-scan) が独立に CWD 依存を検出した。一方 **Parser/Validator Edge Case Pre-check の実行 sub-agent は発見できていない**。後述の改善提案の根拠。
+
+#### merge
+- 特筆事項なし。CI 全緑で通過。
+
+#### verify
+- Pre-merge 8 件は全て `[x]` で SKIPPED、Post-merge 1 件は observation (`event=auto-run session=next`) で SKIPPED。FAIL / UNCERTAIN 0 件。
+- `session=next` の判定が正しく機能した。本 `/auto` セッションは本 Issue の変更が landing する前の `skills/auto/SKILL.md` を保持しており、pr route item 8 の新分岐は実行経路に乗らない。UNCERTAIN ではなく SKIPPED とすることで、構造的に解決不能な条件に対する手動再検証の催促を回避できている。
+- Step 1 の stale skill body 検出が本実行でも取りこぼした (実行中の本文が旧 `emit-verify-event.sh` を参照)。既に #1468 として起票済みのため、ここでは重複記録しない。
+
+#### orchestration
+- spec → code → review (`--full`) → merge が kill なしで完走した (uptime 約 7.3 日)。本 batch の #1461 は uptime 3.3〜4.1 日で 2 回 kill されており、より長い uptime での完走がもう 1 件積み上がった形になる。#1146 のコメントに記録済みの「kill は 3.3〜4.1 日、完走は 6.2〜6.6 日」という並びを補強する 3 件目のデータ点。H-b' (uptime 蓄積で kill されやすくなる) とは逆方向。
+
+### Improvement Proposals
+
+- **`/review` の Parser/Validator Edge Case Pre-check は入力内容の 5 軸のみをカバーし、実行コンテキスト (CWD / root 引数) の軸を持たないため、CWD 依存バグを構造的に検出できない。** `skills/review/SKILL.md:462` の手順 3(3) は「repository root から実際に実行する」と実行場所を固定しており、fixture は入力文字列の形状 (空入力 / 入れ子 / メタ文字 / コメント / 階層深度) のみを変える。したがって「呼び出し元の CWD によって異なる対象を評価してしまう」種のバグは、何度実行しても再現しない。#1463 では実際にこの取りこぼしが起き、`scripts/detect-pr-ci-workflows.sh` の root 依存は実行 sub-agent ではなく review-bug の diff 読解によって発見された。対策として、firing condition (c) (外部由来の文字列を引数に取るスクリプト) が発火したケースでは、入力 5 軸に加えて「repository root 以外の CWD から同じ引数で実行し、結果が一致するか」を 6 番目の軸として追加することが考えられる。これは fixture の内容ではなく実行位置を変えるだけなので、既存の sub-agent 手順への追加コストは小さい。`skills/review/SKILL.md` の当該節と、Workflow path の対応箇所 (`skills/review/workflow-guidance.md`) の 2 ファイルが変更対象となる。
