@@ -38,6 +38,12 @@ First evaluate the Structural CI Absence Check below. If it does not apply, eval
 | 6 | Failure at the `Set up job` stage | First failed step in `gh run view --log-failed` is `Set up job` | Failure during workflow definition resolution or runner acquisition, before repository code executes |
 | 7 | Queued stall | `gh pr checks --json bucket` stays `pending`, and the run in `gh run list` stays `queued` without progressing | Runner queue backlog. Does not necessarily resolve with elapsed time alone |
 
+### Test Count Mismatch Signal (non-infra)
+
+A bats warning such as `# bats warning: Executed N instead of expected M tests` (`N < M`) is a distinct kind of signal from the 7 signatures above. It indicates that **some tests were not executed** (a test-count mismatch), not that any test failed — no `not ok` line is necessarily produced for the missing tests. On its own, this signal does not match any of the 7 signatures and must not be classified as `ci-infra`.
+
+When CI has reached a definite `FAILURE` state and this signal is the only evidence present (e.g. the parallel job exits non-zero solely due to the count mismatch, while zero tests report `not ok`), the existing rule in `## Processing Steps` still applies: no signature matched, so the verdict is `implementation`. Consumers must cite this signal itself as evidence of the `FAILURE` — the absence of `not ok` lines in a serial re-run is not evidence of `ci-infra`, nor grounds to treat the job as passing; it only means the serial re-run had nothing to re-run.
+
 ## Output
 
 Return a 4-value verdict (exhaustive):

@@ -64,3 +64,47 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。`session=next` タグ欠落の修正、曖昧性の自動解決記録 (決定性判別手段の選定と件数不一致シグナル追加方法を `/spec` に委任)、前フェーズ (`/triage`) からの Consumed Comments 引き継ぎを含む。いずれも Issue 本文の内容と重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1466#issuecomment-5651664760
+- `/code` フェーズ: cutoff (`phase/ready` ラベル付与時刻 2026-09-13T06:48:09Z) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–5 をそのまま実装した。
+
+### Design Gaps/Ambiguities
+- Spec の Changed Files には含まれていなかったが、`docs/tech.md` はトップレベル `docs/*.md` として `docs/translation-workflow.md` の同期義務対象であり、Step 9 のドキュメント整合性チェック (`docs/ja/` 同期チェック) で `docs/ja/tech.md` との同期ギャップが検出された。対応する日本語訳 (4 行目の追加行と補足文) を `docs/ja/tech.md` に追記した。Spec 作成時点で `docs/ja/` 同期義務の対象になることが見落とされていたが、実装フェーズの機械チェックで捕捉されたため実害はなかった。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。`review-light` エージェントによる検証で、Implementation Steps 1–5 は diff とすべて一致していることを確認した。`docs/ja/tech.md` の同期追記は Spec の Changed Files に未記載だったが、Code フェーズの機械チェック (`docs/translation-workflow.md` 同期義務) が既に捕捉・修正済みで、review 時点で新規の乖離は残っていなかった。
+
+### Recurring issues
+
+本 Issue 自体が「#1462 review retrospective の誤診断」を発端としており、CI 失敗診断における「既存失敗であること」と「非決定的 (フレーク) であること」の混同という同種の誤りが再発しやすい領域であることを示している。今回追加された "Scope decision" / "Required condition for future generalization" のセクションは、この混同を将来の汎用化提案が繰り返さないための明示的なガードレールとして機能する見込み。
+
+また、`/triage` の AC verify command 監査が Pre-merge AC2 (grep) の「常時 PASS」パターンを Issue 段階で事前検出し、`/spec` 着手前に本文が修正されていた。今回の review では AC2 は正常に機能する状態で検証できており、verify command 品質問題の再発を上流フェーズで防いだ好例として記録する。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN なし。rubric (AC1) は `skills/review/SKILL.md` の該当セクションを目視で確認し明確に PASS 判定できた。grep (AC2) は上記の事前修正により固有文字列にマッチする健全な verify command として機能した。command (AC3、`bats tests/` 全件) は 18 並列実行で 2074 件 PASS・件数不一致なしを確認。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 7 は `.wholework.yml` に `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれも設定されておらず全て `false` のため、7.1–7.6 を全てスキップし Step 8 に進んだ。
+- Step 10 は `REVIEW_DEPTH=light` (ARGUMENTS の `--light` 明示指定、Size=M とも整合) のため、`review-light` エージェント 1 体による軽量統合レビューを実施した。
+
+### Deferred Items
+- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外のまま — `/code` フェーズの Deferred Items を引き継ぐ (将来の汎用化 Issue に委ねる)。
+- Post-merge AC (決定的な既存失敗を含む PR での `/review` 実行観察、`verify-type: observation event=auto-run session=next`) は未検証のまま — 次回の `/verify` セッションで観察される。
+
+### Notes for Next Phase
+- MUST/SHOULD/CONSIDER のいずれも検出されなかったため Step 12 (修正サイクル) は実行していない。`/merge` にそのまま進んで良い。
+- CI は全 15 ジョブ (7 種 × push/pull_request) SUCCESS。Pre-existing failure exception は不発火 (該当ジョブなし)。
+- 本 PR はドキュメント追記のみ (`modules/ci-failure-classifier.md`, `skills/review/SKILL.md`, `docs/tech.md`, `docs/ja/tech.md`) — `scripts/pre-merge-check.sh` や `.github/workflows/test.yml` への変更はない。

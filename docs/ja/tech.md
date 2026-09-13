@@ -186,8 +186,11 @@ CI は速度のため bats スイート全体を並列 (`bats --jobs $(nproc) te
 | PASS | (実行なし) | Success | 通常 |
 | FAIL | PASS | Success | 並列実行時のみの flaky — 再実行結果は `$GITHUB_STEP_SUMMARY` に記録 |
 | FAIL | FAIL | Failure | Genuine な失敗 |
+| FAIL (件数不一致、`not ok` 0 件) | (再実行対象なし) | Failure | 件数不一致 — 並列ステップが `# bats warning: Executed N instead of expected M tests` という件数不一致のみを理由に非ゼロ終了しており、失敗したテストが原因ではない。逐次再実行には再実行対象が存在しない。`modules/ci-failure-classifier.md` § Test Count Mismatch Signal を参照 |
 
 並列ステップの `continue-on-error: true` は、その結果が直接ジョブを失敗させないようにする。genuine な失敗は代わりに逐次再実行ステップの非ゼロ終了によって顕在化する。したがって、CI ジョブが green であっても並列実行時のみの flakiness に当たっている可能性がある — `$GITHUB_STEP_SUMMARY` に "Serial re-run" セクションがあるか確認して判断すること。
+
+件数不一致はフレークとも genuine な失敗とも異なる第 3 種のシグナルである — 一部テストが実行されなかったことを示すものであり、テストが失敗したことを示すものではない。
 
 ### BATS モッキング規約
 
