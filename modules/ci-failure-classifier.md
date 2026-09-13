@@ -4,7 +4,7 @@ Single source of truth (SSoT) for classifying CI platform-side infrastructure fa
 
 ## Purpose
 
-Provide a single judgment criterion that distinguishes CI platform infrastructure failures from implementation-caused failures, so consumers avoid wasted retries, manual parent-session triage, and contamination of external-kill statistics with CI-outage events. This module is the SSoT for the classification signature table; consumers reference it rather than re-declaring the table inline (see `## Output` § "Per-Consumer Response" for how each consumer responds to a verdict).
+Provide a single judgment criterion that distinguishes CI platform infrastructure failures from implementation-caused failures, so consumers avoid wasted retries, manual parent-session triage, and contamination of external-kill statistics with CI-outage events. This module is the SSoT for the classification signature table; consumers reference it rather than re-declaring the table inline (see `## Output` § "Per-Consumer Response" for how each consumer responds to a verdict). It also distinguishes a repository that structurally has no PR-triggered CI (retrying does not help) from an actual CI platform or implementation failure.
 
 ## Input
 
@@ -12,10 +12,19 @@ Provide a single judgment criterion that distinguishes CI platform infrastructur
 - `PR_NUMBER` (optional): PR number, when the failure surfaced via a PR's CI checks
 - `HEAD_SHA` (optional): the commit SHA whose CI run is being classified
 - `WRAPPER_LOG_PATH` (optional): path to the wrapper log, when the caller has one
+- `CI_RESULT_LINE` (optional): the `ci_result:` line and, if available, the `PENDING:` reason line from `run-review.sh`'s output
 
 ## Processing Steps
 
-Evaluate the signatures below in any order against the available observation commands. If **any** signature matches, the verdict is `ci-infra`. If CI has reached a definite pass/fail state and no signature matches, the verdict is `implementation`. If neither can be established, the verdict is `undetermined`.
+First evaluate the Structural CI Absence Check below. If it does not apply, evaluate the Signature Table. Evaluate the signatures in any order against the available observation commands. If **any** signature matches, the verdict is `ci-infra`. If CI has reached a definite pass/fail state and no signature matches, the verdict is `implementation`. If neither can be established, the verdict is `undetermined`.
+
+### Structural CI Absence Check (evaluated before the Signature Table)
+
+- **Applies when**: the classification target originates from a PR's zero registered checks. Specifically, `ci_result: ... zero_checks=true` together with the `PENDING: CI check wait did not reach a confirmed state` reason, or `gh pr checks <PR>` itself reporting no checks. Does **not** apply to the `PENDING: PR preview ...` reason (preview-wait PENDING).
+- **Observation**: run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh` at the repository root.
+- If the output is `absent` (no workflow under `.github/workflows/` is triggered by `pull_request` / `pull_request_target`): verdict is `no-ci-configured`. Do not evaluate the Signature Table.
+- If the output is `present` / `unknown`: proceed to the Signature Table as normal.
+- **Difference from signature 5** (no workflow run is generated for the head SHA): signature 5 assumes a PR-triggered workflow exists but did not dispatch a run; this check applies when no such workflow exists at all.
 
 ### Signature Table (exhaustive — known CI platform failure patterns)
 
@@ -31,21 +40,23 @@ Evaluate the signatures below in any order against the available observation com
 
 ## Output
 
-Return a 3-value verdict (exhaustive):
+Return a 4-value verdict (exhaustive):
 
 - `ci-infra` — one or more signatures matched
 - `implementation` — CI has reached a definite pass/fail state and the failure is attributable to implementation or test code
 - `undetermined` — neither of the above could be established. Safe side: consumers fall back to their existing failure handling
+- `no-ci-configured` — PR-triggered CI structurally does not exist in this repository (`.github/workflows/` has no `pull_request` / `pull_request_target`-triggered workflow); no amount of waiting, re-running, or re-triggering CI will ever register a check. This is not a CI failure
 
 ### Per-Consumer Response (exhaustive)
 
 Each cell is a one-line summary of the response and its own reference; consumer procedures themselves are not restated here (avoids duplicate definitions).
 
-| Consumer | Response when `ci-infra` | Response when `implementation` / `undetermined` |
-|----------|---------------------------|--------------------------------------------------|
-| `skills/verify/SKILL.md` Step 5 Step 1 | Fall back to local tests (procedure documented in that Step) | Continue existing PASS / FAIL / UNCERTAIN judgment |
-| `skills/auto/SKILL.md` Step 6 CI platform failure pre-check | Do not enter Tier 1/2/3 — wait, re-judge, stop if unresolved (no retry) | Proceed to Tier 1 as normal |
-| `skills/auto/SKILL.md` pr route item 8 (`run-review.sh` exit 2) | Abandon the PENDING retry loop and classify as a CI failure | Apply the existing PENDING retry mechanism (#1115) unchanged |
-| `agents/orchestration-recovery.md` (Tier 3) | `action=abort` (never `retry`) | Follow the existing anomaly pattern table |
-| `modules/verify-executor.md` § 3a (`command` hint CI reference fallback) | Ignore CI result, execute the `command` hint locally (procedure documented in that section) | UNCERTAIN (CI job failed) |
-| `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` | Re-run CI on the same SHA, then retry the phase once CI reaches a confirmed state (this is a bounded, single re-run — not the unbounded retry the other rows above rule out) | Escalate per the entry's own Escalation section |
+| Consumer | Response when `ci-infra` | Response when `implementation` / `undetermined` | Response when `no-ci-configured` |
+|----------|---------------------------|--------------------------------------------------|-----------------------------------|
+| `skills/verify/SKILL.md` Step 5 Step 1 | Fall back to local tests (procedure documented in that Step) | Continue existing PASS / FAIL / UNCERTAIN judgment | Same as `undetermined` (a failed job reference is a precondition this case does not meet in practice) |
+| `skills/auto/SKILL.md` Step 6 CI platform failure pre-check | Do not enter Tier 1/2/3 — wait, re-judge, stop if unresolved (no retry) | Proceed to Tier 1 as normal | Proceed to Tier 1 as normal (no wait/re-judge) |
+| `skills/auto/SKILL.md` pr route item 8 (`run-review.sh` exit 2) | Abandon the PENDING retry loop and classify as a CI failure | Apply the existing PENDING retry mechanism (#1115) unchanged | Skip the PENDING retry loop (#1115) entirely and fall through immediately to the completion check |
+| `agents/orchestration-recovery.md` (Tier 3) | `action=abort` (never `retry`) | Follow the existing anomaly pattern table | Follow the existing anomaly pattern table; does not match the `CI platform outage` row |
+| `modules/verify-executor.md` § 3a (`command` hint CI reference fallback) | Ignore CI result, execute the `command` hint locally (procedure documented in that section) | UNCERTAIN (CI job failed) | Same as `implementation`/`undetermined` (a failed job reference is a precondition this case does not meet in practice) |
+| `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` | Re-run CI on the same SHA, then retry the phase once CI reaches a confirmed state (this is a bounded, single re-run — not the unbounded retry the other rows above rule out) | Escalate per the entry's own Escalation section | Re-running CI is meaningless here; escalate per the entry's own Escalation section |
+| `scripts/run-review.sh` (CI wait gate, bash) | Not classified — this consumer calls `detect-pr-ci-workflows.sh` directly rather than through this module | Not classified — existing PENDING judgment unchanged | Calls the same `detect-pr-ci-workflows.sh` detection directly; when `zero_checks=true` and the result is `absent`, returns exit 0 (proceeds to review) instead of PENDING (exit 2) |
