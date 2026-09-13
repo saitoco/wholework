@@ -195,8 +195,11 @@ CI runs the full bats suite in parallel (`bats --jobs $(nproc) tests/`) for spee
 | PASS | (not run) | Success | Normal |
 | FAIL | PASS | Success | Parallel-only flaky — re-run result recorded in `$GITHUB_STEP_SUMMARY` |
 | FAIL | FAIL | Failure | Genuine failure |
+| FAIL (count mismatch, 0 `not ok`) | (nothing to re-run) | Failure | Test-count mismatch — the parallel step exits non-zero solely on a `# bats warning: Executed N instead of expected M tests` mismatch, not on any failed test; the serial re-run has no failed tests to target. See `modules/ci-failure-classifier.md` § Test Count Mismatch Signal |
 
 `continue-on-error: true` on the parallel step keeps its result from directly failing the job; a genuine failure is instead surfaced by the serial re-run step's non-zero exit. A green CI job can therefore still have hit parallel-only flakiness — check `$GITHUB_STEP_SUMMARY` for a "Serial re-run" section to confirm.
+
+A test-count mismatch is a third kind of signal, distinct from both flakiness and a genuine test failure — it indicates that some tests were not executed, not that any test failed.
 
 ### BATS Mocking Convention
 
