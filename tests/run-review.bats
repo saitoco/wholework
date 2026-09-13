@@ -354,8 +354,8 @@ MOCK
 
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No PR-triggered CI workflow"* ]]
-    [[ "$output" != *"PENDING:"* ]]
+    echo "$output" | grep -q "No PR-triggered CI workflow"
+    if echo "$output" | grep -q "PENDING:"; then false; fi
     [ -f "$CLAUDE_CALL_LOG" ]
 }
 
@@ -378,7 +378,7 @@ MOCK
 
     run bash "$SCRIPT" 123
     [ "$status" -eq 2 ]
-    [[ "$output" == *"PENDING:"* ]]
+    echo "$output" | grep -q "PENDING:"
     [ ! -f "$CLAUDE_CALL_LOG" ]
 }
 
@@ -400,7 +400,7 @@ MOCK
 
     run bash "$SCRIPT" 123
     [ "$status" -eq 2 ]
-    [[ "$output" == *"PENDING:"* ]]
+    echo "$output" | grep -q "PENDING:"
     [ ! -f "$CLAUDE_CALL_LOG" ]
 }
 
@@ -423,7 +423,7 @@ MOCK
 
     run bash "$SCRIPT" 123
     [ "$status" -eq 2 ]
-    [[ "$output" == *"PENDING:"* ]]
+    echo "$output" | grep -q "PENDING:"
     [ ! -f "$CLAUDE_CALL_LOG" ]
 }
 

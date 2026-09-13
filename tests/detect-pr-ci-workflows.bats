@@ -190,5 +190,5 @@ EOF
 @test "detect-pr-ci-workflows: two arguments -> exit 1 with usage" {
     run "$SCRIPT" "$REPO" "extra-arg"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Usage"* ]]
+    echo "$output" | grep -q "Usage"
 }
