@@ -6,6 +6,10 @@
 #   0     = review completed (or overridden to success via Tier 1 reconcile)
 #   2     = PENDING (CI/preview state not yet confirmed; caller should retry
 #           after a delay, not treat this as a failure)
+#           Exception: zero registered checks does NOT produce PENDING when
+#           scripts/detect-pr-ci-workflows.sh reports "absent" (no
+#           pull_request / pull_request_target-triggered workflow exists) —
+#           that state is structural and will never resolve on retry (#1463).
 #   other = review phase failed
 
 set -euo pipefail
@@ -111,8 +115,15 @@ _ci_pending=$(echo "$_ci_result_line" | grep -oE 'pending=[0-9]+' | cut -d= -f2 
 _ci_zero_checks=$(echo "$_ci_result_line" | grep -oE 'zero_checks=[a-z]+' | cut -d= -f2 || echo false)
 
 _pending_reason=""
-if [[ "${_ci_pending:-0}" -gt 0 || "${_ci_zero_checks:-false}" == "true" ]]; then
+if [[ "${_ci_pending:-0}" -gt 0 ]]; then
   _pending_reason="CI check wait did not reach a confirmed state for PR #${PR_NUMBER} (${_ci_result_line:-no ci_result line captured})"
+elif [[ "${_ci_zero_checks:-false}" == "true" ]]; then
+  _pr_ci_workflows=$("$SCRIPT_DIR/detect-pr-ci-workflows.sh" 2>/dev/null) || _pr_ci_workflows="unknown"
+  if [[ "$_pr_ci_workflows" == "absent" ]]; then
+    echo "No PR-triggered CI workflow (pull_request / pull_request_target) found under .github/workflows/; zero registered checks is structural (ci-failure-classifier verdict: no-ci-configured). Proceeding to review without CI confirmation." >&2
+  else
+    _pending_reason="CI check wait did not reach a confirmed state for PR #${PR_NUMBER} (${_ci_result_line:-no ci_result line captured})"
+  fi
 fi
 
 # Wait for PR preview deployment (capabilities.pr-preview: true projects only)
