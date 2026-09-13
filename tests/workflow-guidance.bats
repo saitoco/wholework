@@ -27,3 +27,7 @@ GUIDANCE_FILE="$PROJECT_ROOT/skills/review/workflow-guidance.md"
 @test "workflow-guidance: Pre-flight falls back to static Task fan-out without re-invocation guarantee" {
     grep -q "do NOT launch the Workflow tool for this step" "$GUIDANCE_FILE"
 }
+
+@test "workflow-guidance: new Pre-check axes require no content change to this file" {
+    grep -q "no change to this file is required" "$GUIDANCE_FILE"
+}
