@@ -290,22 +290,37 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 - サブディレクトリの扱いはドキュメントに記載がなく未確認。ただし「checks がゼロ」という前提条件と組み合わせるため、どちらの仕様でも安全側に倒れることを確認し、非再帰と決めた
 - `.github/workflows` を持たない外部 CI (GitHub App) が猶予期間内に checks を登録しない場合は受容リスクとした。`/review` Step 9 と `/merge` の CI 確認が後段に残る
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps 1〜9 を Spec の記載順どおりに実装した
+
+### Design Gaps/Ambiguities
+
+- `scripts/detect-pr-ci-workflows.sh` の grep 呼び出しでパーミッションエラー (chmod 000 ケース) が stderr に漏れ、bats の `run` が stdout/stderr を結合する `$output` の等価比較を壊した。`grep ... 2>/dev/null` で抑制して解決。Spec のエッジケース記述には現れていなかった実装レベルの詳細
+
+### Rework
+
+- なし。Pre-implementation FAIL 確認は新規 3 テストファイル (`ci-failure-classifier.bats` の新規 3 ケース、`run-review.bats` の新規 4 ケースのうち成功ケース 1 件) で実施し、いずれも一発で意図通りに FAIL/PASS した
+- 新規 bats テストの `$output`/`$status` に対する bare `[[ ... ]]` アサーションは、`skills/code/skill-dev-validation.md` の bash 3.2 非伝播ガイダンスに従って `grep -q` / 否定形の grep 形式に書き直した (既存の類似アサーションは対象外、新規分のみ)
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- 主な修正は `scripts/run-review.sh` の CI 待ちゲート。`zero_checks=true` かつ `scripts/detect-pr-ci-workflows.sh` が `absent` のときは PENDING (exit 2) を返さずレビューへ進む。classifier の新 verdict `no-ci-configured` と `skills/auto/SKILL.md` pr route item 8 のリトライ省略は安全網として AC どおり実装する
-- 検出スクリプトは `.github/workflows/*.yml|*.yaml` (直下) のコメント外の行に `pull_request` があるかを `LC_ALL=C grep` で判定し、`present` / `absent` / `unknown` を出力する。fail-closed で、挙動を変えるのは `absent` のみ
-- `wait-ci-checks.sh` の 120 秒猶予期間と `ci_result:` 出力契約は変えない
-- Issue 本文に Pre-merge AC 2 件 (`tests/detect-pr-ci-workflows.bats` / `tests/run-review.bats`) と、Post-merge observation AC の期待出力構造を追加した
+- Spec の Implementation Steps 1〜9 を記載順どおりに実装し、逸脱なし。`scripts/detect-pr-ci-workflows.sh` を新設し、`scripts/run-review.sh` の CI 待ちゲート (`zero_checks=true` かつ `absent` のとき PENDING を返さない) を主修正とした
+- `modules/ci-failure-classifier.md` に verdict `no-ci-configured` を追加し、`skills/auto/SKILL.md` pr route item 8 / Step 6 pre-check、`agents/orchestration-recovery.md` の Tier 3 anomaly table、`modules/orchestration-fallbacks.md` を安全網として同期した
+- 新規テスト 3 ファイル分 (`detect-pr-ci-workflows.bats` 14 件、`run-review.bats` 4 件、`ci-failure-classifier.bats` 3 件) すべてで実装前 FAIL を確認してから実装を復元し、フルスイート (2073 テスト、`--jobs 18`) を PASS させた
+- Issue 本文の Pre-merge AC 7 件をチェック済みにした (`github_check "gh pr checks"` の 1 件は PR 作成後の CI 確認のため未チェックのまま)
 
 ### Deferred Items
 - Issue 補足の「`/merge` Phase Handoff が zero checks を CI success と誤記する」問題はスコープ外 (必要なら別 Issue)
 - `.github/workflows` を持たない外部 CI (GitHub App) が猶予期間内に checks を登録しないケースは受容リスク (Spec Uncertainty 参照)
 - `scripts/run-auto-sub.sh` (XL route) には classifier 判定を追加しない。発生源の修正により、本件の exit 2 自体が発生しなくなるため
+- Post-merge observation AC (`/auto` の pr route を PR トリガ CI 不在リポジトリで実行して確認) は次回セッションでのみ観測可能
 
 ### Notes for Next Phase
-- `tests/run-review.bats` の `setup()` にデフォルト mock (`detect-pr-ci-workflows.sh` → `present`) を入れ、既存の `PENDING: ci_result zero_checks=true skips claude and exits 2` の意味を保つこと (WHOLEWORK_SCRIPT_DIR は MOCK_DIR を指す)
-- SKILL.md の制約: 半角 `!` と 3 連バッククォートを本文に入れない。allowed-tools は 1 行を維持する。`python3 scripts/validate-skill-syntax.py skills/` で確認すること
-- `modules/ci-failure-classifier.md` の Per-Consumer Response (exhaustive) は、`grep -rn "ci-failure-classifier.md" skills modules agents scripts` の参照元と突合すること
-- `docs/structure.md` / `docs/ja/structure.md` の件数コメントは追加後の実測値に更新し、verify command には固定しないこと。ja ミラーはコードフェンス数も突合すること
+- `/review` は Pre-merge AC の `github_check "gh pr checks" "Run bats tests"` を実際の CI 結果で検証すること (Step 10 の CI verification AC exclusion によりこの Issue 本文チェックは未実施のまま残している)
+- `docs/guide/xl-decomposition.md` の ja ミラーが既存ドリフト (en: 2026-08-19 / ja: 2026-06-14) のまま残っている。本 Issue の変更範囲外のため未着手 — `bash scripts/check-translation-sync.sh` で確認できる
+- `modules/ci-failure-classifier.md` の Per-Consumer Response (exhaustive) は `grep -rn "ci-failure-classifier.md" skills modules agents scripts` の参照元と突合済み。将来この表に列を追加する際も同じコマンドで再突合すること
