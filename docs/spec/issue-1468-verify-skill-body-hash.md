@@ -28,6 +28,7 @@
 - `tests/check-skill-body-hash.bats`: 新規ファイル — `scripts/check-skill-body-hash.sh` の一致/不一致/マーカー不在/ファイル不在/同一行数内容変更の回帰テスト
 - `tests/verify.bats`: 既存の `"skill-body-lines marker stays in sync with wc -l (Issue #1447)"` テストと対になる新規テストケース `"skill-body-sha marker stays in sync with computed hash (Issue #1468)"` を追加
 - `docs/structure.md`: `.github/workflows/test.yml` の Directory Layout コメント行の CI ジョブ列挙に「skill body hash check」を追加
+- `docs/ja/structure.md`: `docs/structure.md` の変更に対応する日本語ミラー同期 (`docs/translation-workflow.md` の Sync Procedure に従う)
 
 ## Implementation Steps
 
@@ -44,7 +45,7 @@
 
 4. `tests/check-skill-body-hash.bats` を新規作成し、(a) マーカーと計算値が一致 → exit 0、(b) マーカーが stale → exit 1 かつ期待値をメッセージに含む、(c) マーカー不在 → exit 1、(d) 対象ファイル不在 → exit 0、(e) 行数を変えない内容変更 (同一行数のリネーム相当) → exit 1、の5ケースを追加する。`tests/verify.bats` に既存の `"skill-body-lines marker stays in sync with wc -l (Issue #1447)"` と対になる新規テスト `"skill-body-sha marker stays in sync with computed hash (Issue #1468)"` を追加する。既存スイートが PASS することだけでなく、これら新規テストケースを追加したうえで `bats tests/` スイート全体が PASS すること。(→ 受入基準3, 受入基準4)
 
-5. `docs/structure.md` の `.github/workflows/test.yml` 行のコメント (CI ジョブ列挙) に「skill body hash check」を追加する。(ドキュメント同期)
+5. `docs/structure.md` の `.github/workflows/test.yml` 行のコメント (CI ジョブ列挙) に「skill body hash check」を追加する。`docs/translation-workflow.md` の Sync Procedure に従い、対応する `docs/ja/structure.md` の同一行 (現行: 34行目) も日本語で同期する (コードフェンス数の整合も確認)。(ドキュメント同期)
 
 ## Verification
 
@@ -89,6 +90,10 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 ### Steering Docs sync candidate check
 
 `skill-body-lines`/`STALE_SKILL_BODY_DETECTED` をキーワードに `docs/`, `tests/`, `scripts/`, `modules/` を `grep -rn` したところ、ヒットは `tests/verify.bats` (Implementation Step 4 で対応済み) と、過去 Issue (#1447/#1458/#1461) の disposable Spec ファイル (historical record として同期対象から除外) のみであり、追加の同期対象なし。
+
+### `docs/translation-workflow.md` 同期チェック
+
+`docs/structure.md` (トップレベル `docs/*.md`、`docs/spec/`/`docs/reports/`/`docs/ja/` の除外対象外) を変更するため、`docs/translation-workflow.md` の Sync Procedure に従い対応する `docs/ja/structure.md` (34行目が該当箇所) を Changed Files に追加した。Implementation Steps は SPEC_DEPTH=light の上限 (5件) に既に達していたため、新規ステップを追加せず既存の Step 5 (docs/structure.md 更新) に統合した。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1468#issuecomment-5652635164
