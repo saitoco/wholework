@@ -9,6 +9,11 @@
 - (verify phase, re-run) saito / MEMBER / first-class (wholework-event bot 相当の自動投稿、`type=observation-trigger` マーカー) / observation event `pr-review-light` が 2026-08-21 に発火した旨の通知 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5365112099
 - (verify phase, re-run) saito / MEMBER / first-class (wholework-event bot 相当の自動投稿、`type=observation-trigger` マーカー) / 同イベントが 2026-08-23 (今回 `/review 1450` の Event-based observation scan) にも発火した旨の通知 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5384892143
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1365#issuecomment-5384905063
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5597935058
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1365#issuecomment-5597967687
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1365#issuecomment-5652071077
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1365#issuecomment-5652087719
 ## Overview
 
 Issue #476 の post-merge observation AC (`keyword=workflow`) は、#1220 (path-like token 除外) と #1293 (CLI-flag-like token 除外) の修正後も 18 回連続で誤発火/無関係発火を続けている (`docs/spec/issue-476-review-severity-classification.md` Verify Retrospective 参照)。原因は、`scripts/opportunistic-search.sh` の `resolve_filtered_context()` が除去する 2 種類のトークン形状 (`/` を含むパス様トークン、`--flag=value` 形式の CLI フラグ) のいずれにも該当しない**第三のサブパターン** — config-key 形式 (`capabilities.workflow`) やディレクトリ接頭辞のないベアファイル名 (`` `size-workflow-table.md` ``)、および独立した単語としての出現 (`Workflow path`) — が素通りするため。
