@@ -455,3 +455,31 @@ No new comments since last phase.
 ### Acceptance criteria verification difficulty
 
 - rubric 型の AC ("両 module の event emission が単一コマンド形の wrapper 呼び出しで記述されている") は、両ファイルを実際に読んで確認するだけで機械的に PASS 判定でき、UNCERTAIN や誤判定の余地はなかった。`github_check` 型の CI 検証 AC も CI ロールアップの直接参照で PASS 判定でき、特筆すべき困難はなし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は 16 ファイルにわたる変更を Implementation Steps として展開しており、review retrospective が指摘した 2 件の乖離 (`--emit-issue` 空値の fail-closed 仕様、`--session-from-issue` バリデーションの fail-open 意図) は、いずれも Spec 側の記述粒度が抽象度の高い自然言語だったことに起因する。ガードの実行タイミングやフラグ未指定と空文字の区別といった実装粒度の判断は、Spec の散文からは一意に落ちない。
+
+#### code
+- 実装本体は Spec どおり。review で 3 件の修正を取り込んでおり、いずれも根本原因は「フラグパーサが最初の非 `--` トークンで走査を打ち切る」という単一の設計特性 (review retrospective に記録済み)。
+
+#### review
+- `--full` の 3 エージェント fan-out が `modules/retro-proposals.md:75` の同一指摘に 3 系統で収束した。冗長ではあるが高シグナル指摘の取りこぼし防止としては機能している。
+- review 自体は 2 回の external kill を挟んで 3 回目に完走した。review の判定内容には影響していない。
+
+#### merge
+- 特筆事項なし。CI 全緑で通過。
+
+#### verify
+- **Step 1 の stale skill body 検出が本件を取りこぼした。** 本 Issue は `scripts/emit-verify-event.sh` を `scripts/emit-skill-event.sh` にリネームしており、ディスク上の `skills/verify/SKILL.md` は新名を 15 箇所参照するよう更新されている。しかし本 `/verify` 実行が保持していた session キャッシュ版は旧名を参照しており、最初の emit 呼び出しが `No such file or directory` (exit 127) で失敗した。Step 1 の自己整合チェックは cached 996 行 / on-disk 996 行の一致により `STALE_SKILL_BODY_DETECTED=false` と判定している。行数を変えないリネーム変更に対して line-count ヒューリスティックが原理的に無力であることが実証された。
+- 本 Issue が解消したのは module 側に埋め込まれた複合コマンドだが、**スキル実行時に LLM が生成する複合コマンドは引き続き guard に拒否される**。本実行でも `gh-issue-comment.sh` をヒアドキュメントと `&&` で連結した試行が「too complex to verify that it stays inside the worktree」で拒否された。Write ツールへの分割で回避したが、これは skill の Notes が既に規定している手順でもある。
+
+#### orchestration
+- review フェーズで external kill が 2 回発生し、3 回目で完走。詳細は `docs/reports/orchestration-recoveries.md` の 2026-09-10 02:57 UTC エントリ (SSoT) と Issue #1146 のコメントに記録済み。ここでは重複させない。
+
+### Improvement Proposals
+
+- **`/verify` Step 1 の stale skill body 検出は、行数が変わらない変更に対して原理的に無力である。** 本実行がその実例で、スクリプトのリネーム (旧名と新名が同じ行数に収まる置換) を検出できず、最初の emit 呼び出しが exit 127 で失敗するまで気付けなかった。現在の指標は `<!-- skill-body-lines: N -->` と `wc -l` の比較のみ。内容ハッシュ (例: `skill-body-sha: <first 8 chars>`) を併記して比較するか、あるいは行数一致時のみハッシュを追加検証する二段構えにすれば、リネーム・語句置換・同行数の書き換えを検出できる。#1447 が導入した検出機構の穴を塞ぐ位置づけであり、`skills/verify/SKILL.md` Step 1 と、同じマーカーを持つ他 skill の該当箇所が変更対象になる。
