@@ -152,3 +152,38 @@ Background に記載された具体的な claim (grep 結果・行番号) を現
 ### Consumed Comments (at /issue time)
 
 No new comments since last phase.
+
+## Verify Retrospective (2026-09-13 observation dispatch)
+
+本節は `/auto --batch --until` session `90128-1788933783` の observation dispatch で実行された `/verify 1329` の記録。`auto-run` 発火後の初回評価にあたる。
+
+### 判定
+
+Post-merge AC (`observation event=auto-run session=next`) を **PASS** と判定し、`phase/done` へ遷移した。
+
+### 観測された事象
+
+session `90128-1788933783` の #1462 (PR #1465) で **merge phase の silent no-op が実際に発生した** (2026-09-09 17:22)。
+
+```
+Warning: claude exited 0 but merge phase did not complete (silent no-op). reconcile: {"phase":"merge","matches_expected":false,"actual":{"pr_state":"OPEN","pr_number":1465},"diagnosis":"PR #1465 state is OPEN, not MERGED"}
+Exit code: 1
+```
+
+挙動は auto-retry なし / exit 1 / Tier 3 (`action=abort`) → 親セッションの手動介入。`modules/orchestration-fallbacks.md` の Phase Scope Decision が merge について規定する「明示された非対応」と一致しており、AC を満たす。
+
+### deferral 解除条件が形式上満たされた (要再検討)
+
+同ドキュメントは merge phase への auto-retry 実装を次の条件で保留している。
+
+> Deferred until a real merge-phase silent-no-op incident justifies the added design and implementation cost.
+
+本件がその「実際のインシデント」の 1 件目にあたり、条件は形式上満たされた。
+
+**しかし本件は auto-retry の不在が被害を生んだ事例ではない。** 真因は pre-merge AC の未チェック (`Error: Issue #1462 に未チェックの pre-merge acceptance condition が2件あります (#3, #4)`) であり、merge gate が設計どおり停止した結果が silent no-op シグネチャに合致したものである。auto-retry が実装されていても AC が未チェックのままなら同じ地点で再停止したはずで、手動介入は回避できなかった。
+
+つまり「インシデント件数」という解除条件は、**auto-retry で救えるケースと救えないケースを区別できていない**。
+
+### Improvement Proposals
+
+- **merge phase auto-retry の deferral 解除条件を「インシデント件数」から「auto-retry で回避可能だったか」へ精緻化すべき。** `modules/orchestration-fallbacks.md` § "auto-retry-on-fail (code_retry_fire)" の Phase Scope Decision は merge phase への拡張を「a real merge-phase silent-no-op incident justifies the added design and implementation cost」まで保留としている。2026-09-13 に初のインシデント (#1462 / PR #1465) が発生し条件は形式上満たされたが、その真因は pre-merge AC 未チェックによる merge gate の正常停止であり、auto-retry があっても手動介入は回避できなかった。件数のみを解除条件にすると、この種の「救えないインシデント」を根拠に不可逆操作へのリトライ機構を実装してしまうリスクがある。解除条件に「当該インシデントが auto-retry で回避可能だったか (= 再実行すれば成功しえたか)」の判定を加えるべき。変更対象は `modules/orchestration-fallbacks.md` の当該節と、判定の入力となる `docs/reports/orchestration-recoveries.md` のエントリ形式 (回避可能性を記録するフィールドの要否) の 2 箇所。
