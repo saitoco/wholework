@@ -115,21 +115,19 @@ N/A
 N/A — 新規テスト 3 件 (`tests/edge-case-execution-context.bats` 2 件、`tests/workflow-guidance.bats` 1 件) について、対象ファイル (`skills/review/SKILL.md`, `skills/review/workflow-guidance.md`) を `git stash push -u` で実装前の状態に一時退避したうえで実行し、全件 FAIL することを確認した (New Verification-Test Pre-implementation FAIL Check)。その後 stash を復元し、`bats --jobs 18 tests/` で全 2077 件 PASS を確認した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 4 件を verify-executor で再検証し、全件 PASS (rubric 1件、section_contains 1件、file_contains 1件、command 1件は CI reference fallback 経由) を確認した。Issue チェックボックスは code フェーズで既に `[x]` 済みのため変更なし。
-- REVIEW_DEPTH=light (Size M) のため review-light 1エージェント統合レビューを実行。SHOULD 指摘1件 (Parser/Validator Edge Case Pre-check の新規手順 (7) が生成する代替 CWD ディレクトリが 14.2 のクリーンアップ backstop リストに含まれていない) を採用し修正した。
-- 修正方針は、代替 CWD を `.tmp/edge-case-fixtures-$NUMBER/` 配下にネストする案 (既存クリーンアップの対象に自動的に含まれる) を採用し、14.2 のリスト自体への追加は不要とした。
-- CI (全8ジョブ SUCCESS)・Base Branch Conflict Pre-check (競合なし)・Parser/Validator Edge Case Pre-check (本PRはプロース/テストのみでゼロマッチ) はいずれも通常経路で完了。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は unchecked_count=0、review-incomplete-fallback チェックも `matches_expected: true` で追加条件なしと判定し、そのまま Step 1 を通過した。
+- `resolve-merge-strategy.sh --flag` の結果 `--squash` を採用し、`gh pr merge 1472 --squash --delete-branch` で正常マージ・リモートブランチ削除まで完了した。
+- mergeable=true (clean) だったため Step 3 (コンフリクト解決) は不要だった。
 
 ### Deferred Items
-- Post-merge AC (firing condition (c) 該当の新規 PR での `/review` 実行時に実行コンテキスト軸が実際に測定されることの観察) は `/verify` で次回該当 PR 発生時に確認する (未変更、code フェーズからの引き継ぎを維持)。
+- Post-merge AC (firing condition (c) 該当の新規 PR での `/review` 実行時に実行コンテキスト軸が実際に測定されることの観察) は `/verify` で次回該当 PR 発生時に確認する (review フェーズからの引き継ぎを維持)。
 
 ### Notes for Next Phase
-- レビューで1件 SHOULD 修正済み・push済み (commit 350152ea)。追加の MUST/SHOULD/CONSIDER 指摘なし。
-- Lightweight re-check: `validate-skill-syntax.py` PASS、対象テスト7件 PASS、`bats --jobs 18 tests/` 全2077件 PASS。
-- 本 phase 中に GitHub 側の一時的な Partial System Outage (2026-09-13T09:16 UTC) が発生し、ラベル遷移・レビュー投稿 API が一時的に失敗したが、再試行で解消済み。`/merge` 実行時に同種の一時エラーが再発する可能性はあるが、本 Issue のスコープとは無関係。
+- `/verify` 実行時、Post-merge AC は「次に該当 PR が来たときに観察する」性質のため、今回時点では該当事例がなければ未検証のまま残る想定 (Issue #1470 自身のスコープ)。
+- review フェーズ中に報告された GitHub 側 Partial System Outage (2026-09-13T09:16 UTC) は再試行で解消済みで、merge フェーズには影響しなかった。
 
 ## review retrospective
 
