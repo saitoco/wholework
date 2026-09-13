@@ -11,7 +11,8 @@
 # bash 3.2+ compatible: no associative arrays, no mapfile.
 set -euo pipefail
 
-TARGET_FILE="${1:-skills/verify/SKILL.md}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_FILE="${1:-$SCRIPT_DIR/../skills/verify/SKILL.md}"
 
 if [ ! -f "$TARGET_FILE" ]; then
   exit 0
@@ -24,11 +25,14 @@ if [ -z "$MARKER_LINE" ]; then
   exit 1
 fi
 
-EXPECTED_HASH=$(printf '%s\n' "$MARKER_LINE" | grep -oE '[0-9a-f]{8}')
-ACTUAL_HASH=$(grep -v '<!-- skill-body-' "$TARGET_FILE" | shasum -a 256 | cut -c1-8)
+# `|| true` on both extractions below prevents a malformed marker or an
+# all-marker-lines (no body) file from tripping `pipefail` and aborting the
+# script silently before the diagnostic below can print (Issue #1468 review).
+EXPECTED_HASH=$(printf '%s\n' "$MARKER_LINE" | grep -oE '[0-9a-f]{8}' | head -1 || true)
+ACTUAL_HASH=$(grep -v '<!-- skill-body-' "$TARGET_FILE" | shasum -a 256 | cut -c1-8 || true)
 
-if [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
-  echo "Error: $TARGET_FILE 's skill-body-sha marker is stale (marker: $EXPECTED_HASH, computed: $ACTUAL_HASH). Recompute the hash and update the marker." >&2
+if [ -z "$EXPECTED_HASH" ] || [ -z "$ACTUAL_HASH" ] || [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
+  echo "Error: $TARGET_FILE 's skill-body-sha marker is stale or malformed (marker: ${EXPECTED_HASH:-<none>}, computed: ${ACTUAL_HASH:-<none>}). Recompute the hash and update the marker." >&2
   exit 1
 fi
 
