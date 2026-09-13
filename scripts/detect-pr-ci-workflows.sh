@@ -13,9 +13,10 @@
 #   absent  - no such file has that trigger, and no read/detection error
 #             occurred (also covers a missing .github/workflows directory,
 #             or zero *.yml/*.yaml files under it)
-#   unknown - <repo-root> is not a directory, .github/workflows exists but
-#             is not a readable+searchable directory, or a workflow file
-#             could not be read (grep exit code >= 2, e.g. permission denied)
+#   unknown - <repo-root> is not a directory, is not a readable+searchable
+#             directory itself, .github/workflows exists but is not a
+#             readable+searchable directory, or a workflow file could not
+#             be read (grep exit code >= 2, e.g. permission denied)
 #
 # Fail-safe policy: fail-closed. Only "absent" changes caller behavior
 # (scripts/run-review.sh's CI wait gate; modules/ci-failure-classifier.md's
@@ -34,7 +35,7 @@ fi
 
 REPO_ROOT="${1:-.}"
 
-if [[ ! -d "$REPO_ROOT" ]]; then
+if [[ ! -d "$REPO_ROOT" ]] || [[ ! -r "$REPO_ROOT" ]] || [[ ! -x "$REPO_ROOT" ]]; then
   echo "unknown"
   exit 0
 fi

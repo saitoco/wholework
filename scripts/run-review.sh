@@ -10,6 +10,12 @@
 #           scripts/detect-pr-ci-workflows.sh reports "absent" (no
 #           pull_request / pull_request_target-triggered workflow exists) —
 #           that state is structural and will never resolve on retry (#1463).
+#           Known limitation: this detection runs against whatever branch is
+#           checked out in MAIN_REPO_ROOT (the main repository worktree, not
+#           the PR's own head), since detect-pr-ci-workflows.sh is invoked
+#           with no explicit repo-root argument below. Accepted risk: a PR
+#           that itself introduces the repository's first CI workflow can
+#           diverge from this check (#1463 review).
 #   other = review phase failed
 
 set -euo pipefail

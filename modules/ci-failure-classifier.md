@@ -12,7 +12,7 @@ Provide a single judgment criterion that distinguishes CI platform infrastructur
 - `PR_NUMBER` (optional): PR number, when the failure surfaced via a PR's CI checks
 - `HEAD_SHA` (optional): the commit SHA whose CI run is being classified
 - `WRAPPER_LOG_PATH` (optional): path to the wrapper log, when the caller has one
-- `CI_RESULT_LINE` (optional): the `ci_result:` line and, if available, the `PENDING:` reason line from `run-review.sh`'s output
+- `CI_RESULT_LINE` (optional): the `ci_result:` line and, if available, the `PENDING:` reason line from `run-review.sh`'s output. When the consumer has no access to this log (e.g. an LLM-driven consumer resuming without the background `run-review.sh` output), fall back to `gh pr checks <PR>` reporting no checks to evaluate the "Applies when" condition below instead.
 
 ## Processing Steps
 
@@ -21,7 +21,7 @@ First evaluate the Structural CI Absence Check below. If it does not apply, eval
 ### Structural CI Absence Check (evaluated before the Signature Table)
 
 - **Applies when**: the classification target originates from a PR's zero registered checks. Specifically, `ci_result: ... zero_checks=true` together with the `PENDING: CI check wait did not reach a confirmed state` reason, or `gh pr checks <PR>` itself reporting no checks. Does **not** apply to the `PENDING: PR preview ...` reason (preview-wait PENDING).
-- **Observation**: run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh` at the repository root.
+- **Observation**: run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh` at the main repository root — the same root `scripts/run-review.sh` resolves via `git worktree list` (its first entry), not the PR's own worktree/head branch. Known limitation: this evaluates whatever branch happens to be checked out there, which can diverge from the PR head content in the rare case where a PR itself introduces the repository's first CI workflow (#1463 review).
 - If the output is `absent` (no workflow under `.github/workflows/` is triggered by `pull_request` / `pull_request_target`): verdict is `no-ci-configured`. Do not evaluate the Signature Table.
 - If the output is `present` / `unknown`: proceed to the Signature Table as normal.
 - **Difference from signature 5** (no workflow run is generated for the head SHA): signature 5 assumes a PR-triggered workflow exists but did not dispatch a run; this check applies when no such workflow exists at all.
@@ -60,3 +60,4 @@ Each cell is a one-line summary of the response and its own reference; consumer 
 | `modules/verify-executor.md` § 3a (`command` hint CI reference fallback) | Ignore CI result, execute the `command` hint locally (procedure documented in that section) | UNCERTAIN (CI job failed) | Same as `implementation`/`undetermined` (a failed job reference is a precondition this case does not meet in practice) |
 | `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` | Re-run CI on the same SHA, then retry the phase once CI reaches a confirmed state (this is a bounded, single re-run — not the unbounded retry the other rows above rule out) | Escalate per the entry's own Escalation section | Re-running CI is meaningless here; escalate per the entry's own Escalation section |
 | `scripts/run-review.sh` (CI wait gate, bash) | Not classified — this consumer calls `detect-pr-ci-workflows.sh` directly rather than through this module | Not classified — existing PENDING judgment unchanged | Calls the same `detect-pr-ci-workflows.sh` detection directly; when `zero_checks=true` and the result is `absent`, returns exit 0 (proceeds to review) instead of PENDING (exit 2) |
+| `scripts/run-auto-sub.sh` `run_phase_with_recovery()` (XL route) | Not classified — never calls this module directly for exit 2 | Not classified — existing PENDING judgment unchanged | Not applicable in practice: the source-side fix in `scripts/run-review.sh` already prevents this exit-2 case, so this consumer never observes it |

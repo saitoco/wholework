@@ -187,6 +187,23 @@ EOF
     [ "$output" = "unknown" ]
 }
 
+@test "detect-pr-ci-workflows: unreadable repo-root -> unknown (not absent)" {
+    if [ "$(id -u)" -eq 0 ]; then
+        skip "running as root; chmod 000 has no effect on readability"
+    fi
+    mkdir -p "$REPO/.github/workflows"
+    cat > "$REPO/.github/workflows/ci.yml" <<'EOF'
+on:
+  pull_request:
+    branches: [main]
+EOF
+    chmod 000 "$REPO"
+    run "$SCRIPT" "$REPO"
+    chmod 755 "$REPO"
+    [ "$status" -eq 0 ]
+    [ "$output" = "unknown" ]
+}
+
 @test "detect-pr-ci-workflows: two arguments -> exit 1 with usage" {
     run "$SCRIPT" "$REPO" "extra-arg"
     [ "$status" -eq 1 ]
