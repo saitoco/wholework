@@ -95,4 +95,5 @@ Issue Scope 節は "`skills/review/workflow-guidance.md` にも同じ軸を反�
 キーワード "review" (bare skill name) は `docs/`, `tests/`, `scripts/`, `modules/` 配下で 1099 ファイルにマッチし判別力なしのためスキップした。"Edge Case Pre-check" というより具体的な語での追加 grep も実施したが、ヒットはすべて `docs/spec/issue-*.md` の disposable な過去レトロスペクティブ記録 (Spec は完了後保守されないため対象外) と、`modules/observation-trigger.md:238` の 1 件のみだった。後者は過去に Pre-check が検出したバグの引用 (historical anecdote) であり、Pre-check の現在の軸構成を規定する記述ではないため更新不要と判断した。`docs/workflow.md` / `README.md` / `docs/guide/*.md` にも "Edge Case" 系の記述はなく、同期対象なし。`docs/ja/` は `docs/*.md` (steering/project doc) のみを対象としており `skills/*/SKILL.md` は翻訳対象外のため対象外。
 
 ## Consumed Comments
-No new comments since last phase.
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: triage AC audit — AC3 の rubric verify command が実装前から常時 PASS しうる懸念を指摘 (対応内容は Notes > Consumed Comments からの反映を参照) / URL: https://github.com/saitoco/wholework/issues/1470#issuecomment-5652189343
