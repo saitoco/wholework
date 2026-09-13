@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (95 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (98 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (130 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (133 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -136,7 +136,7 @@ wholework/
 - `modules/phase-handoff.md` — フェーズ間の Phase Handoff サマリー読み書き (フェーズ横断のコンテキスト引き継ぎ)
 - `modules/steering-hint.md` — steering doc が存在しない場合に `/doc init` を推奨する動的ヒント
 - `modules/orchestration-fallbacks.md` — オーケストレーションレベルの fallback パターンリファレンスカタログ (#319 tier 2、#316 recovery sub-agent、#318 learning loop で消費)。発火履歴がなく参照もされていないエントリは `docs/reports/orchestration-fallbacks-archive.md` にアーカイブされる (#1180)
-- `modules/ci-failure-classifier.md` — CI プラットフォーム障害分類の SSoT (シグネチャ表、3 値の判定、消費者ごとの応答)
+- `modules/ci-failure-classifier.md` — CI プラットフォーム障害分類の SSoT (シグネチャ表、4 値の判定、消費者ごとの応答)
 - `modules/domain-classifier.md` — improvement proposal の Domain 分類 (合成可能、LLM-in-context)
 - `modules/retro-proposals.md` — Improvement Proposal の収集、Tier 分類 (retro_proposal_classified イベント発行を伴う)、Issue 作成 (/verify Step 16、/auto Step 4a、/auto Step 5 で共有)
 - `modules/filesystem-scope.md` — skill/scripts のファイルシステムアクセススコープの制約と承認済みパターン
@@ -227,6 +227,7 @@ wholework/
 - `scripts/claude-watchdog.sh` — `claude -p` 呼び出し用の watchdog wrapper (ハング検出 + 1 回リトライ)
 - `scripts/reconcile-phase-state.sh` — 全フェーズにわたる前提条件・完了チェックのための汎用状態リコンサイラ。`modules/phase-state.md` SSoT に従って JSON v1 を出力する (watchdog-reconcile.sh の後継)
 - `scripts/wait-ci-checks.sh` — PR 上の全 CI チェックが非 pending 状態 (`gh pr checks --json bucket` の pass/fail/skipping/cancel) に達するまで待機する。猶予期間 + チェックがゼロ件の場合の警告付き。claude 実行前に `/review` と `/merge` から呼び出される。また `capabilities.pr-preview: true` の場合 `/code` の pr 経路からも呼び出される
+- `scripts/detect-pr-ci-workflows.sh` — `.github/workflows/` 配下に PR トリガの CI workflow (`pull_request` / `pull_request_target`) があるかを静的に判定する。`present`/`absent`/`unknown` を出力する (fail-closed: 挙動を変えるのは `absent` のときだけ)。`scripts/run-review.sh` の CI 待ちゲートと `modules/ci-failure-classifier.md` の Structural CI Absence Check から呼び出される
 - `scripts/pre-merge-check.sh` — baseline diff 分類器: 指定されたチェックを base と head の両ブランチで ephemeral worktree 内に実行する。結果を NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env エラー (exit 1) に分類する。`run-merge.sh` の pre-merge gate と `/review` Step 9 の pre-existing failure exception (#1139) から呼び出される
 - `scripts/worktree-merge-push.sh` — 短命な patch lock を取得。lock 取得後の fetch、checkout なしの ref-fetch マージ (`git fetch . <from>:<base>`)、is-ancestor による rebase スキップ、push リトライループ (最大 3 回) による並行セッションのレース耐性
 - `scripts/detect-foreign-worktree.sh` — CWD が foreign (別オーナー) の git worktree 内にあるかを検出する。`modules/worktree-lifecycle.md` Entry セクション、`skills/verify/SKILL.md` Step 2 (base ブランチのチェックアウトガード)、`skills/review/SKILL.md` Opportunistic Verification (worktree exit 前提条件) から使用される
