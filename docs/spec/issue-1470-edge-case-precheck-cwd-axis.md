@@ -144,3 +144,27 @@ review-bug 2 エージェントの fan-out は `SKIP_REVIEW_BUG=false` かつ `R
 Nothing to note — 4件の Pre-merge AC (rubric 1件、section_contains 1件、file_contains 1件、command 1件) はいずれも UNCERTAIN なく PASS 判定できた。`command "bats tests/"` は safe mode のため CI reference fallback (exact job name match: `Run bats tests`) で PASS 判定。rubric AC は Consumed Comments 記録済みの triage 指摘 (常時 PASS しうる懸念) を `/spec` 側で既に file_contains に置き換え済みだったため、本 phase では健全な形で検証できた。
 
 なお本 phase 中、GitHub 側で API リクエスト全般に影響する Partial System Outage (2026-09-13T09:16 UTC 発生、githubstatus.com で確認) が発生し、`gh-label-transition.sh` および `gh-pr-review.sh` のレビュー投稿 API 呼び出しが一時的に 500 エラーで失敗した。いずれも再試行で成功しており、本 Issue のスコープ (Edge Case Pre-check の CWD 軸追加) とは無関係な GitHub 側の一時的な障害であることを githubstatus.com で確認済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時の AC3 は「Workflow path 側 (`workflow-guidance.md`) にも同じ軸が反映されている」という `rubric` 型だった。これは「両ファイルが独立に同じ軸を実装する」という前提を含んでいたが、実際の `workflow-guidance.md` は `edgeCaseContext` を `SKILL.md` 側の測定結果として受け取り転記するだけの構造であり、前提が実態とずれていた。
+
+#### spec
+- AC3 が「Workflow path 側の対応方針 (変更要否) が明示され、実際の `edgeCaseContext` 転記ロジックと整合している」という `file_contains` 型に精緻化された。起票時の想定より実態に即した判定条件になっており、**spec フェーズが AC の前提誤りを補正した例**。起票時点でファイル間の責務関係まで確認できていれば最初から正しく書けたが、retro-proposals による自動起票では調査深度に限界があるため、spec フェーズでの補正が機能する設計になっていることの確認になる。
+
+#### code / review / merge
+- Spec からの逸脱なし、手戻りなし。CI 全緑で通過。
+
+#### verify
+- Pre-merge 4 件 SKIPPED (already checked)、Post-merge 1 件 SKIPPED (observation 未発火 + `session=next`)。FAIL / UNCERTAIN 0 件。
+- 実装確認では `skills/review/SKILL.md` の Edge Case Pre-check 節内に CWD 言及 2 箇所、`workflow-guidance.md` に 1 箇所を確認。
+
+#### orchestration
+- kill・recovery なしのクリーンな実行。
+
+### Improvement Proposals
+
+- N/A — AC の前提誤りは spec フェーズが補正しており、機構側の欠陥ではない。retro-proposals が起票する AC は調査深度が浅くなりうるが、その補正を spec に委ねる現行の役割分担が意図どおり機能している。
