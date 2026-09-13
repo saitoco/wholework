@@ -116,3 +116,31 @@ N/A — Spec に `## Smoke Test` セクションが存在しないため対象�
 ### Notes for Next Phase
 - `/verify` は Pre-merge AC 3件全て PASS 済み (Issue チェックボックス更新済み) の状態から開始する
 - Post-merge AC は `verify-type: observation event=auto-run` のため、発火済みイベントがなければ SKIPPED 判定が正常
+
+## Verify Retrospective (2026-09-13 observation dispatch)
+
+本節は `/auto --batch --until` session `90128-1788933783` の observation dispatch で実行された `/verify 1325` の記録。`auto-run` 発火後の初回評価にあたる。
+
+### 判定
+
+Post-merge AC 1 件 (`observation event=auto-run`) を **UNCERTAIN** と判定した。詳細は Issue コメント参照。
+
+### 収集した証拠
+
+本 session で `/issue` が 7 回実行されたが (#1462 #1464 #1461 #1463 #1466 #1470 #1468)、検出力に関する指摘は 1 件も出ていない。#1463 は「新規テスト追加を主張する」形の AC を 3 件持つ明確な該当ケースだった。
+
+### 構造的な発見 (本 AC が満たされにくい理由)
+
+`skills/triage/skill-dev-verify-audit.md:104-108` の Detection approach は、検出力の判定に以下を要求している。
+
+- (b) 追加されたフィクスチャが対象の欠陥に実際に感度を持つか検討する (可能なら実装前の状態でそのテストが FAIL することを確認する)
+- (c) (b) を確認できない場合、フィクスチャが常に安全側の結果を返す既知の値のみを使っていないか確認する
+- (d) 判定が難しい場合は検出せず素通しする (偽陽性を避ける)
+
+**`/issue` は実装前に走るため、これらが参照するフィクスチャがまだ存在しない。** したがって (b) も (c) も評価不能で、(d) の素通しが構造的にほぼ常に適用される。本 AC が期待する「`/issue` Step 15 での指摘」は、現行のルール設計では原理的に発生しにくい。
+
+検出力の評価が実際に可能になるのは、テストが書かれた後 (`/review` の diff レビュー時、または `/verify` の post-merge 検証時) である。
+
+### Improvement Proposals
+
+- **検出力ゼロ AC の監査は、フィクスチャが存在しない `/issue` 実行時点では原理的に判定できないため、対象フェーズの再配置を検討すべき。** `skills/triage/skill-dev-verify-audit.md` の「検出力ゼロの成果物を証明する AC」サブパターンは Detection approach (b)(c) でフィクスチャの中身の検討を要求するが、`/issue` Step 15 は実装前に走るためフィクスチャが存在せず、(d)「判定が難しい場合は素通し」が常に適用される。本 session の実測では `/issue` 7 回・該当形 AC 3 件 (#1463) に対して指摘 0 件だった。対応案は 2 つ考えられる: (1) 検出力の判定を `/review` (diff にフィクスチャが現れる) または `/verify` (テストが実行可能) へ移す、(2) `/issue` 時点では「新規テスト追加を主張する AC が存在する」旨の注意喚起のみに留め、実際の検出力判定は後段フェーズに委ねる旨をルールに明記する。いずれも `skills/triage/skill-dev-verify-audit.md` と、呼び出し側 (`skills/issue/SKILL.md` Step 15 / `skills/review/SKILL.md` / `skills/verify/SKILL.md`) の 2 ファイル以上に波及する。
