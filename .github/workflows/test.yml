@@ -81,6 +81,16 @@ jobs:
       - name: Check .wholework.yml for unknown/typo keys
         run: bash scripts/check-config-schema.sh
 
+  check-skill-body-hash:
+    name: Skill Body Hash check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check skills/verify/SKILL.md skill-body-sha marker
+        run: bash scripts/check-skill-body-hash.sh
+
   bare-bracket-assertions:
     name: Bare Bracket Assertions check
     runs-on: ubuntu-latest

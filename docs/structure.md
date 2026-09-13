@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (98 files)
+├── scripts/             # Utility scripts used by skills and agents (99 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -38,7 +38,7 @@ wholework/
 │   │   ├── feature_request.yml  # Feature request Issue Form
 │   │   └── config.yml           # Disables blank (templateless) issues
 │   └── workflows/
-│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, config schema check, bare bracket assertions check, language convention check, and macOS shell compatibility test
+│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, config schema check, skill body hash check, bare bracket assertions check, language convention check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
@@ -271,6 +271,7 @@ Key modules:
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/check-config-schema.sh` — detect unknown/typo'd top-level keys in `.wholework.yml` against `modules/detect-config-markers.md`'s Marker Definition Table; run by the `check-config-schema` CI job
+- `scripts/check-skill-body-hash.sh` — verify a SKILL.md's `<!-- skill-body-sha: H -->` marker matches its computed content hash (default target `skills/verify/SKILL.md`), catching same-line-count edits (renames, word substitutions) the `skill-body-lines` marker cannot detect; run by the `check-skill-body-hash` CI job
 - `scripts/check-bare-bracket-assertions.sh` — detect bare `[[ "$output"/"$status"` bats assertions without `|| false` (informational; does not fail the build)
 - `scripts/check-known-events-firing.sh` — verify every `KNOWN_EVENTS` entry in `scripts/opportunistic-search.sh` has a real `--event <name>` invocation site (excluding comment lines and echo/printf usage strings)
 - `scripts/check-language-convention.py` — detect CJK characters transcribed into English-only paths (skills/, modules/, scripts/) from a unified diff; run by the `language-convention` CI job
