@@ -64,3 +64,32 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。`session=next` タグ欠落の修正、曖昧性の自動解決記録 (決定性判別手段の選定と件数不一致シグナル追加方法を `/spec` に委任)、前フェーズ (`/triage`) からの Consumed Comments 引き継ぎを含む。いずれも Issue 本文の内容と重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1466#issuecomment-5651664760
+- `/code` フェーズ: cutoff (`phase/ready` ラベル付与時刻 2026-09-13T06:48:09Z) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–5 をそのまま実装した。
+
+### Design Gaps/Ambiguities
+- Spec の Changed Files には含まれていなかったが、`docs/tech.md` はトップレベル `docs/*.md` として `docs/translation-workflow.md` の同期義務対象であり、Step 9 のドキュメント整合性チェック (`docs/ja/` 同期チェック) で `docs/ja/tech.md` との同期ギャップが検出された。対応する日本語訳 (4 行目の追加行と補足文) を `docs/ja/tech.md` に追記した。Spec 作成時点で `docs/ja/` 同期義務の対象になることが見落とされていたが、実装フェーズの機械チェックで捕捉されたため実害はなかった。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Pre-existing failure exception の汎用化を見送り、`forbidden-expressions` 単体スコープを維持する決定とその理由を `skills/review/SKILL.md` に明記した (Spec Notes の判断をそのまま実装に反映)。
+- 決定性判別手段として、同一 commit SHA での単発再実行 (`modules/orchestration-fallbacks.md#ci-wait-silence-timeout` と同系統) を採用する旨を明記した。複数 run 再現率や OS 依存切り分けは将来の汎用化 Issue に委ねる。
+- 件数不一致シグナルは `modules/ci-failure-classifier.md` に新規シグネチャとしてではなく、Signature Table の直後に独立した "Test Count Mismatch Signal (non-infra)" セクションとして追加した (7 シグネチャのいずれにも該当しない別種のシグナルであることを明示するため)。
+
+### Deferred Items
+- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外とし、将来の汎用化 Issue に委ねる (Spec Notes に記載済み)。
+- Post-merge AC (決定的な既存失敗を含む PR での `/review` 実行観察) は `verify-type: observation event=auto-run session=next` であり、次回の `/verify` セッションで検証される。
+
+### Notes for Next Phase
+- `bats tests/` 全件 (2074 件) PASS 済み、件数不一致なし。
+- `docs/ja/tech.md` の同期ギャップを実装フェーズで検出・修正済み — Spec の Changed Files には未記載だった点に注意。
+- 本 Issue はドキュメント追記のみで `scripts/pre-merge-check.sh` や `.github/workflows/test.yml` は変更していない。
