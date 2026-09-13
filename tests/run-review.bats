@@ -2,7 +2,8 @@
 
 # Tests for run-review.sh
 # Mocks: claude, claude-watchdog.sh, phase-banner.sh, gh, wait-ci-checks.sh,
-#        gh-extract-issue-from-pr.sh, reconcile-phase-state.sh (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
+#        detect-pr-ci-workflows.sh, gh-extract-issue-from-pr.sh,
+#        reconcile-phase-state.sh (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-review.sh"
 
@@ -126,6 +127,17 @@ echo "CI check wait complete for PR #$1"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    # Mock detect-pr-ci-workflows.sh: default "present" — preserves the
+    # existing "PENDING: ci_result zero_checks=true skips claude and exits 2"
+    # test's meaning (a PR-triggered CI workflow exists but has not yet
+    # registered checks) unless a test below overrides it.
+    cat > "$MOCK_DIR/detect-pr-ci-workflows.sh" <<'MOCK'
+#!/bin/bash
+echo "present"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/detect-pr-ci-workflows.sh"
 
     # sleep mock: no-op to keep preview-poll tests fast (tests/wait-ci-checks.bats convention)
     cat > "$MOCK_DIR/sleep" <<'MOCK'
@@ -320,6 +332,98 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 2 ]
     [[ "$output" == *"PENDING:"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "success: ci_result zero_checks=true with no PR-triggered CI workflow runs claude" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=0 passed=0 failed=0 pending=0 cancelled=0 zero_checks=true"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    cat > "$MOCK_DIR/detect-pr-ci-workflows.sh" <<'MOCK'
+#!/bin/bash
+echo "absent"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/detect-pr-ci-workflows.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "No PR-triggered CI workflow"
+    if echo "$output" | grep -q "PENDING:"; then false; fi
+    [ -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "PENDING: ci_result zero_checks=true with unknown PR-trigger workflow detection exits 2" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=0 passed=0 failed=0 pending=0 cancelled=0 zero_checks=true"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    cat > "$MOCK_DIR/detect-pr-ci-workflows.sh" <<'MOCK'
+#!/bin/bash
+echo "unknown"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/detect-pr-ci-workflows.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    echo "$output" | grep -q "PENDING:"
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "PENDING: ci_result zero_checks=true when PR-trigger workflow detection fails exits 2" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=0 passed=0 failed=0 pending=0 cancelled=0 zero_checks=true"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    cat > "$MOCK_DIR/detect-pr-ci-workflows.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/detect-pr-ci-workflows.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    echo "$output" | grep -q "PENDING:"
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "PENDING: ci_result pending>0 exits 2 even when no PR-triggered CI workflow is detected" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=1 passed=0 failed=0 pending=1 cancelled=0 zero_checks=false"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    cat > "$MOCK_DIR/detect-pr-ci-workflows.sh" <<'MOCK'
+#!/bin/bash
+echo "absent"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/detect-pr-ci-workflows.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    echo "$output" | grep -q "PENDING:"
     [ ! -f "$CLAUDE_CALL_LOG" ]
 }
 

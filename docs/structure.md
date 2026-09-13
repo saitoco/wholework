@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (95 files)
+├── scripts/             # Utility scripts used by skills and agents (98 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (130 files)
+├── tests/               # Bats test files for scripts (133 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -143,7 +143,7 @@ Key modules:
 - `modules/phase-handoff.md` — phase-to-phase Phase Handoff summary read/write (cross-phase context carryover)
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop); entries retired for zero firing history and no live reference are archived to `docs/reports/orchestration-fallbacks-archive.md` (#1180)
-- `modules/ci-failure-classifier.md` — CI platform failure classification SSoT (signature table, 3-value verdict, per-consumer response)
+- `modules/ci-failure-classifier.md` — CI platform failure classification SSoT (signature table, 4-value verdict, per-consumer response)
 - `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
 - `modules/retro-proposals.md` — Improvement Proposal collection, Tier classification (with retro_proposal_classified event emission), and Issue creation (shared by /verify Step 16, /auto Step 4a, and /auto Step 5)
 - `modules/filesystem-scope.md` — filesystem access scope constraints and approved patterns for skills/scripts
@@ -234,6 +234,7 @@ Key modules:
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 - `scripts/reconcile-phase-state.sh` — general-purpose state reconciler for precondition and completion checks across all phases; outputs JSON v1 per `modules/phase-state.md` SSoT (supersedes watchdog-reconcile.sh)
 - `scripts/wait-ci-checks.sh` — wait for all CI checks on a PR to reach a non-pending `gh pr checks --json bucket` state (pass/fail/skipping/cancel), with a grace period + warning when zero checks are registered; called by `/review` and `/merge` before running claude, and by `/code`'s pr route when `capabilities.pr-preview: true`
+- `scripts/detect-pr-ci-workflows.sh` — static check for PR-triggered CI workflows (`pull_request` / `pull_request_target`) under `.github/workflows/`; outputs `present`/`absent`/`unknown` (fail-closed: only `absent` changes behavior); called by `scripts/run-review.sh`'s CI wait gate and `modules/ci-failure-classifier.md`'s Structural CI Absence Check
 - `scripts/pre-merge-check.sh` — baseline diff classifier: runs a specified check on both base and head branches in ephemeral worktrees; classifies result as NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1); called by `run-merge.sh`'s pre-merge gate and by `/review` Step 9's pre-existing failure exception (#1139)
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock; fetch-after-lock, checkout-less ref-fetch merge (`git fetch . <from>:<base>`) with is-ancestor rebase-skip, and push-retry loop (max 3) for parallel session race hardening
 - `scripts/detect-foreign-worktree.sh` — detect whether CWD is inside a foreign (different-owner) git worktree; used by `modules/worktree-lifecycle.md` Entry section, `skills/verify/SKILL.md` Step 2 (base branch checkout guard), and `skills/review/SKILL.md` Opportunistic Verification (worktree exit precondition)
