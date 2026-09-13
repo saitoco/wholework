@@ -110,21 +110,20 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 - Spec Implementation Step 5 は `docs/structure.md`/`docs/ja/structure.md` の Directory Layout コメント行 (CI ジョブ列挙) のみを対象としていたが、`docs/tech.md` の "Modification Rules" 節 (ラベル追加時は SSoT も同一 PR で更新する規約) と同種の一貫性維持のため、Key Files > Scripts 一覧への `check-skill-body-hash.sh` のエントリ追加、および `scripts/` ファイル数コメント (98→99 files) の更新も同一コミットに含めた。範囲逸脱ではなく、doc-checker の一貫性チェックの範囲内の追記と判断した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode、REVIEW_DEPTH=light) の4観点統合レビューに加え、`scripts/check-skill-body-hash.sh` を Parser/Validator Edge Case Pre-check の対象 (firing condition (c): 外部から渡された文字列を解釈・検証する新規スクリプト) と判断し、実行ベースのエッジケース検証を事前実施した。
-- 検出された2件の SHOULD (pipefail 起因の無出力中断、CWD 相対デフォルトパス) はいずれも直接実行で再現確認したうえで review 中に修正・push した (MUST 相当ではないが、CI ゲートスクリプトの堅牢性に関わるため fix-then-merge を選択)。
-- Pre-merge 受入基準4件は全て PASS (rubric ×2 / grep / command)。CI は全17ジョブ SUCCESS (`Forbidden Expressions check` を含む)。
+- Pre-merge AC ゲート (4件) は全てチェック済み、review completion も fallback 起源ではなく `/review` 自身の Step 14 完了だったため、事前条件確認なしでマージを実行した。
+- マージ戦略は `resolve-merge-strategy.sh` の解決結果 `--squash` を採用 (`.wholework.yml` の既定に従う)。
+- `gh-pr-merge-status.sh` の結果は `mergeable=true, reason=clean` であり、コンフリクト解決・テスト再実行のフローは不要だった。
 
 ### Deferred Items
-- Post-merge の observation AC (行数を変えない変更が landing した後の `/verify` 実行での stale 検出発火の観察、`session=next`) は未検証のまま — 次回のいずれかの `/verify` 実行で自然に検証される設計 (code フェーズからの継続)。
-- 同種の「`set -euo pipefail` 下での `grep -v` 0-match による無出力中断」パターンが他の `scripts/check-*.sh` に存在しないかの横展開調査は本 Issue のスコープ外として見送った。
+- Post-merge の observation AC (行数を変えない変更が landing した後の `/verify` 実行での stale 検出発火の観察、`session=next`) は依然未検証 — 次回の `/verify` 実行で確認する。
+- 同種の `set -euo pipefail` 下 `grep -v` 0-match パターンの他スクリプトへの横展開調査は引き続きスコープ外。
 
 ### Notes for Next Phase
-- `/merge` 前に `bats --jobs 18 tests/` (2083件 PASS) を review 修正後に再実行済み。`scripts/check-skill-body-hash.sh` の修正後の挙動もエッジケース再実行で確認済み。
-- `docs/guide/xl-decomposition.md` の翻訳同期ギャップ (`check-translation-sync.sh` で検出) は本 PR の変更対象外の既存事項 — merge 判断に影響しない。
-- `skills/verify/SKILL.md` の `skill-body-lines`(997) / `skill-body-sha`(fd821ed4) マーカー値は本 PR 確定時点の値のまま変更していない (review での修正対象は `scripts/check-skill-body-hash.sh` のみ)。
+- `/verify` では pre-merge の Verification 項目に加え、post-merge observation AC (stale 検出の実地発火確認) を優先的に扱うこと。
+- マージは squash 戦略でリモートブランチ `worktree-code+issue-1468` は削除済み。
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1468#issuecomment-5652635164
