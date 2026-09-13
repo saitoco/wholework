@@ -95,5 +95,35 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 
 `docs/structure.md` (トップレベル `docs/*.md`、`docs/spec/`/`docs/reports/`/`docs/ja/` の除外対象外) を変更するため、`docs/translation-workflow.md` の Sync Procedure に従い対応する `docs/ja/structure.md` (34行目が該当箇所) を Changed Files に追加した。Implementation Steps は SPEC_DEPTH=light の上限 (5件) に既に達していたため、新規ステップを追加せず既存の Step 5 (docs/structure.md 更新) に統合した。
 
+## Code Retrospective
+
+### Deviations from Design
+- None — Implementation Steps 1〜5 をそのまま実装した。
+
+### Design Gaps/Ambiguities
+- なし。Spec の Notes セクション (自己参照回避の除外ルール、`shasum` 採用理由、CI チェックスクリプト採用理由、fail-safe 判定) が実装判断のほぼ全てを事前にカバーしており、実装中に新たな曖昧点は発生しなかった。
+
+### Rework
+- なし。
+
+### Scope note (spec 範囲外の軽微な追記)
+- Spec Implementation Step 5 は `docs/structure.md`/`docs/ja/structure.md` の Directory Layout コメント行 (CI ジョブ列挙) のみを対象としていたが、`docs/tech.md` の "Modification Rules" 節 (ラベル追加時は SSoT も同一 PR で更新する規約) と同種の一貫性維持のため、Key Files > Scripts 一覧への `check-skill-body-hash.sh` のエントリ追加、および `scripts/` ファイル数コメント (98→99 files) の更新も同一コミットに含めた。範囲逸脱ではなく、doc-checker の一貫性チェックの範囲内の追記と判断した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 記載の通り「常時両方比較 (行数 OR ハッシュのいずれかの不一致で stale)」を採用し、二段構え (行数一致時のみハッシュ検証) にはしなかった。
+- ハッシュ計算は `grep -v '<!-- skill-body-'` で両マーカー行を除外してから `shasum -a 256 | cut -c1-8` を適用する設計とし、マーカー自身の自己参照問題を回避した。
+- `check-skill-body-hash.sh` は fail-open (対象ファイル不在→exit 0) / fail-closed (マーカー不在→exit 1) の非対称設計とし、Spec Notes の判断根拠をそのまま実装した。
+
+### Deferred Items
+- Post-merge の observation AC (行数を変えない変更が landing した後の `/verify` 実行での stale 検出発火の観察、`session=next`) は未検証のまま — 次回のいずれかの `/verify` 実行で自然に検証される設計。
+
+### Notes for Next Phase
+- `/review` は `bats tests/` (2083件 PASS) と `validate-skill-syntax.py`/`check-forbidden-expressions.sh`/`check-translation-sync.sh` が全て通過済みであることを確認済み。
+- `skills/verify/SKILL.md` の `skill-body-lines`(997) / `skill-body-sha`(fd821ed4) マーカー値は本 PR のコミット確定後の値。以降このファイルに変更が入る場合、両マーカーの再計算が必要になる (`bash scripts/check-skill-body-hash.sh` で検証可能)。
+- `docs/structure.md`/`docs/ja/structure.md` は Directory Layout コメント行に加え、Key Files > Scripts 一覧のエントリとファイル数コメント (98→99) も同一 PR で更新済み — スコープ逸脱ではなく一貫性維持の追記 (Code Retrospective 参照)。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1468#issuecomment-5652635164
