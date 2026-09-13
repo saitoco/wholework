@@ -141,3 +141,28 @@ Parser/Validator Edge Case Pre-check (firing condition (c): 外部から渡さ�
 ### Acceptance criteria verification difficulty
 
 Pre-merge 受入基準4件はいずれも明確な verify command (`rubric` ×2, `grep`, `command`) を伴っており、UNCERTAIN は発生しなかった。`command "bats tests/"` は safe mode では CI 参照フォールバック (`gh pr view --json statusCheckRollup`) で PASS 判定でき、identity confirmation (run command containment: `bats --jobs $(nproc) tests/`) も明確だった。verify command の記述・アクセス性に特筆すべき問題はなし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 本 Issue は #1461 の `/verify` 実行中に実際に踏んだ不具合 (旧 `emit-verify-event.sh` を参照する stale な本文が、行数一致 996 = 996 で検出をすり抜けた) から起票された。再現手順と失敗ログ (`exit 127`) を伴う具体的な起票になっており、spec / code フェーズで解釈の揺れが生じなかった。
+
+#### spec / code
+- Spec からの逸脱なし。AC3 が求めた「マーカー値の更新漏れを防ぐ手段」は `scripts/check-skill-body-hash.sh` + CI ジョブとして実装され、「ハッシュは人手で正しく書けないため CI チェックが実質必須」という起票時の想定どおりの形に着地した。
+
+#### review / merge
+- 特筆事項なし。CI 全緑で通過。
+
+#### verify
+- **Step 1 の stale 検出が本実行で初めて発火した** (cached 996 行 / on-disk 997 行)。ただしこれは本 Issue が追加した `skill-body-sha` 行によって行数が 1 増えた結果であり、**発火したのは旧来の行数比較**である。ハッシュ比較が機能したことの証明にはならない点を Issue コメントに明記した。
+- 本セッションは #1461 マージ以降、#1461 / #1463 / #1466 / #1470 の 4 回の `/verify` で一貫して stale な本文を実行していた。いずれも親セッションが emit 呼び出しの `exit 127` に気付いて新名に読み替えることで進行したが、検出機構自体は 4 回とも沈黙していた。本 Issue の修正はこの沈黙区間を塞ぐもの。
+
+#### orchestration
+- review フェーズで external kill が 2 回発生し、3 回目の respawn で完走 (#1461 と同一のパターン)。`docs/reports/orchestration-recoveries.md` に記録済み (SSoT) のため、ここでは重複させない。
+- resume は 2 回とも `skip-to-review` で正しく復帰しており、spec / code の再実行は発生していない。
+
+### Improvement Proposals
+
+- N/A — 本 Issue 自身が検出機構の穴を塞ぐ修正であり、その実装・検証過程で新たな機構上の欠陥は見つからなかった。ハッシュ比較の実効性確認は AC5 (observation, `session=next`) が次セッション以降に持ち越しており、現時点で追加の起票は不要。
