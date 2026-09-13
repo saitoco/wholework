@@ -244,3 +244,4 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 方向性 B (自動検出による新 verdict) の採用、具体的な検出方法は `/spec` に委任、補足の merge Phase Handoff 誤記はスコープ外、AC を新規追加 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672
+- saito / MEMBER / first-class / ## Spec Phase: Autonomous Auto-Resolve Log / https://github.com/saitoco/wholework/issues/1463#issuecomment-5651004555
