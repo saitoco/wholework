@@ -245,3 +245,67 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 
 - saito / MEMBER / first-class / Issue Retrospective: 方向性 B (自動検出による新 verdict) の採用、具体的な検出方法は `/spec` に委任、補足の merge Phase Handoff 誤記はスコープ外、AC を新規追加 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672
 - saito / MEMBER / first-class / ## Spec Phase: Autonomous Auto-Resolve Log / https://github.com/saitoco/wholework/issues/1463#issuecomment-5651004555
+
+## issue retrospective
+
+(Issue コメント https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672 から転記)
+
+### Autonomous Auto-Resolve Log
+
+- **採用した方向性: B (自動検出)** — reason: Issue 本文が挙げていた A (`.wholework.yml` 設定キーによる明示無効化) / B (自動検出により新しい verdict を追加) / C (verdict は `undetermined` のままリトライのみ抑止) のうち、B を採用した。`modules/ci-failure-classifier.md` (#1227) が既に「CI 起因の PENDING を判定ロジックで分類し、消費側の応答を変える」という同種の構造を持っており、その拡張として最も自然で、workflow ファイルの静的内容から機械的に判定できるため設定漏れのリスクもない。`skills/auto/SKILL.md` pr route item 8 は、新しい verdict を受け取った場合に既存の sleep + 最大 2 回リトライ (#1115) を行わず即座に次の判断へ進む
+  - Other candidates: A (設定キー明示) — 利用者の設定漏れで同じ問題が再発しうるため却下。C (リトライ抑止のみ) — verdict を `undetermined` のままにすると `skills/auto/SKILL.md` Step 6 の CI platform failure pre-check など他の消費側に恩恵が及ばないため却下
+- **具体的な検出方法の設計は `/spec` に委ねる** — reason: `.github/workflows/` の静的 grep か、他の観測手段かは実装手段 (How) の判断であり、`/issue` (What) の責務を超えるため
+
+### 主要なポリシー決定
+
+- 補足の「`/merge` Phase Handoff の `### Key Decisions` が実態と食い違う」問題は、本 Issue のスコープ外として明示的に除外した (Issue filing restraint の方針に従い、必要になった時点で別途起票する判断とし、今回は新規 Issue を追加起票しない)
+- Acceptance Criteria が本 Issue には存在しなかったため、新規に Pre-merge / Post-merge セクションを追加した。Pre-merge は `modules/ci-failure-classifier.md` の新 verdict 追加と `skills/auto/SKILL.md` pr route item 8 の分岐追加を rubric + 補助的な `file_contains` で検証し、既存の回帰テスト (`tests/ci-failure-classifier.bats` / `tests/auto-recovery.bats`) を command 検証に含めた。Post-merge は `skills/auto/SKILL.md` の変更を含むため `verify-type: observation event=auto-run session=next` とした (skill 変更は次回セッションでのみ観測可能)
+
+(issue phase の消費コメント記録: No new comments since last phase.)
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文は「item 8 がレビュー完了チェックへフォールスルーすればレビューへ進める」という前提に立っていたが、フォールスルー先の `reconcile-phase-state.sh review --check-completion` はレビュー未実行だと `matches_expected: false` を返し、Step 6 に進むだけだった。`/issue` の段階で「フォールスルー後に何が起きるか」まで辿っていれば、発生源 (`run-review.sh`) の変更が必要だと What の段階で見えていた
+- `docs/structure.md` の Directory Layout 件数コメントに、本 Issue 着手前から `scripts/` と `tests/` とも +2 のドリフトがあった (#1227 retrospective で指摘された modules 件数ドリフトと同種)。ファイル追加のたびに更新が必要な設計上、再発しやすい
+- #1227 review retrospective の教訓を 2 点適用した。(1) classifier の読み手ごとに allowed-tools を独立して grep で確認し、`skills/auto/SKILL.md` と `skills/verify/SKILL.md` の両方に登録する。(2) verdict 列挙を持つ契約側 (`agents/orchestration-recovery.md` の `## Input` と anomaly 表) も Changed Files に含める
+- Consumed Comments safety net (`append-consumed-comments-section.sh`) は、この spec phase 自身が cutoff 後に投稿した Auto-Resolve Log コメントも消費コメントとして 1 行追記した。実害はないが、自フェーズ由来のコメントが「消費した入力」として記録されるノイズになる
+- worktree 分離ガードは `git add ... && git commit ... && ...` のような複合コマンドを拒否した。単純なコマンドに分割すれば問題なく実行できた
+
+### Judgment rationale
+
+- 主な修正箇所を classifier / item 8 (AC の対象) ではなく `run-review.sh` のゲートに置いた。発生源で PENDING を回避すれば pr route・XL route (`run-auto-sub.sh`)・ラッパー直接実行のすべてに効く。一方、item 8 のみの変更では目的 (レビュー本体の実行) を満たせない。item 8 の分岐は AC どおり安全網として残す
+- 検出スクリプトの出力を 3 値 (`present` / `absent` / `unknown`) にし、挙動を変えるのは `absent` のときだけにした (fail-closed)。「挙動を変えるのは確証があるときだけ」という既存フェイルセーフ設計 (#1060 の fail-open バグの教訓) に合わせた
+- 新規分岐に対して必須とした新規テストケースは次のとおり
+  - `tests/detect-pr-ci-workflows.bats`: 14 件 (`on` の 3 形式、`pull_request_target`、`.yaml`、コメントアウト、CRLF、読み取り不能、存在しない root、引数過多)
+  - `tests/run-review.bats`: 4 件 (`absent` → レビュー実行 / `unknown` → PENDING / 検出スクリプト失敗 → PENDING / `pending>0` は検出結果にかかわらず PENDING)
+  - `tests/ci-failure-classifier.bats`: 3 件 (新 verdict の定義、item 8 の対応、run-review.sh での共有検出の利用)
+  - Issue 本文の AC 4〜6 に対応付けた
+- Changed Files は名目上 15 件だが、同期編集が 7 件あるため Size L を維持した (XL 化は sub-issue 分割を伴う High-Stakes Decision)
+
+### Uncertainty resolution
+
+- `on` キーの 3 形式 (文字列 / 配列 / マッピング) と、配置場所が `.github/workflows` の `.yml` / `.yaml` であることを公式ドキュメントで確認した (出所: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions 、取得日時: 2026-09-13)。キー名ではなく `pull_request` という値の文字列で判定するので、`"on":` などの表記揺れには依存しない
+- サブディレクトリの扱いはドキュメントに記載がなく未確認。ただし「checks がゼロ」という前提条件と組み合わせるため、どちらの仕様でも安全側に倒れることを確認し、非再帰と決めた
+- `.github/workflows` を持たない外部 CI (GitHub App) が猶予期間内に checks を登録しない場合は受容リスクとした。`/review` Step 9 と `/merge` の CI 確認が後段に残る
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- 主な修正は `scripts/run-review.sh` の CI 待ちゲート。`zero_checks=true` かつ `scripts/detect-pr-ci-workflows.sh` が `absent` のときは PENDING (exit 2) を返さずレビューへ進む。classifier の新 verdict `no-ci-configured` と `skills/auto/SKILL.md` pr route item 8 のリトライ省略は安全網として AC どおり実装する
+- 検出スクリプトは `.github/workflows/*.yml|*.yaml` (直下) のコメント外の行に `pull_request` があるかを `LC_ALL=C grep` で判定し、`present` / `absent` / `unknown` を出力する。fail-closed で、挙動を変えるのは `absent` のみ
+- `wait-ci-checks.sh` の 120 秒猶予期間と `ci_result:` 出力契約は変えない
+- Issue 本文に Pre-merge AC 2 件 (`tests/detect-pr-ci-workflows.bats` / `tests/run-review.bats`) と、Post-merge observation AC の期待出力構造を追加した
+
+### Deferred Items
+- Issue 補足の「`/merge` Phase Handoff が zero checks を CI success と誤記する」問題はスコープ外 (必要なら別 Issue)
+- `.github/workflows` を持たない外部 CI (GitHub App) が猶予期間内に checks を登録しないケースは受容リスク (Spec Uncertainty 参照)
+- `scripts/run-auto-sub.sh` (XL route) には classifier 判定を追加しない。発生源の修正により、本件の exit 2 自体が発生しなくなるため
+
+### Notes for Next Phase
+- `tests/run-review.bats` の `setup()` にデフォルト mock (`detect-pr-ci-workflows.sh` → `present`) を入れ、既存の `PENDING: ci_result zero_checks=true skips claude and exits 2` の意味を保つこと (WHOLEWORK_SCRIPT_DIR は MOCK_DIR を指す)
+- SKILL.md の制約: 半角 `!` と 3 連バッククォートを本文に入れない。allowed-tools は 1 行を維持する。`python3 scripts/validate-skill-syntax.py skills/` で確認すること
+- `modules/ci-failure-classifier.md` の Per-Consumer Response (exhaustive) は、`grep -rn "ci-failure-classifier.md" skills modules agents scripts` の参照元と突合すること
+- `docs/structure.md` / `docs/ja/structure.md` の件数コメントは追加後の実測値に更新し、verify command には固定しないこと。ja ミラーはコードフェンス数も突合すること
