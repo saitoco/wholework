@@ -77,19 +77,34 @@
 ### Rework
 - N/A — 手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。`review-light` エージェントによる検証で、Implementation Steps 1–5 は diff とすべて一致していることを確認した。`docs/ja/tech.md` の同期追記は Spec の Changed Files に未記載だったが、Code フェーズの機械チェック (`docs/translation-workflow.md` 同期義務) が既に捕捉・修正済みで、review 時点で新規の乖離は残っていなかった。
+
+### Recurring issues
+
+本 Issue 自体が「#1462 review retrospective の誤診断」を発端としており、CI 失敗診断における「既存失敗であること」と「非決定的 (フレーク) であること」の混同という同種の誤りが再発しやすい領域であることを示している。今回追加された "Scope decision" / "Required condition for future generalization" のセクションは、この混同を将来の汎用化提案が繰り返さないための明示的なガードレールとして機能する見込み。
+
+また、`/triage` の AC verify command 監査が Pre-merge AC2 (grep) の「常時 PASS」パターンを Issue 段階で事前検出し、`/spec` 着手前に本文が修正されていた。今回の review では AC2 は正常に機能する状態で検証できており、verify command 品質問題の再発を上流フェーズで防いだ好例として記録する。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN なし。rubric (AC1) は `skills/review/SKILL.md` の該当セクションを目視で確認し明確に PASS 判定できた。grep (AC2) は上記の事前修正により固有文字列にマッチする健全な verify command として機能した。command (AC3、`bats tests/` 全件) は 18 並列実行で 2074 件 PASS・件数不一致なしを確認。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Pre-existing failure exception の汎用化を見送り、`forbidden-expressions` 単体スコープを維持する決定とその理由を `skills/review/SKILL.md` に明記した (Spec Notes の判断をそのまま実装に反映)。
-- 決定性判別手段として、同一 commit SHA での単発再実行 (`modules/orchestration-fallbacks.md#ci-wait-silence-timeout` と同系統) を採用する旨を明記した。複数 run 再現率や OS 依存切り分けは将来の汎用化 Issue に委ねる。
-- 件数不一致シグナルは `modules/ci-failure-classifier.md` に新規シグネチャとしてではなく、Signature Table の直後に独立した "Test Count Mismatch Signal (non-infra)" セクションとして追加した (7 シグネチャのいずれにも該当しない別種のシグナルであることを明示するため)。
+- Step 7 は `.wholework.yml` に `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれも設定されておらず全て `false` のため、7.1–7.6 を全てスキップし Step 8 に進んだ。
+- Step 10 は `REVIEW_DEPTH=light` (ARGUMENTS の `--light` 明示指定、Size=M とも整合) のため、`review-light` エージェント 1 体による軽量統合レビューを実施した。
 
 ### Deferred Items
-- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外とし、将来の汎用化 Issue に委ねる (Spec Notes に記載済み)。
-- Post-merge AC (決定的な既存失敗を含む PR での `/review` 実行観察) は `verify-type: observation event=auto-run session=next` であり、次回の `/verify` セッションで検証される。
+- 決定性判別の自動化 (複数 run 再現率収集、結果比較ロジック) は本 Issue のスコープ外のまま — `/code` フェーズの Deferred Items を引き継ぐ (将来の汎用化 Issue に委ねる)。
+- Post-merge AC (決定的な既存失敗を含む PR での `/review` 実行観察、`verify-type: observation event=auto-run session=next`) は未検証のまま — 次回の `/verify` セッションで観察される。
 
 ### Notes for Next Phase
-- `bats tests/` 全件 (2074 件) PASS 済み、件数不一致なし。
-- `docs/ja/tech.md` の同期ギャップを実装フェーズで検出・修正済み — Spec の Changed Files には未記載だった点に注意。
-- 本 Issue はドキュメント追記のみで `scripts/pre-merge-check.sh` や `.github/workflows/test.yml` は変更していない。
+- MUST/SHOULD/CONSIDER のいずれも検出されなかったため Step 12 (修正サイクル) は実行していない。`/merge` にそのまま進んで良い。
+- CI は全 15 ジョブ (7 種 × push/pull_request) SUCCESS。Pre-existing failure exception は不発火 (該当ジョブなし)。
+- 本 PR はドキュメント追記のみ (`modules/ci-failure-classifier.md`, `skills/review/SKILL.md`, `docs/tech.md`, `docs/ja/tech.md`) — `scripts/pre-merge-check.sh` や `.github/workflows/test.yml` への変更はない。
