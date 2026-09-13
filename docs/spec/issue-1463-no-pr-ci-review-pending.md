@@ -322,20 +322,15 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 - `github_check "gh pr checks" "Run bats tests"` の 1 件は `/code` フェーズでは意図的に未チェックのまま残されており (Phase Handoff の Notes for Next Phase に明記)、`/review` が実際の CI 結果で検証してチェック済みに更新する運用が想定どおり機能した
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 の Pre-merge AC 8 件はすべて PASS (rubric 2 件、file_contains 1 件、command 4 件は CI reference fallback、github_check 1 件は実 CI 結果) と判定し、最後の未チェック AC をチェック済みに更新した
-- Step 10 は `--non-interactive` (fork 実行、re-invocation 保証なし) のため Workflow tool を使わず、static Task fan-out (review-spec + review-bug×2) を Agent tool `run_in_background: false` で foreground 実行した
-- review-bug×2 が独立に提起した「`detect-pr-ci-workflows.sh` の repo-root 引数省略問題」を 2 系統の指摘 (unreadable repo-root → absent / CWD・branch 依存) に整理し、adversarial verification で両方 PASS (SHOULD) と確認。前者はコード修正 (readability チェック追加 + 回帰テスト)、後者は設計変更のコストと発生確率 (repo で最初の CI workflow を追加する PR という稀なケース) を鑑みてドキュメント化 (受容リスクの明記) で対応した
-- CONSIDER 3 件 (ci-failure-classifier.md の root 記述曖昧さ、CI_RESULT_LINE 未使用、Per-Consumer 表の exhaustive 主張の欠落、orchestration-fallbacks.md のケース構造) はいずれも軽量な文書修正で解消可能と判断し、SHOULD と合わせて全 7 件のライン指摘 (MUST 0) を修正した
-- `skills/review/SKILL.md` の allowed-tools 非対称性の指摘は adversarial verification で REJECT (verify-executor §3a 経路は no-ci-configured の前提条件と構造的に両立しないことを確認) — false positive として除外
+- Pre-merge AC ゲートは 8/8 チェック済み、review completion も review-incomplete-fallback 起源ではなかったため、AskUserQuestion を経由せずそのまま `gh pr merge --squash --delete-branch` を実行した
+- `merge-strategy` は `.wholework.yml` 未設定のためデフォルトの `squash` に解決された
 
 ### Deferred Items
-- `scripts/run-review.sh` が main repo root (PR head ではない) の `.github/workflows/` を評価する制約は、フルの是正 (PR head 内容の評価への変更) を行わずドキュメント化のみで対応した。リポジトリが初めて CI workflow を追加する PR という稀なケースでのみ顕在化するため、実際に問題が観測されたら別 Issue で再設計を検討する
-- Post-merge observation AC (`/auto` の pr route を PR トリガ CI 不在リポジトリで実行して確認) は引き続き次回セッションでのみ観測可能 (code フェーズからの deferred item を継続)
+- Post-merge observation AC (`/auto` の pr route を PR トリガ CI 不在リポジトリで実行して確認) は引き続き次回セッションでのみ観測可能 (spec/review フェーズからの deferred item を継続)
 - `docs/guide/xl-decomposition.md` の ja ミラードリフトは本 PR のスコープ外のまま未着手
 
 ### Notes for Next Phase
-- `/merge` は Pre-merge AC 8 件すべて PASS 済み (チェックボックスも全て `[x]`) のため、AC ゲートで滞留しないはず
-- Post-merge observation AC (`session=next`) は、次に PR トリガ CI が構造的に存在しないリポジトリで `/auto` pr route を実行するセッションで `/verify` が確認すること
+- `/verify` は Post-merge observation AC (`session=next`) を、次に PR トリガ CI が構造的に存在しないリポジトリで `/auto` pr route を実行するセッションで確認すること
