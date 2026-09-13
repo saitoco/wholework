@@ -115,17 +115,34 @@ N/A
 N/A — 新規テスト 3 件 (`tests/edge-case-execution-context.bats` 2 件、`tests/workflow-guidance.bats` 1 件) について、対象ファイル (`skills/review/SKILL.md`, `skills/review/workflow-guidance.md`) を `git stash push -u` で実装前の状態に一時退避したうえで実行し、全件 FAIL することを確認した (New Verification-Test Pre-implementation FAIL Check)。その後 stash を復元し、`bats --jobs 18 tests/` で全 2077 件 PASS を確認した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜4 をそのままの順序で実装し、逸脱なし。
-- 実行コンテキスト軸の挿入位置は Spec が指定した挿入位置 A (5 軸直後・Trust gating 直前) / 挿入位置 B (手順 3 の (6) 直後) に厳密に従った。
-- 新規 3 テストは commit 前に `git stash push -u` で対象ファイルを実装前状態に戻し、全件 FAIL することを確認してから復元・commit した (New Verification-Test Pre-implementation FAIL Check)。
+- Pre-merge AC 4 件を verify-executor で再検証し、全件 PASS (rubric 1件、section_contains 1件、file_contains 1件、command 1件は CI reference fallback 経由) を確認した。Issue チェックボックスは code フェーズで既に `[x]` 済みのため変更なし。
+- REVIEW_DEPTH=light (Size M) のため review-light 1エージェント統合レビューを実行。SHOULD 指摘1件 (Parser/Validator Edge Case Pre-check の新規手順 (7) が生成する代替 CWD ディレクトリが 14.2 のクリーンアップ backstop リストに含まれていない) を採用し修正した。
+- 修正方針は、代替 CWD を `.tmp/edge-case-fixtures-$NUMBER/` 配下にネストする案 (既存クリーンアップの対象に自動的に含まれる) を採用し、14.2 のリスト自体への追加は不要とした。
+- CI (全8ジョブ SUCCESS)・Base Branch Conflict Pre-check (競合なし)・Parser/Validator Edge Case Pre-check (本PRはプロース/テストのみでゼロマッチ) はいずれも通常経路で完了。
 
 ### Deferred Items
-- Post-merge AC (firing condition (c) 該当の新規 PR での `/review` 実行時に実行コンテキスト軸が実際に測定されることの観察) は `/verify` で次回該当 PR 発生時に確認する。
+- Post-merge AC (firing condition (c) 該当の新規 PR での `/review` 実行時に実行コンテキスト軸が実際に測定されることの観察) は `/verify` で次回該当 PR 発生時に確認する (未変更、code フェーズからの引き継ぎを維持)。
 
 ### Notes for Next Phase
-- Pre-merge AC 4 件はすべて PASS 済みで Issue チェックボックスも更新済み。
-- `bats --jobs 18 tests/` で全 2077 件 PASS を確認済み (behavioral change 検出により `tests/run-review.bats` も含めた全件実行)。
-- Post-merge AC は次に firing condition (c) 該当の新規スクリプトを含む PR が現れるまで検証不能なため、`/verify` はそれまで UNCERTAIN/pending として扱う想定。
+- レビューで1件 SHOULD 修正済み・push済み (commit 350152ea)。追加の MUST/SHOULD/CONSIDER 指摘なし。
+- Lightweight re-check: `validate-skill-syntax.py` PASS、対象テスト7件 PASS、`bats --jobs 18 tests/` 全2077件 PASS。
+- 本 phase 中に GitHub 側の一時的な Partial System Outage (2026-09-13T09:16 UTC) が発生し、ラベル遷移・レビュー投稿 API が一時的に失敗したが、再試行で解消済み。`/merge` 実行時に同種の一時エラーが再発する可能性はあるが、本 Issue のスコープとは無関係。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light (Perspective 1) が Spec の Implementation Steps 1〜4 と実装差分を突き合わせ、挿入位置 A/B・workflow-guidance.md の追記・新規テスト2件とも Spec 記載どおりであることを確認した。`EDGE_CASE_SUFFIX` の content-agnostic な転記ロジックについても独自に再検証しており、Spec の Notes が主張する設計判断の裏付けが取れている。
+
+### Recurring issues
+
+review-bug 2 エージェントの fan-out は `SKIP_REVIEW_BUG=false` かつ `REVIEW_DEPTH=full` の場合のみ動く経路であり、本 PR は `REVIEW_DEPTH=light` (Size M) のため review-light 1 エージェントによる統合レビューのみで完結した。指摘は 1 件 (SHOULD): Parser/Validator Edge Case Pre-check の新規手順 (7) が使う「repository root 以外の CWD」ディレクトリが、既存のクリーンアップ対象 (`.tmp/edge-case-fixtures-$NUMBER/` および 14.2 の backstop リスト) に明示的に含まれていなかった。本 Issue 自身が「Pre-check の実行結果の取りこぼし (CWD 依存バグ)」を主題としており、その対策コード自身が新たな一時ディレクトリを生成する副作用を持つ点は Spec 側で想定されていなかった。修正は該当ディレクトリを `.tmp/edge-case-fixtures-$NUMBER/` 配下にネストする 1 行の文言修正で完了し、既存テスト (grep ベースの文字列一致) にも影響しなかった。この種の「新規手順が生成する副産物のクリーンアップ漏れ」は Edge Case Pre-check 拡張時に繰り返しやすいパターンとして留意する。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 4件の Pre-merge AC (rubric 1件、section_contains 1件、file_contains 1件、command 1件) はいずれも UNCERTAIN なく PASS 判定できた。`command "bats tests/"` は safe mode のため CI reference fallback (exact job name match: `Run bats tests`) で PASS 判定。rubric AC は Consumed Comments 記録済みの triage 指摘 (常時 PASS しうる懸念) を `/spec` 側で既に file_contains に置き換え済みだったため、本 phase では健全な形で検証できた。
+
+なお本 phase 中、GitHub 側で API リクエスト全般に影響する Partial System Outage (2026-09-13T09:16 UTC 発生、githubstatus.com で確認) が発生し、`gh-label-transition.sh` および `gh-pr-review.sh` のレビュー投稿 API 呼び出しが一時的に 500 エラーで失敗した。いずれも再試行で成功しており、本 Issue のスコープ (Edge Case Pre-check の CWD 軸追加) とは無関係な GitHub 側の一時的な障害であることを githubstatus.com で確認済み。
