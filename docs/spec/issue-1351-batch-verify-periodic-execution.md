@@ -181,3 +181,39 @@ No new comments since last phase.
 ### 2026-08-15 再確認 (`/audit verify-backlog` セッションから)
 
 `phase/verify` backlog の減少 (10 Issue 処理、5 Issue が `phase/done` 到達) が本セッションで実際に観測されたが、これはユーザーによる `/audit verify-backlog` の**手動ディスパッチ**によるものであり、Spec で選定した「確立した実行方法」(CronCreate による定期実行) を経由したものではない。加えて上記の通り CronCreate は無人実行下で分類器にブロックされることが実証済みであり、選定した実行方法自体が実際には無人稼働しない可能性が高い。Post-merge AC の premise (確立した方法での定期実行実施) は今回も成立せず、UNCERTAIN のまま維持。
+
+## Verify Retrospective (2026-09-18 observation dispatch)
+
+本節は `/auto --batch --until` session `90128-1788933783` の observation dispatch で実行された `/verify 1351` の記録。`auto-run` 発火後の初回評価にあたる。
+
+### 判定
+
+Post-merge AC (`observation event=auto-run session=next`) を **SKIPPED** と判定した (前提不成立)。
+
+### 実測
+
+| 指標 | 値 |
+|---|---|
+| ベースライン (本 Spec 記録、実装時) | 303 (state=all) |
+| 現在 (2026-09-18) | 294 (state=all) |
+| 差分 | −9 |
+
+**本 Spec がベースラインを数値で記録していた点は良い。** #1350 の同種 AC (「UNCERTAIN/SKIPPED 率が改善する」) はベースライン不在で UNCERTAIN 判定になったのに対し、本 Issue は 303 件という具体値と測定手段 (`scripts/rank-verify-backlog.sh`) を Spec に残していたため、比較そのものは機械的に行えた。
+
+### SKIPPED の理由
+
+減少は確認できたが、**確立された実行方法 (`/loop 1h /audit verify-backlog --top 10`) は一度も実行されていない**。`.tmp/auto-events.jsonl` に `/loop /audit verify-backlog` の痕跡はなく、減少 9 件は本セッションの `/auto --batch --until` と observation dispatch による個別処理 (#1464 / #1461 / #1329 の `phase/done` 遷移) に帰属する。
+
+本 AC は「**確立した実行方法で** ... **次回の定期実行後に**」と原因を限定しているため、別経路による減少をもって PASS にはできない。
+
+### event 種別と実際のトリガの不一致
+
+本 AC は `event=auto-run` だが、待っている事象は**人手による `/loop` の起動**である。Spec 自身が `/loop` を「人手による対話セッションからの起動を前提とする」と明記している。
+
+したがって本 AC は、ユーザーが `/loop` を起動するまで `/auto` が走るたびに再評価され SKIPPED され続ける。`auto-run` は「観測の機会」としては機能するが「待っている事象」とは対応していない。
+
+この観測は #1480 (observation AC の判定可能性) にコメントとして追記済み。#1350 (測定基準の欠落)、#1474 (判定フェーズの不整合) と合わせ、observation AC が構造的に解決しない 3 つの型のうちの 1 つにあたる。
+
+### Improvement Proposals
+
+- N/A — 本 Issue 固有の欠陥ではない。ベースライン記録は適切に行われており、残る論点 (event 種別とトリガの不一致) は observation AC 全般の authoring 品質の問題として #1480 に集約した。
