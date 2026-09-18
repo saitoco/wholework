@@ -99,3 +99,33 @@
 
 ### Improvement Proposals
 - N/A (今回判明した知見は AC 自体の限界であり、実装の不備ではないため改善提案には該当しない)
+
+## Verify Retrospective (2026-09-18 observation dispatch)
+
+本節は `/auto --batch --until` session `90128-1788933783` の observation dispatch で実行された `/verify 1350` の記録。`auto-run` 発火後の初回評価にあたる。
+
+### 判定
+
+Post-merge AC (`observation event=auto-run session=next`) を **UNCERTAIN** と判定した。
+
+### 収集した証拠
+
+本 dispatch で発火済み observation AC を 2 件処理し、いずれも「証拠が見つからず SKIPPED」には至らなかった。
+
+| 対象 | 使用した evidence source | 結果 |
+|---|---|---|
+| #1329 | Direct grep against operational log files | PASS |
+| #1325 | Issue コメント横断スキャン + 対象ファイルの grep | UNCERTAIN (構造的曖昧さ。証拠は収集済み) |
+
+#1329 では 3 番目のパターンが決定的証拠となり PASS に到達した。
+
+### UNCERTAIN の理由: 後半節が測定不能
+
+本 AC は「evidence source が実際に参照され」(前半) と「UNCERTAIN/SKIPPED 率が改善する」(後半) の 2 節からなる。
+
+- **前半**: 技法は実際に使われ PASS を生んだが、`modules/verify-classifier.md` のテーブルを参照してから技法を選んだわけではない。`/verify` Step 8c の evidence collection リスト自体が同じ証拠源を挙げているため、テーブル参照が原因だったとは断定できない
+- **後半**: 率の改善を主張するにはベースライン率と十分なサンプル数が要るが、どちらも存在しない。#1350 の元データ (#1349、40 Issues) は**修正前**の観測でありパターン抽出の材料、ベースライン測定ではない。修正後サンプルは本 dispatch の 2 件のみ
+
+### Improvement Proposals
+
+- **「率の改善」を要求する observation AC は、ベースライン値とサンプル数閾値が AC 自身に明記されていないと原理的に PASS 判定できない。** 本 AC の後半節「UNCERTAIN/SKIPPED 率が改善することを観察する」は、比較対象のベースライン率がどこにも記録されておらず、何件観測すれば判定してよいかも定義されていない。結果として、evidence source が実際に機能して PASS を 1 件生んだ (#1329) にもかかわらず AC 全体は UNCERTAIN に留まる。同種の「率 / 割合 / 頻度の改善」を問う AC は将来も書かれうるため、`modules/verify-classifier.md` の observation 型の記述に「定量的改善を問う条件は、(a) ベースライン値とその測定元、(b) 判定に必要な最小サンプル数、の両方を条件文自身に含めること」という要件を追加すべき。変更対象は `modules/verify-classifier.md` と、AC を生成する `skills/issue/SKILL.md` の該当ステップの 2 ファイル。
