@@ -141,6 +141,16 @@ No new comments since last phase.
 - saito / MEMBER / first-class / ## Post-merge 条件の再確認 (`/audit verify-backlog` セッションから) / https://github.com/saitoco/wholework/issues/1351#issuecomment-5302103419
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5304278828
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=1351 --> / https://github.com/saitoco/wholework/issues/1351#issuecomment-5306050519
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1351#issuecomment-5306056056
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5310553480
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5327741075
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5341255378
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5354389076
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5369705054
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5378428576
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5384001892
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5579815580
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1351#issuecomment-5653269410
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
