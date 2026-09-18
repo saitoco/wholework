@@ -130,3 +130,44 @@ No new comments since last phase.
 ### Acceptance criteria verification difficulty
 
 なし — rubric ベースの AC 4件はいずれも diff から一意に判定でき、UNCERTAIN は0件だった。command 型 AC 1件 (`bats tests/run-spec.bats`) も CI job `Run bats tests` (`bats --jobs $(nproc) tests/` によるフルスイート実行) との run command containment が明確で、CI reference fallback により迷いなく PASS 判定できた。
+
+## Verify Retrospective (2026-09-18 observation dispatch)
+
+本節は `/auto --batch --until` session `90128-1788933783` の observation dispatch で実行された `/verify 1369` の記録。`auto-run` 発火後の初回評価にあたる。
+
+### 判定
+
+Post-merge AC (`observation event=auto-run`) を **SKIPPED** と判定した (spec phase の silent no-op が未発生、機構に発火機会なし)。
+
+### 収集した証拠
+
+| 確認項目 | 結果 |
+|---|---|
+| `.tmp/auto-events.jsonl` の `spec_retry_fire` (全期間) | 0 件 |
+| `orchestration-recoveries.md` の spec-retry 相当 | 0 件 |
+| 本 session の spec phase 関連イベント | 33 件 (全て正常完了) |
+
+本 session では 6 件で spec phase が実行されたが (#1464 は Size XS でスキップ)、いずれも silent no-op を起こしていない。実装は `scripts/run-spec.sh` に存在することを確認済み (`_write_spec_retry_recovery` L157-164、tier/config ゲート L121-123、`exec` self-restart L329) — **機構の欠落ではなく発火機会の不在**である。
+
+なお #1462 の spec phase 実行中に external kill が 1 件発生したが、kill 時点で `phase_complete` emit 済み・Spec コミット済みであり、本 AC が対象とする silent no-op (exit 0 かつ `matches_expected:false`) とは別種の事象である。
+
+### AC 品質の好例 — 判定材料が条件文に明記されている
+
+本 AC は判定材料を条件文自身に書いている。
+
+> 次の `event=auto-run` 発火時、`docs/reports/orchestration-recoveries.md` の spec-retry-fire 相当エントリの有無、または該当セッションの `.tmp/auto-events.jsonl` …
+
+この 1 行があるため、**何を見れば判定できるかを推測する必要がなく、5 件の dispatch 中で最も迷いなく評価できた**。同じ dispatch で処理した他 3 件との対比が明確である。
+
+| Issue | 判定 | 判定が難しかった理由 |
+|---|---|---|
+| #1325 | UNCERTAIN | 評価に必要な材料 (フィクスチャ) が対象フェーズに存在しない |
+| #1350 | UNCERTAIN | 「率の改善」にベースライン・サンプル数の定義がない |
+| #1351 | SKIPPED | event 種別 (`auto-run`) と実トリガ (人手の `/loop` 起動) が不一致 |
+| **#1369** | **SKIPPED** | **判定材料が明記済み。前提未成立を即座に確定できた** |
+
+#1369 の形式 (「次の `event=X` 発火時、<具体的なファイル/イベント名> の有無を見る」) は、#1480 で検討する observation AC の authoring 要件の参考形になる。
+
+### Improvement Proposals
+
+- N/A — 本 Issue に改善点は見つからなかった。AC 品質はむしろ好例であり、上記の対比を #1480 の Spec 作業の参考として残す。
