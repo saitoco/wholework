@@ -106,17 +106,14 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 - 今回の `/review` では `review-light` が同期で結果を返したため、Sub-agent Result Fallback の発火経路そのものは検証できていない
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Language Convention check の FAILURE は `前景` をインラインコードで囲んで解消した (`tests/review.bats:129` の `grep -q "前景"` は backtick 付きでも一致する)
-- Review 本文の記録行 (Sub-agent fallback) の置き場が無かった点を SHOULD として修正し、テンプレートの `## Code Review` 直下と本文構成リスト (10.0 / 10.2) に追記した
-- `review-bug` が両方欠けた場合の扱いと、途中で切れた結果の扱いは CONSIDER としてスキップした (実際に起きた形ではないため)
+- pre-merge AC は 4 件すべてチェック済みで、review-incomplete-fallback も無かったため、ゲートを通過してそのままマージした
+- マージ戦略は `resolve-merge-strategy.sh --flag` の結果 (`--squash`) を使い、コンフリクトは無かったので rebase は行っていない
 
 ### Deferred Items
-- 回帰テスト (Step 10 に "Sub-agent Result Fallback" があることを見る grep ベースの bats assertion) は追加していない。Spec が文書のみの変更として追加しない方針で、再発は Post-merge の observation 条件 (event=pr-review-light) で確認する
-- 機械的な検出 (対応案 3) と `TaskStop` による後始末 (#1478) は引き続き範囲外
+- Post-merge の observation 条件 (fork 実行の light review で Review Response Summary が投稿され、Sub-agent fallback 行から結果の出どころが判別できること) は未確認のまま `/verify` に残る
 
 ### Notes for Next Phase
-- 実行環境に `bats` が無いので、push 後の CI (特に `Language Convention check` と bats の各 job) の結果を `/merge` 前に確認してほしい。レビュー時点では Language Convention check 以外の 16 jobs は SUCCESS だった
-- Post-merge の observation 条件は未チェックのまま。fork 実行の light review で Review Response Summary が投稿され、Review 本文の Sub-agent fallback 行から結果の出どころが判別できるかを `/verify` で確認する
+- CI は success でマージした。Post-merge の observation 条件は会話セッションでの fork 実行 light review を要するため、`/verify` では UNCERTAIN になりうる
