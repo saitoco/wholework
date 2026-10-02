@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-10-02 22:12 UTC: issue-phase-silent-no-op
+
+### Context
+- Issue #1484, phase: issue
+- Source: recovery-sub-agent
+- Wrapper: run-issue.sh, exit code: 1
+- Log tail: "Warning: claude exited 0 but issue phase did not complete (silent no-op). reconcile: ... issue #1484 has no phase/issue or later phase label"
+
+### Diagnosis
+- cause: label-transition-skipped
+- `/issue 1484 --non-interactive` finished its substantive work (body refined, triage applied, retrospective posted, completion report printed) but never ran Existing Issue Refinement Step 3 (`gh-label-transition.sh 1484 issue`), so the Issue had no `phase/*` label and `run-issue.sh`'s completion check flagged a silent no-op. detect-external-kill: no-match; detect-wrapper-anomaly: no known pattern
+
+### Recovery Applied
+- Tier 3 orchestration-recovery sub-agent plan `action=recover` (1 step, validated by `validate-recovery-plan.sh`): `gh-label-transition.sh 1484 issue`. Re-running the whole phase was avoided since the work was already done
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-09-13 12:21 UTC: manual-recovery-respawn
 
 ### Context

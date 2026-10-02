@@ -181,3 +181,19 @@ No new comments since last phase.
 
 ### Improvement Proposals
 - N/A (issue フェーズのラベル遷移の欠落は初回の観測。`docs/reports/orchestration-recoveries.md` の記録で再発を追う)
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | - | SUCCESS (Tier 3 recover) | run-issue.sh exit 1 (silent no-op): phase/issue label missing; label applied by recovery plan |
+| spec | - | SUCCESS | |
+| code | patch | SUCCESS | commits 8f0ae89e, 65999c1e |
+| verify | - | SUCCESS | phase/verify (observation pending); CI run 37073678331 all jobs success |
+
+### Orchestration Anomalies
+- `run-issue.sh 1484` exited 1: `/issue` (non-interactive) completed its refinement work and completion report but skipped Existing Issue Refinement Step 3 (`gh-label-transition.sh 1484 issue`). Tier 1 reconcile `matches_expected: false`; Tier 2 detector found no known pattern; Tier 3 orchestration-recovery sub-agent proposed `action=recover` (`cause=label-transition-skipped`, 1 step applying the missing label), validated by `validate-recovery-plan.sh` and applied. Recorded in `docs/reports/orchestration-recoveries.md` (2026-10-02 22:12 UTC)
+
+### Improvement Proposals
+- N/A (first observation of this pattern in the issue phase)
