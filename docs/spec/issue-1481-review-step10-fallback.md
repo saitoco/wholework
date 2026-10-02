@@ -117,3 +117,29 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 
 ### Notes for Next Phase
 - CI は success でマージした。Post-merge の observation 条件は会話セッションでの fork 実行 light review を要するため、`/verify` では UNCERTAIN になりうる
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/issue` の Background の事実確認で、#1443 の "Foreground dispatch reminder" がすでにあることが分かった。それによって、主眼を「禁止の文章を足す」から「結果が無いときの代わりの行動 (フォールバック)」に移せた。再発を防ぐ設計判断として妥当だった
+- 付記の「#1142 は誤り」は、調べると誤りではなかった (PR #1143 への fork 実行の `/review` が #1142 の retrospective に記録されていた)。AC4 を `file_not_contains` にしたことで、「誤りの修正」と「曖昧さの解消」のどちらでも同じ形で満たせた
+
+#### design
+- サブエージェントの `tools:` に SendMessage / Write を足さない判断 (宛先は親セッション、ファイルを待つ手段はポーリング) は、実装と review で異論なく通った
+
+#### code
+- Spec どおりの実装で、手戻りは無かった。ただし既存行を編集したことで、元から地の文にあった `前景` が CI の Language Convention check に初めて掛かり、push 後に FAILURE になった。`/code` の実行環境には `bats` も無く、ローカルでの確認は `validate-skill-syntax.py` と `check-forbidden-expressions.sh` に限られた
+
+#### review
+- Language Convention の MUST と、記録行の置き場がテンプレートに無いという SHOULD を検出し、どちらも修正した。今回の review では `review-light` が同じターンの戻り値で返ったので、新設したフォールバックの発火経路は観察できていない
+
+#### merge
+- コンフリクトは無く、CI success でマージした
+
+#### verify
+- Pre-merge 4 件は `/review` でチェック済みのため SKIPPED (既定)。Post-merge の observation 条件 (event=pr-review-light, session=next) は未発火で SKIPPED。Issue は `phase/verify` に留まる
+
+### Improvement Proposals
+- `/code` に、変更後の差分 (`skills/` `modules/` `scripts/`) を `scripts/check-language-convention.py` に通す確認を加える。CI の `language-convention` job (`.github/workflows/test.yml`) は `git diff -U100000 origin/<base>...HEAD -- skills/ modules/ scripts/` を同スクリプトに渡しており、既存行を編集すると、元からあった日本語の地の文が初めて検出される。`/code` が同じ確認をローカルで行えば、push 後の CI FAILURE と review での修正の往復を省ける (#1481 で 1 往復発生)
