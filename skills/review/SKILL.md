@@ -36,7 +36,7 @@ Key per-step behavior in non-interactive mode:
 - **Any AskUserQuestion during review comment resolution** (Steps 7.2, 7.4, 7.6): auto-resolve using model judgment (apply the fix that best matches the review comment intent); record the decision in the Auto-Resolve Log as an issue comment
 - **External review timeout waiting**: auto-resolve by proceeding without waiting (the review results may be incomplete; note this in the review summary)
 - **Unclear review comment intent**: auto-resolve by adopting the most conservative interpretation (e.g., add a comment rather than delete code)
-- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents) and for the orchestrator's own Step 10 sub-agent dispatch (`review-light` / `review-spec` / `review-bug`, and the Workflow path)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. For the sub-agent dispatch, never state that you are waiting for a sub-agent's result and end the turn without it; if the result is not in hand in the same turn, move to the "Sub-agent Result Fallback" in Step 10 and perform that review yourself. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Additionally, pass an explicit Bash `timeout` that covers the measured duration of the command — the tool's 120s default is too short for a full bats suite. Interactive-mode behavior (background execution + await notification) is unaffected.
+- **Foreground (`前景`) execution for test/build commands (including commands run by Step 10's review sub-agents) and for the orchestrator's own Step 10 sub-agent dispatch (`review-light` / `review-spec` / `review-bug`, and the Workflow path)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. For the sub-agent dispatch, never state that you are waiting for a sub-agent's result and end the turn without it; if the result is not in hand in the same turn, move to the "Sub-agent Result Fallback" in Step 10 and perform that review yourself. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Additionally, pass an explicit Bash `timeout` that covers the measured duration of the command — the tool's 120s default is too short for a full bats suite. Interactive-mode behavior (background execution + await notification) is unaffected.
   - **The timeout must fit inside the tool's 600000 ms ceiling.** A command that runs past it is moved to the background automatically, which reproduces the failure this rule exists to prevent — an explicit `timeout` alone does not keep the command in the foreground. For a whole bats suite, run it in parallel so it finishes inside the ceiling; the serial form does not (Issue #1213). Resolve the job count as a separate, literal step first — a `$(...)` command substitution inside the `bats` invocation itself is refused by this project's worktree isolation guard, active whenever `/review` is running inside a worktree session: run `nproc 2>/dev/null || sysctl -n hw.logicalcpu` on its own, then substitute the printed value literally into `bats --jobs <N> tests/`. If `--jobs` fails naming `parallel` (missing GNU `parallel`), follow `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` § "Fallback when `--jobs` is unavailable" rather than re-running one serial whole-suite command. If the tool moves the command to the background anyway, report it as a failure rather than waiting on its completion notification.
 
 ## Review-only Mode (--review-only)
@@ -568,7 +568,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
-   - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
+   - Write Review body (acceptance criteria table + CI status + Sub-agent fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
 6. **Proceed to Step 10** (skip 10.1–10.3)
 
@@ -643,7 +643,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
-   - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
+   - Write Review body (acceptance criteria table + CI status + Sub-agent fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
 5. **Pass integrated results to Step 10.3**:
    - Run 2-stage verification on issues collected from review-bug×2 via verification sub-agents (see 10.3)
@@ -751,6 +751,8 @@ rm -f .tmp/review-body-$NUMBER.md .tmp/review-comments-$NUMBER.json
 | job-name | PENDING | CI running |
 
 ## Code Review
+
+- Sub-agent fallback: {sub-agent} result not obtained ({reason}); orchestrator performed {aspects}  (only when the Sub-agent Result Fallback was used; one line per substituted sub-agent)
 
 ### General Comments (issues where path/line cannot be identified)
 
