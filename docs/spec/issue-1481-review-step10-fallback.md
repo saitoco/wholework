@@ -77,3 +77,36 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (判断の根拠、Q&A で決めた方針、受入条件の変更、Triage の結果) / https://github.com/saitoco/wholework/issues/1481#issuecomment-5956690140
+- `/code` 実行時 (phase/ready 以降): 新規コメントなし
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりに実装した。Step 1〜3 は同一ファイル (`skills/review/SKILL.md`) の変更なので 1 コミットにまとめた
+
+### Design Gaps/Ambiguities
+- Spec の Changed Files は `guard-prefix.sh` への一文追加を `/code` の判断に委ねていた。対話セッションからの fork 実行には届かない文言であり、Step 10 のフォールバックはどの実行面でも SKILL.md 側で効くため、今回は追加しなかった
+- 実行環境に `bats` が無く、bats スイートを実行できなかった。代わりに `tests/review.bats` の `## Non-Interactive Mode Behavior` 節への既存 assertion が見る文字列が変更後も残っていることを grep で確認した。`validate-skill-syntax.py` と `check-forbidden-expressions.sh` は通っている (bare bracket の警告 1031 件は既存)
+
+### Rework
+- なし
+- 新規テストは追加していないので、Pre-implementation FAIL の確認 (Confirmed pre-implementation FAIL for N new test(s)) は対象外 (N=0)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `review` の fork 実行ではサブエージェントの起動形態を SKILL.md から制御できないので、「同期で待て」の禁止を足すのではなく、結果が手元に無いときに orchestrator 自身がその観点のレビューを行う Sub-agent Result Fallback を Step 10 に新設した
+- 前景実行の規定 (Non-Interactive Mode Behavior) の対象に orchestrator 自身の Step 10 dispatch を加え、Step 10 冒頭の reminder は重複を避けて短くし、新小節を参照する形にした
+- 10.3 の検証サブエージェントは代行せず、結果が得られなければ検証なしで通す (上限超過分と同じ扱い)
+- `modules/execution-context.md` の Precedents は「PR #1143 (… recorded in #1142's verify retrospective)」に直し、#1481 を追記した
+
+### Deferred Items
+- 起動済みサブエージェントの停止 (`TaskStop` が fork から拒否される問題) は #1478 の範囲
+- 機械的な検出 (対応案 3) は Out of Scope。再発は Post-merge の observation 条件 (event=pr-review-light) で確認する
+- `guard-prefix.sh` への同趣旨の一文追加は見送った
+
+### Notes for Next Phase
+- `/review` では、Sub-agent Result Fallback の記述が light (10.0) / full (10.2) / Workflow の 3 経路すべてに及んでいるか、および Review 本文への記録行が General Comments の前に置かれる記述になっているかを確認してほしい
+- `bats` が実行環境に無かったので、CI の bats の結果を必ず確認する (特に `tests/review.bats` と `tests/workflow-guidance.bats`)
+- Pre-merge の 4 条件は `/code` 内で PASS と判断してチェック済み。Post-merge は observation で、未チェックのまま
