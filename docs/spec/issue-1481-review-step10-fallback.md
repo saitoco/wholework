@@ -77,3 +77,46 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (判断の根拠、Q&A で決めた方針、受入条件の変更、Triage の結果) / https://github.com/saitoco/wholework/issues/1481#issuecomment-5956690140
+- `/code` 実行時 (phase/ready 以降): 新規コメントなし
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりに実装した。Step 1〜3 は同一ファイル (`skills/review/SKILL.md`) の変更なので 1 コミットにまとめた
+
+### Design Gaps/Ambiguities
+- Spec の Changed Files は `guard-prefix.sh` への一文追加を `/code` の判断に委ねていた。対話セッションからの fork 実行には届かない文言であり、Step 10 のフォールバックはどの実行面でも SKILL.md 側で効くため、今回は追加しなかった
+- 実行環境に `bats` が無く、bats スイートを実行できなかった。代わりに `tests/review.bats` の `## Non-Interactive Mode Behavior` 節への既存 assertion が見る文字列が変更後も残っていることを grep で確認した。`validate-skill-syntax.py` と `check-forbidden-expressions.sh` は通っている (bare bracket の警告 1031 件は既存)
+
+### Rework
+- なし
+- 新規テストは追加していないので、Pre-implementation FAIL の確認 (Confirmed pre-implementation FAIL for N new test(s)) は対象外 (N=0)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps 1〜5 と差分は一致していた。構造的な乖離は無い
+
+### Recurring issues
+- 既存の行 (`前景` を含む Foreground bullet) を編集すると、行全体が + 行になって `scripts/check-language-convention.py` の検査対象に入り、元から地の文にあった日本語が初めて検出された。`/code` は `validate-skill-syntax.py` と `check-forbidden-expressions.sh` しか実行しておらず、CI の Language Convention check に相当する確認を持たなかったため、push 後の CI で初めて FAILURE になった。`skills/` `modules/` `scripts/` の既存行を触る変更では、`/code` 側で変更後の差分を `check-language-convention.py` に通す確認が有効かもしれない (改善提案。Issue 化は `/verify` で集約)
+- Review 本文に記録する行を新設する変更では、本文テンプレートにその置き場があるかを併せて見る必要がある (今回は SHOULD として指摘し、テンプレートに追記して解消)
+
+### Acceptance criteria verification difficulty
+- 4 つの Pre-merge 条件は rubric / `section_contains` / `file_not_contains` で、UNCERTAIN は無かった。Post-merge の observation 条件は fork 実行の light review を要するため、この実行 (`--non-interactive`、`review-light` が同じターンの戻り値で返った) では確認できない
+- 今回の `/review` では `review-light` が同期で結果を返したため、Sub-agent Result Fallback の発火経路そのものは検証できていない
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Language Convention check の FAILURE は `前景` をインラインコードで囲んで解消した (`tests/review.bats:129` の `grep -q "前景"` は backtick 付きでも一致する)
+- Review 本文の記録行 (Sub-agent fallback) の置き場が無かった点を SHOULD として修正し、テンプレートの `## Code Review` 直下と本文構成リスト (10.0 / 10.2) に追記した
+- `review-bug` が両方欠けた場合の扱いと、途中で切れた結果の扱いは CONSIDER としてスキップした (実際に起きた形ではないため)
+
+### Deferred Items
+- 回帰テスト (Step 10 に "Sub-agent Result Fallback" があることを見る grep ベースの bats assertion) は追加していない。Spec が文書のみの変更として追加しない方針で、再発は Post-merge の observation 条件 (event=pr-review-light) で確認する
+- 機械的な検出 (対応案 3) と `TaskStop` による後始末 (#1478) は引き続き範囲外
+
+### Notes for Next Phase
+- 実行環境に `bats` が無いので、push 後の CI (特に `Language Convention check` と bats の各 job) の結果を `/merge` 前に確認してほしい。レビュー時点では Language Convention check 以外の 16 jobs は SUCCESS だった
+- Post-merge の observation 条件は未チェックのまま。fork 実行の light review で Review Response Summary が投稿され、Review 本文の Sub-agent fallback 行から結果の出どころが判別できるかを `/verify` で確認する
