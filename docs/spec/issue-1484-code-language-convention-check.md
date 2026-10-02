@@ -128,3 +128,30 @@ CI は `git diff -U100000 origin/<base>...HEAD -- skills/ modules/ scripts/` を
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 をそのまま実装した。`docs/structure.md` / `docs/ja/structure.md` の sync candidate は、`scripts/check-language-convention.py` の項目の末尾に `/code` の事前実行を足す形で更新した
+
+### Design Gaps/Ambiguities
+- bats が未インストールのため、新規テスト 9 件とスイート全体は実行できなかった (Spec Notes の想定どおり)。代わりに、各 assertion の文字列を `grep -cF` で直接確認し、すべて期待どおりの件数 (`$(git merge-base` のみ 0 件) だった。bats の実行は CI の `bats` job に任せる
+- New Verification-Test Pre-implementation FAIL Check: bats が無いため、実装前の状態に対する FAIL は `git show HEAD:skills/code/SKILL.md | grep -cF` (0 件) と、補助文書が `HEAD` に存在しないことの確認で代替した。9 件中、補助文書を見る 7 件は文書不在で、SKILL.md を見る 2 件は 0 件ヒットで、実装前に FAIL する
+
+### Rework
+- なし。手順 1〜3 のコマンドでこの変更自体を検査し、`check-language-convention.py` が exit 0 (違反なし) だった。`validate-skill-syntax.py`、`check-allowed-tools.sh`、`check-forbidden-expressions.sh` も問題なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 検査手順は Spec どおり補助文書 `skills/code/language-convention-check.md` に置き、`SKILL.md` の Step 9 には存在条件付きの読み込み 1 行だけを足した (`SKILL.md` を増やさず、script を持たない repo にも読み込みを課さないため)
+- 失敗時の扱いは、`git merge-base` 失敗と script 実行不能を fail-open、違反の報告だけを fail-closed にした (CI が最終ゲートのため)
+
+### Deferred Items
+- Post-merge の observation AC (次の `/review --light` 完了時の `Language Convention check` の成功) は未検証で、`/verify` 以降に委ねる
+- bats スイートの実行は未実施で、CI の `bats` job に委ねる
+
+### Notes for Next Phase
+- patch route のため `/review` を通らない。bats 未実行の分は push 後の CI 結果を確認すること
+- `docs/environment-adaptation.md` の Domain Files 表に `bare-bracket-assertions-check.md` の行が無い既存の抜けは、対象外としてそのままにしてある
