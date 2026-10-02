@@ -155,3 +155,29 @@ No new comments since last phase.
 ### Notes for Next Phase
 - patch route のため `/review` を通らない。bats 未実行の分は push 後の CI 結果を確認すること
 - `docs/environment-adaptation.md` の Domain Files 表に `bare-bracket-assertions-check.md` の行が無い既存の抜けは、対象外としてそのままにしてある
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/issue` (非対話) は本文の整理と triage を終え、完了報告まで出力したが、Existing Issue Refinement Step 3 の `gh-label-transition.sh 1484 issue` が実行されず、`phase/*` ラベルが付かなかった。`run-issue.sh` が silent no-op と判定して exit 1 になった。`/auto` の Tier 3 復旧 (orchestration-recovery サブエージェント、`action=recover`、`cause=label-transition-skipped`) で、ラベルの付与だけを行って spec に進んだ。issue フェーズでの同種の記録は `docs/reports/orchestration-recoveries.md` に過去 0 件で、今回が初回
+- Post-merge AC は「次の `/review --light` の対象 PR の diff が該当パスに及ぶ場合」と判定対象を限定する形に整理されており、observation の発火時に判定できる形になっている
+
+#### design
+- 検査手順を補助文書 (`skills/code/language-convention-check.md`、`load_when.file_exists_any` 付き) に置き、`SKILL.md` には読み込み 1 行だけを足す設計は、script を持たない repo への影響を避けつつ AC1/AC3 を満たしている
+
+#### code
+- 実装は Spec どおりで手戻りなし。ローカルに bats が無く、新規テスト 9 件は push 後の CI に委ねられた。CI (run 37073678331) では `Run bats tests` と `Language Convention check` を含む全ジョブが success だった
+
+#### review
+- patch route のため `/review` は無い。bats をローカルで実行できない環境では、CI の結果確認が `/verify` の手作業になる
+
+#### merge
+- patch route のため PR / merge は無い
+
+#### verify
+- Pre-merge 3 件は `/code` でチェック済みのため SKIPPED (既定)。Post-merge の observation 条件 (event=pr-review-light, session=next) は未発火で SKIPPED。Issue は `phase/verify` に留まる
+
+### Improvement Proposals
+- N/A (issue フェーズのラベル遷移の欠落は初回の観測。`docs/reports/orchestration-recoveries.md` の記録で再発を追う)
