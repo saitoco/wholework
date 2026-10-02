@@ -36,7 +36,7 @@ Key per-step behavior in non-interactive mode:
 - **Any AskUserQuestion during review comment resolution** (Steps 7.2, 7.4, 7.6): auto-resolve using model judgment (apply the fix that best matches the review comment intent); record the decision in the Auto-Resolve Log as an issue comment
 - **External review timeout waiting**: auto-resolve by proceeding without waiting (the review results may be incomplete; note this in the review summary)
 - **Unclear review comment intent**: auto-resolve by adopting the most conservative interpretation (e.g., add a comment rather than delete code)
-- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Additionally, pass an explicit Bash `timeout` that covers the measured duration of the command — the tool's 120s default is too short for a full bats suite. Interactive-mode behavior (background execution + await notification) is unaffected.
+- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents) and for the orchestrator's own Step 10 sub-agent dispatch (`review-light` / `review-spec` / `review-bug`, and the Workflow path)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. For the sub-agent dispatch, never state that you are waiting for a sub-agent's result and end the turn without it; if the result is not in hand in the same turn, move to the "Sub-agent Result Fallback" in Step 10 and perform that review yourself. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Additionally, pass an explicit Bash `timeout` that covers the measured duration of the command — the tool's 120s default is too short for a full bats suite. Interactive-mode behavior (background execution + await notification) is unaffected.
   - **The timeout must fit inside the tool's 600000 ms ceiling.** A command that runs past it is moved to the background automatically, which reproduces the failure this rule exists to prevent — an explicit `timeout` alone does not keep the command in the foreground. For a whole bats suite, run it in parallel so it finishes inside the ceiling; the serial form does not (Issue #1213). Resolve the job count as a separate, literal step first — a `$(...)` command substitution inside the `bats` invocation itself is refused by this project's worktree isolation guard, active whenever `/review` is running inside a worktree session: run `nproc 2>/dev/null || sysctl -n hw.logicalcpu` on its own, then substitute the printed value literally into `bats --jobs <N> tests/`. If `--jobs` fails naming `parallel` (missing GNU `parallel`), follow `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` § "Fallback when `--jobs` is unavailable" rather than re-running one serial whole-suite command. If the tool moves the command to the background anyway, report it as a failure rather than waiting on its completion notification.
 
 ## Review-only Mode (--review-only)
@@ -459,7 +459,25 @@ In both cases, do not fix the violation inline in this PR.
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
 
-**Foreground dispatch reminder (orchestrator's own `Task(...)`/Agent calls, distinct from the sub-agents' internal commands):** this step's fan-out (`Task(...)` calls in 10.0/10.1–10.3, and the Workflow path in `skills/review/workflow-guidance.md`) is the orchestrator dispatching sub-agents and then consuming their results before continuing — not a command the review sub-agents run internally. The `## Non-Interactive Mode Behavior` section above ("Foreground (前景) execution for test/build commands, including commands run by Step 10's review sub-agents") covers only the latter. In every execution surface without a re-invocation guarantee (`--non-interactive`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), this dispatch must also be handled synchronously within the same turn: launch the fan-out and consume every sub-agent's result before ending the turn — do not end the turn as if waiting for a background completion notification for this dispatch itself.
+**Foreground dispatch reminder (orchestrator's own `Task(...)`/Agent calls, distinct from the sub-agents' internal commands):** this step's fan-out (`Task(...)` calls in 10.0/10.1–10.3, and the Workflow path in `skills/review/workflow-guidance.md`) is the orchestrator dispatching sub-agents and then consuming their results before continuing. The `## Non-Interactive Mode Behavior` Foreground bullet above covers this dispatch as well as the commands the sub-agents run internally: consume every sub-agent's result within the same turn, and do not end the turn as if waiting for a background completion notification. When a result is not in hand, follow "Sub-agent Result Fallback" below instead of waiting.
+
+### Sub-agent Result Fallback
+
+The foreground rule above cannot control how the harness returns a sub-agent: an Agent/Workflow call may come back as a background teammate/task whose result arrives only as a later completion notification. A fork-executed Skill has no re-invocation guarantee (`${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), so that notification never reaches the review and the Review Response Summary is never posted (Issue #1481). Asking the orchestrator to "wait synchronously" is therefore not enough — when a result is not in hand, the orchestrator performs that review itself.
+
+1. **Trigger**: a sub-agent launched in this step (`review-light` in 10.0; `review-spec` / `review-bug` in 10.2; the Workflow pipeline in `skills/review/workflow-guidance.md`) returned no result in the same turn — empty output, an error, or a background teammate/task whose return value carries no review body. Never end the turn to wait for the completion notification, on any execution surface.
+2. **Substitution**: for each sub-agent whose result was not obtained, the orchestrator performs that review itself, reading `.tmp/pr-diff-$NUMBER.txt` and the Spec (plus any `.tmp/base-conflict-context-$NUMBER.md` / `.tmp/edge-case-context-$NUMBER.md`), following the aspects and output format (`**[aspect] path:line**` / `- path:` / `- line:` / severity) in the matching `agents/review-*.md`:
+
+   | Sub-agent without a result | Orchestrator performs |
+   |----------------------------|-----------------------|
+   | `review-light` | the 4 aspects (spec deviation, edge cases, security, documentation consistency); only aspects 1 and 4 when `SKIP_REVIEW_BUG=true` |
+   | `review-spec` | spec/documentation review |
+   | `review-bug` (each of the 2 agents) | bug/logic and security review |
+   | Workflow pipeline | the `review-spec` and `review-bug` rows above |
+
+   Feed the substituted output into the same extraction as a sub-agent's result (10.0 step 5 / 10.2 step 4).
+3. **Record in the Review body**: before "General Comments", add one line per substituted sub-agent, e.g. `- Sub-agent fallback: review-light result not obtained (backgrounded); orchestrator performed aspects 1-4`. This makes it visible from the Review body whether Step 10's result came from the sub-agent's return value or from this fallback.
+4. **Cleanup**: stopping the already-launched sub-agent is out of scope here (see #1478); `TaskStop` from a fork may be refused. Whether the stop succeeds must not block the fallback.
 
 ### Base Branch Conflict Pre-check
 
@@ -543,6 +561,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    ```
 
 5. **Pass results to Step 10**:
+   - If the `review-light` result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs the 4 aspects itself) before extracting
    - Extract `path`, `line`, `body`, `severity` from `review-light` output
    - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
    - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
@@ -613,8 +632,8 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    ```
 
 4. **Integrate 2 groups' results and generate line comments JSON and Review body**:
-   - Collect outputs from each group (successful groups only)
-   - Record failed groups as "review unavailable"
+   - Collect outputs from each group
+   - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs that review itself) instead of recording the group as unavailable
    - Extract `path`, `line`, `body`, `severity` from each issue:
      - Detect issue start with `**[aspect name] filename:line-approx**` line
      - Read values from subsequent `- path: ...` / `- line: ...` lines (raw values without backticks)
@@ -634,7 +653,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
 Run only when `SKIP_REVIEW_BUG=false` (skip if review-bug was skipped).
 
-Launch verification sub-agents (Opus) in parallel for each issue collected from review-bug×2 to filter false positives. Issue limit: **10**; excess issues are passed to Step 10 without verification.
+Launch verification sub-agents (Opus) in parallel for each issue collected from review-bug×2 to filter false positives. Issue limit: **10**; excess issues are passed to Step 10 without verification. An issue whose verification sub-agent result was not obtained in this turn is treated the same way as the excess issues: pass it through without verification (the orchestrator does not substitute for verification).
 
 **Pre-measured edge case findings bypass verification**: an issue whose title matches the `**[Edge Case Execution] path:line**` format (see Parser/Validator Edge Case Pre-check, step 3(6)) was already confirmed by actually executing the target code with real fixture inputs — it is not a speculative diff-reading finding. Do not send it through the verification sub-agent below; treat it as `VERDICT: PASS` directly and include it in Step 10's integrated results unchanged.
 

@@ -91,7 +91,11 @@ instead (for a full bats suite: run it in parallel). If the tool backgrounds a c
 report it as a failure rather than waiting on its completion notification.
 
 **Precedents**: #994 (`/code`'s bats run), #1097 (`/review`'s bats run), #1103 (the Workflow tool
-path), #1142 (a fork-executed `/review`), #1213/#1234 (the tool-ceiling corollary — an explicit
+path), PR #1143 (a fork-executed `/review`, recorded in #1142's verify retrospective), #1481 (a
+fork-executed `/review` ended its turn waiting for the Step 10 sub-agent's result — recurred in
+saito/ops PR #141 and PR #175 despite the #1443 foreground-dispatch reminder; the fix is the
+`skills/review/SKILL.md` Step 10 "Sub-agent Result Fallback", where the orchestrator performs the
+review itself when no result is in hand), #1213/#1234 (the tool-ceiling corollary — an explicit
 `timeout` alone was insufficient because the command itself exceeded the ceiling).
 
 ### Wrapper-Level Constraint Injection
@@ -185,7 +189,8 @@ Skills/modules that explicitly read this module:
   `docs/tech.md` for the fork context policy)
 - "Re-invocation Guarantee and Notification-Dependent Waiting" section: `modules/test-runner.md`
   (Step 2 non-interactive Note), `skills/review/SKILL.md` (Non-Interactive Mode Behavior Foreground
-  bullet; Step 12.3 Lightweight Re-check local reminder), `skills/review/workflow-guidance.md`
+  bullet; Step 10 foreground dispatch reminder and "Sub-agent Result Fallback"; Step 12.3
+  Lightweight Re-check local reminder), `skills/review/workflow-guidance.md`
   (Pre-flight section), `skills/code/SKILL.md` (Step 9 execution surface constraint, stated once
   before the Behavioral Change Detection subsection)
 - `scripts/guard-prefix.sh` — not a reader of this module; distributes this section's MUST rule
