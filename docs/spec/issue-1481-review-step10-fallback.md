@@ -92,21 +92,31 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 - なし
 - 新規テストは追加していないので、Pre-implementation FAIL の確認 (Confirmed pre-implementation FAIL for N new test(s)) は対象外 (N=0)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps 1〜5 と差分は一致していた。構造的な乖離は無い
+
+### Recurring issues
+- 既存の行 (`前景` を含む Foreground bullet) を編集すると、行全体が + 行になって `scripts/check-language-convention.py` の検査対象に入り、元から地の文にあった日本語が初めて検出された。`/code` は `validate-skill-syntax.py` と `check-forbidden-expressions.sh` しか実行しておらず、CI の Language Convention check に相当する確認を持たなかったため、push 後の CI で初めて FAILURE になった。`skills/` `modules/` `scripts/` の既存行を触る変更では、`/code` 側で変更後の差分を `check-language-convention.py` に通す確認が有効かもしれない (改善提案。Issue 化は `/verify` で集約)
+- Review 本文に記録する行を新設する変更では、本文テンプレートにその置き場があるかを併せて見る必要がある (今回は SHOULD として指摘し、テンプレートに追記して解消)
+
+### Acceptance criteria verification difficulty
+- 4 つの Pre-merge 条件は rubric / `section_contains` / `file_not_contains` で、UNCERTAIN は無かった。Post-merge の observation 条件は fork 実行の light review を要するため、この実行 (`--non-interactive`、`review-light` が同じターンの戻り値で返った) では確認できない
+- 今回の `/review` では `review-light` が同期で結果を返したため、Sub-agent Result Fallback の発火経路そのものは検証できていない
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `review` の fork 実行ではサブエージェントの起動形態を SKILL.md から制御できないので、「同期で待て」の禁止を足すのではなく、結果が手元に無いときに orchestrator 自身がその観点のレビューを行う Sub-agent Result Fallback を Step 10 に新設した
-- 前景実行の規定 (Non-Interactive Mode Behavior) の対象に orchestrator 自身の Step 10 dispatch を加え、Step 10 冒頭の reminder は重複を避けて短くし、新小節を参照する形にした
-- 10.3 の検証サブエージェントは代行せず、結果が得られなければ検証なしで通す (上限超過分と同じ扱い)
-- `modules/execution-context.md` の Precedents は「PR #1143 (… recorded in #1142's verify retrospective)」に直し、#1481 を追記した
+- Language Convention check の FAILURE は `前景` をインラインコードで囲んで解消した (`tests/review.bats:129` の `grep -q "前景"` は backtick 付きでも一致する)
+- Review 本文の記録行 (Sub-agent fallback) の置き場が無かった点を SHOULD として修正し、テンプレートの `## Code Review` 直下と本文構成リスト (10.0 / 10.2) に追記した
+- `review-bug` が両方欠けた場合の扱いと、途中で切れた結果の扱いは CONSIDER としてスキップした (実際に起きた形ではないため)
 
 ### Deferred Items
-- 起動済みサブエージェントの停止 (`TaskStop` が fork から拒否される問題) は #1478 の範囲
-- 機械的な検出 (対応案 3) は Out of Scope。再発は Post-merge の observation 条件 (event=pr-review-light) で確認する
-- `guard-prefix.sh` への同趣旨の一文追加は見送った
+- 回帰テスト (Step 10 に "Sub-agent Result Fallback" があることを見る grep ベースの bats assertion) は追加していない。Spec が文書のみの変更として追加しない方針で、再発は Post-merge の observation 条件 (event=pr-review-light) で確認する
+- 機械的な検出 (対応案 3) と `TaskStop` による後始末 (#1478) は引き続き範囲外
 
 ### Notes for Next Phase
-- `/review` では、Sub-agent Result Fallback の記述が light (10.0) / full (10.2) / Workflow の 3 経路すべてに及んでいるか、および Review 本文への記録行が General Comments の前に置かれる記述になっているかを確認してほしい
-- `bats` が実行環境に無かったので、CI の bats の結果を必ず確認する (特に `tests/review.bats` と `tests/workflow-guidance.bats`)
-- Pre-merge の 4 条件は `/code` 内で PASS と判断してチェック済み。Post-merge は observation で、未チェックのまま
+- 実行環境に `bats` が無いので、push 後の CI (特に `Language Convention check` と bats の各 job) の結果を `/merge` 前に確認してほしい。レビュー時点では Language Convention check 以外の 16 jobs は SUCCESS だった
+- Post-merge の observation 条件は未チェックのまま。fork 実行の light review で Review Response Summary が投稿され、Review 本文の Sub-agent fallback 行から結果の出どころが判別できるかを `/verify` で確認する
