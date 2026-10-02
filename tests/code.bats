@@ -188,3 +188,48 @@ step10_section() {
     run step10_section "$SKILL_FILE"
     [[ "$output" == *"Step 10 runs before the commit or PR that would produce a CI run"* ]]
 }
+
+# Language convention pre-commit check (Issue #1484)
+LANG_CHECK_DOC="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/code/language-convention-check.md"
+
+@test "Step 9 reads language-convention-check.md only when check-language-convention.py exists" {
+    run step9_section "$SKILL_FILE"
+    echo "$output" | grep -qF 'If `scripts/check-language-convention.py` exists, Read' || false
+    echo "$output" | grep -qF 'skills/code/language-convention-check.md' || false
+}
+
+@test "SKILL.md allowed-tools pre-approves git merge-base for the language convention check" {
+    head -6 "$SKILL_FILE" | grep -qF 'git merge-base:*' || false
+}
+
+@test "language-convention-check.md is a code Domain file gated on scripts/check-language-convention.py" {
+    head -8 "$LANG_CHECK_DOC" | grep -qF 'type: domain' || false
+    head -8 "$LANG_CHECK_DOC" | grep -qF 'skill: code' || false
+    head -8 "$LANG_CHECK_DOC" | grep -qF 'file_exists_any: [scripts/check-language-convention.py]' || false
+}
+
+@test "language-convention-check.md skips the whole check when check-language-convention.py is absent" {
+    grep -qF 'skip this entire check' "$LANG_CHECK_DOC" || false
+}
+
+@test "language-convention-check.md runs the CI-equivalent diff form over skills/ modules/ scripts/" {
+    grep -qF 'git diff -U100000 <base> -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py' "$LANG_CHECK_DOC" || false
+}
+
+@test "language-convention-check.md diffs from the merge base against the working tree so uncommitted changes are included" {
+    grep -qF 'git merge-base "origin/$BASE_BRANCH" HEAD' "$LANG_CHECK_DOC" || false
+    grep -qF 'uncommitted' "$LANG_CHECK_DOC" || false
+}
+
+@test "language-convention-check.md resolves the merge base as a separate literal step (no inline command substitution)" {
+    run grep -F '$(git merge-base' "$LANG_CHECK_DOC"
+    [ "$status" -ne 0 ]
+}
+
+@test "language-convention-check.md registers untracked new files with intent-to-add before diffing" {
+    grep -qF 'git add -N' "$LANG_CHECK_DOC" || false
+}
+
+@test "language-convention-check.md requires fixing violations before committing" {
+    grep -qF 'before committing' "$LANG_CHECK_DOC" || false
+}

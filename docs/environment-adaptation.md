@@ -142,6 +142,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific |
 | `modules/skill-dev-doc-impact.md` | `/spec`, `/code` (via `doc-checker.md`) | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific Change Types |
 | `skills/code/forbidden-expressions-check.md` | `/code` | `check-forbidden-expressions.sh` exists | `file_exists_any: [scripts/check-forbidden-expressions.sh]` | Forbidden expression pre-check |
+| `skills/code/language-convention-check.md` | `/code` | `check-language-convention.py` exists | `file_exists_any: [scripts/check-language-convention.py]` | Language convention pre-check |
 | `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development syntax validation |
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development stale test check |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |

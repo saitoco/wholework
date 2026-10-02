@@ -136,6 +136,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 |
 | `modules/skill-dev-doc-impact.md` | `/spec`、`/code`（`doc-checker.md` 経由） | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 Change Types |
 | `skills/code/forbidden-expressions-check.md` | `/code` | `check-forbidden-expressions.sh` が存在 | `file_exists_any: [scripts/check-forbidden-expressions.sh]` | 禁止表現事前チェック |
+| `skills/code/language-convention-check.md` | `/code` | `check-language-convention.py` が存在 | `file_exists_any: [scripts/check-language-convention.py]` | 言語規約事前チェック |
 | `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発構文検証 |
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発陳腐化テストチェック |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |

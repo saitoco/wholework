@@ -267,7 +267,7 @@ wholework/
 - `scripts/check-skill-body-hash.sh` — SKILL.md の `<!-- skill-body-sha: H -->` マーカーが計算済みの内容ハッシュと一致するか検証する (デフォルト対象 `skills/verify/SKILL.md`)。`skill-body-lines` マーカーでは検出できない同一行数の編集 (リネーム、語句置換) を捕捉する。`check-skill-body-hash` CI ジョブから実行される
 - `scripts/check-bare-bracket-assertions.sh` — `|| false` を伴わない裸の `[[ "$output"/"$status"` bats アサーションを検出する (informational; ビルドを失敗させない)
 - `scripts/check-known-events-firing.sh` — `scripts/opportunistic-search.sh` の `KNOWN_EVENTS` の各エントリに実際の `--event <name>` 呼び出しサイトがあることを検証する (コメント行と echo/printf の使用文字列は除外)
-- `scripts/check-language-convention.py` — unified diff から skills/、modules/、scripts/ の英語専用パスに転記された CJK 文字を検出する。`language-convention` CI ジョブから実行される
+- `scripts/check-language-convention.py` — unified diff から skills/、modules/、scripts/ の英語専用パスに転記された CJK 文字を検出する。`language-convention` CI ジョブから実行される。`/code` もコミット前に実行する (`skills/code/language-convention-check.md`)
 - `scripts/setup-labels.sh` — ワークフロー用の GitHub ラベルを作成
 - `scripts/compute-escalation-level.sh` — phase/verify または Icebox の滞留時間に対するエスカレーションレベルを計算する。`/audit stats --retention` の retire-proposal コメントルーティングに使用される
 - `scripts/test-skills.sh` — 全 skill のテストを実行

@@ -274,7 +274,7 @@ Key modules:
 - `scripts/check-skill-body-hash.sh` — verify a SKILL.md's `<!-- skill-body-sha: H -->` marker matches its computed content hash (default target `skills/verify/SKILL.md`), catching same-line-count edits (renames, word substitutions) the `skill-body-lines` marker cannot detect; run by the `check-skill-body-hash` CI job
 - `scripts/check-bare-bracket-assertions.sh` — detect bare `[[ "$output"/"$status"` bats assertions without `|| false` (informational; does not fail the build)
 - `scripts/check-known-events-firing.sh` — verify every `KNOWN_EVENTS` entry in `scripts/opportunistic-search.sh` has a real `--event <name>` invocation site (excluding comment lines and echo/printf usage strings)
-- `scripts/check-language-convention.py` — detect CJK characters transcribed into English-only paths (skills/, modules/, scripts/) from a unified diff; run by the `language-convention` CI job
+- `scripts/check-language-convention.py` — detect CJK characters transcribed into English-only paths (skills/, modules/, scripts/) from a unified diff; run by the `language-convention` CI job and by `/code` before committing (`skills/code/language-convention-check.md`)
 - `scripts/setup-labels.sh` — create GitHub labels for workflow
 - `scripts/compute-escalation-level.sh` — compute escalation level for phase/verify or Icebox dwell time; used by `/audit stats --retention` for retire-proposal comment routing
 - `scripts/test-skills.sh` — run all skill tests
