@@ -159,3 +159,34 @@
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (自動解決ログ、受け入れ条件の変更理由、監査で残った点: AC4 の rubric を `/spec` で絞る) / https://github.com/saitoco/wholework/issues/1478#issuecomment-5964340803
 - saito / MEMBER / first-class / triage の AC 監査 (AC4 の rubric が変更前の main でも PASS しうる Pattern 2。停止手順の存在を前提にした文言への絞り込みを提案) / https://github.com/saitoco/wholework/issues/1478#issuecomment-5964340973
 - 参考: cutoff (`phase/issue` の付与、2026-10-03T01:52:13Z) より前の triage の AC 監査コメント (`file_contains "TaskStop"` が #1481 の注記で常時 PASS) は `/issue` で消費済みで、Issue 本文の AC に反映されている
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-3 の文面をそのまま `skills/review/SKILL.md` に反映した (Step 4 は検証のみ)
+
+### Design Gaps/Ambiguities
+- なし。Spec の挿入位置指定 (新小節は `Foreground dispatch reminder` の直後、Fallback の直前) と項目の繰り下げ指定が具体的で、迷う箇所は無かった
+
+### Rework
+- なし
+- 検証結果: `Task(` 起動箇所 6 件すべてに `name=` が付いた (Step 10 内の `name="` が 6 件)。Fallback 小節の `see #1478` は 0 件、Step 10 内の `TaskStop(task_id:` は 11 件。`validate-skill-syntax.py` / `check-forbidden-expressions.sh` / `check-allowed-tools.sh` / `check-language-convention.py` はすべて成功
+- 追加行は ASCII の英語のみ (非 ASCII は既存行と同じ `—` のみ、仮名・漢字は 0 件)。`tests/edge-case-execution-context.bats` が見る 2 文字列 (`Execution context axis`、`CWD other than the repository root`) は残存
+- `/code` 環境に `bats` が無いため既存の bats は実行できなかった (Spec の想定どおり)。新規テストは追加していないので pre-implementation FAIL 確認の対象は 0 件
+- AC は Pre-merge 6 件すべて PASS として Issue 本文のチェックを更新した (command 2 件は grep で確認、rubric 4 件は SKILL.md の差分を読んで判定)。Post-merge の manual 条件 (`ListAgents` で残留なし) は未確認のまま
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec どおり `allowed-tools` には `TaskStop` を足さず、`skills/review/SKILL.md` の 1 ファイルだけを変更した
+- Fallback の停止を項目 2 (代行の前) に置き、旧 Cleanup (「停止は #1478 の範囲」の先送り) を削除して項目 3 と 4 に繰り下げた
+- Edge Case Pre-check の測定用サブエージェント (`edge-case-$NUMBER-{n}`) も名前付き・停止対象に含めた
+
+### Deferred Items
+- Post-merge の manual 条件 (`/review` 実行後に `ListAgents` へレビュー用サブエージェントが残らないこと) は、対話セッションからの fork 実行で次回確認する
+- Workflow 経路 (`skills/review/workflow-guidance.md`) の停止手順は Issue の対象外のまま。別 Issue で扱う
+
+### Notes for Next Phase
+- fork 実行では main session 所有の teammate に対する `TaskStop` が拒否されうる。停止はベストエフォートとして書いてあるので、拒否だけを理由に FAIL としないこと
+- 同名のエージェントが残った状態で同じ PR を再度 `/review` した場合の挙動は未検証 (Spec の Uncertainty を参照)
