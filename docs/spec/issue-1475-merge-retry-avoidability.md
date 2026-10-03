@@ -208,3 +208,28 @@ AC2 の `section_contains "modules/orchestration-fallbacks.md" "auto-retry-on-fa
 ### Notes for Next Phase
 - `/verify` は AC5 (`command "bats tests/"`) を実際に実行すること。bats が使えない場合は CI の結果で判定する
 - Post-merge の observation AC (次の merge phase silent no-op 発生時に `- avoidable:` 行が記録されること) は、発生するまで未判定のまま残る
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 記録先を `### Diagnosis` 内の専用行とし、スクリプトを変えずに済む規約に絞った判断は妥当。既存の merge-phase エントリの分類例まで含めた点も、解除条件を評価する人の助けになる
+
+#### design
+- 判定値 `yes|no|unknown` と「行が無ければ unknown、`yes` だけを解除根拠に数える」という保守的な既定値が明確だった
+
+#### code
+- 手戻りなし。ただし実行環境に bats が無く、`bats tests/` を含む AC5 を確認できなかったため、Pre-merge 5 件をすべて未チェックのまま verify に渡した
+
+#### review
+- patch route のため review フェーズなし
+
+#### merge
+- patch route (main 直コミット)。問題なし
+
+#### verify
+- AC 1〜4 は差分と grep で PASS。AC5 は CI run 37096981454 の bats 成功で代替確認した
+
+### Improvement Proposals
+- patch route の `/code` で `bats` が実行環境に無いとき、`bats tests/` 型の command AC を CI 結果 (`gh run list` / `gh run watch` の該当 run) で代替確認する手順を `/code` に定める。現状は AC を未チェックのまま `/verify` に渡すか、awk と grep の部分確認で済ませており、同じ記述が直近 20 件の Spec (#1410, #1413, #1429, #1447, #1449, #1454, #1461, #1462, #1477, #1480 など) にある。同じバッチでも #1482 / #1480 / #1479 / #1477 / #1475 で発生した
