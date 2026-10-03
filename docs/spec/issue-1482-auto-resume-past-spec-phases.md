@@ -126,3 +126,30 @@
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (非対話モードでの曖昧ポイントの自動解決、受入条件の変更、補足。cutoff は最新の `phase/*` ラベル付与 2026-10-02T23:34:41Z) / https://github.com/saitoco/wholework/issues/1482#issuecomment-5963159669
 - クロスフェーズ marker (`type=verify-fail` / `type=preview-ac-unverified`): 該当なし
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 を Spec どおりに実装した。Step 4 の項目番号 (patch route 1-9 / pr route 1-16) は `grep -n` で再確認し、変更されていなかった
+
+### Design Gaps/Ambiguities
+- 実行環境に `bats` が無く、`tests/auto.bats` の新規 6 件を直接実行できなかった。Spec の Notes が示す代替 (同じ awk 抽出と `grep -F`) で同等の確認を行い、変更前は新分岐の 5 件が FAIL・既存分岐維持の 1 件が PASS、変更後は 6 件すべて PASS になることを確認した (Confirmed pre-implementation FAIL for 5 new test(s))
+- 同じ理由で、`skills/auto/SKILL.md` を参照する他の bats (`run-auto-sub.bats` 等) は実行できていない。追加は Step 3 と Checkpoint Design の 1 行に限られ、他テストが見る文字列 (`skipping dispatch ... per skills/auto/SKILL.md Step 3` はスクリプト出力) は変わらないことを grep で確認した。CI の bats が最終確認になる
+
+### Rework
+- 日本語ミラーの Step 2a の括弧は、既存が全角だったが、置換する文を新規に書くため半角 `()` + 前後スペースに揃えた (グローバル規約)。それ以外の手戻りはなし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 3 に 3 分岐 (`phase/code`・`phase/review`・`phase/merge` / `phase/verify` / `phase/done`) と Resume entry points の表・共通規則を Spec の英文どおり追加した。新しい機構は足さず、Step 4 の既存項目に入る形にした
+- `phase/done` 分岐は `auto-checkpoint.sh delete_single` を呼んで終了する。Checkpoint Design の Label conflict の処理主体に併記した
+
+### Deferred Items
+- Post-merge の opportunistic AC (`phase/verify` の Issue に `/auto N` を実行したとき code の `phase_start` が記録されず verify が実行される) は、実運用で確認する
+- Step 2a の stale marker と `phase/code` 再開時の operate route 検出は、Spec の Notes のとおり別 Issue の範囲
+
+### Notes for Next Phase
+- 実行環境に `bats` が無く、新規テストは awk と `grep -F` の同等確認だけで、bats 本体は未実行。CI の結果を確認する
+- Pre-merge の 3 AC は section_contains (Step 3 内の出現を確認済み) と rubric で、Issue 側のチェックボックスは更新済み
