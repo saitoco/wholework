@@ -81,4 +81,4 @@ Get `categories.{category}.score` from the JSON output (0-1 scale).
 
 ## Notes
 
-**High-resolution model support**: Claude Opus 4.7 supports images up to **2576 px** on the long edge. If visual verification is integrated into Lighthouse workflows in the future, screenshots at up to 2576 px can be passed directly — each image costs up to **4,784 tokens/image** at full resolution. No scale-factor conversion is required (coordinates are 1:1 with actual pixels on Opus 4.7).
+**High-resolution model support**: Claude 4.7 and later models (including Opus 5.5 / Sonnet 5.5 / Fable 5.1) support images up to **2576 px** on the long edge. If visual verification is integrated into Lighthouse workflows in the future, screenshots at up to 2576 px can be passed directly — each image costs up to **4,784 tokens/image** at full resolution. No scale-factor conversion is required (images within these limits are not downscaled, so coordinates are 1:1 with actual pixels; larger images are downscaled first).

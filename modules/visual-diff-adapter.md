@@ -203,7 +203,7 @@ Return the execution result as one of:
 3-panel images at 1440 px viewport width can be wide (up to 4320 × height px before compositing). Apply downsampling via `sharp` before passing to the sub-agent when token budget is constrained:
 
 - For layout and color checks: resize long edge to 1280 px before compositing
-- For pixel-level detail: use full resolution (up to 2576 px long edge on Claude Opus 4.7)
+- For pixel-level detail: use full resolution (up to 2576 px long edge on Claude 4.7 and later models)
 
 See `modules/browser-adapter.md` Token budget section for per-image cost estimates.
 

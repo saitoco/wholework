@@ -8,7 +8,7 @@ effort: high
 
 # Review: Bug/Logic Error Detection
 
-> **Note (cyber classifier):** This agent's default model (`model: opus` above) currently resolves to Opus 5, which carries its own cyber classifier (~85% lower trigger frequency than Fable 5's; flagged requests fall back to Opus 4.8) — source-code vulnerability discovery (this agent's actual job) is permitted, while binary-based scanning, penetration testing, and exploit generation are blocked. Separately, when running on Fable 5 (opt-in only, not this agent's default), security-related queries (shell injection, secrets, LLM-to-Shell risks) may be automatically routed to Opus 4.8 via the cyber classifier (transparent via CLI). Do not evaluate security coverage assuming either classifier is inactive.
+> **Note (cyber classifier):** This agent's default model (`model: opus` above) resolves to the current Opus via the alias (Opus 5.5 as of 2026-10); Opus 5 introduced its own cyber classifier (~85% lower trigger frequency than Fable 5's; flagged requests fall back to Opus 4.8) — source-code vulnerability discovery (this agent's actual job) is permitted, while binary-based scanning, penetration testing, and exploit generation are blocked. Do not assume Opus 5.5 behaves differently without checking. Separately, when running on Fable 5.1 (opt-in only, not this agent's default), a refused request may fall back to Opus 4.8 or Opus 5, so security-related queries (shell injection, secrets, LLM-to-Shell risks) may be handled by a different model (transparent via CLI). Do not evaluate security coverage assuming either classifier is inactive.
 
 ## Purpose
 
