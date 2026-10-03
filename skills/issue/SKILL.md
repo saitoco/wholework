@@ -175,7 +175,7 @@ See `modules/verify-patterns.md` §9 for the full guideline and applicability co
 
 In particular, when the rubric's grader description contains a numeric literal, constant name, or threshold value (e.g., `BREAKEVEN_THRESHOLD_PCT = 10.0`), add a `file_contains` hint for the corresponding constant alongside the `rubric` to enable deterministic verification of the value.
 
-**AC authoring convention — evaluator self-sufficiency:** An acceptance condition must carry the information its evaluator needs to judge it, not rely on context outside the condition text. Before finalizing a `rubric` command whose primary evidence lives outside `git diff`/the Issue body, read `modules/verify-executor.md` § Rubric Command Semantics ("Primary evidence outside git diff / Issue body"). Before writing a numeric or `observation`-tagged post-merge condition, read `modules/verify-classifier.md` § observation Type (Population Definition for Numeric Conditions, Firing Likelihood Check).
+**AC authoring convention — evaluator self-sufficiency:** An acceptance condition must carry the information its evaluator needs to judge it, not rely on context outside the condition text. Before finalizing a `rubric` command whose primary evidence lives outside `git diff`/the Issue body, read `modules/verify-executor.md` § Rubric Command Semantics ("Primary evidence outside git diff / Issue body"). Before writing a numeric or `observation`-tagged post-merge condition, read `modules/verify-classifier.md` § observation Type (Population Definition for Numeric Conditions, Baseline and Minimum Sample Size for Quantitative Improvement Conditions, Firing Likelihood Check).
 
 When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
 
@@ -210,6 +210,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verif
 **Firing likelihood check (before assigning `observation`):**
 
 Before tagging a condition `verify-type: observation`, apply `modules/verify-classifier.md` § observation Type: Firing Likelihood Check — confirm the condition text states which `event=<name>` firing supplies evidence and what that evidence is. If it cannot, use one of that section's alternatives (resolve now, fall back to `auto`, or drop the condition) instead of assigning `observation`.
+
+**Baseline and minimum sample size check (before assigning `observation` to a rate, proportion, or frequency improvement condition):**
+
+Before tagging such a condition `verify-type: observation`, apply `modules/verify-classifier.md` § observation Type: Baseline and Minimum Sample Size for Quantitative Improvement Conditions — the condition text (or its `Expected output structure` sub-bullet) must state the baseline value with where it was measured, and the minimum sample size at which the condition may be judged. If no baseline can be measured, do not write the improvement condition: reduce it to a single-shot observation (e.g., "the added evidence source is actually referenced in the next dispatch") as that section describes.
 
 **Skill self-update propagation check:**
 

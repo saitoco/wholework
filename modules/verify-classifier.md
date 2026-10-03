@@ -127,6 +127,17 @@ When an observation condition's evidence is a count or aggregate (e.g., "the num
 
 **When an aggregate count cannot be avoided**: state the population explicitly in the condition text itself (label filter, date range, open/closed state) — do not rely on a value recorded elsewhere (e.g., a linked report's own baseline note) to supply it implicitly.
 
+### observation Type: Baseline and Minimum Sample Size for Quantitative Improvement Conditions
+
+When an observation condition asks whether a rate, proportion, or frequency **improved** (e.g., "the UNCERTAIN/SKIPPED rate improves", "fewer retries per run than before"), it cannot be judged PASS or FAIL unless the comparison inputs are written into the condition text itself — or into its `Expected output structure` sub-bullet — rather than reconstructed by the evaluator later. Both of the following are **required**:
+
+1. **Baseline value and its measurement source**: the pre-change value the post-change rate is compared against, and where it was measured — the log, report, or Issue that records it, plus the scan scope it was computed from (and, when the measurement is reproducible, the command that produced it). The baseline and the post-change observation must cover the same population (see Population Definition above). Raw data that was only the material for designing the change is not a baseline unless a rate was actually computed from it and recorded.
+2. **Minimum sample size**: the smallest number of post-change observations at which the condition may be judged, stated as a concrete number rather than "enough samples", and the verdict while fewer samples exist. State `SKIPPED` (waiting for more samples) rather than PASS or FAIL — the same treatment `/verify` Step 8c gives an event that has not fired yet. Choose a number the expected event rate can actually reach: an unreachable minimum sample size turns the condition into a permanent SKIPPED, the same failure the Firing Likelihood Check below guards against.
+
+Without both, a change that demonstrably works can still leave the condition unresolvable. Reference incident (Issue #1350): the added evidence source was actually used and produced a PASS for one of the two dispatched conditions, but "the UNCERTAIN/SKIPPED rate improves" stayed UNCERTAIN — no pre-change rate had been recorded, no sample-size threshold was defined, and only n=2 post-change samples existed.
+
+**When the baseline cannot be measured** (no pre-change rate was recorded and it cannot be reconstructed now): do not write a rate or proportion improvement condition. Reduce it to a single-shot observation whose evidence can be described without a baseline — e.g., "the added evidence source is actually referenced in the next `/verify` observation dispatch". The single-shot form must still pass the Firing Likelihood Check below (which `event=<name>` firing supplies the evidence, and what that evidence is); if it cannot, use that check's alternatives (resolve now, fall back to `auto`, or drop the condition).
+
 ### observation Type: Firing Likelihood Check (before assignment)
 
 Before assigning `verify-type: observation`, confirm the condition text can state two things: which `event=<name>` firing is expected to supply evidence, and what evidence — once that event fires — is sufficient to judge PASS or FAIL. Write both directly into the condition text; do not leave them implicit.
