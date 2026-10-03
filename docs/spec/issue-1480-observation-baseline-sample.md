@@ -95,3 +95,29 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (/issue フェーズの判断: 隣接ケース #1351 の Out of scope 化、AC2 の grep 差し替え、代替形 AC の追加、Post-merge AC の証拠源追記) / https://github.com/saitoco/wholework/issues/1480#issuecomment-5963470410
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Notes の挿入文案ドラフトをほぼそのまま採用した (新節は `modules/verify-classifier.md` の Population Definition 直後、`skills/issue/SKILL.md` は Step 4 の参照リスト更新と新規段落)。
+
+### Design Gaps/Ambiguities
+- 実行環境に `bats` が未インストールで、Step 9 の `bats --jobs 4 tests/` (AC6) を実行できなかった。変更は文書の追記のみで、`tests/` に置換した文字列 (`SKILL.md` line 178 の括弧内の節名列挙) を assert するものが無いことを grep で確認した。AC6 のチェックボックスは未チェックのまま `/verify` に委ねる。
+- `validate-skill-syntax.py` (0 error)、`check-language-convention.py` (exit 0)、`check-forbidden-expressions.sh` (exit 0) は PASS。AC2 / AC5 の grep は実装前 0 件 → 実装後各 1 件で、空撃ちで PASS を確認した。
+
+### Rework
+- なし。
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+- 挿入文案ドラフトの趣旨と必須語 (`minimum sample size` / `single-shot` / `evidence source` / `baseline`) を保ったまま採用し、`/verify` Step 8c は変更しなかった。
+
+### Deferred Items
+- AC6 (`bats tests/` 全件 PASS) は実行環境に `bats` が無く未検証。`/verify` または CI で確認が必要。
+
+### Notes for Next Phase
+- 変更は `modules/verify-classifier.md` と `skills/issue/SKILL.md` の追記のみ (patch route、`closes #1480` 付きコミット)。
+- rubric 型 AC (1, 3, 4) は差分の目視確認では満たしているが、`/verify` での機械判定は未実施。
