@@ -1,7 +1,10 @@
 #!/bin/bash
 # pre-merge-check.sh - Baseline diff classifier for pre-merge checks
 # Usage: pre-merge-check.sh <pr-number> [check-name]
-# Exit codes: 0 (CLEAN/FIXED/PRE_EXISTING), 1 (env error), 2 (NEW_FAILURE)
+# Exit codes: 0 (CLEAN/FIXED/PRE_EXISTING/NOT_APPLICABLE), 1 (env error), 2 (NEW_FAILURE)
+# NOT_APPLICABLE: the check script is absent from both the base and head refs, so the check
+# does not exist in this repository (not an environment error). If the script is present on
+# only one ref, or a git operation fails, the exit code stays 1.
 
 set -euo pipefail
 
@@ -41,6 +44,36 @@ fi
 # Fetch both refs so worktree add can reference origin/<ref>
 if ! git fetch --quiet origin "$HEAD_REF" "$BASE_REF"; then
   echo "Error: git fetch failed for refs: $HEAD_REF, $BASE_REF" >&2
+  exit 1
+fi
+
+# Probe whether the check script exists in a ref's tree (before creating any worktree).
+# Sets _ref_has_check: true = present, false = absent.
+# Only a successful probe with empty output counts as "absent"; a probe failure is an env error.
+probe_check_on_ref() {
+  local ref="$1"
+  local listing
+  if ! listing=$(git ls-tree --name-only "origin/${ref}" -- "$CHECK_REL"); then
+    echo "Error: could not inspect origin/$ref for $CHECK_REL" >&2
+    exit 1
+  fi
+  if [[ -n "$listing" ]]; then
+    _ref_has_check=true
+  else
+    _ref_has_check=false
+  fi
+}
+
+probe_check_on_ref "$BASE_REF"
+base_has_check=$_ref_has_check
+probe_check_on_ref "$HEAD_REF"
+head_has_check=$_ref_has_check
+
+if [[ "$base_has_check" == "false" && "$head_has_check" == "false" ]]; then
+  echo "NOT_APPLICABLE: $CHECK check is not applicable ($CHECK_REL is absent from both $BASE_REF and $HEAD_REF)"
+  exit 0
+elif [[ "$base_has_check" != "$head_has_check" ]]; then
+  echo "Error: $CHECK_REL exists on only one of $BASE_REF (present: $base_has_check) and $HEAD_REF (present: $head_has_check)" >&2
   exit 1
 fi
 

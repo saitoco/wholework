@@ -427,7 +427,8 @@ Branch on the exit code (exhaustive):
 | 2 | `NEW_FAILURE:` | this PR introduced the violation | **Blocking** — inject the MUST entry as before |
 | 0 | `PRE_EXISTING:` | violation predates this PR, inherited from base | **Non-blocking** |
 | 0 | `FIXED:` or `CLEAN:` | no violation attributable to this PR | **Non-blocking** |
-| 1 | (env error: missing args, ref resolution, fetch, or worktree-add failure) | classifier could not run | **Blocking** — the MUST entry body must state that baseline attribution could not be determined |
+| 0 | `NOT_APPLICABLE:` | check script absent from both base and head — nothing to compare, so no baseline attribution was made | **Blocking** — the exception does not apply; inject the MUST entry as before, and its body must state that baseline attribution was not applicable (check script absent from both refs) |
+| 1 | (env error: missing args; ref resolution, fetch, ref inspection, or worktree-add failure; or the check script present on only one ref) | classifier could not run | **Blocking** — the MUST entry body must state that baseline attribution could not be determined |
 
 Exit 1 is fail-closed rather than mirroring `run-merge.sh`'s fail-open
 handling of the same exit code: both directions follow the same underlying
@@ -436,6 +437,8 @@ behavior that existed before the classifier was introduced. In `run-merge.sh`
 the classifier only adds a gate, so falling back means letting the merge
 proceed; here the classifier only relaxes an existing gate, so falling back
 means keeping the block.
+
+`NOT_APPLICABLE:` is blocking for the same reason, even though its exit code is 0. The classifier exits 0 so that `run-merge.sh` — where it only adds a gate — proceeds without a fail-open warning in repositories that do not ship the check script. Here, however, it made no baseline attribution (there was nothing to compare), so the same principle applies: fall back to the behavior that existed before the classifier was introduced, which means keeping the block.
 
 **Non-blocking outcome handling**: record the classification name
 (`PRE_EXISTING` / `FIXED` / `CLEAN`) in the CI Status table's Notes column

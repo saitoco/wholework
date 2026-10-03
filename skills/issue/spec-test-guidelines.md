@@ -275,9 +275,10 @@ _setup_feature_branch() {
 |----------|-------------|-------------|-----------------|
 | PRE_EXISTING (both FAIL) | has FORBIDDEN string | has FORBIDDEN string | Yes — identical content |
 | CLEAN (both PASS) | no FORBIDDEN string | no FORBIDDEN string | Yes — identical content |
+| NOT_APPLICABLE (script absent from both refs) | no check script | no check script | Yes — identical content |
 | NEW_FAILURE | no FORBIDDEN string | has FORBIDDEN string | No — content differs |
 | FIXED | has FORBIDDEN string | no FORBIDDEN string | No — content differs |
 
 ### Applicability
 
-Apply this pattern when designing test fixtures for git diff-based comparison scripts (`pre-merge-check.sh` and future diff-based scripts). For NEW_FAILURE and FIXED scenarios the base and head branches differ by definition, so no marker file is required. Adding one is harmless for consistency, but it is only mandatory for PRE_EXISTING and CLEAN scenarios.
+Apply this pattern when designing test fixtures for git diff-based comparison scripts (`pre-merge-check.sh` and future diff-based scripts). For NEW_FAILURE and FIXED scenarios the base and head branches differ by definition, so no marker file is required. Adding one is harmless for consistency, but it is only mandatory for PRE_EXISTING, CLEAN, and NOT_APPLICABLE scenarios.

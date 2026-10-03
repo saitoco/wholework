@@ -77,6 +77,37 @@ _setup_feature_branch() {
     git checkout main >/dev/null 2>&1
 }
 
+# Helper: remove the check script from a branch (commit + push), then return to main
+_remove_check_script_on_branch() {
+    local branch="$1"
+
+    git checkout "$branch" >/dev/null 2>&1
+    git rm -q scripts/check-forbidden-expressions.sh
+    git commit -m "remove check script" >/dev/null 2>&1
+    git push origin "$branch" >/dev/null 2>&1
+    git checkout main >/dev/null 2>&1
+}
+
+# Helper: install a git shim that fails for one subcommand and delegates everything else
+# to the real git. Usage: _mock_git_failure <subcommand> <exit-code> [stderr-message]
+_mock_git_failure() {
+    local subcommand="$1"
+    local exit_code="$2"
+    local message="${3:-}"
+    local real_git
+    real_git="$(command -v git)"
+
+    cat > "$MOCK_DIR/git" <<SHIM
+#!/bin/bash
+if [[ "\$1" == "$subcommand" ]]; then
+  echo "$message" >&2
+  exit $exit_code
+fi
+exec "$real_git" "\$@"
+SHIM
+    chmod +x "$MOCK_DIR/git"
+}
+
 # Helper: set the gh mock to return specific head/base refs
 _mock_gh_refs() {
     local head_ref="$1"
@@ -189,4 +220,68 @@ MOCK
     run bash "$SCRIPT" 99
     [ "$status" -eq 1 ]
     [[ "$output" == *"baseRefName"* ]]
+}
+
+@test "NOT_APPLICABLE: script absent from both refs exits 0 with NOT_APPLICABLE label" {
+    _remove_check_script_on_branch main
+    _setup_feature_branch "feature-no-check" "clean content"
+    _mock_gh_refs "feature-no-check" "main"
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"NOT_APPLICABLE:"* ]] || false
+    [[ "$output" == *"not applicable"* ]] || false
+    [[ "$output" != *"Error"* ]] || false
+    [[ "$output" != *"Warning"* ]] || false
+}
+
+@test "env error: check script present on base only exits 1" {
+    _setup_feature_branch "feature-drops-check" "clean content"
+    _remove_check_script_on_branch "feature-drops-check"
+    _mock_gh_refs "feature-drops-check" "main"
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"only one of"* ]] || false
+    [[ "$output" != *"NOT_APPLICABLE"* ]] || false
+}
+
+@test "env error: check script present on head only exits 1" {
+    _setup_feature_branch "feature-adds-check" "clean content"
+    _remove_check_script_on_branch main
+    _mock_gh_refs "feature-adds-check" "main"
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"only one of"* ]] || false
+    [[ "$output" != *"NOT_APPLICABLE"* ]] || false
+}
+
+@test "env error: git fetch failure exits 1" {
+    _mock_gh_refs "no-such-branch" "main"
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"git fetch failed"* ]] || false
+}
+
+@test "env error: git worktree add failure exits 1" {
+    _setup_feature_branch "feature-clean" "clean content"
+    _mock_gh_refs "feature-clean" "main"
+    _mock_git_failure "worktree" 1
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"git worktree add failed"* ]] || false
+}
+
+@test "env error: git ref inspection failure is not read as absent exits 1" {
+    _setup_feature_branch "feature-clean" "clean content"
+    _mock_gh_refs "feature-clean" "main"
+    _mock_git_failure "ls-tree" 128 "fatal: simulated ls-tree failure"
+
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"could not inspect"* ]] || false
+    [[ "$output" != *"NOT_APPLICABLE"* ]] || false
 }
