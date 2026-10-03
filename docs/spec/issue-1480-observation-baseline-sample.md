@@ -121,3 +121,28 @@
 ### Notes for Next Phase
 - 変更は `modules/verify-classifier.md` と `skills/issue/SKILL.md` の追記のみ (patch route、`closes #1480` 付きコミット)。
 - rubric 型 AC (1, 3, 4) は差分の目視確認では満たしているが、`/verify` での機械判定は未実施。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 隣接ケース (#1351) を Out of scope に留めた判断は妥当で、AC の範囲もぶれなかった。spec フェーズは親セッション終了による外部 kill を 1 回挟んだ (`docs/reports/orchestration-recoveries.md` に記録済み)。再実行で残った下書きから問題なく完了した
+
+#### design
+- 挿入位置 (Population Definition 直後) と必須語の指定が具体的で、code フェーズで乖離は生じなかった
+
+#### code
+- 手戻りなし。実行環境に `bats` が無く AC6 を未チェックで渡した。同じ状況は同一バッチの #1482 でも発生している
+
+#### review
+- patch route のため review フェーズなし
+
+#### merge
+- patch route (main 直コミット)。問題なし
+
+#### verify
+- AC6 は CI run 37083458442 の bats 成功で代替確認した。rubric 3 件・grep 2 件はすべて PASS
+
+### Improvement Proposals
+- N/A
