@@ -115,7 +115,7 @@ capabilities:
 | `review-bug` | boolean | `true` | `/review` でバグ検出 agent を実行する |
 | `opportunistic-verify` | boolean | `false` | スキル完了時に軽量 verify command を実行する |
 | `skill-proposals` | boolean | `false` | `/verify` 中に Wholework 改善 issue を生成する |
-| `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする |
+| `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする。どのマシンのセッションかを区別したい場合 (例: Remote Control の一覧) は、`claude` プロセスの環境に env var `WHOLEWORK_SESSION_TITLE_PREFIX` を設定する。値は `/auto N` / `--resume` / `--batch` のいずれのタイトルにも先頭へそのまま付く (例: `🐧` → `🐧auto #123: ...`)。区切り文字は自動挿入されない (必要なら値に含める。例: `"mac "`)。50 文字の truncate は本体タイトルに適用されるため prefix は切られず、未設定・空文字ならタイトルは変わらない。キーではなく env var なのは、`.wholework.yml` がコミットされてマシン間で共有されるため。 |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
 | `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`run-review.sh` の `pr-preview` ゲート・`/review` の Step 8.0 のいずれの解決呼び出し箇所もこの capability でゲートされる)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接呼ぶ経路の Step 8.0 の両方が参照する (共有スクリプト `scripts/resolve-preview-env.sh` 経由、Issue #1428)。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (このファイル内の他の実行コマンド系キーと同じ信頼レベル)。 |
