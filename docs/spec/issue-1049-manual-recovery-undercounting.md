@@ -87,6 +87,22 @@
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。session 97764 (`manual_intervention` 0件) と session 1497 (同 2件) の対照実験結果を踏まえ、Purpose/AC を「呼び出し側コンプライアンス確保 (主)」「emission path 再検証 (従)」の二段構成へ改訂した経緯の記録。本 Spec 作成前に Issue 本文へ統合済みのため、本文を一次資料として直接使用した | https://github.com/saitoco/wholework/issues/1049#issuecomment-5240768609 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1049#issuecomment-5241836326
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5243099673
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5255748725
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5296381392
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5304273761
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5310547214
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5327726435
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5341235349
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5354370851
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5369689061
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5378422322
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1049#issuecomment-5378442116
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5383998116
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5579805973
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5653264640
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1049#issuecomment-5957344041
 ## Code Retrospective
 
 ### Deviations from Design
