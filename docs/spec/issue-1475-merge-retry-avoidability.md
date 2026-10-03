@@ -181,3 +181,30 @@ AC2 の `section_contains "modules/orchestration-fallbacks.md" "auto-retry-on-fa
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1475#issuecomment-5965395129
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-4 のとおりに `modules/orchestration-fallbacks.md` (4 箇所) と `docs/reports/orchestration-recoveries.md` のヘッダ部 (2 箇所) を編集した
+
+### Design Gaps/Ambiguities
+- Spec Step 5 の「bats が使えない環境」の分岐に該当した (`which bats` で未検出)。`tests/orchestration-fallbacks.bats` が見る観点 (必須 5 見出しの出現数 21 件ずつ、各 Rationale の `#N` 参照、`### Entry Retention Criterion` の存在) を grep / awk で代替確認し、全件 `bats tests/` (AC5) は実行できなかった。CI に委ねる (Step 10 では UNCERTAIN 扱い、`/verify` で再判定)
+- Behavioral Change Detection: 変更 2 ファイルを参照する他テスト (`tests/run-auto-sub.bats` ほか recoveries 系) は、追記した文言や見出しを検査していない (`Deferred until a real merge-phase` 等は tests/ に 0 件)。ヘッダ部のスキーマ記述追加がテストを壊す経路は見つからなかった
+
+### Rework
+- なし。新規テストは追加していないため pre-implementation FAIL の確認対象も無い (Confirmed pre-implementation FAIL for 0 new test(s))
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の文面をそのまま実装した。解除条件は「silent no-op シグネチャ」かつ「`- avoidable: yes`」の 2 条件で、記録なしは `unknown` 扱い (fail-closed)
+- スクリプト・SKILL.md・テストは変更せず、`modules/orchestration-fallbacks.md` と `docs/reports/orchestration-recoveries.md` のヘッダ部だけを編集した
+
+### Deferred Items
+- 全件 `bats tests/` (AC5) はこの環境に `bats` が無く未実行。構造検査のみ grep / awk で代替確認した。CI または `/verify` で実行する
+- `--write-manual-recovery` への専用フラグ追加 (`--avoidable`) は Issue の Out of scope で、別 Issue に残している
+
+### Notes for Next Phase
+- `/verify` は AC5 (`command "bats tests/"`) を実際に実行すること。bats が使えない場合は CI の結果で判定する
+- Post-merge の observation AC (次の merge phase silent no-op 発生時に `- avoidable:` 行が記録されること) は、発生するまで未判定のまま残る
