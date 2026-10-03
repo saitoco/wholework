@@ -219,3 +219,31 @@ UNCERTAIN は 0 件。rubric 3 件 (AC 3 / 4 / 5) は diff と grep で判定で
 
 ### Notes for Next Phase
 - merge は競合なしで完了した。`/verify` は manual AC のみが対象
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge の verify command は、起票時に main へ空撃ちして常時 PASS / 常時 FAIL が無いことを確認していた。7 件とも `/review` で UNCERTAIN なく判定できた
+- `tests/run-spec.bats` の部分一致 (`claude-fable-5` が `claude-fable-5-1` にも一致する) を起票時に見つけて AC に入れたことで、ID を変えても検出できないテストが残らずに済んだ
+
+#### design
+- commit trailer を `Co-Authored-By: Claude <noreply@anthropic.com>` に統一し、モデル名を含めない形を選んだ。モデルが変わるたびに 20 箇所を直す必要が無くなった
+
+#### code
+- 実装は Spec どおりで、新規テスト 2 件は旧値に戻すと FAIL することを確認済み。実行環境に `bats` と GNU `parallel` が無く、`.tmp/` に bats を一時導入して対応した (#1484 と同じ環境制約)
+- 親セッションの終了で `run-code.sh` が kill された (PR #1487 の作成と Code Retrospective の push までは完了済み)。`/auto` は再実行せず完了扱いで続行し、`docs/reports/orchestration-recoveries.md` に `completion-override` として記録済み
+
+#### review
+- `--full` で review-spec + review-bug×2 を静的 fan-out で実行し、`docs/tech.md` の注記を historical 化した際の参照漏れ (SHOULD 1 / CONSIDER 1) を検出して修正した。review-bug 2 件が同じ箇所を独立に指摘している
+
+#### merge
+- 競合なし、CI success で squash merge
+
+#### verify
+- Pre-merge 7 件は `/review` でチェック済みのため SKIPPED (既定)。Post-merge の manual 条件は、`claude -p --model sonnet` / `--model opus` の `modelUsage` がそれぞれ `claude-sonnet-5-5` / `claude-opus-5-5` で PASS
+- `skills/verify/SKILL.md` は今回の PR で trailer が変わったため、この `/verify` は stale 警告付きで実行した (検証手順への影響なし)
+
+### Improvement Proposals
+- N/A (5.5 世代の effort 再較正は、Phase Handoff の Deferred Items のとおり `token_usage` が溜まってから別途扱う)
