@@ -245,6 +245,9 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
     - **stop-at check**: if `EFFECTIVE_STOP_AT == "spec"`: output "Stopped at phase: spec (auto-stop-at=spec)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="spec"`
     - Otherwise, proceed to Step 4
   - On spec failure, go to Step 6 (error report)
+- **`phase/code`, `phase/review`, or `phase/merge` label present (no `phase/ready`)**: spec has already completed — skip the spec dispatch (the same rule `scripts/run-auto-sub.sh` applies, issue #977) and Step 3a, then proceed to Step 4. Resumption is delegated to Step 4's existing mechanisms and no new one is introduced: GitHub labels plus `reconcile-phase-state.sh` (precondition and completion checks) are the authority for the phase state, and the checkpoint (`auto-checkpoint.sh`) is only a hint for the verify iteration counter. Output "Issue #$NUMBER is at {label} — skipping spec, resuming from {phase}." and enter Step 4 at the item listed for the label under "Resume entry points" below
+- **`phase/verify` label present (no `phase/ready`)**: spec, code, review, and merge have already completed — skip all four and start from verify. Output "Issue #$NUMBER is at phase/verify — skipping spec, code, review, and merge, resuming from verify." and enter Step 4 at the verify items of the current route, as listed under "Resume entry points" below (precondition check → counter increment → checkpoint save → `Skill(wholework:verify)`)
+- **`phase/done` label present**: the Issue is already complete — do not process it. Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER` (a no-op when no checkpoint exists; Step 4's stale-checkpoint check is not reached on this path), output "Issue #$NUMBER is already at phase/done — nothing to run.", and stop without entering Step 3a, Step 4, or Step 5
 - **No `phase/*` labels** (issue triage not done):
   - Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
   - After success, re-fetch Size (`${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`). Update route if Size is now set.
@@ -260,6 +263,26 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
     - On spec failure, go to Step 6 (error report)
   - If expected `phase/*` label state is not reached after re-fetch, go to Step 6 (error report)
   - On issue failure, go to Step 6 (error report)
+
+**Resume entry points (`phase/code`, `phase/review`, `phase/merge`, `phase/verify`):** Step 4 proceeds from the listed item as in a fresh run — each phase keeps its usual precondition check → run → completion check — and the phases before the entry item are not re-run.
+
+| Label | ROUTE | Enter Step 4 at |
+|---|---|---|
+| `phase/code` | patch / operate | patch route item 1 (code) |
+| `phase/code` | pr | pr route item 1 (code; `run-code.sh` skips itself when the PR already exists) |
+| `phase/review` | pr | pr route items 4-5 (extract the PR number), then continue from item 6 (review) |
+| `phase/merge` | pr | pr route items 4-5 (extract the PR number), then continue from item 9 (merge) |
+| `phase/verify` | patch / operate | patch route item 5 (verify precondition check), after Step 4's `VERIFY_ITERATION_COUNT` initialization |
+| `phase/verify` | pr | pr route item 12 (verify precondition check; output `[4/4] verify`), after Step 4's `VERIFY_ITERATION_COUNT` initialization |
+
+`phase/review` and `phase/merge` are only reached through the pr route's phases, so use ROUTE=pr for them even when Step 2 derived `patch` from the Size — the patch route would re-implement an Issue whose PR already exists.
+
+**Rules common to the four resume branches above:**
+
+- Step 2a takes precedence: it runs before this step and skips Step 3 entirely when it detects a fix-cycle. These branches are reached only when Step 2a did not match, so a `phase/verify` Issue with a verify-fail marker or a reopen after merge (and a Spec) is still resumed from code by Step 2a, as before
+- If `EFFECTIVE_STOP_AT` names a phase earlier than the one being resumed (phase order: spec, code, review, merge, verify), that stop point has already been passed: run nothing, output "Stopped at phase: {EFFECTIVE_STOP_AT} (auto-stop-at={EFFECTIVE_STOP_AT})", and proceed to Step 5 with `STOPPED_AT` set
+- XL route: an XL parent's `phase/*` label is aggregated from its sub-issues (see `docs/workflow.md` § XL Parent Issue Phase Management) and is not a resume point for this invocation, so these branches do not apply — enter Step 4's XL route as before
+- In Step 5's result table, show the skipped phases as skipped (already complete) instead of leaving them out
 
 ### Step 3a: Post-Spec Size Refresh
 
@@ -1399,7 +1422,7 @@ Writes are **atomic**: write to `*.json.tmp` then `mv` to the target path to pre
 A checkpoint is considered stale and must be discarded when either of the following holds:
 
 1. **issue_number mismatch**: the `issue_number` field in `.tmp/auto-state-NUMBER.json` does not match `NUMBER` (handled by `auto-checkpoint.sh read_single` — returns 0 and exits 0)
-2. **Label conflict**: live GitHub labels show `phase/done` for the issue while a checkpoint exists (handled by `/auto` Step 4 initialization — calls `delete_single` and resets count to 0)
+2. **Label conflict**: live GitHub labels show `phase/done` for the issue while a checkpoint exists (handled by `/auto` Step 3's `phase/done` branch — calls `delete_single` and stops — or, on paths that skip Step 3 such as Step 2a, by Step 4 initialization — calls `delete_single` and resets count to 0)
 
 In both cases, the label + reconciler state is the authority and the checkpoint is dropped.
 

@@ -25,6 +25,53 @@ step3a_section() {
     [[ "$output" == *"ALWAYS_PR"* ]]
 }
 
+# Extract Step 3 section: from "### Step 3:" to the next "### " heading (Issue #1482)
+step3_section() {
+    awk '/^### Step 3:/{found=1} found && /^### / && !/^### Step 3:/{exit} found{print}' "$1"
+}
+
+@test "Step 3 section has phase/verify resume branch" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *'`phase/verify` label present'* ]] || false
+    [[ "$output" == *"skip all four and start from verify"* ]] || false
+}
+
+@test "Step 3 section has phase/done branch that stops without running" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *'`phase/done` label present'* ]] || false
+    [[ "$output" == *"nothing to run"* ]] || false
+    [[ "$output" == *"auto-checkpoint.sh delete_single"* ]] || false
+}
+
+@test "Step 3 section has phase/code, phase/review, phase/merge branch delegating to reconciler" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *"phase/code"* ]] || false
+    [[ "$output" == *"phase/review"* ]] || false
+    [[ "$output" == *"phase/merge"* ]] || false
+    [[ "$output" == *"skip the spec dispatch"* ]] || false
+    [[ "$output" == *"reconcile-phase-state.sh"* ]] || false
+}
+
+@test "Step 3 section has Resume entry points table" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *"Resume entry points"* ]] || false
+    [[ "$output" == *"ROUTE=pr"* ]] || false
+}
+
+@test "Step 3 section has rules common to resume branches" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *"Step 2a takes precedence"* ]] || false
+    [[ "$output" == *"EFFECTIVE_STOP_AT"* ]] || false
+    [[ "$output" == *"XL route"* ]] || false
+}
+
+@test "Step 3 section keeps existing phase/ready and phase/issue branches" {
+    run step3_section "$SKILL_FILE"
+    [[ "$output" == *'`phase/ready` label present'* ]] || false
+    [[ "$output" == *'`phase/issue` label present'* ]] || false
+    [[ "$output" == *"run-spec.sh"* ]] || false
+}
+
 # Extract Step 2a section: from "### Step 2a:" to the next "### " heading
 step2a_section() {
     awk '/^### Step 2a:/{found=1} found && /^### / && !/^### Step 2a:/{exit} found{print}' "$1"
