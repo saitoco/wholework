@@ -268,17 +268,27 @@ spec 時点で再現を確認済み: bats fixture (bare origin + 作業 repo + g
 ### Rework
 - 新規テストの追記時に `run bash "$SCRIPT"  99` と空白を誤って 2 つ入れたため、直後に修正した (実害なし)。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec と実装の構造的な乖離は無し。Implementation Steps 1〜4 どおりで、`/review` Step 9 の表の扱い (`NOT_APPLICABLE:` は exit 0 でも Blocking) も Spec Notes の矛盾解消に沿っている。
+- Spec のエッジケース検討は「ref の不在・片方のみ・git 失敗」に集中しており、「script の実行 CWD」という実行コンテキスト軸が抜けていた。`git ls-tree` の pathspec が CWD 相対で解決されるため、サブディレクトリ実行で偽の `NOT_APPLICABLE:` (exit 0) になる経路を `/review` で検出し、`--full-tree` と回帰テストで修正した (a689bb37)。
+
+### Recurring issues
+- 「存在判定の成功」と「判定が意図どおりの場所を見ていること」は別物で、probe の fail-closed 化 (失敗を不在と読まない) だけでは、成功した誤判定を防げない。git の path 系サブコマンド (`ls-tree` / `diff` / `show` 等) を新規に使う変更では、CWD 非依存かを Spec 段階で確認項目に入れる余地がある。
+
+### Acceptance criteria verification difficulty
+- AC1〜AC5 はすべて PASS。AC4 (`bats`) は `/code` 環境に bats が無く UNCERTAIN だったが、`/review` で CI の `Run bats tests` SUCCESS を参照して確定できた。`file_contains` で新規テスト名を併記した Spec 判断が、既存テストだけで常時 PASS になる問題を防いだ。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- worktree 作成前に `git ls-tree` で tree 内の存在を判定し、probe の失敗は「不在」と読まず exit 1 (fail-closed) とした。`NOT_APPLICABLE:` は stdout に出力し exit 0
-- `/review` Step 9 の表では `NOT_APPLICABLE:` を exit 0 でも **Blocking** とした (Spec Notes の矛盾解消に従う)。`run-merge.sh` は変更なし
+- Light review (`--light`) で SHOULD 1 件を検出し修正: probe に `git ls-tree --full-tree` を指定して CWD 非依存にした。回帰テスト `CLEAN: check script is detected when run from a repository subdirectory` を追加 (a689bb37)
+- CONSIDER 1 件 (`run-merge.sh` レベルの `NOT_APPLICABLE:` 通過テスト) は、`run-merge.sh` が exit code のみで分岐し Spec も unit テストに限定しているため見送り
 
 ### Deferred Items
-- bats の実行 (`tests/pre-merge-check.bats` 新規 6 件、`tests/review.bats` 新規 1 件) は実装環境に bats が無く未実施。CI の `Run bats tests` で確認する (AC4)
-- AC のチェックボックスは更新していない (bats を要する AC4 が UNCERTAIN のため。`/review` / `/verify` で確認)
+- 追加した回帰テストは bats 未実行 (実装環境に bats が無い)。同構成の使い捨てハーネスでサブディレクトリ実行が `CLEAN:` になることのみ確認。修正後 commit の CI `Run bats tests` で確認する
 
 ### Notes for Next Phase
-- `/review` では CI の bats 結果、特に `env error: git worktree add failure` / `git ref inspection failure` の 2 件 (git shim 経由) の挙動を確認する
-- bare-bracket 警告は既存行のみで、追加したテストはすべて `|| false` 形式
+- `/merge` では修正 commit (a689bb37) 後の CI 結果を確認する。AC1〜AC5 は `/review` で `[x]` 済み、Post-merge 条件は無い
