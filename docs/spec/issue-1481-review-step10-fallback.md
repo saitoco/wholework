@@ -79,6 +79,8 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (判断の根拠、Q&A で決めた方針、受入条件の変更、Triage の結果) / https://github.com/saitoco/wholework/issues/1481#issuecomment-5956690140
 - `/code` 実行時 (phase/ready 以降): 新規コメントなし
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1481#issuecomment-5957262516
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1481#issuecomment-5964181057
 ## Code Retrospective
 
 ### Deviations from Design
