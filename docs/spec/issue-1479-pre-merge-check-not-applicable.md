@@ -281,14 +281,13 @@ spec 時点で再現を確認済み: bats fixture (bare origin + 作業 repo + g
 - AC1〜AC5 はすべて PASS。AC4 (`bats`) は `/code` 環境に bats が無く UNCERTAIN だったが、`/review` で CI の `Run bats tests` SUCCESS を参照して確定できた。`file_contains` で新規テスト名を併記した Spec 判断が、既存テストだけで常時 PASS になる問題を防いだ。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Light review (`--light`) で SHOULD 1 件を検出し修正: probe に `git ls-tree --full-tree` を指定して CWD 非依存にした。回帰テスト `CLEAN: check script is detected when run from a repository subdirectory` を追加 (a689bb37)
-- CONSIDER 1 件 (`run-merge.sh` レベルの `NOT_APPLICABLE:` 通過テスト) は、`run-merge.sh` が exit code のみで分岐し Spec も unit テストに限定しているため見送り
+- PR #1489 を squash でマージした。pre-merge AC は全て `[x]`、review 完了は organic (fallback ではない)、CI は success だった
 
 ### Deferred Items
-- 追加した回帰テストは bats 未実行 (実装環境に bats が無い)。同構成の使い捨てハーネスでサブディレクトリ実行が `CLEAN:` になることのみ確認。修正後 commit の CI `Run bats tests` で確認する
+- None
 
 ### Notes for Next Phase
-- `/merge` では修正 commit (a689bb37) 後の CI 結果を確認する。AC1〜AC5 は `/review` で `[x]` 済み、Post-merge 条件は無い
+- Post-merge 条件は無い。`/verify` では `bats tests/pre-merge-check.bats` の main 上での結果を確認する
