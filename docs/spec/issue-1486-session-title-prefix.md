@@ -174,3 +174,30 @@ consumer sweep (セッションタイトル形式の消費者の列挙):
 ### Notes for Next Phase
 - Post-merge の確認項目はなし。`/verify` は Pre-merge AC がマージ後も成立していることの確認のみでよい
 
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge 9 件は Issue 本文から 1:1 で転記しており、light の目安 (5 件) を超えたが、各条件の verify command は具体的で、検証の妨げにはならなかった
+- spec フェーズで Size が M → L に引き上げられ、review は `--full` で実施された。変更対象が docs・tests・modules にまたがる 8 ファイルだったことを踏まえると妥当な判断
+
+#### design
+- 設計からの逸脱なし (Code Retrospective / review retrospective のどちらにも記載なし)
+
+#### code
+- 実装の手戻りなし。ただし Step 15 の opportunistic verify で、引数展開の誤りにより `issue=0`・`ac_index` が空の `opportunistic_verify_result` イベントを 4 件、`.tmp/auto-events.jsonl` に記録した。親の `/auto` セッションが該当 4 行を削除済み (gitignore 対象のため commit 上の影響はない)
+
+#### review
+- MUST 指摘は 0 件。review-bug の 1 件 (`modules/worktree-lifecycle.md` の部分一致照合) は検証 sub-agent が REJECT しており、2 段検証が誤検知を防いだ
+
+#### merge
+- 競合・CI 失敗はなし。Deferred Items に `docs/ja/tech.md:271` の表記揺れ (「env var」→「環境変数」) が残っている (任意対応)
+
+#### verify
+- Pre-merge AC はすべて `[x]` 済みのため既定どおり SKIPPED、Post-merge AC は 0 件。会話セッションの途中で #1485 がマージされたため、stale skill body を検出した (行数は一致、ハッシュが不一致)。差分はモデル固定の文言のみで、判定への影響はない
+- verify 着手の直前、ローカル main に別セッション (#1479 spec) の未 push コミットがあり、一時的に origin/main と分岐していた。数分後に解消したため、介入せず待ってから進めた
+
+### Improvement Proposals
+- `scripts/emit-skill-event.sh` で、`<issue>` 引数が `0` または非数値のときは記録せずに警告を出す (fail-closed)。LLM が引数展開を誤っても、`issue=0` のような集計を汚すイベントが `.tmp/auto-events.jsonl` に残らないようにする
