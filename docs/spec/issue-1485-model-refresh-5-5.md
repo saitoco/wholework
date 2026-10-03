@@ -195,21 +195,30 @@ Opus 5.5 (2026-09-22) / Sonnet 5.5 (2026-09-28) / Fable 5.1 (2026-09-01) のリ�
 ### Confirmed pre-implementation FAIL
 - Confirmed pre-implementation FAIL for 2 new test(s): `success: --fable switches model to claude-fable-5-1` と `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)`。対象行を一時的に旧値 (`claude-fable-5` / `claude-sonnet-4-6`) に戻して実行し、2 件とも FAIL することを確認してから新値に復元した (対象ファイルは当該 commit より前の未 commit 状態だったので `git stash` は使っていない)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Spec の Changed Files / Implementation Steps とのずれは無かった (変更 24 ファイルは Spec の対象 23 ファイルと Spec 自身の追記に一致)。Spec が触れていなかった箇所として、`docs/tech.md` の「Opus 4.8 effort calibration」注記が「実際に `opus` エイリアスに適用されるガイダンスは Opus 5 の注記を参照」と書いており、Opus 5 の注記を historical 化したことでこの参照先が古くなっていた。Spec の Step 6 は新設注記と Opus 5 注記の書き換えだけを指示していて、それらを参照する既存の文言の洗い出しが無かった。
+
+### Recurring issues
+指摘は 2 件とも `docs/tech.md` / `docs/ja/tech.md` 内の同種の不整合 (注記を historical 化した際に、同じ段落内・他の段落からの参照が追従していない) だった。review-bug 2 件が同じ箇所を独立に指摘している。historical 化する注記がある場合は、その見出し文字列を grep して参照元の文言を Spec の Changed Files に含めると防げる。
+
+### Acceptance criteria verification difficulty
+UNCERTAIN は 0 件。rubric 3 件 (AC 3 / 4 / 5) は diff と grep で判定できた。AC 7 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後でなければ判定できないため `/code` では未チェックのままで、`/review` が確認する前提がうまく機能した。
+
 ## Phase Handoff
 
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- commit trailer を `Co-Authored-By: Claude <noreply@anthropic.com>` に統一し、`grep -rnE "Co-Authored-By: Claude [^<]" skills/ scripts/ modules/ agents/` が 0 件であることを確認した。`skills/verify/SKILL.md` の `skill-body-sha` は `7e7751af` に再計算し、`scripts/check-skill-body-hash.sh` が exit 0
-- `run-spec.sh` は `FABLE_MODEL_ID="claude-fable-5-1"` を代入と比較の両方で使い、コスト警告に `credit` / `retention` の語を残したまま 4 行にした
-- effort の明示値は `docs/tech.md` / `docs/ja/tech.md` では変更せず、5.5 / 5.1 世代の推奨と再評価のきっかけだけを追記した
+- 指摘 2 件 (SHOULD 1 / CONSIDER 1、MUST 0) はどちらも `docs/tech.md` / `docs/ja/tech.md` の注記の整合性で、505bb54d で修正した。見出し文字列は `#922` / `#1064` が引用しているため変更していない
+- 非対話実行 (再呼び出しの保証なし) のため `capabilities.workflow: true` でも Workflow path は使わず、Agent をフォアグラウンドで使う静的 fan-out (review-spec + review-bug×2) で実行した
+- review-bug 2 件が同じ指摘を返したため、検証 sub-agent は使わず該当行を直接確認して妥当と判断した
 
 ### Deferred Items
 - 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — `token_usage` が溜まってから別 Issue
-- Pre-merge AC 7 (`github_check "gh pr checks" "Run bats tests"`) — PR #1487 の CI 完了後に `/review` が確認する (`/code` では未チェックのまま)
-- Post-merge の manual AC (`claude -p --output-format json` でエイリアスの解決先を確認) — merge 後に人が確認
+- Post-merge の manual AC (`claude -p --model sonnet --output-format json` と `--model opus` でエイリアスの解決先を確認) — merge 後に人が確認
 
 ### Notes for Next Phase
-- Pre-merge AC 1-6 は `/code` で確認済みで Issue 本文のチェックボックスを `[x]` にした。AC 3 / 4 / 5 は rubric なので `/review` でも内容を確認すること
-- `docs/ja/tech.md` は英語版とコードフェンス数が一致している (どちらも 2)。`scripts/check-translation-sync.sh` で `docs/tech.md` は IN_SYNC (`docs/guide/xl-decomposition.md` の OUTDATED は本 Issue と無関係の既存状態)
-- ローカルの bats は GNU `parallel` が無く、`xargs -P4` による分割実行で全 2099 件 PASS を確認済み。CI の結果が正
+- Pre-merge AC は 7 件すべて `[x]` (AC 7 は CI の `Run bats tests` が 2 件とも pass)。fix commit 505bb54d はドキュメントのみの変更で、push 後の CI は `/merge` 側で再確認される
+- `docs/tech.md` / `docs/ja/tech.md` の修正後も `check-translation-sync.sh` は IN_SYNC、`validate-skill-syntax.py` は 0 error
