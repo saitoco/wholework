@@ -291,3 +291,28 @@ spec 時点で再現を確認済み: bats fixture (bare origin + 作業 repo + g
 
 ### Notes for Next Phase
 - Post-merge 条件は無い。`/verify` では `bats tests/pre-merge-check.bats` の main 上での結果を確認する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- spec 後に Size が S → M へ上がり、PR route で進んだ。AC4 に新規テスト名の `file_contains` を併記した判断が、既存テストだけで常に PASS になる問題を防いだ
+
+#### design
+- エッジケースの検討が「ref の不在・片方のみ・git 失敗」に偏り、実行 CWD という軸が抜けていた (`git ls-tree` の pathspec が CWD 相対で解決される)
+
+#### code
+- 実行環境に bats が無く、使い捨てのハーネスで代替確認した。同じバッチの #1482・#1480 でも同じ制約が出ている
+
+#### review
+- CWD 依存による偽の `NOT_APPLICABLE:` (exit 0) を検出し、`--full-tree` と回帰テストで修正した (a689bb37)。review が実質的な欠陥を止めた例
+
+#### merge
+- squash merge。CI success で問題なし
+
+#### verify
+- AC 5 件は review の時点ですべてチェック済みで、Post-merge 条件は無い。main 上のマージコミットの CI は verify の時点で実行中だった
+
+### Improvement Proposals
+- `/spec` の設計チェックに「git の path 系サブコマンド (`ls-tree` / `diff` / `show` 等) を新たに使う変更では、実行 CWD に依存しないか (`--full-tree` やリポジトリルート基準のパスを使っているか) を確認する」項目を加える。probe を fail-closed にしても、成功した誤判定は防げないため
