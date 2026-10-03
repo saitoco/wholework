@@ -285,3 +285,14 @@ MOCK
     [[ "$output" == *"could not inspect"* ]] || false
     [[ "$output" != *"NOT_APPLICABLE"* ]] || false
 }
+
+@test "CLEAN: check script is detected when run from a repository subdirectory" {
+    _setup_feature_branch "feature-clean" "clean content"
+    _mock_gh_refs "feature-clean" "main"
+
+    cd skills
+    run bash "$SCRIPT" 99
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CLEAN:"* ]] || false
+    [[ "$output" != *"NOT_APPLICABLE"* ]] || false
+}

@@ -53,7 +53,8 @@ fi
 probe_check_on_ref() {
   local ref="$1"
   local listing
-  if ! listing=$(git ls-tree --name-only "origin/${ref}" -- "$CHECK_REL"); then
+  # --full-tree: the pathspec must resolve from the repository root, not the caller's CWD
+  if ! listing=$(git ls-tree --full-tree --name-only "origin/${ref}" -- "$CHECK_REL"); then
     echo "Error: could not inspect origin/$ref for $CHECK_REL" >&2
     exit 1
   fi
