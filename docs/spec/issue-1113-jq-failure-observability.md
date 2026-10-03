@@ -72,6 +72,11 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5354373518
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5369691437
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5378423203
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1113#issuecomment-5379835515
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5383998310
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5579806480
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5653264908
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1113#issuecomment-5957345737
 ## Notes
 
 - **Scope confirmation**: Issue Background に記載された5箇所 (L67/72/80/86/125) は、現行コードの実際の行番号と完全に一致することを確認済み (ズレなし)。実装は行番号ではなく変数名 (`RAW_COMMENTS` 等) で特定する。
