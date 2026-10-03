@@ -200,4 +200,4 @@ consumer sweep (セッションタイトル形式の消費者の列挙):
 - verify 着手の直前、ローカル main に別セッション (#1479 spec) の未 push コミットがあり、一時的に origin/main と分岐していた。数分後に解消したため、介入せず待ってから進めた
 
 ### Improvement Proposals
-- `scripts/emit-skill-event.sh` で、`<issue>` 引数が `0` または非数値のときは記録せずに警告を出す (fail-closed)。LLM が引数展開を誤っても、`issue=0` のような集計を汚すイベントが `.tmp/auto-events.jsonl` に残らないようにする
+- `scripts/emit-skill-event.sh` は、`--emit-issue` に空や不正な値が渡ると警告を出して `issue=0` で記録する (L3 bridge 経路の `NUMBER="batch-..."` と共通の fail-closed 設計なので、`0` 自体を拒否することはできない)。`opportunistic_verify_result` については、`--emit-issue` が不正なときは候補 Issue を特定できずイベントの意味がなくなるため、記録をスキップする扱いにする余地がある。ただし今回は LLM の引数展開ミスによる 1 回限りの事象で、再発の根拠はない (Tier 3 相当)
