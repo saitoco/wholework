@@ -33,6 +33,11 @@ No new comments since last phase. (cutoff: `phase/*` ラベル最終付与時刻
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5354375045
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5369692886
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5378423826
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1159#issuecomment-5379975922
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5383998745
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5579807820
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5653265712
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1159#issuecomment-5957349207
 ## Changed Files
 
 - `modules/retro-proposals.md`: Step 6 の Tier 1 行を positive-evidence gate へ書き換え、Mechanical heuristics を「キーワード単独では Tier 1 を選ばない」形へ引き締め、`**Default**` を Tier 2 へ反転して根拠ブロックを追加、`**Tier classification persistence**` サブ節を追加。冒頭 `Called by:` の step 番号 (`/verify` Step 13 → Step 16、`/auto` Step 4a → Step 5 L3 auto-retrospective) と `## Output` 節を更新
