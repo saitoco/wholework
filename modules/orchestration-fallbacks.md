@@ -450,11 +450,12 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ### Escalation
 - If the failure is a pre-existing violation that was incorrectly classified as NEW_FAILURE (unexpected): inspect both branches manually with `bash scripts/check-forbidden-expressions.sh` and compare; if this is a misclassification, report as a bug in `pre-merge-check.sh`
-- If `pre-merge-check.sh` exits 1 (env error: ref resolution, fetch, or worktree failure), `run-merge.sh` proceeds fail-open — the merge is not blocked; investigate the env error separately
+- If `pre-merge-check.sh` exits 1 (env error: ref resolution, fetch, ref inspection, or worktree failure, or the check script present on only one ref), `run-merge.sh` proceeds fail-open — the merge is not blocked; investigate the env error separately
+- A repository that ships the check script on neither ref is not an env error: `pre-merge-check.sh` prints a `NOT_APPLICABLE:` line and exits 0, so `run-merge.sh` proceeds without a fail-open warning.
 
 ### Rationale
 - Introduced in #719: `/auto` merge phase encountered a pre-existing Forbidden Expressions FAILURE on main (`docs/spec/issue-710-blocked-by-workflow.md`) and `--non-interactive` auto-resolve policy silently continued; without baseline diff, there was no machine-readable distinction between pre-existing and new failures
-- `pre-merge-check.sh` runs both base and head branches in ephemeral worktrees and classifies the result (NEW_FAILURE / PRE_EXISTING / FIXED / CLEAN); only exit 2 (NEW_FAILURE) blocks the merge
+- `pre-merge-check.sh` runs both base and head branches in ephemeral worktrees and classifies the result (NEW_FAILURE / PRE_EXISTING / FIXED / CLEAN / NOT_APPLICABLE); only exit 2 (NEW_FAILURE) blocks the merge
 - env error (exit 1) is fail-open because blocking all merges due to check infrastructure failure is a worse outcome than proceeding with the existing GitHub merge-state gates and human review
 - See also: #702 (triggering incident — Forbidden Expressions pre-existing FAILURE auto-resolved in merge), #704 (autonomy tier matrix)
 - Since #1139, `/review` Step 9 also calls `pre-merge-check.sh`, but the symptom this entry addresses is specific to the merge-phase `run-merge.sh` abort; a `/review` Step 9 NEW_FAILURE is handled as a MUST review finding by Step 12, not by this fallback's steps.

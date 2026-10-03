@@ -254,3 +254,41 @@ spec 時点で再現を確認済み: bats fixture (bare origin + 作業 repo + g
 - costly / irreversible な Implementation Step、外部サービスへのログインを要する Step は無い (`spec-approval-needed` / `external-auth-required` の対象外)。
 - UI に関わる変更は無いため、UI Design phase は対象外。
 - Issue 本文は、AC3 (hint 追加)・AC4 (新規テスト名の hint 追加)・AC5 (description と hint) を更新した。AC1 / AC2 は変更していない。Post-merge は「なし」のまま。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec どおりに実装した。`skills/issue/spec-test-guidelines.md` は「更新か見送りか」を `/code` に委ねられていたが、marker file 規則の表と Applicability に NOT_APPLICABLE を加える小さな変更で済むため更新した。
+
+### Design Gaps/Ambiguities
+- 実装環境に bats が無く (`command -v bats` が空)、`bats tests/pre-merge-check.bats` / `bats tests/review.bats` は実行できなかった。Spec が予告していた制約どおりで、CI の `Run bats tests` ジョブで確認する。
+- 代替として、bats fixture と同じ構成 (bare origin + 作業 repo + gh mock + git shim) の使い捨てハーネスを `.tmp/` で実行し、S1〜S6 と既存分類 R1 / R2 の 16 チェックが全て PASS することを確認した (ハーネスは削除済みでリポジトリには残していない)。`tests/review.bats` の新規 assert の正規表現は `grep -c -E` で `skills/review/SKILL.md` に 1 件ヒットすることを確認した。
+- 新規テストの「実装前 FAIL 確認」は、bats が無いため bats 上では実施していない。実装前の script に対する失敗は Spec 時点のプロトタイプ検証 (新規挙動 8 チェックのみ失敗) で確認済みの記録に依拠する。
+
+### Rework
+- 新規テストの追記時に `run bash "$SCRIPT"  99` と空白を誤って 2 つ入れたため、直後に修正した (実害なし)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec と実装の構造的な乖離は無し。Implementation Steps 1〜4 どおりで、`/review` Step 9 の表の扱い (`NOT_APPLICABLE:` は exit 0 でも Blocking) も Spec Notes の矛盾解消に沿っている。
+- Spec のエッジケース検討は「ref の不在・片方のみ・git 失敗」に集中しており、「script の実行 CWD」という実行コンテキスト軸が抜けていた。`git ls-tree` の pathspec が CWD 相対で解決されるため、サブディレクトリ実行で偽の `NOT_APPLICABLE:` (exit 0) になる経路を `/review` で検出し、`--full-tree` と回帰テストで修正した (a689bb37)。
+
+### Recurring issues
+- 「存在判定の成功」と「判定が意図どおりの場所を見ていること」は別物で、probe の fail-closed 化 (失敗を不在と読まない) だけでは、成功した誤判定を防げない。git の path 系サブコマンド (`ls-tree` / `diff` / `show` 等) を新規に使う変更では、CWD 非依存かを Spec 段階で確認項目に入れる余地がある。
+
+### Acceptance criteria verification difficulty
+- AC1〜AC5 はすべて PASS。AC4 (`bats`) は `/code` 環境に bats が無く UNCERTAIN だったが、`/review` で CI の `Run bats tests` SUCCESS を参照して確定できた。`file_contains` で新規テスト名を併記した Spec 判断が、既存テストだけで常時 PASS になる問題を防いだ。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Light review (`--light`) で SHOULD 1 件を検出し修正: probe に `git ls-tree --full-tree` を指定して CWD 非依存にした。回帰テスト `CLEAN: check script is detected when run from a repository subdirectory` を追加 (a689bb37)
+- CONSIDER 1 件 (`run-merge.sh` レベルの `NOT_APPLICABLE:` 通過テスト) は、`run-merge.sh` が exit code のみで分岐し Spec も unit テストに限定しているため見送り
+
+### Deferred Items
+- 追加した回帰テストは bats 未実行 (実装環境に bats が無い)。同構成の使い捨てハーネスでサブディレクトリ実行が `CLEAN:` になることのみ確認。修正後 commit の CI `Run bats tests` で確認する
+
+### Notes for Next Phase
+- `/merge` では修正 commit (a689bb37) 後の CI 結果を確認する。AC1〜AC5 は `/review` で `[x]` 済み、Post-merge 条件は無い

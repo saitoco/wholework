@@ -171,6 +171,11 @@ step12_2_section() {
     step9_section | grep -q -F "CLEAN:"
 }
 
+@test "Step 9: pre-existing CI failure exception keeps NOT_APPLICABLE: blocking despite exit 0" {
+    step9_section | grep -q -F "NOT_APPLICABLE:"
+    step9_section | grep -q -E '^\| 0 \| `NOT_APPLICABLE:` \|.*\*\*Blocking\*\*'
+}
+
 @test "Step 9: pre-existing CI failure exception is fail-closed on classifier env error" {
     step9_section | grep -q -F "fail-closed"
 }
