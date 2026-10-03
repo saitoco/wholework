@@ -159,3 +159,43 @@ Opus 5.5 (2026-09-22) / Sonnet 5.5 (2026-09-28) / Fable 5.1 (2026-09-01) のリ�
 - **audit/investigation 型か**: いいえ (既存の項目を分類して判断根拠を残す Issue ではない)
 - **認証情報・セキュリティ方針**: 該当なし
 - **Size の再評価**: 変更ファイルは 23 個 (Axis 1 では XL) だが、うち 12 個は trailer 1 行の機械的な置き換え、残りも大半が文書の更新 (Axis 2 で 1 段下げ) なので L のまま
+
+## spec retrospective
+
+### Minor observations
+- Issue 本文の前提 (「Fable は ID の明示が必要」) は、Issue 作成後に Claude Code 側で `fable` エイリアスが入ったことで部分的に古くなっていた。モデル関連の Issue は前提の鮮度が短いので、`/spec` で公式文書を引き直す価値が高い
+- trailer の対象を `skills/` `scripts/` `modules/` に限って grep すると `agents/orchestration-recovery.md` を取りこぼす。#918 の Spec はこのファイルを含めていたので、前例の Changed Files を見ると漏れに気付きやすい
+- `skills/verify/SKILL.md` は `<!-- skill-body-sha: H -->` マーカーを持ち、1 行の文字列置き換えでも CI (`Skill Body Hash check`) と `tests/verify.bats` が落ちる。一括置換の対象にこのファイルが入るときは hash の再計算を Implementation Steps に明記する必要がある
+
+### Judgment rationale
+- commit trailer はモデル名を含まない形を選んだ。bash 側の commit は LLM を介さずエイリアスの解決先を知る手段が無く、「実行時のモデル名」は SKILL.md 側でしか実現できない。2 つの形が混在するより、1 つの形に統一するほうが単純で古くならない
+- `run-spec.sh --fable` は `fable` エイリアスに切り替えず ID 固定を続けた。AC 2 が ID の存在を求めていることに加え、コスト警告の文言 (価格比) が特定のバージョンに結び付くため、エイリアスで解決先が変わるとコスト警告と実際のモデルがずれる
+- effort の値は変えなかった。公式の推奨は「Opus 5.5 / Sonnet 5.5 では前世代の設定を持ち越さず sweep する」だが、Wholework にはまだ 5.5 世代の実測が無い。#921 / #922 / #923 / #1064 と同じ「実測が無いまま既定を変えない」方針に合わせ、推奨と再評価のきっかけを `docs/tech.md` に書くだけにした。特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh` は再較正の候補として最優先 (`/verify` での改善提案の材料)
+- Issue に挙がっていない `agents/review-bug.md` / `SECURITY.md` / `docs/ja/tech.md` を対象に含めた。どれも Purpose と同じ種類の古さで、別 Issue に分けるほどの量ではない
+
+### Uncertainty resolution
+- `ANTHROPIC_MODEL` と `--model` の優先順位: Claude Code の model-config 文書で `--model` が優先と確認 (出所: https://code.claude.com/docs/en/model-config 、2026-10-03 取得)
+- 5.5 / 5.1 での画像の上限: Vision 文書で「Claude 4.7 and later models」が 2576 px / 4784 visual tokens と確認 (出所: https://platform.claude.com/docs/en/build-with-claude/vision 、2026-10-03 取得)。値は据え置き
+- Fable 5.1 の制約: 30 日保持・ZDR 不可・フォールバック先 (Opus 4.8 / Opus 5)・Claude Code v2.1.257 以降が必要、を確認 (出所: Fable 5.1 の What's new と model-config、2026-10-03 取得)
+- 未解決: Opus 5.5 の cyber classifier の挙動は公式文書で見つからなかった。`agents/review-bug.md` は断定しない書き方にする
+- 新しい分岐ロジックは無いが、回帰防止のテストを 2 つ用意する: `tests/spawn-recovery-subagent.bats` に `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)` を追加、`tests/run-spec.bats` の `--fable` テストを `claude-fable-5-1` の完全一致 (`grep -qx`) に書き換え
+
+## Phase Handoff
+
+<!-- phase: spec -->
+
+### Key Decisions
+- commit trailer はモデル名を含まない `Co-Authored-By: Claude <noreply@anthropic.com>` に統一する (12 ファイル 20 箇所)。bash 側の commit はエイリアスの解決先を知れないため
+- `run-spec.sh --fable` は `fable` エイリアスではなく `FABLE_MODEL_ID="claude-fable-5-1"` で固定し、代入と比較の両方でこの定数を使う
+- `spawn-recovery-subagent.sh` は `ANTHROPIC_MODEL=sonnet` と `--model sonnet` の併記を維持する (他の `run-*.sh` と同じ `-p` モードの不具合対策)
+- effort の明示値は変えず、5.5 / 5.1 世代の公式の推奨と再評価のきっかけを `docs/tech.md` に書く
+
+### Deferred Items
+- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — 実測が溜まってから別 Issue
+- Post-merge の manual AC (エイリアスの解決先を `claude -p --output-format json` で確認) — merge 後に人が確認
+
+### Notes for Next Phase
+- `skills/verify/SKILL.md` の trailer を置き換えたら `<!-- skill-body-sha: H -->` を再計算する (`grep -v '<!-- skill-body-' skills/verify/SKILL.md | shasum -a 256 | cut -c1-8`)。忘れると CI の `Skill Body Hash check` と `tests/verify.bats` が落ちる
+- `run-spec.sh` のコスト警告は既存テストが `credit` / `retention` の語を見ているので、この 2 語を残す
+- `docs/tech.md` の「Opus 5 effort calibration」見出しは #1064 の箇条が名前で引用しているので、見出しの文字列は変えずに historical の注記を付ける
+- `docs/ja/tech.md` の同期では英語版とコードフェンス数を合わせる (`docs/translation-workflow.md`)
