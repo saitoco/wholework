@@ -33,6 +33,11 @@ Step 9 の「Blocking by default」段落が、CI FAILURE の**帰属** (この 
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1139#issuecomment-5375196020
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5375262642
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1139#issuecomment-5379950708
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5381169653
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5384989351
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5579807241
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5653265385
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5957347837
 ## Changed Files
 
 - `skills/review/SKILL.md`: (1) frontmatter `allowed-tools` の `Bash(...)` パターンに `${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*` を追加 (2) Step 9「Blocking by default」段落の最終文を差し替え (3) Step 9 に `### Pre-existing failure exception (baseline attribution)` サブセクションを新設 (4) Step 12.2 Fix Work に out-of-scope エントリの修正禁止を 1 文追加
