@@ -65,7 +65,7 @@ The following information is passed from the caller:
 | `file_not_contains "path" "text"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` and check if output contains "text" — not found → PASS, found → FAIL, `git show` error (file deleted in PR branch) → PASS (file absent = text absent). If `PR_BRANCH` is not set: search with Grep and confirm no match (backward compatible). | `always_allow` |
 | `files_not_contain "glob_pattern" "text"` | Expand glob_pattern with Glob tool; search each matched file for "text" using Grep; PASS if no files contain it, FAIL listing files that match. If no files match the glob, PASS. Safe-mode compatible. | `always_allow` |
 | `grep "pattern" "path"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` and apply regex pattern match to the output — match found → PASS, not found → FAIL, `git show` error (file deleted in PR branch) → FAIL. If `PR_BRANCH` is not set: regex match using Grep (backward compatible). **PASS when match is found**. To assert absence (no match), use `file_not_contains` instead. **Prefer `file_contains` for fixed strings**: For fixed strings or simple patterns without regex metacharacters, use `file_contains` instead — it avoids shell escaping issues and is more readable. Use `grep` only when regex features (ERE alternation `|`, bracket expressions `[]`, anchors `^`/`$`, etc.) are actually needed. **Matching is case-sensitive by default**: match the exact case of the implementation text. When the case is uncertain, use bracket notation (e.g., `[Nn]o heading matched`). **Regex flavor — ERE (Extended Regular Expressions)**: the `grep` verify command uses ripgrep, which defaults to ERE. ERE alternation is `|` (bare pipe); `\|` in ERE matches a literal `|` character, not OR. BRE metacharacter syntax (`\|` for OR, `\(` for grouping, `\+` for one-or-more) is not recognized as metacharacters in ERE. For BRE, use `command "grep -G 'pattern' file"` instead. See the "grep Verify Command: ERE vs BRE Reference" section below for comparison and examples. | `always_allow` |
-| `command "cmd"` | **Mode-dependent**: `safe` → attempt CI reference fallback (see below); return UNCERTAIN if no match. `full` → execute command in a bash subprocess (`bash -c 'cmd'`; timeout: 60 seconds; exit code 0 = success). **Note**: The command always runs in a bash subprocess regardless of the user's default shell. Shell-dependent glob patterns (e.g., `**` with zsh globstar) behave as bash glob, which may produce unexpected results. Use `find` for cross-shell compatible file enumeration (e.g., `find tests -name '*.bats'` instead of `tests/**/*.bats`). **Note**: `nproc` is Linux-only and not available on macOS. Use the portable one-liner `$(nproc 2>/dev/null \|\| sysctl -n hw.logicalcpu)` instead (macOS alternative: `sysctl -n hw.logicalcpu`). Example: `bats --jobs $(nproc 2>/dev/null \|\| sysctl -n hw.logicalcpu) tests/*.bats` | `always_ask` |
+| `command "cmd"` | **Mode-dependent**: `safe` → attempt CI reference fallback (see below); return UNCERTAIN if no match. `full` → execute command in a bash subprocess (`bash -c 'cmd'`; timeout: 60 seconds; exit code 0 = success). **Note**: The command always runs in a bash subprocess regardless of the user's default shell. Shell-dependent glob patterns (e.g., `**` with zsh globstar) behave as bash glob, which may produce unexpected results. Use `find` for cross-shell compatible file enumeration (e.g., `find tests -name '*.bats'` instead of `tests/**/*.bats`). **Note**: `/verify`, `/review`, and `/code` all run in a worktree-isolated session, where the worktree isolation guard refuses any command whose target repository cannot be shown to stay inside the worktree. `bash -c` does not bypass the guard — the guard inspects the text handed to `bash -c` as well. Do not embed `$(...)` command substitution, or `xargs`/`parallel` feeding git, in a `command`; see `modules/verify-patterns.md` §34 for the refused shapes and their alternatives. In particular, a `$(nproc ...)` job count is refused (and `nproc` is Linux-only): write a literal job count instead. Example: `bats --jobs 4 tests/run-code.bats tests/run-spec.bats` | `always_ask` |
 | `json_field "path" ".key" "value"` | Read file, parse JSON, and confirm field value | `always_allow` |
 | `section_contains "path" "heading" "text"` | Read file and confirm fixed string "text" is present within the specified markdown heading section (from the specified heading line to just before the next heading of the same or higher level, or end of file). The heading argument uses **partial match**: the "heading" string only needs to appear anywhere within the heading line (after stripping leading `#` symbols and spaces), so `"Next Steps"` matches both `## Next Steps` and `## 🧭 Next Steps`. If no heading matches the given "heading" argument, return UNCERTAIN with a diagnostic message in the Details column: `No heading matched "{heading}". Candidate headings: "{H1}", "{H2}", ...` (up to 3 candidate headings from the file's actual headings, in document order). | `always_allow` |
 | `section_not_contains "path" "heading" "text"` | Read file and confirm fixed string "text" is NOT present within the specified markdown heading section. Uses the same heading **partial match** rule as `section_contains`. If no heading matches, return UNCERTAIN with the same diagnostic message as `section_contains`: `No heading matched "{heading}". Candidate headings: "{H1}", "{H2}", ...` (up to 3 candidates). | `always_allow` |
@@ -88,25 +88,35 @@ The following information is passed from the caller:
 
 A **job-level variant** of `github_check` references a specific CI job's conclusion instead of the entire workflow outcome. Use this form when a multi-job CI workflow contains pre-existing failures in unrelated jobs (e.g., a `Forbidden Expressions check` job) that would cause false FAILs on a workflow-level `github_check` command.
 
-**Usage form:**
+**Usage form (patch route — the run belongs to the latest commit on `main`):**
 
 ```
-github_check "gh run view $(gh run list --workflow=<file>.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"<job_name>\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"
+github_check "gh api repos/{owner}/{repo}/commits/main/check-runs --jq '.check_runs[] | select(.name==\"<job_name>\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"
 ```
 
-**Example (verifying only the `Run bats tests` job):**
+**Usage form (pr route — the run belongs to the PR's own head):**
 
 ```
-<!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success" -->
+github_check "gh pr checks --json name,state --jq '.[] | select(.name==\"<job_name>\") | .state'" "SUCCESS"
 ```
+
+The PR number is injected by the `gh pr checks` pre-run rewrite in the table above, so the verify command itself stays a single literal command.
+
+**Example (verifying only the `Run bats tests` job on `main`):**
+
+```
+<!-- verify: github_check "gh api repos/{owner}/{repo}/commits/main/check-runs --jq '.check_runs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success" -->
+```
+
+**Why not `gh run view $(gh run list ...)`:** the earlier form of this sub-form resolved the run ID with a `$(gh run list ...)` command substitution. The worktree isolation guard refuses it — verified 2026-10-03 in a worktree session: both the bare command and the same text handed to `bash -c` were refused as "a construct too complex to verify", even though the inner commands are gh-only (a plain `gh run list ... --jq '.[0].databaseId'` with literal arguments runs fine). `gh run list --json` has no `jobs` field, so a job-level lookup needs the run ID from a second call — the two forms above avoid that by asking GitHub's check-runs API (patch route) or `gh pr checks` (pr route) for the named job directly. The check-runs form is keyed on the `main` ref rather than on a workflow file, so the job name must be unique across the repository's workflows.
 
 **Applicability:** Use in multi-job CI workflows when only a specific job's success matters and unrelated jobs have pre-existing failures that would falsely FAIL a workflow-level check.
 
-**Safe mode behavior:** `gh run view` is in the safe mode allowlist. The command executes in both safe and full modes.
+**Safe mode behavior:** `gh api` (no `--method`) and `gh pr checks` are in the safe mode allowlist. The command executes in both safe and full modes.
 
 **Workflow-level vs. job-level comparison:**
 
-| Aspect | Workflow-level (`gh run list`) | Job-level (`gh run view ... --json jobs`) |
+| Aspect | Workflow-level (`gh run list`) | Job-level (`gh api ... /check-runs` or `gh pr checks`) |
 |--------|-------------------------------|------------------------------------------|
 | Scope | Entire workflow conclusion | Single named job conclusion |
 | False-positive risk | High when unrelated jobs fail | None — scoped to the specific job |
@@ -122,7 +132,7 @@ The `in_progress` string-match rule in the main table above (`If output contains
 --json conclusion,status --jq 'if .[0].status != "completed" then "in_progress" else .[0].conclusion end'
 ```
 
-See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the canonical `gh run list` verify command template using this pattern. This constraint also applies to the job-level sub-form above (`gh run view --json jobs`): each job object carries the same empty-while-in-progress `.conclusion` field, so the same `status`-synthesis fix (`select(.name=="<job_name>") | if .status != "completed" then "in_progress" else .conclusion end`) applies there too if job-level PENDING detection is needed.
+See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the canonical `gh run list` verify command template using this pattern. This constraint also applies to the job-level sub-form above (`gh api .../check-runs`): each check-run object carries the same empty-while-in-progress `.conclusion` field, so the same `status`-synthesis fix (`select(.name=="<job_name>") | if .status != "completed" then "in_progress" else .conclusion end`) applies there too — the patch-route usage form above already includes it. The pr-route form (`gh pr checks --json name,state`) needs no synthesis: its `state` column reports `IN_PROGRESS` directly.
 
 **Constraint scope:** a bare `--json conclusion --jq '.[0].conclusion'` (or the job-level equivalent without `status`) must not be used as a `gh run list`/`gh run view` verify command going forward — it cannot distinguish an in-progress run from a run whose conclusion happens to not match `expected_value`.
 

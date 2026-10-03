@@ -224,12 +224,18 @@ When a multi-job workflow contains pre-existing failures in unrelated jobs (e.g.
 Use the job-level form to reference only the specific job that the AC is designed to verify:
 
 ```
-<!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success" -->
+<!-- verify: github_check "gh pr checks --json name,state --jq '.[] | select(.name==\"Run bats tests\") | .state'" "SUCCESS" -->
 ```
 
-Same PR-route caveat as Preferred pattern 1 above: do not add `--branch=main` — this form is meant to resolve the PR's own most recent run.
+For a patch-route Issue (no PR), ask the check-runs API for the latest commit on `main` instead:
 
-This form uses `gh run view` with `--json jobs` to extract the conclusion of a single named job. Because `gh run view` is in the `github_check` safe mode allowlist, this command executes in both safe and full modes. Unrelated job failures do not affect the result.
+```
+<!-- verify: github_check "gh api repos/{owner}/{repo}/commits/main/check-runs --jq '.check_runs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success" -->
+```
+
+Same PR-route caveat as Preferred pattern 1 above: the pr-route form resolves the PR's own checks (the PR number is injected by `modules/verify-executor.md`); only the patch-route form is keyed on `main`.
+
+Both forms are a single command with literal arguments, so they pass the worktree isolation guard (see §34). Do not write the job-level lookup as `gh run view $(gh run list ...)`: the `$(...)` command substitution is refused by the guard even though every inner command is gh-only (confirmed 2026-10-03). Because `gh api` (no `--method`) and `gh pr checks` are in the `github_check` safe mode allowlist, these commands execute in both safe and full modes. Unrelated job failures do not affect the result.
 
 **Fallback guidance:** When `gh pr checks` must be used (e.g., whole-CI gate), write "all CI green" explicitly in the AC text to clarify that the condition covers the full CI. This signals that handling of out-of-scope failures (e.g., pre-existing failures on `main`) is delegated to the verify phase reviewer.
 
@@ -904,12 +910,12 @@ Use narrow scope only when the implementation is purely additive (new files, no 
 
 | Framework | Narrow scope (direct `command`) | Full suite (CI reference) |
 |-----------|---------------------|---------------------|
-| bats | `command "bats tests/run-code.bats"` | `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] \| select(.name==\"Run bats tests\") \| if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"` (this repository's `.github/workflows/test.yml` bats job) |
+| bats | `command "bats tests/run-code.bats"` | `github_check "gh pr checks --json name,state --jq '.[] \| select(.name==\"Run bats tests\") \| .state'" "SUCCESS"` (this repository's `.github/workflows/test.yml` bats job; pr route — see §7 job-level sub-form for the patch-route `gh api` form) |
 | pytest | `command "pytest tests/test_foo.py"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` (workflow-level, if the workflow runs only pytest) |
 | Node.js (pnpm) | `command "pnpm test -- foo.test.ts"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
 | Node.js (npm) | `command "npm test -- foo.test.js"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success"` |
 
-For the pr route, use the job-level (or workflow-level) form as-is — the run belongs to the PR branch. For the patch route (direct commit to `main`, no PR), add `--branch=main` to the underlying `gh run list`/`gh run view` lookup per `modules/verify-classifier.md` § "Patch Route CI Verification Note", since there is no PR to scope the run to.
+For the pr route, use the job-level (or workflow-level) form as-is — the run belongs to the PR branch. For the patch route (direct commit to `main`, no PR), add `--branch=main` to the workflow-level `gh run list` lookup per `modules/verify-classifier.md` § "Patch Route CI Verification Note", since there is no PR to scope the run to; for the job-level form, use the `gh api repos/{owner}/{repo}/commits/main/check-runs` variant from §7 instead, which is already keyed on `main`.
 
 **Decision procedure (4 steps):**
 
@@ -924,7 +930,7 @@ For the pr route, use the job-level (or workflow-level) form as-is — the run b
 - Narrow verify command used: `bats tests/run-code.bats tests/append-consumed-comments-section.bats`
 - Missed: `tests/run-verify.bats` contained a "spec absent" test that relied on `run-code.sh`'s prior behavior
 - Consequence: regression was not caught at verify-time; CI detected the failure after merge
-- Correct verify command: `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\") | if .status != \"completed\" then \"in_progress\" else .conclusion end'" "success"` (full suite via CI reference, not a direct `command "bats tests/"` invocation)
+- Correct verify command: `github_check "gh pr checks --json name,state --jq '.[] | select(.name==\"Run bats tests\") | .state'" "SUCCESS"` (full suite via CI reference, not a direct `command "bats tests/"` invocation)
 
 ### 25. Measurement-Dependent Rubric AC — Deferral Protocol Guideline
 
@@ -1177,6 +1183,44 @@ Plain bullet:
 ```
 
 See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the canonical, correctly-escaped template this pattern derives from.
+
+### 34. Worktree Isolation Guard — Write Verify Commands That Are Not Refused
+
+`/verify` always enters a worktree (its Step 3), and `/code` and `/review` run verify commands from inside a worktree as well. Inside a worktree-isolated session, the **worktree isolation guard** refuses a Bash command when it cannot be shown that any git operation inside it stays in the worktree. A `command` or `github_check` verify command written without this in mind cannot be run as written: the executor must split it by hand, and has to repeat that split on every re-verify. Write verify commands in a shape the guard accepts when the AC is authored (`/issue`, `/spec`). The guard's own decision rules are out of scope here; this section only records which shapes were observed to be refused or accepted.
+
+**Shapes the guard refuses (observed):**
+
+| Shape | Example | Why it is refused |
+|-------|---------|-------------------|
+| Run-time value fed to git through `xargs`/`parallel` | `git log --reverse --format=%H -- <path> \| head -1 \| xargs -I{} git show {}:<path>` | git receives its arguments from stdin at run time, so the repository it targets cannot be verified |
+| `$(...)` command substitution, **including gh-only ones** | `gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') ...`, `bats --jobs $(nproc) tests/` | a construct too complex to verify; the guard cannot show that what runs inside is not git. Confirmed 2026-10-03: the bare command and the same text handed to `bash -c` were both refused |
+| Compound git commands with `&&` and a heredoc | `git ... && cat <<EOF ...` | too complex to verify that it stays inside the worktree |
+| Loop variable in option position | `for f in a b; do sed -n '1,8p' dir/$f.md; done` | runs the tool with a run-time value where an option may stand, which cannot be shown not to be git |
+| Starting a shell | `/bin/sh --version` | what the shell reads or is handed as text cannot be shown not to run git |
+| `git log --format` containing `%(trailers:...)` | `git log --format='%(trailers:key=Co-Authored-By)'` | too complex to verify |
+| `bash -c` wrapping any of the above | `bash -c 'gh run view $(gh run list ...)'` | `bash -c` is not an escape hatch: the guard inspects the text handed to bash. Confirmed 2026-10-03; a plain `bash -c 'echo ok'` is accepted, so this is about the wrapped content, not `bash -c` itself |
+
+**Shapes the guard accepted (observed):**
+
+- A git command with literal arguments only, e.g. `git log --reverse --format=%H -- <path>`
+- Literal-argument git commands joined by `;`
+- A gh command with literal arguments, e.g. `gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq '...'` or `gh api repos/{owner}/{repo}/commits/main/check-runs --jq '...'` (confirmed 2026-10-03)
+- `bash -c` wrapping plain commands that contain no refused shape (e.g. `bash -c 'echo ok'`)
+- An executable script in the repository invoked with literal arguments
+
+**Alternatives, in order of preference:**
+
+1. **Use a dedicated verify command type** — `file_contains`, `file_not_contains`, `grep`, `section_contains`, `git_committed`, `github_check`, `rubric`. They are run by the executor itself and involve no shell shape to refuse.
+2. **A single command with literal arguments.** Replace a run-time value with the literal. Instead of `$(nproc)` write the number (`bats --jobs 4 tests/foo.bats`); instead of `$(gh run list ...)` use a form that needs no ID (see the job-level sub-form in §7, which asks `gh api .../commits/main/check-runs` or `gh pr checks` for the job directly).
+3. **Move a multi-step judgment into a script committed to the repository** and call it from the verify command with literal arguments, e.g. `command "bash scripts/check-history.sh <path> <pattern>"`. This is the wrapper script pattern of `modules/worktree-lifecycle.md` (§ "`source`-based shell function calls are blocked by the worktree isolation guard"), applied to AC authoring: the guard has no objection to running a plain script — only to the shell text around it. Add the script (and a bats test for it) in the same Issue's Implementation Steps; the verify command only works once it is merged.
+4. **Split into several verify commands**, one per literal command, each on its own AC line, when each step is independently meaningful. Do not rely on a SHA or other value obtained by one command being pasted into the next — it would have to be hard-coded into the AC and goes stale.
+
+**Real examples:**
+
+- #1181: an AC with `bats --jobs $(nproc ...)` was refused and had to be rewritten as `--jobs 18` by hand. The AC should have used a literal job count (alternative 2) or CI results (§24).
+- Downstream repository, 2026-09-15: an AC combining `git log ... | head -1 | xargs -I{} git show {}:<path> | grep -c ...` was refused on every `/verify`. Alternative 3 (a committed script called as `bash scripts/check-history.sh <path> <pattern>`) removes the run-time value from the verify command.
+
+**Check before finalizing an AC:** scan the verify command text for `$(`, backticks, `xargs`, `parallel`, `<<`, `&&` joining git commands, a loop (`for`/`while`), `sh -c`/`/bin/sh`, and `%(` in a git `--format`. If any is present, rewrite with the alternatives above.
 
 ## Output
 
