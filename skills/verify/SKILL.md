@@ -9,7 +9,7 @@ allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git 
 # Acceptance Test
 
 <!-- skill-body-lines: 997 -->
-<!-- skill-body-sha: fd821ed4 -->
+<!-- skill-body-sha: 7e7751af -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
@@ -867,7 +867,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
      git add $SPEC_PATH/issue-"$NUMBER"-*.md
      git commit -s -m "Add verify retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
      ```
      ```bash
      git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }

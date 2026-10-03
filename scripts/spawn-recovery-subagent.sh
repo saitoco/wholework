@@ -146,7 +146,7 @@ source "$SCRIPT_DIR/watchdog-defaults.sh"
 load_watchdog_timeout "$SCRIPT_DIR"
 
 set +e
-ANTHROPIC_MODEL="claude-sonnet-4-6" \
+ANTHROPIC_MODEL=sonnet \
   WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
   env -u CLAUDECODE \
   "$SCRIPT_DIR/claude-watchdog.sh" \

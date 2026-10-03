@@ -836,7 +836,7 @@ Step 9's Pre-existing failure exception) is never fixed here — record it in
 
 Refs: $PR_COMMENT_URL
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
 6. **Push with git push**
 
@@ -1025,7 +1025,7 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
      git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
      git commit -s -m "Add review retrospective for issue #$ISSUE_NUMBER
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
      ```
      ```bash
      git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }

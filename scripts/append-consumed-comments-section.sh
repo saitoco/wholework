@@ -224,7 +224,7 @@ if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
     && git -C "$_repo_root" commit -s \
          -m "Add consumed comments fallback for issue #${ISSUE_NUMBER} (${PHASE_NAME} phase)
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
+Co-Authored-By: Claude <noreply@anthropic.com>" 2>/dev/null; then
     if [[ "$NO_PUSH" == "true" ]]; then
       : # commit only, push is the caller's responsibility (in-session mandatory call path)
     elif [[ "$_in_main_tree" == "true" ]]; then

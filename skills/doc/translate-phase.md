@@ -180,7 +180,7 @@ git status
 git add README.md README.{lang}.md docs/ 
 git commit -s -m "docs: regenerate {lang} translations
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 ```bash

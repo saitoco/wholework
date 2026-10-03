@@ -108,6 +108,30 @@ MOCK
     grep -q "42" "$RUNNER_LOG"
 }
 
+@test "spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)" {
+    export CLAUDE_ENV_LOG="$BATS_TEST_TMPDIR/claude-env.log"
+    cat > "$MOCK_DIR/claude-mock" <<'MOCK'
+#!/bin/bash
+echo "ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-}" >> "$CLAUDE_ENV_LOG"
+FOUND_MODEL=0
+for arg in "$@"; do
+    if [[ $FOUND_MODEL -eq 1 ]]; then
+        echo "MODEL_VALUE=$arg" >> "$CLAUDE_ENV_LOG"
+        break
+    fi
+    [[ "$arg" == "--model" ]] && FOUND_MODEL=1
+done
+echo '{"action":"retry","rationale":"transient failure","steps":[]}'
+MOCK
+    chmod +x "$MOCK_DIR/claude-mock"
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    grep -qx "ANTHROPIC_MODEL=sonnet" "$CLAUDE_ENV_LOG"
+    grep -qx "MODEL_VALUE=sonnet" "$CLAUDE_ENV_LOG"
+}
+
 @test "spawn-recovery: --record-issue overrides the recorded Issue number without affecting the retry target (issue #984)" {
     make_claude_mock '{"action":"retry","rationale":"transient failure","steps":[]}'
     cd "$BATS_TEST_TMPDIR"
