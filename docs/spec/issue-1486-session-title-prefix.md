@@ -150,17 +150,29 @@ consumer sweep (セッションタイトル形式の消費者の列挙):
 
 - saito / MEMBER / first-class / Issue Retrospective (docs 追記位置の確定を spec・code フェーズへ委任) / https://github.com/saitoco/wholework/issues/1486#issuecomment-5963663315
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 構造的な乖離なし。変更ファイル 8 件は Spec の Changed Files と一致し、prefix 付与の位置・テストケース (a)〜(i) も Spec の通りだった
+
+### Recurring issues
+- 繰り返しの指摘なし。指摘は CONSIDER 1 件 (`docs/ja/tech.md` の「env var」と「環境変数」の表記揺れ) のみで、修正は見送った。review-bug の 1 件 (`modules/worktree-lifecycle.md` の部分一致照合) は検証 sub-agent が REJECT した
+- `capabilities.workflow: true` でも、完了通知を受け取れない実行面では Workflow パスを使わず、静的な Task fan-out をフォアグラウンドで実行した。通知待ちにならず、3 sub-agent の結果をすべて同一ターンで回収できた
+
+### Acceptance criteria verification difficulty
+- UNCERTAIN なし。`command "bats ..."` は safe mode のため直接実行せず、CI の `Run bats tests` ジョブ (全 bats を実行) の SUCCESS で代替判定した。日本語版ガイドの条件は verify command なしのため diff から AI 判断で PASS とした (Spec の注記通り `file_contains` を足せば決定的にできる)
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- prefix 付与は truncate ブロックの直後・`jq` 出力の直前の 1 箇所に置き、3 経路すべてに効かせつつ prefix が切られないようにした
-- 値の trim・サニタイズ・区切り文字の補完はしない (`"mac "` のような末尾スペースに意味があるため)
+- 9 件の Pre-merge 条件はすべて PASS で、チェックボックスを更新済み (verify command なしの日本語版ガイドと CI 参照の 2 件を最後に更新)
+- CONSIDER 1 件 (`docs/ja/tech.md:271` の用語揺れ) は、意味に影響せず CI 再実行を伴う fix cycle に見合わないため見送り
 
 ### Deferred Items
-- なし
+- `docs/ja/tech.md:271` の「env var のみで」を「環境変数のみで」に揃える (任意。必要なら別 Issue)
 
 ### Notes for Next Phase
-- AC 9 (`github_check "gh pr checks" "Run bats tests"`) は PR 作成後の CI 結果で判定される。AC 6 (日本語版ガイド) は verify command なしのため AI 判断で確認する
-- `docs/tech.md` / `docs/ja/tech.md` の Environment Variables 表と `modules/worktree-lifecycle.md` の追記は AC 外だが Spec の Changed Files に含まれる
+- MUST 指摘なし・CI 17 チェックすべて SUCCESS のため `/merge 1488` に進める
+- Post-merge の確認項目はなし
 
