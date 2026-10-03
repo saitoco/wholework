@@ -59,7 +59,7 @@ The template enumerates only the subcommand-level patterns wholework actually us
 
 ### Plan and model requirements
 
-Auto mode is available on all plans. Team and Enterprise administrators can disable it organization-wide via the managed setting `permissions.disableAutoMode`. Auto mode requires an auto-mode-capable model — Sonnet 4.6 or later, Opus 4.6 or later, or Fable 5. `scripts/handle-permission-mode-failure.sh` detects a likely auto-mode-related early exit at runtime (a non-zero exit within 30 seconds) and prints a diagnostic pointing back to this section, so the failure is never silent.
+Auto mode is available on all plans. Team and Enterprise administrators can disable it organization-wide via the managed setting `permissions.disableAutoMode`. Auto mode requires an auto-mode-capable model — Sonnet 4.6 or later, Opus 4.6 or later, or a Fable model. `scripts/handle-permission-mode-failure.sh` detects a likely auto-mode-related early exit at runtime (a non-zero exit within 30 seconds) and prints a diagnostic pointing back to this section, so the failure is never silent.
 
 ## Required Tools and Authentication
 

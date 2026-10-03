@@ -213,7 +213,7 @@ PYEOF
     if git -C "$repo_root" add "docs/reports/orchestration-recoveries.md" \
        && git -C "$repo_root" commit -s -m "Record code_retry_fire recovery for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+Co-Authored-By: Claude <noreply@anthropic.com>" \
        && _push_with_retry "$repo_root"; then
       echo "[recovery] code-retry-fire recovery log committed and pushed" >&2
     else

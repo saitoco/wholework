@@ -8,6 +8,13 @@ shift
 # Save trailing args before parsing loop so exec re-invocation can pass them unchanged
 _TRAILING_ARGS=("$@")
 
+# Fable is pinned by explicit model ID rather than the `fable` alias: --fable is a
+# cost-sensitive opt-in, and the alias resolves to a different model in some environments
+# (e.g. Fable 5 in Claude apps gateway sessions), which would desync the cost warning below
+# from the model actually used. When a newer Fable ships, update this ID and the warning
+# together (see docs/tech.md § Phase-specific model and effort matrix).
+FABLE_MODEL_ID="claude-fable-5-1"
+
 # Parse options
 # Default: --model sonnet, --effort max (Opus path: xhigh by default, max with --max)
 MODEL="sonnet"
@@ -20,7 +27,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --fable)
-      MODEL="claude-fable-5"
+      MODEL="$FABLE_MODEL_ID"
       EFFORT="high"
       shift
       ;;
@@ -204,7 +211,7 @@ PYEOF
     if git -C "$repo_root" add "docs/reports/orchestration-recoveries.md" \
        && git -C "$repo_root" commit -s -m "Record spec_retry_fire recovery for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+Co-Authored-By: Claude <noreply@anthropic.com>" \
        && _push_with_retry "$repo_root"; then
       echo "[recovery] spec-retry-fire recovery log committed and pushed" >&2
     else
@@ -222,10 +229,11 @@ echo "Effort: ${EFFORT}"
 echo "Permissions: permission-mode auto (with allow rules template)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
-if [[ "$MODEL" == "claude-fable-5" ]]; then
-  echo "WARNING: Fable 5 opt-in — cost \$10/\$50 per MTok (2x Opus 4.8, ~3.3x Sonnet)"
-  echo "WARNING: Usage credits required (subscription plans)"
+if [[ "$MODEL" == "$FABLE_MODEL_ID" ]]; then
+  echo "WARNING: Fable 5.1 opt-in — cost \$10/\$50 per MTok (2.5x Opus 5.5, 5x Sonnet 5.5)"
+  echo "WARNING: Usage credits may be required (subscription plans, depending on plan/seat tier)"
   echo "WARNING: 30-day retention required — ZDR organizations not supported"
+  echo "WARNING: Requires Claude Code v2.1.257 or later"
 fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)

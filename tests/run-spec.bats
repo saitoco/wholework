@@ -317,11 +317,11 @@ MOCK
     [[ "$output" != *"Warning:"* ]]
 }
 
-@test "success: --fable switches model to claude-fable-5" {
+@test "success: --fable switches model to claude-fable-5-1" {
     run bash "$SCRIPT" 123 --fable
     [ "$status" -eq 0 ]
-    grep -q "MODEL_VALUE=claude-fable-5" "$CLAUDE_CALL_LOG"
-    grep -q "ANTHROPIC_MODEL=claude-fable-5" "$CLAUDE_CALL_LOG"
+    grep -qx "MODEL_VALUE=claude-fable-5-1" "$CLAUDE_CALL_LOG"
+    grep -qx "ANTHROPIC_MODEL=claude-fable-5-1" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: --fable default effort is high" {

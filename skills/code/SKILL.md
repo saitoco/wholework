@@ -557,11 +557,11 @@ git add <changed files>
 # When BASE_BRANCH is main:
 git commit -s -m "{prefix} <summary> (closes #$NUMBER)
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 # When BASE_BRANCH is not main, omit the "(closes #$NUMBER)" suffix instead:
 # git commit -s -m "{prefix} <summary>
 #
-# Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+# Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 **Fallback when Step 8 leaves no new diff (residual case):** if the `git commit` above reports nothing to commit, first check push state:
@@ -576,7 +576,7 @@ git log origin/main..HEAD --oneline
   # When BASE_BRANCH is main:
   git commit -s --allow-empty -m "{prefix} <summary> (closes #$NUMBER)
 
-  Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+  Co-Authored-By: Claude <noreply@anthropic.com>"
   # When BASE_BRANCH is not main, omit the "(closes #$NUMBER)" suffix instead
   ```
 
@@ -743,7 +743,7 @@ If there are items under "Deviations from Design" (reordering of implementation 
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }

@@ -43,9 +43,9 @@ Parse ARGUMENTS to extract the Issue number and mode options:
 3. Explicit `--light`/`--full` overrides auto-detection
 
 **Model selection flags (L-size only)**:
-- `--opus`: Use Opus 4.x instead of the default Sonnet for design quality on L-size specs
-- `--fable`: Use Fable 5 (Mythos class; opt-in, cost-sensitive — see `docs/tech.md` § Phase-specific model and effort matrix for cost/retention constraints)
-- `--max`: Override effort to `max` (Opus / Fable 5 only)
+- `--opus`: Use Opus (the `opus` alias, which resolves to the current Opus model) instead of the default Sonnet for design quality on L-size specs
+- `--fable`: Use Fable 5.1 (`claude-fable-5-1`, pinned by explicit model ID; Mythos class; opt-in, cost-sensitive — see `docs/tech.md` § Phase-specific model and effort matrix for cost/retention constraints)
+- `--max`: Override effort to `max` (Opus / Fable only)
 
 **Input**: ARGUMENTS (Issue number + option flags)
 **Output**: `NUMBER` (Issue number), `SPEC_DEPTH` (`light` or `full`)

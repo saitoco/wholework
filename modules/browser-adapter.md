@@ -120,7 +120,7 @@ Return the execution result as one of:
 
 ## Token budget
 
-Claude Opus 4.7 supports images up to **2576 px** on the long edge (~3.75 MP), compared to 1568 px in earlier models. At full resolution, each image costs up to **4,784 tokens/image** — approximately 3× the token cost of a 1568 px image.
+Claude 4.7 and later models (including Opus 5.5 / Sonnet 5.5 / Fable 5.1) support images up to **2576 px** on the long edge (~3.75 MP), compared to 1568 px in earlier models. At full resolution, each image costs up to **4,784 tokens/image** — approximately 3× the token cost of a 1568 px image.
 
 **Downsampling guidance**: When token budget is constrained (e.g., many screenshots in a single verify run or a cost-sensitive pipeline), downsample before passing the screenshot to the model:
 
@@ -128,4 +128,4 @@ Claude Opus 4.7 supports images up to **2576 px** on the long edge (~3.75 MP), c
 - For pixel-level detail or small text: use the full 2576 px resolution.
 - When using Playwright MCP's `browser_take_screenshot`, the screenshot width can be controlled via `browser_resize` before capture.
 
-Coordinates are 1:1 with actual pixels on Opus 4.7 — no coordinate scaling is required.
+Images within these limits are not downscaled, so coordinates are 1:1 with actual pixels — no coordinate scaling is required; larger images are downscaled first.

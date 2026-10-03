@@ -345,7 +345,7 @@ PYEOF
     if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
        && git -C "$_repo_root" commit -s -m "Record manual-recovery-${recovery_type} recovery for issue #${issue} ${phase}
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+Co-Authored-By: Claude <noreply@anthropic.com>" \
        && _push_with_retry "$_repo_root"; then
       echo "[#${issue}] [recovery] manual-recovery-${recovery_type} recovery log committed and pushed"
     else
@@ -569,7 +569,7 @@ PYEOF
     if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
        && git -C "$_repo_root" commit -s -m "Record wrapper-retry-on-kill recovery for issue #${issue} ${phase}
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+Co-Authored-By: Claude <noreply@anthropic.com>" \
        && _push_with_retry "$_repo_root"; then
       echo "${LOG_PREFIX} [recovery] wrapper-retry-on-kill recovery log committed and pushed"
     else

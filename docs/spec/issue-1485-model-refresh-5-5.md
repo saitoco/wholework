@@ -180,22 +180,45 @@ Opus 5.5 (2026-09-22) / Sonnet 5.5 (2026-09-28) / Fable 5.1 (2026-09-01) のリ�
 - 未解決: Opus 5.5 の cyber classifier の挙動は公式文書で見つからなかった。`agents/review-bug.md` は断定しない書き方にする
 - 新しい分岐ロジックは無いが、回帰防止のテストを 2 つ用意する: `tests/spawn-recovery-subagent.bats` に `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)` を追加、`tests/run-spec.bats` の `--fable` テストを `claude-fable-5-1` の完全一致 (`grep -qx`) に書き換え
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps どおりに実装した。Step 9 の確認コマンド `bats --jobs <N> tests/` だけは、実行環境に GNU `parallel` が無く実行できなかったため、`modules/test-runner.md` の「`--jobs` 不可時のフォールバック」に従い、`ls tests/*.bats | xargs -P4 -n1 bats --tap` でファイル単位に分割して並列実行した (2099 件 PASS、FAIL 0)
+
+### Design Gaps/Ambiguities
+- 実行環境に `bats` 自体が入っていなかったため、`npm install --prefix .tmp/bats-install bats` で worktree 内の `.tmp/` にだけ導入して使った (リポジトリ管理外)
+- `docs/ja/tech.md` は英語版と段落の並びが一部異なる (「Default parent のスコープ」段落の直後に表が続くなど) ため、行番号ではなく段落の見出し文字列で対応箇所を特定した
+
+### Rework
+- `docs/ja/tech.md` の Alias pin policy 追記で、最初の Edit が段落間の空行を見落として不一致になり、やり直した (内容の手戻りは無し)
+
+### Confirmed pre-implementation FAIL
+- Confirmed pre-implementation FAIL for 2 new test(s): `success: --fable switches model to claude-fable-5-1` と `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)`。対象行を一時的に旧値 (`claude-fable-5` / `claude-sonnet-4-6`) に戻して実行し、2 件とも FAIL することを確認してから新値に復元した (対象ファイルは当該 commit より前の未 commit 状態だったので `git stash` は使っていない)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Spec の Changed Files / Implementation Steps とのずれは無かった (変更 24 ファイルは Spec の対象 23 ファイルと Spec 自身の追記に一致)。Spec が触れていなかった箇所として、`docs/tech.md` の「Opus 4.8 effort calibration」注記が「実際に `opus` エイリアスに適用されるガイダンスは Opus 5 の注記を参照」と書いており、Opus 5 の注記を historical 化したことでこの参照先が古くなっていた。Spec の Step 6 は新設注記と Opus 5 注記の書き換えだけを指示していて、それらを参照する既存の文言の洗い出しが無かった。
+
+### Recurring issues
+指摘は 2 件とも `docs/tech.md` / `docs/ja/tech.md` 内の同種の不整合 (注記を historical 化した際に、同じ段落内・他の段落からの参照が追従していない) だった。review-bug 2 件が同じ箇所を独立に指摘している。historical 化する注記がある場合は、その見出し文字列を grep して参照元の文言を Spec の Changed Files に含めると防げる。
+
+### Acceptance criteria verification difficulty
+UNCERTAIN は 0 件。rubric 3 件 (AC 3 / 4 / 5) は diff と grep で判定できた。AC 7 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後でなければ判定できないため `/code` では未チェックのままで、`/review` が確認する前提がうまく機能した。
+
 ## Phase Handoff
 
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- commit trailer はモデル名を含まない `Co-Authored-By: Claude <noreply@anthropic.com>` に統一する (12 ファイル 20 箇所)。bash 側の commit はエイリアスの解決先を知れないため
-- `run-spec.sh --fable` は `fable` エイリアスではなく `FABLE_MODEL_ID="claude-fable-5-1"` で固定し、代入と比較の両方でこの定数を使う
-- `spawn-recovery-subagent.sh` は `ANTHROPIC_MODEL=sonnet` と `--model sonnet` の併記を維持する (他の `run-*.sh` と同じ `-p` モードの不具合対策)
-- effort の明示値は変えず、5.5 / 5.1 世代の公式の推奨と再評価のきっかけを `docs/tech.md` に書く
+- 指摘 2 件 (SHOULD 1 / CONSIDER 1、MUST 0) はどちらも `docs/tech.md` / `docs/ja/tech.md` の注記の整合性で、505bb54d で修正した。見出し文字列は `#922` / `#1064` が引用しているため変更していない
+- 非対話実行 (再呼び出しの保証なし) のため `capabilities.workflow: true` でも Workflow path は使わず、Agent をフォアグラウンドで使う静的 fan-out (review-spec + review-bug×2) で実行した
+- review-bug 2 件が同じ指摘を返したため、検証 sub-agent は使わず該当行を直接確認して妥当と判断した
 
 ### Deferred Items
-- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — 実測が溜まってから別 Issue
-- Post-merge の manual AC (エイリアスの解決先を `claude -p --output-format json` で確認) — merge 後に人が確認
+- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — `token_usage` が溜まってから別 Issue
+- Post-merge の manual AC (`claude -p --model sonnet --output-format json` と `--model opus` でエイリアスの解決先を確認) — merge 後に人が確認
 
 ### Notes for Next Phase
-- `skills/verify/SKILL.md` の trailer を置き換えたら `<!-- skill-body-sha: H -->` を再計算する (`grep -v '<!-- skill-body-' skills/verify/SKILL.md | shasum -a 256 | cut -c1-8`)。忘れると CI の `Skill Body Hash check` と `tests/verify.bats` が落ちる
-- `run-spec.sh` のコスト警告は既存テストが `credit` / `retention` の語を見ているので、この 2 語を残す
-- `docs/tech.md` の「Opus 5 effort calibration」見出しは #1064 の箇条が名前で引用しているので、見出しの文字列は変えずに historical の注記を付ける
-- `docs/ja/tech.md` の同期では英語版とコードフェンス数を合わせる (`docs/translation-workflow.md`)
+- Pre-merge AC は 7 件すべて `[x]` (AC 7 は CI の `Run bats tests` が 2 件とも pass)。fix commit 505bb54d はドキュメントのみの変更で、push 後の CI は `/merge` 側で再確認される
+- `docs/tech.md` / `docs/ja/tech.md` の修正後も `check-translation-sync.sh` は IN_SYNC、`validate-skill-syntax.py` は 0 error
