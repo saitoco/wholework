@@ -464,12 +464,32 @@ In both cases, do not fix the violation inline in this PR.
 
 **Foreground dispatch reminder (orchestrator's own `Task(...)`/Agent calls, distinct from the sub-agents' internal commands):** this step's fan-out (`Task(...)` calls in 10.0/10.1–10.3, and the Workflow path in `skills/review/workflow-guidance.md`) is the orchestrator dispatching sub-agents and then consuming their results before continuing. The `## Non-Interactive Mode Behavior` Foreground bullet above covers this dispatch as well as the commands the sub-agents run internally: consume every sub-agent's result within the same turn, and do not end the turn as if waiting for a background completion notification. When a result is not in hand, follow "Sub-agent Result Fallback" below instead of waiting.
 
+### Sub-agent Names and Stop
+
+Every `Task(...)` launched in Step 10 — the Parser/Validator Edge Case Pre-check measurement sub-agents, 10.0, 10.2, and 10.3 — carries an explicit `name:`, so that each agent can be addressed individually by `TaskStop` (Issue #1478). Without a name the agent has no stable identifier to stop by, and a sub-agent that returned no result can stay in the session long after `/review` has finished. `$NUMBER` is the PR number; `{n}` is the 1-based index of the file (Edge Case Pre-check) or of the issue (10.3).
+
+As soon as a given sub-agent's result is in hand, immediately stop that agent alone — do not wait for the others, and do not defer the stops to the end of `/review`:
+
+```text
+TaskStop(task_id: "review-light-$NUMBER")         # right after the review-light result is in hand (10.0)
+TaskStop(task_id: "review-spec-$NUMBER")          # right after the review-spec result is in hand (10.2)
+TaskStop(task_id: "review-bug-diff-$NUMBER")      # right after the diff bug scan result is in hand (10.2)
+TaskStop(task_id: "review-bug-security-$NUMBER")  # right after the security scan result is in hand (10.2)
+TaskStop(task_id: "bug-verify-$NUMBER-{n}")       # right after that verification verdict is in hand (10.3)
+TaskStop(task_id: "edge-case-$NUMBER-{n}")        # right after that measurement result is in hand (Edge Case Pre-check)
+```
+
+A sub-agent whose result was not obtained is stopped too, not only the ones whose result was used — it is the agent most likely to be left behind. For the review sub-agents that stop is step 2 of "Sub-agent Result Fallback" below.
+
+**The stop is best-effort and never gates anything.** `TaskStop` can fail for reasons outside this step's control: no running task matches the name because the agent already ended, or `/review` is running as a fork and the agent is owned by the main session, which refuses the stop. Ignore any such failure — do not retry, do not wait, and do not let it delay the fallback, the Review posting, or any later Step.
+
 ### Sub-agent Result Fallback
 
 The foreground rule above cannot control how the harness returns a sub-agent: an Agent/Workflow call may come back as a background teammate/task whose result arrives only as a later completion notification. A fork-executed Skill has no re-invocation guarantee (`${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), so that notification never reaches the review and the Review Response Summary is never posted (Issue #1481). Asking the orchestrator to "wait synchronously" is therefore not enough — when a result is not in hand, the orchestrator performs that review itself.
 
 1. **Trigger**: a sub-agent launched in this step (`review-light` in 10.0; `review-spec` / `review-bug` in 10.2; the Workflow pipeline in `skills/review/workflow-guidance.md`) returned no result in the same turn — empty output, an error, or a background teammate/task whose return value carries no review body. Never end the turn to wait for the completion notification, on any execution surface.
-2. **Substitution**: for each sub-agent whose result was not obtained, the orchestrator performs that review itself, reading `.tmp/pr-diff-$NUMBER.txt` and the Spec (plus any `.tmp/base-conflict-context-$NUMBER.md` / `.tmp/edge-case-context-$NUMBER.md`), following the aspects and output format (`**[aspect] path:line**` / `- path:` / `- line:` / severity) in the matching `agents/review-*.md`:
+2. **Stop the sub-agent**: for each sub-agent whose result was not obtained, first call `TaskStop(task_id: "<its name>")` (names per "Sub-agent Names and Stop" above) — an agent that returned nothing may still be running, and it is the one most likely to be left in the session after `/review` finishes. This step covers sub-agents launched with `Task(...)`; the Workflow path is a separate launch mechanism and is not covered here. The stop is best-effort: if `TaskStop` fails (no running task matches the name, or `/review` runs as a fork and the main session that owns the agent refuses the stop), ignore the failure and go straight on to item 3 — the stop's outcome never blocks the substitution, the Review body line in item 4, or the Review posting.
+3. **Substitution**: for each sub-agent whose result was not obtained, the orchestrator performs that review itself, reading `.tmp/pr-diff-$NUMBER.txt` and the Spec (plus any `.tmp/base-conflict-context-$NUMBER.md` / `.tmp/edge-case-context-$NUMBER.md`), following the aspects and output format (`**[aspect] path:line**` / `- path:` / `- line:` / severity) in the matching `agents/review-*.md`:
 
    | Sub-agent without a result | Orchestrator performs |
    |----------------------------|-----------------------|
@@ -479,8 +499,7 @@ The foreground rule above cannot control how the harness returns a sub-agent: an
    | Workflow pipeline | the `review-spec` and `review-bug` rows above |
 
    Feed the substituted output into the same extraction as a sub-agent's result (10.0 step 5 / 10.2 step 4).
-3. **Record in the Review body**: before "General Comments", add one line per substituted sub-agent, e.g. `- Sub-agent fallback: review-light result not obtained (backgrounded); orchestrator performed aspects 1-4`. This makes it visible from the Review body whether Step 10's result came from the sub-agent's return value or from this fallback.
-4. **Cleanup**: stopping the already-launched sub-agent is out of scope here (see #1478); `TaskStop` from a fork may be refused. Whether the stop succeeds must not block the fallback.
+4. **Record in the Review body**: before "General Comments", add one line per substituted sub-agent, e.g. `- Sub-agent fallback: review-light result not obtained (backgrounded); orchestrator performed aspects 1-4`. This makes it visible from the Review body whether Step 10's result came from the sub-agent's return value or from this fallback.
 
 ### Base Branch Conflict Pre-check
 
@@ -521,7 +540,7 @@ Run this section after the Base Branch Conflict Pre-check above, before evaluati
 
 1. If zero files match the firing conditions above, skip the rest of this subsection (do not write a context file).
 2. If more than 2 files match, process only the top 2 by diff hunk size, and record the excluded files in the context file's header (cap rationale: this measurement sub-agent carries out heavier work than the 10.3 verification sub-agent, so it uses a more conservative cap). This cap-triggered case always produces a context file (see step 4) — the excluded-file record must not silently disappear because the top-2 processed files happened to report zero findings.
-3. For each matching file (first-class PRs only — see Trust gating above), launch a `subagent_type="general-purpose"` Task sub-agent in parallel. Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, writing any fixture files only under `.tmp/edge-case-fixtures-$NUMBER/` and deleting that directory before returning, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug, (7) if this file was matched via firing condition (c), additionally repeat the execution in (3) from a CWD other than the repository root — a subdirectory nested inside `.tmp/edge-case-fixtures-$NUMBER/` so it is covered by the same cleanup as the fixtures themselves — using identical arguments and fixtures, and compare the result against the repository-root execution — report any mismatch as a finding in the same format, noting both CWD values used.
+3. For each matching file (first-class PRs only — see Trust gating above), launch a `subagent_type="general-purpose"` Task sub-agent in parallel, each with an explicit `name="edge-case-$NUMBER-{n}"` (`{n}` = 1 or 2, the file's rank by diff hunk size; see "Sub-agent Names and Stop"). Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, writing any fixture files only under `.tmp/edge-case-fixtures-$NUMBER/` and deleting that directory before returning, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug, (7) if this file was matched via firing condition (c), additionally repeat the execution in (3) from a CWD other than the repository root — a subdirectory nested inside `.tmp/edge-case-fixtures-$NUMBER/` so it is covered by the same cleanup as the fixtures themselves — using identical arguments and fixtures, and compare the result against the repository-root execution — report any mismatch as a finding in the same format, noting both CWD values used. As soon as each measurement sub-agent has returned (with findings, or without a usable result), stop it with `TaskStop(task_id: "edge-case-$NUMBER-{n}")` (best-effort, see "Sub-agent Names and Stop").
 4. Write `.tmp/edge-case-context-$NUMBER.md` when either condition holds: (a) one or more sub-agents report 1+ findings, or (b) the cap in step 2 triggered (so the excluded-file header is preserved even if the processed files report zero findings). Do not write the file when neither condition holds (zero matches, or matches processed with zero findings and no cap triggered). Add this file, and `.tmp/edge-case-fixtures-$NUMBER/` as a defensive backstop in case a sub-agent's own cleanup (step 3) did not run, to the `rm -f`/`rm -rf` cleanup list in 14.2.
 
 **Review depth and rationale**: fires under `--light`, `--full`, and the Workflow path alike (independent of `REVIEW_DEPTH`). Rationale: the originating defect (#1055 / PR #1120) was found under `--light` — limiting this to `--full` only would reopen the detection gap this Issue is closing. Cost is bounded by the firing-condition gating (most PRs that never touch a parser/validator/normalizer see zero matches) and the 2-file cap.
@@ -559,11 +578,13 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    Task(
      subagent_type="review-light",
      description="Lightweight integrated review (all 4 aspects)",
+     name="review-light-$NUMBER",
      prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
 5. **Pass results to Step 10**:
+   - Stop `review-light-$NUMBER` as soon as its result is in hand: `TaskStop(task_id: "review-light-$NUMBER")` (best-effort, see "Sub-agent Names and Stop"; when the result was not obtained, step 2 of "Sub-agent Result Fallback" stops it instead)
    - If the `review-light` result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs the 4 aspects itself) before extracting
    - Extract `path`, `line`, `body`, `severity` from `review-light` output
    - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
@@ -618,24 +639,28 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    Task(
      subagent_type="wholework:review-spec",
      description="Spec review",
+     name="review-spec-$NUMBER",
      prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (diff bug scan)",
+     name="review-bug-diff-$NUMBER",
      prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (security scan)",
+     name="review-bug-security-$NUMBER",
      prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
 4. **Integrate 2 groups' results and generate line comments JSON and Review body**:
    - Collect outputs from each group
+   - Stop each launched sub-agent as soon as its result is in hand, one call per agent and without waiting for the others: `TaskStop(task_id: "review-spec-$NUMBER")`, `TaskStop(task_id: "review-bug-diff-$NUMBER")`, `TaskStop(task_id: "review-bug-security-$NUMBER")` (best-effort, see "Sub-agent Names and Stop"; a sub-agent whose result was not obtained is stopped by step 2 of "Sub-agent Result Fallback")
    - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs that review itself) instead of recording the group as unavailable
    - Extract `path`, `line`, `body`, `severity` from each issue:
      - Detect issue start with `**[aspect name] filename:line-approx**` line
@@ -667,6 +692,7 @@ Launch verification sub-agents (Opus) in parallel for each issue collected from 
    Task(
      subagent_type="general-purpose",
      description="Bug issue verification #{n}",
+     name="bug-verify-$NUMBER-{n}",
      prompt="""Verify the following bug issue.
 
 PR title: {PR_TITLE}
@@ -685,6 +711,7 @@ Reason: {explanation}"""
    ```
 
 3. **Process verification results**:
+   - Stop each verification sub-agent as soon as its verdict is in hand: `TaskStop(task_id: "bug-verify-$NUMBER-{n}")` (best-effort, see "Sub-agent Names and Stop"). This includes a verification sub-agent whose result was not obtained: the issue passes through unverified, but its sub-agent is still stopped
    - `VERDICT: PASS` → include issue in Step 10 integrated results
    - `VERDICT: REJECT` → filter out issue and record in rejection log; remove from `.tmp/review-comments-$NUMBER.json`
 
