@@ -100,15 +100,29 @@ AC がテスト・回帰保護コードの新規追加を主張しており AC �
 
 例: `#1130` は `scripts/validate-skill-syntax.py` の `INLINE_CODE_PATTERN` を修正し、`tests/validate-skill-syntax.bats` に回帰テストを追加した。追加当初のフィクスチャは verify コマンドに既知の `file_exists` を使用しており、修正前・修正後のどちらの `INLINE_CODE_PATTERN` に対して実行しても `0 error` で PASS した (検出力ゼロ)。フィクスチャの verify コマンドを未知のコマンド名 `totally_unknown_command` に変えたところ、修正前は `0 error`、修正後は `1 error` に分かれ、初めて検出力を持った (`#1325` で是正)。
 
-Detection approach:
-- (a) AC がテスト・回帰保護コードの新規追加のみを主張しているか確認する
-- (b) 追加されたフィクスチャが対象の欠陥に対して実際に感度を持つか検討する (可能なら実装前の状態でそのテストが FAIL することを確認する)
-- (c) (b) を確認できない場合、フィクスチャが常に安全側の結果を返す既知の値のみを使っており、欠陥固有の分岐を経由していないか確認する
-- (d) 判定が難しい場合は検出せず素通しする (偽陽性を避ける — この監査は非破壊コメントであり、過剰指摘は起票者の負担になる)
+Detection approach (split by phase):
+
+The deciding evidence — the added fixture — exists only after implementation, whereas every caller of this audit (`/triage` Step 7 and Bulk Execution, `/issue` Step 15) runs before it is written. Judged there, (b) and (c) can never be evaluated and (d) always applies, so the original single-phase rule produced no findings in practice (Issue #1474). The steps are therefore split by the phase in which they can be evaluated:
+
+- (a) Check whether the AC claims only the addition of new tests or regression-protection code. This needs only the AC text, so it is the only step that can be evaluated before implementation.
+- **Before implementation (every caller of this audit) — advisory only**: stop after (a). Do not attempt (b) or (c), because there is no fixture to inspect yet, and do not treat the absence of a finding as a judgment that the fixture is sufficient. When (a) holds, raise one advisory entry (labelled `注意喚起`) instead of a defect finding — see "Advisory entry" below. The judgment itself is left to a later phase.
+- **After implementation (later phase) — judgment**: (b), (c), and (d) apply once the added tests exist, and are evaluated by whichever phase verifies an AC that asks for this judgment (see "Post-implementation channel" below):
+  - (b) Check whether the added fixture is actually sensitive to the target defect (where possible, confirm that the test FAILs against the pre-implementation state).
+  - (c) If (b) cannot be confirmed, check whether the fixture uses only known values that always yield the safe-side result and never pass through the defect-specific branch.
+  - (d) If the judgment is hard, do not flag it (avoid false positives — this audit is a non-destructive comment, and over-reporting burdens the author).
+
+Post-implementation channel: a `rubric` AC that asks for the fixture's detection power (the advisory proposes one). The phase that verifies the Pre-merge AC runs the grader on the Issue body and the git diff — `/review` Step 8 on the pr route (a FAIL is MUST-equivalent and blocks until the fixture is strengthened), `/verify` Step 5 on the patch route, where `/review` does not run (a FAIL returns the Issue to the fix cycle). A PASS records in the AC result that the fixture was judged sufficient. `/code`'s "New Verification-Test Pre-implementation FAIL Check" (`skills/code/SKILL.md`) covers string-matching asserts only; asserts on process output or exit codes, as in #1130, rely on the `rubric` AC.
+
+Advisory entry (pre-implementation phases only):
+- One entry per audit run, listing every AC that satisfies (a). It is an advisory, not a defect — the AC wording is not wrong. It tells the next phase that (1) the fixture's detection power cannot be judged yet and will be judged after implementation, (2) the new tests must include an input that reproduces the target defect (an unknown value, an error case, or a boundary value) and are expected to FAIL against the pre-implementation state, and (3) a `rubric` AC asking for that judgment should be added to the Pre-merge section. This follows `modules/verify-patterns.md` § "Pre-implementation anchor selection": require the implementation to conform instead of judging an artifact that does not exist yet.
+- It counts as a finding for "Processing Steps" 4 and 5: it is posted in the same single audit comment as any defect findings, and an Issue with only an advisory still receives the comment (format: "Comment Format Template").
+- Do not raise it when it is unclear whether the AC claims new tests (avoid false positives, as in (d)); when the Issue body already has an AC that asks for the fixture's detection power to be judged after implementation (for example a `rubric` AC naming the fixture's sensitivity or the pre-fix FAIL); or when an earlier comment on the Issue already carries the `注意喚起` heading line (`/triage` and `/issue` Step 15 can both run on the same Issue).
+- The next phase (`/spec`, or `/code` directly for Size XS) reads the comment as prompt-equivalent input (see "Repair handoff for self-generated AC" below). Because the Issue body is never auto-edited, adding the suggested `rubric` AC and stating the fixture requirement in the Implementation Steps are that phase's own work.
 
 Fix options:
-- フィクスチャに欠陥を再現する入力 (未知の値・異常系・境界値など) を含める
-- assert を欠陥固有の挙動への具体的照合へ変更する
+- Before implementation (AC side): add a `rubric` AC that asks for the fixture's detection power to be judged after implementation, naming the test file and the defect-reproducing input, and state the fixture requirement in the Spec's Implementation Steps.
+- After implementation (fixture side): include an input that reproduces the defect (an unknown value, an error case, or a boundary value) in the fixture.
+- After implementation (fixture side): change the assert to a concrete check of the defect-specific behavior.
 
 **`section_contains`/`section_not_contains` 型に起因する常時 PASS**:
 
@@ -319,6 +333,17 @@ If no patterns match, skip without posting.
 - AC: `<!-- verify: github_check "gh pr checks" "Run bats tests" -->`
   - Pattern: patch route（Size S）× `gh pr checks` 不整合
   - Suggested fix: `<!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion,status --jq 'if .[0].status != \"completed\" then \"in_progress\" else .[0].conclusion end'" "success" -->`
+```
+
+**Advisory entry format** (the pre-implementation detection-power advisory of Pattern 2). When it is the only entry, use the block below as the whole comment; when defect findings also exist, append it to the same comment after the defect entries, separated by a blank line:
+
+```
+ℹ️ Triage AC audit (注意喚起): 検出力の確認が必要な AC があります
+
+- AC: `<!-- verify: command "bats tests/example.bats" -->` (新規テスト追加を主張)
+  - `/issue` 時点では対象のフィクスチャが存在しないため、検出力 (フィクスチャが欠陥に対して感度を持つか) は判定できません。判定は実装後の後段フェーズで行います
+  - 次フェーズへの依頼: 新規テストには欠陥を再現する入力 (未知の値・異常系・境界値など) を含め、実装前の状態で FAIL することを確認してください
+  - Suggested fix: Pre-merge に次の rubric AC を追加してください: `<!-- verify: rubric "tests/example.bats の新規テストが、欠陥を再現する入力を使用しており、修正前の実装に対して FAIL する形になっている (既知の安全側の値だけで PASS する形ではない)" -->`
 ```
 
 ### Posting the Comment
