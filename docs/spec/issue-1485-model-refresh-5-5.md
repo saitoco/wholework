@@ -180,22 +180,36 @@ Opus 5.5 (2026-09-22) / Sonnet 5.5 (2026-09-28) / Fable 5.1 (2026-09-01) のリ�
 - 未解決: Opus 5.5 の cyber classifier の挙動は公式文書で見つからなかった。`agents/review-bug.md` は断定しない書き方にする
 - 新しい分岐ロジックは無いが、回帰防止のテストを 2 つ用意する: `tests/spawn-recovery-subagent.bats` に `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)` を追加、`tests/run-spec.bats` の `--fable` テストを `claude-fable-5-1` の完全一致 (`grep -qx`) に書き換え
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps どおりに実装した。Step 9 の確認コマンド `bats --jobs <N> tests/` だけは、実行環境に GNU `parallel` が無く実行できなかったため、`modules/test-runner.md` の「`--jobs` 不可時のフォールバック」に従い、`ls tests/*.bats | xargs -P4 -n1 bats --tap` でファイル単位に分割して並列実行した (2099 件 PASS、FAIL 0)
+
+### Design Gaps/Ambiguities
+- 実行環境に `bats` 自体が入っていなかったため、`npm install --prefix .tmp/bats-install bats` で worktree 内の `.tmp/` にだけ導入して使った (リポジトリ管理外)
+- `docs/ja/tech.md` は英語版と段落の並びが一部異なる (「Default parent のスコープ」段落の直後に表が続くなど) ため、行番号ではなく段落の見出し文字列で対応箇所を特定した
+
+### Rework
+- `docs/ja/tech.md` の Alias pin policy 追記で、最初の Edit が段落間の空行を見落として不一致になり、やり直した (内容の手戻りは無し)
+
+### Confirmed pre-implementation FAIL
+- Confirmed pre-implementation FAIL for 2 new test(s): `success: --fable switches model to claude-fable-5-1` と `spawn-recovery: claude -p is invoked with the sonnet alias (no pinned model ID)`。対象行を一時的に旧値 (`claude-fable-5` / `claude-sonnet-4-6`) に戻して実行し、2 件とも FAIL することを確認してから新値に復元した (対象ファイルは当該 commit より前の未 commit 状態だったので `git stash` は使っていない)
+
 ## Phase Handoff
 
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- commit trailer はモデル名を含まない `Co-Authored-By: Claude <noreply@anthropic.com>` に統一する (12 ファイル 20 箇所)。bash 側の commit はエイリアスの解決先を知れないため
-- `run-spec.sh --fable` は `fable` エイリアスではなく `FABLE_MODEL_ID="claude-fable-5-1"` で固定し、代入と比較の両方でこの定数を使う
-- `spawn-recovery-subagent.sh` は `ANTHROPIC_MODEL=sonnet` と `--model sonnet` の併記を維持する (他の `run-*.sh` と同じ `-p` モードの不具合対策)
-- effort の明示値は変えず、5.5 / 5.1 世代の公式の推奨と再評価のきっかけを `docs/tech.md` に書く
+- commit trailer を `Co-Authored-By: Claude <noreply@anthropic.com>` に統一し、`grep -rnE "Co-Authored-By: Claude [^<]" skills/ scripts/ modules/ agents/` が 0 件であることを確認した。`skills/verify/SKILL.md` の `skill-body-sha` は `7e7751af` に再計算し、`scripts/check-skill-body-hash.sh` が exit 0
+- `run-spec.sh` は `FABLE_MODEL_ID="claude-fable-5-1"` を代入と比較の両方で使い、コスト警告に `credit` / `retention` の語を残したまま 4 行にした
+- effort の明示値は `docs/tech.md` / `docs/ja/tech.md` では変更せず、5.5 / 5.1 世代の推奨と再評価のきっかけだけを追記した
 
 ### Deferred Items
-- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — 実測が溜まってから別 Issue
-- Post-merge の manual AC (エイリアスの解決先を `claude -p --output-format json` で確認) — merge 後に人が確認
+- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — `token_usage` が溜まってから別 Issue
+- Pre-merge AC 7 (`github_check "gh pr checks" "Run bats tests"`) — PR #1487 の CI 完了後に `/review` が確認する (`/code` では未チェックのまま)
+- Post-merge の manual AC (`claude -p --output-format json` でエイリアスの解決先を確認) — merge 後に人が確認
 
 ### Notes for Next Phase
-- `skills/verify/SKILL.md` の trailer を置き換えたら `<!-- skill-body-sha: H -->` を再計算する (`grep -v '<!-- skill-body-' skills/verify/SKILL.md | shasum -a 256 | cut -c1-8`)。忘れると CI の `Skill Body Hash check` と `tests/verify.bats` が落ちる
-- `run-spec.sh` のコスト警告は既存テストが `credit` / `retention` の語を見ているので、この 2 語を残す
-- `docs/tech.md` の「Opus 5 effort calibration」見出しは #1064 の箇条が名前で引用しているので、見出しの文字列は変えずに historical の注記を付ける
-- `docs/ja/tech.md` の同期では英語版とコードフェンス数を合わせる (`docs/translation-workflow.md`)
+- Pre-merge AC 1-6 は `/code` で確認済みで Issue 本文のチェックボックスを `[x]` にした。AC 3 / 4 / 5 は rubric なので `/review` でも内容を確認すること
+- `docs/ja/tech.md` は英語版とコードフェンス数が一致している (どちらも 2)。`scripts/check-translation-sync.sh` で `docs/tech.md` は IN_SYNC (`docs/guide/xl-decomposition.md` の OUTDATED は本 Issue と無関係の既存状態)
+- ローカルの bats は GNU `parallel` が無く、`xargs -P4` による分割実行で全 2099 件 PASS を確認済み。CI の結果が正
