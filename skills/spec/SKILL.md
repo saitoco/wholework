@@ -365,6 +365,36 @@ Steps:
 
 **Skip** if Changed Files does not include SKILL.md files, files under `modules/`, or files under `scripts/`.
 
+**Listing-side sub-check of the Steering Docs sync candidate check (regardless of SPEC_DEPTH; only when applicable):**
+
+The check above is **inbound** and keyword-driven: it lists a document only when that document mentions the changed file's name or another extracted keyword, and it drops a keyword that matches too many files. A document that *enumerates* the change target — a Key Files table, a directory tree with file-count comments, a command or subcommand list — can therefore be missed (it may not mention the changed file at all, or the keyword may be filtered out). Even when such a document is hit, its existing entry does not mention the new item, so a keyword hit alone gives no reason to update it. This sub-check starts from the *kind of change* instead of from a keyword, and lists the enumerating documents directly.
+
+**Fires when** the Issue's change does any of the following (exhaustive; decide from the Issue body and the planned Implementation Steps). The changed files do not have to include SKILL.md files, `modules/`, or `scripts/` — the gate of the check above does not apply here:
+- adds or removes a subcommand of an existing script or skill (a new first-argument operation such as `scripts/foo.sh <subcommand>` or `/skill <subcommand>`)
+- adds a new file, or removes or renames one
+- changes the directory structure (a new, renamed, moved, or removed directory)
+
+Steps:
+1. Build the candidate set (exact; do not widen it):
+   - every document directly under `$STEERING_DOCS_PATH/` whose frontmatter `ssot_for` list contains `directory-layout`: run `grep -l "directory-layout" "$STEERING_DOCS_PATH"/*.md`, then confirm that each hit is an `ssot_for` entry in the leading frontmatter block, not body prose (`docs/structure.md` in this repository)
+   - the repository-root `README.md`
+
+   Translation outputs (`docs/{lang}/`, `README.{lang}.md`) are not candidates; the `docs/ja/` translation sync check below handles them.
+2. For each candidate, add a **Steering Docs sync candidate** entry to the Changed Files section, naming the enumeration to re-check, e.g., `docs/structure.md`: [Steering Docs sync candidate] re-check the Directory Layout tree (file-count comments) and the Key Files entry of the changed script; update if needed. If the candidate is already in the Changed Files list, extend its existing entry instead of adding a second one.
+3. As in the check above, the `/code` phase makes the final include/exclude decision by reading each candidate; this step only guarantees that the candidates are not silently omitted.
+
+**Not subject to the Discriminating-power filter**: the 8-file threshold of the check above does not apply to this sub-check, and no candidate is skipped for "matching too many files". That filter exists because a keyword grep can return an unbounded hit list with no way to tell the relevant hits apart. Here the candidates are chosen by document role (the `ssot_for` declaration and the root README), not by keyword hits, so the set is limited to a few listing documents (one or two in practice) and every one of them is worth a look.
+
+**Differs from adjacent checks:**
+- **Steering Docs sync candidate check (inbound)**: starts from the changed file's name or keyword and searches outward, so an enumerating document that does not mention that name or keyword is missed, and a keyword with no discriminating power is skipped. This sub-check starts from the kind of change and does not depend on any keyword hit.
+- **Outbound pointer sync candidate check**: starts from the pointers written in a changed file's own body, so an enumerating document that the changed file never points to is out of its reach. This sub-check does not depend on any pointer in the changed files.
+
+It complements, and does not replace, the Change Types table in `modules/doc-checker.md` (read at the top of this Step): that table is a judgment aid whose firing depends on recognizing the change as one of its types, while this sub-check fires mechanically on the three conditions above.
+
+**Skip** if the change adds or removes no subcommand, adds no file and removes or renames none, and changes no directory structure (e.g., a behavior-only edit to existing files).
+
+*Example: in a downstream repository, two consecutive Specs listed only a script and its procedure document in Changed Files, while the change added a subcommand or a new script; both times `/code` had to fix the steering document holding the Directory Layout, and the README, as drift it found on its own.*
+
 **Outbound pointer sync candidate check (when a Changed Files entry itself points elsewhere):**
 
 Complements the Steering Docs sync candidate check above, which works **inbound**: starting from a changed file's name/keyword, it searches *outward* for other files that reference it. This check works the opposite direction — **outbound**: starting from a changed file's own body, it follows the pointers *that file itself* names, to check whether the file each pointer targets also needs to be in Changed Files.

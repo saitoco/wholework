@@ -84,3 +84,37 @@ patch_route_verify_command_check_section() {
     run patch_route_verify_command_check_section "$SKILL_FILE"
     [[ "$output" == *"Diff-less Axis (operate route)"* ]]
 }
+
+# Content-assertion tests for the Steering Docs sync candidate check's listing-side
+# sub-check (added for #1477). Guards the sub-check against accidental removal or drift:
+# the ssot_for: directory-layout detection key, the explicit firing conditions, the
+# difference from the inbound and Outbound pointer checks, and the exemption from the
+# discriminating-power filter. Assertions are scoped to the sub-check's own block (from its
+# bold label to the next check's label) so that the strings cannot be satisfied elsewhere.
+
+listing_side_subcheck_section() {
+    awk '/^\*\*Listing-side sub-check of the Steering Docs sync candidate check/{found=1} found && /^\*\*Outbound pointer sync candidate check/{exit} found{print}' "$1"
+}
+
+@test "spec skill Steering Docs sync candidate check has a listing-side sub-check keyed on ssot_for directory-layout" {
+    listing_side_subcheck_section "$SKILL_FILE" | grep -q 'frontmatter `ssot_for` list contains `directory-layout`'
+}
+
+@test "spec skill listing-side sub-check states its firing conditions" {
+    section="$(listing_side_subcheck_section "$SKILL_FILE")"
+    grep -q 'adds or removes a subcommand' <<<"$section"
+    grep -q 'adds a new file' <<<"$section"
+    grep -q 'changes the directory structure' <<<"$section"
+}
+
+@test "spec skill listing-side sub-check differs from the inbound and Outbound pointer checks" {
+    section="$(listing_side_subcheck_section "$SKILL_FILE")"
+    grep -q 'starts from the kind of change' <<<"$section"
+    grep -q 'does not depend on any pointer' <<<"$section"
+}
+
+@test "spec skill listing-side sub-check is not subject to the discriminating-power filter" {
+    section="$(listing_side_subcheck_section "$SKILL_FILE")"
+    grep -q 'Not subject to the Discriminating-power filter' <<<"$section"
+    grep -q 'chosen by document role' <<<"$section"
+}
