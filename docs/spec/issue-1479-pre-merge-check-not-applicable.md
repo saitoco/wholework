@@ -254,3 +254,31 @@ spec 時点で再現を確認済み: bats fixture (bare origin + 作業 repo + g
 - costly / irreversible な Implementation Step、外部サービスへのログインを要する Step は無い (`spec-approval-needed` / `external-auth-required` の対象外)。
 - UI に関わる変更は無いため、UI Design phase は対象外。
 - Issue 本文は、AC3 (hint 追加)・AC4 (新規テスト名の hint 追加)・AC5 (description と hint) を更新した。AC1 / AC2 は変更していない。Post-merge は「なし」のまま。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec どおりに実装した。`skills/issue/spec-test-guidelines.md` は「更新か見送りか」を `/code` に委ねられていたが、marker file 規則の表と Applicability に NOT_APPLICABLE を加える小さな変更で済むため更新した。
+
+### Design Gaps/Ambiguities
+- 実装環境に bats が無く (`command -v bats` が空)、`bats tests/pre-merge-check.bats` / `bats tests/review.bats` は実行できなかった。Spec が予告していた制約どおりで、CI の `Run bats tests` ジョブで確認する。
+- 代替として、bats fixture と同じ構成 (bare origin + 作業 repo + gh mock + git shim) の使い捨てハーネスを `.tmp/` で実行し、S1〜S6 と既存分類 R1 / R2 の 16 チェックが全て PASS することを確認した (ハーネスは削除済みでリポジトリには残していない)。`tests/review.bats` の新規 assert の正規表現は `grep -c -E` で `skills/review/SKILL.md` に 1 件ヒットすることを確認した。
+- 新規テストの「実装前 FAIL 確認」は、bats が無いため bats 上では実施していない。実装前の script に対する失敗は Spec 時点のプロトタイプ検証 (新規挙動 8 チェックのみ失敗) で確認済みの記録に依拠する。
+
+### Rework
+- 新規テストの追記時に `run bash "$SCRIPT"  99` と空白を誤って 2 つ入れたため、直後に修正した (実害なし)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- worktree 作成前に `git ls-tree` で tree 内の存在を判定し、probe の失敗は「不在」と読まず exit 1 (fail-closed) とした。`NOT_APPLICABLE:` は stdout に出力し exit 0
+- `/review` Step 9 の表では `NOT_APPLICABLE:` を exit 0 でも **Blocking** とした (Spec Notes の矛盾解消に従う)。`run-merge.sh` は変更なし
+
+### Deferred Items
+- bats の実行 (`tests/pre-merge-check.bats` 新規 6 件、`tests/review.bats` 新規 1 件) は実装環境に bats が無く未実施。CI の `Run bats tests` で確認する (AC4)
+- AC のチェックボックスは更新していない (bats を要する AC4 が UNCERTAIN のため。`/review` / `/verify` で確認)
+
+### Notes for Next Phase
+- `/review` では CI の bats 結果、特に `env error: git worktree add failure` / `git ref inspection failure` の 2 件 (git shim 経由) の挙動を確認する
+- bare-bracket 警告は既存行のみで、追加したテストはすべて `|| false` 形式
