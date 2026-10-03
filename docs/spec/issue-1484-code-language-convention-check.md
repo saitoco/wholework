@@ -129,6 +129,8 @@ CI は `git diff -U100000 origin/<base>...HEAD -- skills/ modules/ scripts/` を
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1484#issuecomment-5962634160
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1484#issuecomment-5964181327
 ## Code Retrospective
 
 ### Deviations from Design
