@@ -208,17 +208,14 @@ UNCERTAIN は 0 件。rubric 3 件 (AC 3 / 4 / 5) は diff と grep で判定で
 
 ## Phase Handoff
 
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 指摘 2 件 (SHOULD 1 / CONSIDER 1、MUST 0) はどちらも `docs/tech.md` / `docs/ja/tech.md` の注記の整合性で、505bb54d で修正した。見出し文字列は `#922` / `#1064` が引用しているため変更していない
-- 非対話実行 (再呼び出しの保証なし) のため `capabilities.workflow: true` でも Workflow path は使わず、Agent をフォアグラウンドで使う静的 fan-out (review-spec + review-bug×2) で実行した
-- review-bug 2 件が同じ指摘を返したため、検証 sub-agent は使わず該当行を直接確認して妥当と判断した
+- Pre-merge AC は 7 件すべてチェック済み、review 完了は organic (fallback ではない) のためゲートを通過し、CI success / review approved で squash merge した
 
 ### Deferred Items
-- 5.5 世代での effort の再較正 (特に `run-spec.sh` の Sonnet 経路 `max` と `--opus` 経路 `xhigh`) — `token_usage` が溜まってから別 Issue
-- Post-merge の manual AC (`claude -p --model sonnet --output-format json` と `--model opus` でエイリアスの解決先を確認) — merge 後に人が確認
+- Post-merge の manual AC (`claude -p --model sonnet --output-format json` と `--model opus` でエイリアスの解決先を確認) は未実施で、`/verify` 側で人が確認する
+- 5.5 世代での effort の再較正は `token_usage` が溜まってから別 Issue
 
 ### Notes for Next Phase
-- Pre-merge AC は 7 件すべて `[x]` (AC 7 は CI の `Run bats tests` が 2 件とも pass)。fix commit 505bb54d はドキュメントのみの変更で、push 後の CI は `/merge` 側で再確認される
-- `docs/tech.md` / `docs/ja/tech.md` の修正後も `check-translation-sync.sh` は IN_SYNC、`validate-skill-syntax.py` は 0 error
+- merge は競合なしで完了した。`/verify` は manual AC のみが対象
