@@ -48,6 +48,12 @@ This file records cross-Issue recovery events, fallback applications, and diagno
   (`run-auto-sub.sh --write-manual-recovery --notification`). Absent means the flag was not
   passed, distinct from `unobserved` which means the wording could not be confirmed. Does not
   participate in frequency grouping)
+- avoidable: <yes|no|unknown> — <one-line reason> (optional; merge-phase entries — whether a
+  plain re-run of the phase wrapper would have completed the phase, the evidence for the
+  merge auto-retry deferral release condition in
+  `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire`. Written by hand,
+  e.g. via `run-auto-sub.sh --write-manual-recovery --diagnosis`. Absent is treated as
+  `unknown`. Does not participate in frequency grouping)
 - <observed state inspection result and root cause hypothesis>
 
 ### Recovery Applied
@@ -67,6 +73,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 | `symptom-short` | Short identifier for the symptom pattern (kebab-case). Frequency grouping key is `symptom-short`, or `symptom-short/cause-slug` when a `cause` line is present in `### Diagnosis` |
 | `cause` | Kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Optional at read time — pre-#1281 entries lack it. Separates occurrences of the same symptom by known root cause during frequency grouping. Always written by Tier 2 (`apply-fallback.sh`, value is the matched symptom anchor) and Tier 3 (`spawn-recovery-subagent.sh`, value is the recovery plan's `cause` field, `unclassified` when missing/invalid); optional for manual recovery (`run-auto-sub.sh --write-manual-recovery --cause`) |
 | `notification` | Classification of the observed task notification wording in `### Diagnosis` (Issue #1153): `harness-stop`/`external-signal`/`indeterminate`/`unobserved`. Written only by the manual recovery path (`run-auto-sub.sh --write-manual-recovery --notification`), never by Tier 2/3. Line is absent when the flag was not passed (see `notification_class=unspecified` on the corresponding `manual_intervention` event). Does not participate in `/audit recoveries` frequency grouping — `cause` is the only grouping key |
+| `avoidable` | Judgment in `### Diagnosis` of whether a plain re-run of the phase wrapper would have completed the phase (Issue #1475): `yes`/`no`/`unknown`, followed by ` — <one-line reason>`. Intended for merge-phase entries, where only `yes` counts as release evidence for the merge auto-retry deferral (see `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire`, "Avoidability Record"). Written by hand — there is no dedicated script flag; pass it through `run-auto-sub.sh --write-manual-recovery --diagnosis`. Absent is treated as `unknown`. Does not participate in `/audit recoveries` frequency grouping — `cause` is the only grouping key |
 | `Source` | Which mechanism detected and handled this recovery event |
 | `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped; `retry fired (iteration <N>/<M>)` = the retry was fired but its result is not yet known at write time (Issue #1320: `code-retry-fire` entries are written immediately before an `exec`-based self-restart, which replaces the process before the retry's own outcome can be observed — see `modules/orchestration-fallbacks.md#auto-retry-on-fail-code_retry_fire`) |
 | `Improvement Candidate` | `未起票` = not yet filed; `起票済み #NNN` = filed as Issue #NNN; `N/A` = no action needed |
