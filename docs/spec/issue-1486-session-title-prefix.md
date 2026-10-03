@@ -163,16 +163,14 @@ consumer sweep (セッションタイトル形式の消費者の列挙):
 - UNCERTAIN なし。`command "bats ..."` は safe mode のため直接実行せず、CI の `Run bats tests` ジョブ (全 bats を実行) の SUCCESS で代替判定した。日本語版ガイドの条件は verify command なしのため diff から AI 判断で PASS とした (Spec の注記通り `file_contains` を足せば決定的にできる)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 9 件の Pre-merge 条件はすべて PASS で、チェックボックスを更新済み (verify command なしの日本語版ガイドと CI 参照の 2 件を最後に更新)
-- CONSIDER 1 件 (`docs/ja/tech.md:271` の用語揺れ) は、意味に影響せず CI 再実行を伴う fix cycle に見合わないため見送り
+- pre-merge AC ゲートは未チェック 0 件・review-incomplete-fallback なしで通過し、競合もなかったため、`--squash` (base の `.wholework.yml` から解決) でそのままマージした
 
 ### Deferred Items
 - `docs/ja/tech.md:271` の「env var のみで」を「環境変数のみで」に揃える (任意。必要なら別 Issue)
 
 ### Notes for Next Phase
-- MUST 指摘なし・CI 17 チェックすべて SUCCESS のため `/merge 1488` に進める
-- Post-merge の確認項目はなし
+- Post-merge の確認項目はなし。`/verify` は Pre-merge AC がマージ後も成立していることの確認のみでよい
 
