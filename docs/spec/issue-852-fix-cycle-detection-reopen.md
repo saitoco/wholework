@@ -153,6 +153,27 @@ verify-fail marker なしで reopen された Issue を fix-cycle と認識で�
 
 - `saito` (MEMBER / first-class): Issue Retrospective コメント — 曖昧ポイントの自動解決ログ (Fix 適用スコープ、criterion 2 緩和範囲、reopen_ts 参照可否) および AC 変更内容 (verify command 追加、テスト実装注意点) を記録
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/852#issuecomment-4829431561
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5200985897
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5212264007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5225316107
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5229259552
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5235402783
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5246557834
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5255747117
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5296380283
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5304273249
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5310546637
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5327724944
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5341233698
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5354369322
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5369687821
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5378421991
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/852#issuecomment-5378434614
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5383997653
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5579804927
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5653264109
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/852#issuecomment-5957341555
 ## Code Retrospective
 
 ### Deviations from Design
