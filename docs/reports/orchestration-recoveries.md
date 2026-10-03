@@ -82,6 +82,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-10-03 00:48 UTC: manual-recovery-respawn
+
+### Context
+- Issue #1480, phase: spec
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: parent-session-ended
+- notification: indeterminate
+- Background shell command didn't finish before the previous session ended (status: stopped, no exit code)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-10-03 00:29 UTC: manual-recovery-completion-override
 
 ### Context
