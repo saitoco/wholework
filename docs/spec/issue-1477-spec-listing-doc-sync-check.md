@@ -177,3 +177,29 @@ No new comments since last phase.
 - 参考: cutoff (`phase/spec` の付与、2026-10-03T02:42:25Z) より前に投稿された 2 件のコメントは、前回の `/spec` 実行で消費済み (wrapper の `comments_consumed` イベントが count=2)。今回の consume 対象は 0 件
   - saito / MEMBER / first-class / `/issue` の Issue Retrospective (曖昧点の自動解決ログ、AC の変更理由) / https://github.com/saitoco/wholework/issues/1477#issuecomment-5964742303
   - saito / MEMBER / first-class / triage の AC 監査 (AC1 の `section_contains` の見出し引数に `#` を含み常時 UNCERTAIN になる指摘。修正を `/spec` に指示) / https://github.com/saitoco/wholework/issues/1477#issuecomment-5964742436 → この Spec で Issue 本文の AC1 を修正済み
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1・2 の本文をそのまま `skills/spec/SKILL.md` と `tests/spec.bats` に反映した
+
+### Design Gaps/Ambiguities
+- この環境に `bats` が無く、`bats tests/spec.bats` と全体スイートは実行できなかった。代替として、helper と同じ `awk` プログラムと各テストの `grep -F` を直接実行し、新規テスト 4 件 (assert 文字列 8 個) が実装後に全て PASS することを確認した。全体スイートの回帰は未確認 (今回の変更は既存行を 1 行も変えない純粋な挿入)
+- Confirmed pre-implementation FAIL for 4 new test(s): `git show HEAD:skills/spec/SKILL.md` を helper の `awk` に通すとサブ検査ブロックが 0 行になり、4 件とも実装前は必ず FAIL する
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 記載のブロックと 4 テストを逐語で実装した。親チェックの本文と既存テストの assert 文字列は変更していない
+- 見出しを使わず太字ラベルのブロックにしたので、AC1 の `section_contains ... "Step 10" ...` の走査範囲 (308〜933 行の手前) に新ブロックが入る
+
+### Deferred Items
+- Post-merge AC (サブコマンドを増やす Issue で `/spec` を実行して確認) は opportunistic のまま未チェック。該当する Issue が次に `/spec` される機会に確認する
+
+### Notes for Next Phase
+- `bats` が無い環境のため、新規テストは `awk | grep -F` の直接実行で確認した。`/verify` で `bats tests/spec.bats` が動く環境があれば再確認すると確実
+- Pre-merge AC 4 件 (rubric 3 件、section_contains 併用 1 件) は `/code` の Step 10 でチェック済み
