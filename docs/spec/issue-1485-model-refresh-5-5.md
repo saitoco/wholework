@@ -247,3 +247,20 @@ UNCERTAIN は 0 件。rubric 3 件 (AC 3 / 4 / 5) は diff と grep で判定で
 
 ### Improvement Proposals
 - N/A (5.5 世代の effort 再較正は、Phase Handoff の Deferred Items のとおり `token_usage` が溜まってから別途扱う)
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | pr | SUCCESS | `run-spec.sh --opus` (`claude-opus-5-5`) |
+| code | pr | SUCCESS (completion override) | `run-code.sh` was killed when the parent session ended; PR #1487 and Code Retrospective were already pushed, so no respawn |
+| review | pr | SUCCESS | `--full`; SHOULD 1 / CONSIDER 1 fixed |
+| merge | pr | SUCCESS | |
+| verify | - | SUCCESS | `phase/done` |
+
+### Orchestration Anomalies
+- `run-code.sh 1485 --pr` was stopped mid-run because the parent Claude Code session exited (task notification: "Background shell command didn't finish before the previous session ended"; no exit code observed). `detect-external-kill.sh` returned `external-kill`. Tier 1 `reconcile-phase-state.sh code-pr --check-completion` returned `matches_expected: true` (PR #1487 open, CI green, Code Retrospective pushed), and only the `phase/code` → review label transition had not run. Instead of respawning (which would have redone completed work), the new parent session proceeded to review and recorded the decision with `run-auto-sub.sh --write-manual-recovery 1485 code completion-override --cause parent-session-exit --notification indeterminate` (entry in `docs/reports/orchestration-recoveries.md`)
+
+### Improvement Proposals
+- N/A (single occurrence caused by the parent session itself ending, not by a phase defect)
