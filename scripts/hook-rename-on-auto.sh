@@ -2,6 +2,7 @@
 # UserPromptSubmit hook: auto-rename session title on /auto invocation
 # Outputs {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":"..."}} when prompt matches /auto pattern.
 # Silent exit (empty output) on no match or gh failure to preserve existing session name.
+# If WHOLEWORK_SESSION_TITLE_PREFIX is set (non-empty), it is prepended verbatim to the generated title.
 
 INPUT=$(cat)
 
@@ -71,6 +72,12 @@ esac
 # Truncate to 50 chars (bash ${#} counts bytes on macOS bash 3.2, accepted as compromise)
 if [ ${#TITLE} -gt 50 ]; then
   TITLE="${TITLE:0:49}…"
+fi
+
+# Prepend operator-supplied prefix (per-machine marker). Applied after truncation so the prefix
+# is never cut; no separator is inserted. Unset or empty: no-op (output unchanged).
+if [ -n "${WHOLEWORK_SESSION_TITLE_PREFIX:-}" ]; then
+  TITLE="${WHOLEWORK_SESSION_TITLE_PREFIX}${TITLE}"
 fi
 
 jq -n --arg title "$TITLE" '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":$title}}'
