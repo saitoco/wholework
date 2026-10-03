@@ -177,3 +177,31 @@
 - Uncertainty: なし。外部仕様への依存もなし
 - 軽微な観察 (範囲外、未修正): `skills/triage/skill-dev-verify-audit.md` の冒頭 (`Used in:`) と Pattern 4 は「Bulk Execution Step 3 substep 7」と書くが、現行の `skills/triage/SKILL.md` では AC verify command audit は substep 8 に当たる (substep 7 は duplicate comment)。本 Issue の範囲外のため修正しない
 - SPEC_DEPTH=light (Size S) のため、Step 7 (Ambiguity Resolution) と Step 8 (Uncertainty Identification) はスキップした。UI Design Phase にも該当しない
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1・2 の文面を逐語で適用した (置換対象は `Detection approach:` + 旧 (a) 箇条書きのアンカーで特定し、行番号は使っていない)
+
+### Design Gaps/Ambiguities
+- `bats` がこの環境に無い (`which bats` → not found) ため、AC3 (`command "bats tests/"`) は実行できなかった。Spec Implementation Steps 3 の方針どおり、grep による構造検査で代替し、全件実行は CI の `Run bats tests` ジョブに委ねる。変更対象は prose の Domain file のみで、`tests/` はこのファイルのパスを参照しない (`grep -rl "skills/triage/skill-dev-verify-audit.md" tests/` → 0 件)
+- Step 10 の checkbox 更新は行っていない: AC3 が UNCERTAIN (bats 不在) のため「all PASS」の条件を満たさない。AC1 (rubric) は手動確認で適合、AC2 (grep) は実装後 4 件ヒットで PASS。`/verify` が再判定する
+
+### Rework
+- なし。構造検査の結果: AC2 パターンのヒット 4 件 (実装前 0 件)、旧 (a) 箇条書き 0 件、fenced ブロック 12 行 (偶数、実装前 10 から +2)、見出し行と #1130 の例は各 1 件で保全、言語規約チェック・禁止表現チェック・`validate-skill-syntax.py`・`check-allowed-tools.sh` はいずれも違反なし
+- worktree 隔離ガードが複合コマンド (`git ... ; ...` や `bash script`) を拒否したため、検証コマンドは単純なコマンドに分割して実行した
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の置換文面を逐語で適用し、見出し行・説明段落・#1130 の例には触れなかった (日本語の既存行を編集すると言語規約チェックで違反になるため)
+- 変更は `skills/triage/skill-dev-verify-audit.md` の 1 ファイルのみ。`/review` と `/verify` の SKILL.md は変更していない
+
+### Deferred Items
+- AC3 (`bats tests/` 全件) はローカルに `bats` が無く未実行。CI の `Run bats tests` ジョブの結果を `gh run list` で確認する (patch route のため `gh pr checks` は使えない)
+- Post-merge の observation AC (`event=auto-run session=next`) は、新規テスト追加を主張する AC を含む次回の Issue が実装フェーズを通過するまで確認できない
+
+### Notes for Next Phase
+- `/verify` は AC1 (rubric) と AC2 (grep) を再判定する。AC3 は CI の結果で解決する
+- `/verify` 時点で CI が未完了・失敗の場合、`bats` ジョブの失敗は prose 変更では起こりにくいため、無関係な既存失敗の可能性を先に疑う
