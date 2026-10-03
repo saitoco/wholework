@@ -134,6 +134,45 @@ consumer sweep (セッションタイトル形式の消費者の列挙):
 
 **日本語 docs の文体**: `docs/ja/*` の追記は既存の表の文体に合わせ、括弧は半角で前後に半角スペースを入れる。
 
+## Code Retrospective
+
+### Deviations from Design
+- 設計からの逸脱なし。Implementation Steps 1-5 をそのまま実装した
+
+### Design Gaps/Ambiguities
+- この環境には `bats` が PATH になく、GNU `parallel` も無かった。`npx --yes bats` で代替し、`--jobs` は使えないため `ls tests/*.bats | xargs -P 4 -n 20 npx --yes bats` のシャード並列でフルスイートを実行した (FAIL 0 件)。`modules/test-runner.md` の `--jobs` fallback 節に沿った扱い
+- 新規テストは出力を検証する振る舞いテストで、文字列一致型 (`grep` / `file_contains`) ではないため、Pre-implementation FAIL Check の対象外とした
+
+### Rework
+- なし (テスト中の `[[ ... ]]` に `|| false` を付け足した軽微な修正のみ)
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (docs 追記位置の確定を spec・code フェーズへ委任) / https://github.com/saitoco/wholework/issues/1486#issuecomment-5963663315
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 構造的な乖離なし。変更ファイル 8 件は Spec の Changed Files と一致し、prefix 付与の位置・テストケース (a)〜(i) も Spec の通りだった
+
+### Recurring issues
+- 繰り返しの指摘なし。指摘は CONSIDER 1 件 (`docs/ja/tech.md` の「env var」と「環境変数」の表記揺れ) のみで、修正は見送った。review-bug の 1 件 (`modules/worktree-lifecycle.md` の部分一致照合) は検証 sub-agent が REJECT した
+- `capabilities.workflow: true` でも、完了通知を受け取れない実行面では Workflow パスを使わず、静的な Task fan-out をフォアグラウンドで実行した。通知待ちにならず、3 sub-agent の結果をすべて同一ターンで回収できた
+
+### Acceptance criteria verification difficulty
+- UNCERTAIN なし。`command "bats ..."` は safe mode のため直接実行せず、CI の `Run bats tests` ジョブ (全 bats を実行) の SUCCESS で代替判定した。日本語版ガイドの条件は verify command なしのため diff から AI 判断で PASS とした (Spec の注記通り `file_contains` を足せば決定的にできる)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 9 件の Pre-merge 条件はすべて PASS で、チェックボックスを更新済み (verify command なしの日本語版ガイドと CI 参照の 2 件を最後に更新)
+- CONSIDER 1 件 (`docs/ja/tech.md:271` の用語揺れ) は、意味に影響せず CI 再実行を伴う fix cycle に見合わないため見送り
+
+### Deferred Items
+- `docs/ja/tech.md:271` の「env var のみで」を「環境変数のみで」に揃える (任意。必要なら別 Issue)
+
+### Notes for Next Phase
+- MUST 指摘なし・CI 17 チェックすべて SUCCESS のため `/merge 1488` に進める
+- Post-merge の確認項目はなし
+

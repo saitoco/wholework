@@ -16,6 +16,9 @@ setup() {
     echo "session-auto-rename: true" > "$PROJ_DIR/.wholework.yml"
     export CLAUDE_PROJECT_DIR="$PROJ_DIR"
 
+    # Isolate from the operator's shell: the prefix env var is expected to be exported there
+    unset WHOLEWORK_SESSION_TITLE_PREFIX
+
     # Default mock gh: return a fixed title for issue 123
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
@@ -176,4 +179,97 @@ MOCK
     OUTPUT=$(echo "$INPUT" | CLAUDE_PROJECT_DIR="$OPT_IN_DIR" bash "$SCRIPT")
     TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
     [ "$TITLE" = "auto #123: Add auto-rename of session title" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX unset keeps output unchanged" {
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | bash "$SCRIPT")
+    EXPECTED='{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":"auto #123: Add auto-rename of session title"}}'
+    [ "$(echo "$OUTPUT" | jq -c .)" = "$EXPECTED" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX empty string keeps output unchanged" {
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="" bash "$SCRIPT")
+    EXPECTED='{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":"auto #123: Add auto-rename of session title"}}'
+    [ "$(echo "$OUTPUT" | jq -c .)" = "$EXPECTED" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX is prepended to /auto N title" {
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="🐧" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "🐧auto #123: Add auto-rename of session title" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX is prepended to --resume title" {
+    INPUT='{"prompt":"/auto --resume 456"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="🐧" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "🐧auto #456 (resume): Short title" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX is prepended to --batch titles" {
+    INPUT='{"prompt":"/auto --batch 123 124 125"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="🐧" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "🐧auto batch #123,124,125" ]
+
+    INPUT='{"prompt":"/auto --batch 5"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="🐧" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "🐧auto batch (5 issues)" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX inserts no separator automatically" {
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="mac " bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "mac auto #123: Add auto-rename of session title" ]
+
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="mac" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "macauto #123: Add auto-rename of session title" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX is kept intact when the body title is truncated" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    INPUT='{"prompt":"/auto 123"}'
+    PLAIN=$(echo "$INPUT" | bash "$SCRIPT" | jq -r '.hookSpecificOutput.sessionTitle')
+    PREFIXED=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX="🐧" bash "$SCRIPT" | jq -r '.hookSpecificOutput.sessionTitle')
+    # Without prefix the body is truncated; with prefix only the body is truncated
+    [[ "$PLAIN" == *"…" ]] || false
+    [ "$PREFIXED" = "🐧${PLAIN}" ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX with JSON special characters keeps valid JSON output" {
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | WHOLEWORK_SESSION_TITLE_PREFIX='a"b\c ' bash "$SCRIPT")
+    echo "$OUTPUT" | jq -e . >/dev/null
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = 'a"b\c auto #123: Add auto-rename of session title' ]
+}
+
+@test "WHOLEWORK_SESSION_TITLE_PREFIX does not affect no-output paths" {
+    export WHOLEWORK_SESSION_TITLE_PREFIX="🐧"
+
+    OUTPUT=$(echo '{"prompt":"/auto 999"}' | bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
+
+    OUTPUT=$(echo '{"prompt":"/code 123"}' | bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
+
+    OUTPUT=$(echo '{"prompt":"/auto --help"}' | bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
+
+    OPT_OUT_DIR="$BATS_TEST_TMPDIR/optout-proj"
+    mkdir -p "$OPT_OUT_DIR"
+    echo "session-auto-rename: false" > "$OPT_OUT_DIR/.wholework.yml"
+    OUTPUT=$(echo '{"prompt":"/auto 123"}' | CLAUDE_PROJECT_DIR="$OPT_OUT_DIR" bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
 }
