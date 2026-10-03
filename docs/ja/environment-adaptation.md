@@ -78,6 +78,8 @@ SKILL.md のコアを軽量に保ち、環境依存のロジック（Domain）�
 | 深度ルーティング | スキル起動モード（`--full` / `--light`） | `spec/codebase-search.md`（`--full` モードで Read、`--light` ではスキップ） |
 | Capability フラグ | `.wholework.yml` の `capabilities.{name}: true` | `verify/browser-verify-phase.md`（`HAS_BROWSER_CAPABILITY=true` で Read） |
 | ディレクトリスキャン | `.wholework/domains/{skill}/` を Glob | プロジェクトローカル domain ファイル（存在すれば無条件でロード） |
+| 引数ルーティング | スキル引数の先頭 (`load_when: arg_starts_with`) | `doc/translate-phase.md` (ARGUMENTS が `translate` で始まるとき Read) |
+| 無条件 | なし (決まったステップで常に Read) | `triage/skill-dev-verify-audit.md` (プロジェクトタイプに関係なく `/triage` Step 7 と `/issue` Step 15 で Read) |
 
 ### Domain 用語定義
 
@@ -139,6 +141,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/code/language-convention-check.md` | `/code` | `check-language-convention.py` が存在 | `file_exists_any: [scripts/check-language-convention.py]` | 言語規約事前チェック |
 | `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発構文検証 |
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発陳腐化テストチェック |
+| `skills/code/bare-bracket-assertions-check.md` | `/code` | `check-bare-bracket-assertions.sh` が存在 | `file_exists_any: [scripts/check-bare-bracket-assertions.sh]` | 裸括弧アサーション事前チェック |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
 | `skills/verify/lighthouse-guidance.md` | `/verify` | `HAS_LIGHTHOUSE_CAPABILITY=true` | `capability: lighthouse` | Lighthouse verify ガイダンス |
@@ -485,4 +488,4 @@ verify-executor (Layer 4) ─→ .wholework/verify-commands/*.md（プロジェ�
 1. `skills/{skill-name}/{domain}-phase.md` を作成する
    - このファイルが参照するすべてのモジュールのフルパスをファイル冒頭に列挙する（例: `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md`）。省略形（例: `detect-config-markers.md` だけ）は禁止。冒頭にフルパスを列挙することで、呼び出し側が事前に参照モジュールを把握できる
 2. SKILL.md に条件付き Read 指示を追加する（marker 検出またはファイル存在パターン）
-3. `docs/structure.md` の Domain Files 表に追加する
+3. 本ドキュメント (`docs/environment-adaptation.md`) の「Domain ファイル（網羅的）」表に追加する

@@ -63,7 +63,7 @@ Wholework が機能するために必須なのは以下のみである。
 
 ## ユーザーマニュアル
 
-ユーザー向けドキュメントは `docs/guide/` 配下で管理されている。インストール、クイックスタートチュートリアル、ワークフロー概要、カスタマイズ、トラブルシューティングをカバーしており、評価者や新規ユーザー向けに、開発者向けの Steering Documents を補完する設計になっている。
+ユーザー向けドキュメントは `docs/guide/` 配下で管理されている。インストール、クイックスタートチュートリアル、ワークフロー概要、カスタマイズ、トラブルシューティング、adapter の作成、Figma ベストプラクティス、スクリプティング、XL 分解、autonomy tier をカバーしており、評価者や新規ユーザー向けに、開発者向けの Steering Documents を補完する設計になっている。
 
 ## 今後の方向性
 
@@ -152,7 +152,7 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Term | Definition | Context | 日本語訳 |
 |------|------------|---------|---------|
 | `/auto` | `claude -p` 経由で spec→code→review→merge→verify を非対話的に連鎖実行するオーケストレーター Skill。`phase/*` ラベルが設定されていない場合は issue triage から自動開始し、`phase/ready` がない場合は `/spec` を自動実行する。`--batch N` はバックログから N 件の XS/S Issue を処理する。XL Issue は独立した sub-issue を並列実行する (worktree 分離)。`--base {branch}` はリリースブランチを対象にする。旧称: 'Dispatch' | Development workflow | `/auto` |
-| `/audit` | プロジェクトヘルス検出のための複合 skill。サブコマンド: `/audit drift` (ドキュメントとコードの drift 検出、Issue 自動生成)、`/audit fragility` (構造的脆弱性検出)、`/audit stats` (Issue のスループット/構成/初回成功率の集計。`--retention` で phase/verify の滞留・Icebox 滞留・recovery 候補頻度を追加)、`/audit progress` (XL sub-issue の進捗スナップショット)、`/audit auto-session` (session.md に埋め込まれた `## Metrics` セクション、または `.tmp/auto-events.jsonl` からのフォールバック生成)、`/audit premise` (open Issue 本文の `premise:` マーカーを現在のコードベースと照合し再評価。premise が失効している Issue にコメントする)。 | /audit Skill | `/audit` |
+| `/audit` | プロジェクトヘルス検出のための複合 skill。サブコマンド: `/audit drift` (ドキュメントとコードの drift 検出、Issue 自動生成)、`/audit fragility` (構造的脆弱性検出)、`/audit stats` (Issue のスループット/構成/初回成功率の集計。`--retention` で phase/verify の滞留・Icebox 滞留・recovery 候補頻度を追加)、`/audit progress` (XL sub-issue の進捗スナップショット)、`/audit auto-session` (session.md に埋め込まれた `## Metrics` セクション、または `.tmp/auto-events.jsonl` からのフォールバック生成)、`/audit premise` (open Issue 本文の `premise:` マーカーを現在のコードベースと照合し再評価。premise が失効している Issue にコメントする)、`/audit verify-backlog` (verify command 付きの未チェック Post-merge 受入条件の件数で `phase/verify` backlog をランキングし、上位 N 件に `/verify` を順次実行)。 | /audit Skill | `/audit` |
 | AC | "Acceptance Criteria" の略語 (インデックスで参照される個々の「受入条件」を指す場合もある。例: `AC1`、`AC2`)。Issue の retrospective、Skill の出力、レビューコメントで略記として使用される | /issue, /spec, /review, /verify | AC |
 | Acceptance condition (受入条件項目) | Issue の受入基準内にある単一の検証可能な要件項目。チェックリストの 1 行として現れ、通常は verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria (受入基準) | Issue の本文の `## Acceptance Criteria` で定義される、受入条件の完全な集合。L2 の個々の受入条件からなる L1 の集合 | /issue, /verify | 受入基準 |
@@ -170,6 +170,8 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Fork context (fork コンテキスト) | メインの会話に影響を与えない Skill 実行モード | Claude Code | fork コンテキスト |
 | Issue triage | メインワークフロー開始前に Type/Priority/Size/Value/Theme を割り当てる初期評価フェーズ。`/triage` skill として実装される。Issue に `phase/*` ラベルがない場合、`/auto` は自動的に triage を連鎖実行する | /triage, /auto | Issue triage |
 | Non-interactive mode (非対話モード) | `AskUserQuestion` が使用できない `claude -p --permission-mode auto` を伴う `run-*.sh` 経由で呼び出される Skill 実行。決定ポイントで 3 段階のポリシー (auto-resolve / skip / hard-error) をトリガーする。`ARGUMENTS` 内の `--non-interactive` によってシグナルされる | run-*.sh, /auto | 非対話モード |
+| Observation dispatch | `/auto` 実行の最後に、`verify-type: observation` 条件のイベントが発火済みの `phase/verify` Issue を探し (`observation-trigger.sh`)、最大 `observation-dispatch-threshold` 件に `/verify` を実行するステップ。同じ Issue が毎回枠を占めないようローテーションする | /auto | observation dispatch |
+| Opportunistic verification (機会的検証) | `/verify` などの Skill 実行の最後に、他の Issue の未チェックの `verify-type: opportunistic` Post-merge 条件を、その実行自身が観測した内容と照合する仕組み (`opportunistic-verify: true` で有効)。判定は PASS / FAIL / SKIP で、PASS のときだけチェックを付ける | /verify ほか | 機会的検証 |
 | Orchestration recovery (オーケストレーション復旧) | `/auto` オーケストレーション失敗に対する 3 段階の復旧メカニズム: (1) `reconcile-phase-state.sh` の完了チェック、(2) `apply-fallback.sh` の既知パターン復旧、(3) `spawn-recovery-subagent.sh` の Tier 3 サブエージェント診断 | /auto, orchestration | オーケストレーション復旧 |
 | Operate route (Operate 経路) | diff を伴わない operational Issue (CMS 編集、インフラ操作) 向けのワークフロー経路。コミットや Pull Request を作成せず外部の MCP/CLI/API 操作を直接実行し、git diff の代わりに `## Execution Log` の Issue コメントを記録する。Spec から判定される (空の `## Changed Files` + 外部操作のみの Implementation Steps)。Size とは直交する | Development workflow | Operate 経路 |
 | Patch route (パッチ経路) | XS/S サイズの Issue 向けのワークフロー経路。Pull Request を作成せず main ブランチへ直接コミットする | Development workflow | パッチ経路 |
@@ -196,5 +198,6 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Sub-issue (サブ Issue) | XL Issue の分解内の子 Issue。`/auto` は `blockedBy` の依存グラフを読み取り、独立した sub-issue を並列実行し (worktree 分離)、依存先はブロッカー完了後に順序付けて実行する | Development workflow | サブ Issue |
 | verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械検証可能な方法を紐づける。旧称: 'verification hint'、'verify hint'、'verify ヒント'、'検証ヒント'、'Acceptance check' | /issue, /verify | verify command |
 | verify command type (verify command タイプ) | verify command の最初のトークン (例: `file_exists`、`grep`、`section_contains`、`command`)。受入条件に適用するチェック方法を識別する | /issue, /verify | verify command タイプ |
+| verify-type | Post-merge 受入条件の検証方法を分類する HTML コメントタグ (`<!-- verify-type: ... -->`)。`auto` (verify command あり)、`manual` (`/verify` で人または Claude が判断)、`observation` (指定したイベントの発火後に評価)、`opportunistic` (後の実行でたまたま確認できたときに確定) のいずれか | /issue, /verify | verify-type |
 | Watchdog (ウォッチドッグ) | ハングした `claude -p` フェーズ呼び出しを検出し、kill してから 1 回リトライするバックグラウンドのサイレントウィンドウタイムアウトメカニズム (`scripts/claude-watchdog.sh`)。フェーズ固有のタイムアウト定数は `scripts/watchdog-defaults.sh` にあり、`.wholework.yml` の `watchdog-timeout-*-seconds` キーでプロジェクトごとに設定可能。SIGKILL ベースの external-kill 失敗モード (`docs/tech.md` § Two-tier orchestration 参照) とは区別される | run-*.sh, orchestration, configuration | ウォッチドッグ |
 | Worktree | XL Issue の sub-issue を並列実行するために `/auto` が使用する git worktree。各 sub-issue の実装を独自の作業ツリーに分離し、ファイル競合を防ぐ。ライフサイクル (create/enter/exit/cleanup) は `modules/worktree-lifecycle.md` によって管理される | `/auto`, `/code`, `/spec` | Worktree |

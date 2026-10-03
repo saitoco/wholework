@@ -84,6 +84,8 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | Depth-routing | Skill invocation mode (`--full` / `--light`) | `spec/codebase-search.md` (Read in `--full` mode; skipped in `--light`) |
 | Capability-flag | `.wholework.yml` `capabilities.{name}: true` | `verify/browser-verify-phase.md` (Read when `HAS_BROWSER_CAPABILITY=true`) |
 | Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded unconditionally when files exist) |
+| Argument-routing | Skill argument prefix (`load_when: arg_starts_with`) | `doc/translate-phase.md` (Read when ARGUMENTS starts with `translate`) |
+| Unconditional | None (always Read at a fixed step) | `triage/skill-dev-verify-audit.md` (Read at `/triage` Step 7 and `/issue` Step 15 regardless of project type) |
 
 ### Domain Terminology
 
@@ -145,6 +147,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/code/language-convention-check.md` | `/code` | `check-language-convention.py` exists | `file_exists_any: [scripts/check-language-convention.py]` | Language convention pre-check |
 | `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development syntax validation |
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development stale test check |
+| `skills/code/bare-bracket-assertions-check.md` | `/code` | `check-bare-bracket-assertions.sh` exists | `file_exists_any: [scripts/check-bare-bracket-assertions.sh]` | Bare bracket assertion pre-check |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
 | `skills/verify/lighthouse-guidance.md` | `/verify` | `HAS_LIGHTHOUSE_CAPABILITY=true` | `capability: lighthouse` | Lighthouse verify guidance |
@@ -491,4 +494,4 @@ Use this table to estimate domain-external overhead before finalizing the extens
 1. Create `skills/{skill-name}/{domain}-phase.md`
    - List the full paths of all modules this file references at the top of the file (e.g., `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md`). Abbreviated forms (e.g., `detect-config-markers.md` alone) are not allowed. Listing full paths at the top allows callers to know the referenced modules before loading.
 2. Add a conditional Read instruction to SKILL.md (marker-detection or file-existence pattern)
-3. Add to the Domain Files table in `docs/structure.md`
+3. Add to the Domain Files (exhaustive) table in this document (`docs/environment-adaptation.md`)

@@ -32,10 +32,11 @@ wholework/
 │   │   └── config.yml           # ブランク (テンプレートなし) Issue を無効化
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、skill 構文検証、禁止表現チェック、config schema チェック、skill body hash チェック、裸括弧アサーションチェック、言語規約チェック、macOS シェル互換性テスト
+│       ├── dco.yml              # CI: PR コミットへの DCO `Signed-off-by:` 強制
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (133 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (135 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -57,7 +58,7 @@ wholework/
 │         {SID}-{DATE}/  # L3 セッション retrospective (/auto Step 5 の L3 トリガーが生成、notable な batch/XL のみ)
 │           session.md       # L3 ナラティブ (What worked / Findings — disposition タグ付き) + get-auto-session-report.sh --metrics-only による機械生成の `## Metrics` セクション
 │           events.jsonl     # .tmp/auto-events.jsonl から抽出されたセッションスコープのイベント (notable ではないセッションはこのファイルのみをコミット)
-├── .wholework/          # プロジェクトローカルの Wholework 設定 (ユーザー管理、wholework リポジトリではトラッキングされない)
+├── .wholework/          # プロジェクトローカルの Wholework 設定 (導入先プロジェクトではユーザー管理。本リポジトリは自身の dogfooding 用設定 `.wholework.yml` と `.wholework/domains/verify/` をトラッキングする)
 │   ├── adapters/        # 検証アダプタのオーバーライド
 │   ├── verify-commands/ # プロジェクトローカルのカスタム verify command ハンドラ
 │   └── domains/         # プロジェクトローカルの Domain file
@@ -94,7 +95,7 @@ wholework/
 | verify | `skills/verify/SKILL.md` | マージ後の受入テスト |
 | auto | `skills/auto/SKILL.md` | spec→code→review→merge→verify を連鎖するオーケストレーター |
 | triage | `skills/triage/SKILL.md` | タイトル正規化と Type/Size/Priority/Value の割り当て |
-| audit | `skills/audit/SKILL.md` | Drift と fragility の検出、Issue 自動生成 |
+| audit | `skills/audit/SKILL.md` | Drift と fragility の検出 (Issue 自動生成)、プロジェクトヘルス統計、XL 進捗スナップショット、auto-session メトリクス、premise 再評価、verify-backlog バッチ verify |
 | doc | `skills/doc/SKILL.md` | Steering/project document の管理と正規化 |
 
 ### Modules
@@ -275,7 +276,7 @@ wholework/
 
 ### CI ワークフロー
 
-- `.github/workflows/test.yml` — bats テストを実行 (flaky な失敗と genuine な失敗を区別するため、parallel-only の失敗を `bats --filter-status failed` で serial に再実行)、`validate-skill-syntax.py`、禁止表現チェック、裸括弧アサーションチェック、言語規約チェック、macOS シェル互換性テストを push/PR で実行
+- `.github/workflows/test.yml` — bats テストを実行 (flaky な失敗と genuine な失敗を区別するため、parallel-only の失敗を `bats --filter-status failed` で serial に再実行)、`validate-skill-syntax.py`、禁止表現チェック、config schema チェック、skill body hash チェック、裸括弧アサーションチェック、言語規約チェック、macOS シェル互換性テストを push/PR で実行
 - `.github/workflows/dco.yml` — 全 pull request コミットに DCO `Signed-off-by:` を強制
 - `.github/workflows/kanban-automation.yml` — `phase/*` ラベルイベントで issue を project board のカラムへ自動移動
 

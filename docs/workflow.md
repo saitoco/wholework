@@ -87,12 +87,12 @@ Integrates PR acceptance criteria verification, multi-perspective code review, a
 copilot-review: true        # Enable GitHub Copilot review (wait and handle findings in Step 7)
 claude-code-review: true    # Enable official Claude Code Review (wait and handle findings in Step 7)
 coderabbit-review: true     # Enable CodeRabbit AI review (wait and handle findings in Step 7)
-review-bug: false           # Disable review-bug agent in Step 9 (only review-spec runs)
+review-bug: false           # Disable review-bug agent in Step 10 (only review-spec runs)
 ```
 
 If `.wholework.yml` does not exist, all settings are treated as default (disabled).
 
-**`--review-only` option**: `/review {PR number} --review-only` stops after multi-perspective code review (Step 10) and skips Steps 11–14 and retrospective. Fixes are delegated to the user or Copilot. The `phase/review` status label remains unchanged.
+**`--review-only` option**: `/review {PR number} --review-only` stops after multi-perspective code review (Step 10) and posting review results (Step 11); it skips external review issue resolution (Steps 7.2/7.4/7.6), Steps 12–14, and retrospective. Fixes are delegated to the user or Copilot. The `phase/review` status label remains unchanged.
 
 ### 5. `/merge` — Merge
 
@@ -304,7 +304,7 @@ All judgment paths (the `/auto --batch` List mode gate, `/triage` Step 9's singl
 | Entry path | Mechanism |
 |------------|-----------|
 | `/issue "title"` (new issue creation) | Step 7 calls `gh-check-blocking.sh $NUMBER` after label assignment |
-| `/issue N` (existing issue refinement) | Step 10 calls `gh-check-blocking.sh $NUMBER` |
+| `/issue N` (existing issue refinement) | Step 11 calls `gh-check-blocking.sh $NUMBER` |
 | `/triage N` (single issue) | Step 9 detects missing relationships and applies tier-aware action |
 | `/triage --backlog dependency` | Step 2b detects missing relationships and applies tier-aware action |
 | `retro-proposals.md` (improvement proposal creation) | Step 11 calls `set-blocked-by.sh` after `gh issue create` |

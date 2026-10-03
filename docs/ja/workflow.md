@@ -80,12 +80,12 @@ PR の受入条件検証、多観点コードレビュー、issue 解決を統�
 copilot-review: true        # GitHub Copilot review を有効化（Step 7 で待機・指摘対応）
 claude-code-review: true    # 公式 Claude Code Review を有効化（Step 7 で待機・指摘対応）
 coderabbit-review: true     # CodeRabbit AI review を有効化（Step 7 で待機・指摘対応）
-review-bug: false           # Step 9 の review-bug agent を無効化（review-spec のみ実行）
+review-bug: false           # Step 10 の review-bug agent を無効化（review-spec のみ実行）
 ```
 
 `.wholework.yml` が存在しない場合、全設定はデフォルト（無効）として扱われます。
 
-**`--review-only` オプション**: `/review {PR 番号} --review-only` は多観点コードレビュー（Step 10）で停止し、Steps 11–14 とレトロスペクティブをスキップします。修正はユーザーまたは Copilot に委譲します。`phase/review` ステータスラベルはそのまま残ります。
+**`--review-only` オプション**: `/review {PR 番号} --review-only` は多観点コードレビュー (Step 10) とレビュー結果の投稿 (Step 11) までで停止し、外部レビュー指摘への対応 (Steps 7.2/7.4/7.6)、Steps 12–14、レトロスペクティブをスキップします。修正はユーザーまたは Copilot に委譲します。`phase/review` ステータスラベルはそのまま残ります。
 
 ### 5. `/merge` — マージ
 
@@ -297,7 +297,7 @@ GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) �
 | 起票経路 | 仕組み |
 |----------|--------|
 | `/issue "title"` (新規起票) | Step 7 でラベル付与後に `gh-check-blocking.sh $NUMBER` を呼び出し |
-| `/issue N` (既存リファイン) | Step 10 で `gh-check-blocking.sh $NUMBER` を呼び出し |
+| `/issue N` (既存リファイン) | Step 11 で `gh-check-blocking.sh $NUMBER` を呼び出し |
 | `/triage N` (単一 Issue) | Step 9 で未設定の relationship を検出し、tier-aware アクションを実行 |
 | `/triage --backlog dependency` | Step 2b で未設定の relationship を検出し、tier-aware アクションを実行 |
 | `retro-proposals.md` (改善提案起票) | Step 11 で `gh issue create` 後に `set-blocked-by.sh` を呼び出し |
