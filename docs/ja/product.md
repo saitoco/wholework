@@ -39,6 +39,7 @@ Wholework は、自律的なコーディングエージェントを実際の Git
 
 - main ブランチへの直接コミット・プッシュ (Spec ファイル、`/code --patch` の修正、`/doc translate {lang}` が生成する翻訳ドキュメントを除く)
 - `/tmp/` 配下への一時ファイル作成 (プロジェクト内の `.tmp/` を使用すること)
+  - 適用範囲: Skill・module の手順が作成する一時ファイル、および呼び出し元や後続の tool call にパスを引き渡す一時ファイルが対象。同梱スクリプト自身の scratch ファイル (引数なしの `mktemp` / `mktemp -d` で作成し、1 回のスクリプト実行内で削除するもの) は対象外。詳細は `modules/filesystem-scope.md` § Temporary Files を参照
 - SKILL.md 本文でのコードフェンス外での半角 `!` 文字の使用
 
 ## 必須依存関係
