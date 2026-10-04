@@ -626,16 +626,15 @@ ${NESTED_TIMELINE_SECTION}
 - Parser/Validator Edge Case 事前計測 (`emit-event.sh` / `run-auto-sub.sh` を実行) で、空白を含む main repo root パスで anchor 先が切れる点と、複数の `#N` を含む subject が丸ごと除外される点が見つかった。どちらも CONSIDER で、前者は既存の `git worktree list` idiom と同じ既知の制約として今回は修正せず見送った (follow-up 候補)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘は無く、レビュー結果は COMMENT で投稿した。SHOULD 1 件 (bats の `|| false`) と、文書・コメントの CONSIDER 2 件をその場で修正した
-- `emit-event.sh` の空白パス・正規化の CONSIDER 2 件は、既存 idiom と同じ制約で実害が小さいため見送った
+- Pre-merge AC 5 件がチェック済みで review 完了も organic だったため、gate を通過して squash merge した (CI success、mergeable=clean)
 
 ### Deferred Items
-- `emit-event.sh` の `awk '{print $2}'` を行全体の取得に直すか (pointer 由来の `_root` も同じ idiom): follow-up 候補
 - Post-merge の observation AC (nested dispatch が起きた `/auto --batch` 実行での観察) は、nested dispatch が発生した実行を待つ
+- `emit-event.sh` の `awk '{print $2}'` を行全体の取得に直すか: follow-up 候補
 
 ### Notes for Next Phase
-- Pre-merge AC 5 件はチェック済み。CI は修正 commit の push 後にもう一度走る (修正は assertion・文書・コメントのみ)
+- verify では Post-merge の observation 条件の扱い (opportunistic / 待機) を確認する
 - `scripts/collect-run-facts.sh` と `scripts/hook-worktree-path-guard.sh` の同根の相対パス問題は、Spec の Notes のとおり意図的に範囲外
