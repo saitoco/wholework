@@ -120,17 +120,27 @@
 ### Pre-implementation FAIL check
 - Confirmed pre-implementation FAIL for 1 new test(s) (テスト (a) 相当の手動再現。旧 hook は `issue=0` で `4242` と不一致)。テスト (b) は未設定時の既定動作の固定であり修正前後とも PASS する想定
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note (Spec の Implementation Steps 1〜4 と PR diff は一致。`review-light` の 4 観点で指摘 0 件)
+
+### Recurring Issues
+- Nothing to note
+
+### Acceptance Criteria Verification Difficulty
+- AC4 (`command "bats ..."`) は `/code` 時点で bats 不在のため UNCERTAIN 扱いだったが、`/review` で CI の `Run bats tests` ジョブ (`tests/` 全体) の結果を参照して PASS と判定できた。verify command の書き方に問題は無い
+- Spec Notes の「スコープ外の観測」(ラッパーが相対パスの `AUTO_EVENTS_LOG` を export する場合、worktree 配下のイベントが worktree ローカルに出うる) は本 PR でも未対応のまま。`/verify` の retrospective で改善提案として集約する
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- hook の `emit_event` 呼び出しから `EMIT_ISSUE_NUMBER` の接頭辞代入だけを削除し、継承値は `emit_event()` 既定の `${EMIT_ISSUE_NUMBER:-0}` に任せた (Spec Notes の決定どおり。`WHOLEWORK_ISSUE_NUMBER` のフォールバックは残さない)
-- `AUTO_EVENTS_LOG` の接頭辞代入は維持した
+- `review-light` (4 観点) で指摘 0 件、CI 17 ジョブすべて SUCCESS のため、Step 12 の修正コミットなしで完了とした
+- AC1〜AC4 すべて PASS とし Issue のチェックボックスを更新した (AC4 は CI の bats ジョブで確認)
 
 ### Deferred Items
-- AC4 (`bats tests/hook-worktree-path-guard.bats`) と新規 bats 2 件は bats 不在のためローカル未実行 — PR の CI bats ジョブで確認 (`/review`)
-- Spec Notes の「スコープ外の観測」(ラッパーが相対パスの `AUTO_EVENTS_LOG` を export するため、worktree 配下のイベントが worktree ローカルの `.tmp/auto-events.jsonl` に出る可能性) は本 Issue の対象外のまま。`/verify` の retrospective で改善提案として集約
+- 相対パスの `AUTO_EVENTS_LOG` を wrapper が export する場合のイベント出力先の問題は本 Issue の対象外のまま (`/verify` の retrospective で改善提案として集約)
 
 ### Notes for Next Phase
-- 変更は `scripts/hook-worktree-path-guard.sh` (代入削除とコメント 2 行)、`scripts/emit-event.sh` (コメントのみ)、`modules/event-emission.md` (段落追加)、`tests/hook-worktree-path-guard.bats` (テスト 2 件追加)
-- `check-forbidden-expressions.sh` / `check-language-convention.py` はローカルで問題なし
+- Post-merge 条件は無い。`/merge 1505` に進める
