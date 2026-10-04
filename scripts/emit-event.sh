@@ -268,7 +268,9 @@ read_pgid_pointer() {
 # exported by a wrapper script.
 #
 # Resolution order (exhaustive), Issue #1075 (revised in #1224):
-#   1. AUTO_EVENTS_LOG already set             -> no-op, return 0 (existing behavior preserved)
+#   1. AUTO_EVENTS_LOG already set             -> keep it and return 0 (existing behavior preserved);
+#                                                  a relative value is first anchored to the main
+#                                                  repo root (Issue #1499, see below)
 #   2. AUTO_SESSION_ID already set             -> adopt it directly (in-band hand-off, e.g.
 #                                                  --session-id parsed by the caller; also fixes
 #                                                  the prior bug where a pre-set AUTO_SESSION_ID
@@ -310,8 +312,26 @@ read_pgid_pointer() {
 # search and AUTO_EVENTS_LOG with it. Outside a git repo (e.g. bats tmpdir
 # fixtures), `git worktree list` fails and the prefix stays empty, preserving
 # the previous CWD-relative behavior. bash 3.2+ compatible.
+#
+# Issue #1499: the rule above only covered an AUTO_EVENTS_LOG derived from a pointer file.
+# run-*.sh wrappers export the CWD-relative default `.tmp/auto-events.jsonl`, and a skill
+# nested in a wrapper phase (e.g. the /verify that /review dispatches) inherits it, so step 1
+# used to keep the relative value. Once that skill entered its own worktree the value resolved
+# inside the worktree, and every later event (phase_complete, ...) went to a worktree-local
+# file that is discarded at Worktree Exit. Step 1 now anchors a relative value to the main
+# repo root with the same `git worktree list --porcelain` idiom.
 restore_auto_session_pointer() {
-  [[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0
+  if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+    if [[ "${AUTO_EVENTS_LOG}" != /* ]]; then
+      local _anchor
+      _anchor="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')" || _anchor=""
+      if [[ -n "${_anchor}" ]]; then
+        AUTO_EVENTS_LOG="${_anchor}/${AUTO_EVENTS_LOG#./}"
+        export AUTO_EVENTS_LOG
+      fi
+    fi
+    return 0
+  fi
   local _root
   _root="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
   local _prefix=""

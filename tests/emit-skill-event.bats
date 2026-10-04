@@ -174,3 +174,35 @@ teardown() {
     [ "$status" -eq 1 ] || false
     [[ "$output" == *"Error:"*"emit-event.sh not found"* ]] || false
 }
+
+@test "a relative AUTO_EVENTS_LOG inherited from a wrapper is anchored to the main repo root when emitting from a linked worktree (issue #1499)" {
+    # Models a nested /verify dispatched from /review: run-*.sh export the CWD-relative default
+    # AUTO_EVENTS_LOG, and the skill's own Worktree Entry moves the CWD into a linked worktree
+    # before its phase_complete emit. The event must reach the main repo's log, not a
+    # worktree-local file that is discarded at Worktree Exit.
+    MAIN_REPO="$BATS_TEST_TMPDIR/main"
+    git init -q "$MAIN_REPO"
+    git -C "$MAIN_REPO" config user.email "test@example.com"
+    git -C "$MAIN_REPO" config user.name "Test"
+    echo "init" > "$MAIN_REPO/file.txt"
+    git -C "$MAIN_REPO" add -A
+    git -C "$MAIN_REPO" commit -q -m init
+    # Resolve to the real path (e.g. macOS /tmp -> /private/tmp) so it matches `git worktree list`.
+    MAIN_REPO="$(cd "$MAIN_REPO" && pwd -P)"
+    LINKED_WORKTREE="$BATS_TEST_TMPDIR/linked_wt"
+    git -C "$MAIN_REPO" worktree add -q -b worktree-verify+issue-1365 "$LINKED_WORKTREE"
+
+    run bash -c "cd \"$LINKED_WORKTREE\" && export AUTO_EVENTS_LOG=.tmp/auto-events.jsonl AUTO_SESSION_ID=sid-1499 && bash \"$SCRIPT\" 1365 phase_complete phase=verify"
+    [ "$status" -eq 0 ] || false
+    [ -f "$MAIN_REPO/.tmp/auto-events.jsonl" ] || false
+    run jq -r '.event' "$MAIN_REPO/.tmp/auto-events.jsonl"
+    [ "$output" = "phase_complete" ] || false
+    [ ! -e "$LINKED_WORKTREE/.tmp/auto-events.jsonl" ] || false
+}
+
+@test "a relative AUTO_EVENTS_LOG stays relative to the CWD outside a git repository (issue #1499)" {
+    run bash -c "cd \"$WORKDIR\" && export AUTO_EVENTS_LOG=.tmp/auto-events.jsonl AUTO_SESSION_ID=sid-1499 && bash \"$SCRIPT\" 1365 phase_start phase=verify"
+    [ "$status" -eq 0 ] || false
+    run jq -r '.event' "$WORKDIR/.tmp/auto-events.jsonl"
+    [ "$output" = "phase_start" ] || false
+}
