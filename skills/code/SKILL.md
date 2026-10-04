@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`. Does not update CLAUDE.md, run session retrospectives, or manage memory.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, git merge-base:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, gh pr checks:*, gh run view:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, git merge-base:*, git rev-parse:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, gh pr checks:*, gh run view:*, gh run list:*, gh run watch:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -469,8 +469,16 @@ If ROUTE is `patch` or `operate` (resolved in Step 0, which already applies the 
 
 **CI verification AC exclusion (route-agnostic):** Step 10 runs before the commit or PR that would produce a CI run for this Issue's own change exists, so a CI verification AC that depends on that commit or PR cannot be evaluated accurately at this point — evaluating it here would either reference an unrelated prior commit's CI, or find no target to check against at all. Exclude both of the following forms from this Step's verify-executor full-mode pass; **neither exclusion checks off its condition** — leave each as `- [ ]` (do not include them in the checkbox-flip loop of result branch 1 below, and do not count them toward "all PASS"):
 
-- **patch or operate route** — `github_check "gh run list"` (the `modules/verify-classifier.md` § "Patch Route CI Verification Note" canonical form, `--branch=main --limit=1`): for patch route, the implementation commit is not yet pushed at this point (it happens in Step 11); for operate route (no implementation diff), the retrospective commit is not yet pushed either (it happens in Step 12). Either way the most recent run on `main` still predates this Issue's own change — evaluating it here would check an unrelated prior commit's CI, not this Issue's. Verified for real when `/verify` runs post-merge, once the implementation commit (or the retrospective commit pushed alongside it) actually has a run.
+- **patch or operate route** — `github_check "gh run list"` (the `modules/verify-classifier.md` § "Patch Route CI Verification Note" canonical form, `--branch=main --limit=1`): for patch route, the implementation commit is not yet pushed at this point (the push happens in Step 14's merge-to-main exit; Step 11 only commits); for operate route (no implementation diff), the retrospective commit is not yet pushed either (it happens in Step 12). Either way the most recent run on `main` still predates this Issue's own change — evaluating it here would check an unrelated prior commit's CI, not this Issue's. Verified for real when `/verify` runs post-merge, once the implementation commit (or the retrospective commit pushed alongside it) actually has a run.
 - **pr route** — `github_check "gh pr checks" "<job>"`: at this point the PR does not yet exist (PR creation happens in Step 11), so `gh pr checks` has no target to evaluate against and returns UNCERTAIN. Verified for real by `/review`, once the PR and its checks exist.
+
+**bats-absent AC exclusion (patch route only):** when ROUTE is `patch`, check whether bats is installed before running verify-executor:
+
+```bash
+command -v bats
+```
+
+If nothing is printed (bats is not installed, which is typical of a headless execution environment), a pre-merge `command` AC whose command runs `bats` against files under `tests/` (for example `command "bats tests/foo.bats"`) cannot be evaluated here. Exclude every such AC from this Step's verify-executor pass and **do not check it off**: leave it as `- [ ]` (not in the checkbox-flip loop of result branch 1 below, not counted toward "all PASS"), and keep the list (index and condition text) as `BATS_DEFERRED_ACS` for the "CI-based bats AC confirmation" block in Step 14. A local approximation (for example `awk` / `grep -F` assertions standing in for the test body) is fine as your own early sanity check, but it is not evidence for the AC and must not be the basis for checking it off. Note the deferral in Step 12's Code Retrospective (`### Design Gaps/Ambiguities`) and Phase Handoff `### Deferred Items` as "pending post-push CI confirmation (Step 14)". When bats is installed, or on any other route, this exclusion does not apply and those ACs run in the verify-executor pass as usual.
 
 **Resolving `{{base_url}}` to localhost**: If verify commands contain `{{base_url}}`, resolve it before passing to verify-executor:
 
@@ -811,7 +819,54 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit s
 **patch route (merge-to-main pattern):**
 Follow "Exit: merge-to-main section". After push completes, transition the label (patch route skips `/merge`, so label transition happens here).
 
-**patch route (XS/S common)**: After push completes, post an `## Implementation Complete` summary comment to the Issue, then transition to `phase/verify`.
+**CI-based bats AC confirmation (patch route, only when Step 10 deferred bats ACs):**
+
+Fire condition: ROUTE is `patch`, the push above has completed, and `BATS_DEFERRED_ACS` from Step 10's bats-absent AC exclusion is non-empty. Otherwise skip this block entirely (no CI wait). Step 10 could not confirm those ACs because the commit that produces the CI run did not exist yet; now that it is pushed, the CI bats job's result stands in for the missing local bats run. Emit a progress line first so the watchdog resets its silence counter:
+
+```bash
+echo "progress: Confirming bats ACs against CI for issue #$NUMBER..."
+```
+
+1. **Resolve the pushed head SHA** as its own plain command (not via `$(...)`, which the worktree isolation guard refuses), then substitute the printed value literally in the commands below:
+
+   ```bash
+   git rev-parse origin/$BASE_BRANCH
+   ```
+
+   Do not use the worktree-local `HEAD`. A push gets one CI run, keyed on its head commit (here the retrospective commit), never on the implementation commit (`modules/verify-classifier.md` § "Patch Route CI Verification Note").
+2. **Identify the bats job**: find the workflow under `.github/workflows/` whose job runs `bats`, and note the workflow file name and that job's `name:` (the job id when `name:` is absent), e.g. `test.yml` and `Run bats tests` in this repository. Apply the identity rule of `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` § "CI Reference Fallback (safe mode + PR number present)" (run command containment): the job's bats target (e.g. `tests/`) must contain each deferred AC's `bats` target, and an AC whose target is not contained stays unchecked. If no workflow runs `bats`, stop here: leave every deferred AC unchecked and report "no CI job runs bats; deferred to /verify".
+3. **Find the run for the pushed commit**:
+
+   ```bash
+   gh run list --workflow=<workflow-file> --commit <SHA> --event push --limit 1 --json databaseId,status,conclusion
+   ```
+
+   All three filters are required: `--commit` alone also returns unrelated runs on the same SHA (for example issue-event automation workflows). If the result is `[]`, the run may not be registered yet; repeat the same command up to 2 more times as separate calls (no `sleep` loop), and if it is still empty treat it as "no run found" (see the table below).
+4. **Wait for the run** (skip this when step 3 already reports `completed`), in the foreground with Bash `timeout: 600000` and never `run_in_background: true` (see Step 9's execution surface constraint):
+
+   ```bash
+   gh run watch <run-id> --compact --interval 30
+   ```
+
+   This repository's CI run takes roughly 3 to 5 minutes (189 to 277 seconds over the 25 most recent `main` runs, measured 2026-10-04), well inside the ceiling. `gh run watch` returns only when the whole run completes, including unrelated jobs, so a stalled unrelated job can hold it until the ceiling. If the tool backgrounds the command at the ceiling, treat the wait as ended and continue; never wait for its completion notification (`modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"). Do not use the watch's exit status as the verdict: it is run-level, which is why `--exit-status` is omitted.
+5. **Read the bats job's own result**, however step 4 ended:
+
+   ```bash
+   gh run view <run-id> --json jobs --jq '.jobs[] | select(.name == "<bats job name>") | {status, conclusion}'
+   ```
+
+   The job's own result is the verdict: not the workflow run's (it also reflects unrelated jobs) and not a single step's (this repository's bats step is `continue-on-error`, and a serial re-run step decides the job's final result).
+6. **Branch on the result (exhaustive)**:
+
+   | Result of step 5 | Handling |
+   |------------------|----------|
+   | `status` is `completed` and `conclusion` is `success` | Confirmed. Check off each deferred AC that passed step 2's identity rule, using the checkbox procedure of Step 10 result branch 1 (if fetching the Issue body fails, skip the check-off and leave the ACs unchecked). In the Implementation Complete comment's `### Tests`, record: bats not run locally (unavailable), confirmed by CI job `<name>` (run URL, short SHA): success. |
+   | `status` is `completed` and `conclusion` is anything else (`failure`, `cancelled`, `timed_out`, ...) | CI failure. Leave the ACs unchecked. Do not try to fix, revert, or force-push from here: the commit is already on the base branch, and continuing lets `/verify` re-evaluate the ACs and reopen the Issue on FAIL (classifying CI infrastructure failures is left to `modules/ci-failure-classifier.md` in `/verify`). Record the job name, conclusion, and run URL in `### Tests` and in the completion message, then continue to the comment and label transition below; do not exit non-zero. |
+   | `status` is not `completed` (`queued` / `in_progress`), no run was found, the job is absent from the run, or any command above failed or returned unparsable output | Still running or unknown. Leave the ACs unchecked, deferred to /verify; do not wait further and do not re-run the wait. Record "CI result pending at /code time; bats ACs deferred to /verify" in `### Tests`, then continue. |
+
+   Only a completed job with conclusion `success` ever checks an AC. Every other outcome leaves it `- [ ]`, so partial evidence can never produce a false PASS.
+
+**patch route (XS/S common)**: After push completes (and after the CI-based bats AC confirmation above, when it fired), post an `## Implementation Complete` summary comment to the Issue, then transition to `phase/verify`.
 
 **Implementation Complete comment (patch route, before label transition):**
 

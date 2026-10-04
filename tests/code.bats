@@ -233,3 +233,82 @@ LANG_CHECK_DOC="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/code/l
 @test "language-convention-check.md requires fixing violations before committing" {
     grep -qF 'before committing' "$LANG_CHECK_DOC" || false
 }
+
+# bats-absent CI confirmation for patch route (Issue #1490)
+
+# Extract Step 10 section: from "### Step 10:" to the next "### " heading
+step10_section() {
+    awk '/^### Step 10:/{found=1} found && /^### / && !/^### Step 10:/{exit} found{print}' "$1"
+}
+
+# Extract Step 14 section: from "### Step 14:" to the next "### " heading
+step14_section() {
+    awk '/^### Step 14:/{found=1} found && /^### / && !/^### Step 14:/{exit} found{print}' "$1"
+}
+
+@test "SKILL.md allowed-tools pre-approves gh run list, gh run watch and git rev-parse for the bats CI confirmation" {
+    head -6 "$SKILL_FILE" | grep -qF 'gh run list:*' || false
+    head -6 "$SKILL_FILE" | grep -qF 'gh run watch:*' || false
+    head -6 "$SKILL_FILE" | grep -qF 'git rev-parse:*' || false
+}
+
+@test "Step 10 excludes bats command ACs when bats is absent on patch route" {
+    section="$(step10_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'bats-absent AC exclusion' || false
+    printf '%s\n' "$section" | grep -qF 'command -v bats' || false
+    printf '%s\n' "$section" | grep -qF 'BATS_DEFERRED_ACS' || false
+}
+
+@test "Step 10 bats-absent exclusion leaves the AC unchecked and rejects approximations as evidence" {
+    section="$(step10_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'do not check it off' || false
+    printf '%s\n' "$section" | grep -qF 'is not evidence for the AC' || false
+}
+
+@test "Step 10 CI AC exclusion places the patch route push in Step 14" {
+    section="$(step10_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'the push happens in Step 14' || false
+}
+
+@test "Step 14 documents the CI-based bats AC confirmation with gh run list and gh run watch" {
+    section="$(step14_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'CI-based bats AC confirmation' || false
+    printf '%s\n' "$section" | grep -qF 'gh run watch <run-id> --compact --interval 30' || false
+    printf '%s\n' "$section" | grep -qF 'BATS_DEFERRED_ACS' || false
+}
+
+@test "Step 14 CI confirmation resolves the pushed head SHA as a separate literal step" {
+    section="$(step14_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'git rev-parse origin/$BASE_BRANCH' || false
+    if printf '%s\n' "$section" | grep -qF '$(git rev-parse'; then
+        false
+    fi
+}
+
+@test "Step 14 CI confirmation filters the run by workflow, commit and push event" {
+    section="$(step14_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'gh run list --workflow=<workflow-file> --commit <SHA> --event push' || false
+}
+
+@test "Step 14 CI confirmation reads the bats job conclusion rather than the workflow level result" {
+    section="$(step14_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'select(.name == "<bats job name>")' || false
+    printf '%s\n' "$section" | grep -qF 'Only a completed job with conclusion' || false
+}
+
+@test "Step 14 CI confirmation defers to verify when CI is still running and handles CI failure without exiting" {
+    section="$(step14_section "$SKILL_FILE")"
+    printf '%s\n' "$section" | grep -qF 'Still running or unknown' || false
+    printf '%s\n' "$section" | grep -qF 'deferred to /verify' || false
+    printf '%s\n' "$section" | grep -qF 'CI failure' || false
+    printf '%s\n' "$section" | grep -qF 'do not exit non-zero' || false
+}
+
+@test "Step 14 CI confirmation runs after the push and before the Implementation Complete comment" {
+    section="$(step14_section "$SKILL_FILE")"
+    ci_line="$(printf '%s\n' "$section" | grep -nF 'CI-based bats AC confirmation' | head -1 | cut -d: -f1)"
+    comment_line="$(printf '%s\n' "$section" | grep -nF 'Implementation Complete comment (patch route, before label transition)' | head -1 | cut -d: -f1)"
+    [ -n "$ci_line" ] || false
+    [ -n "$comment_line" ] || false
+    [ "$ci_line" -lt "$comment_line" ] || false
+}
