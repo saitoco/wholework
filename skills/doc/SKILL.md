@@ -73,7 +73,7 @@ The `type` and `ssot_for` values here are the SSoT for frontmatter (`type: steer
 |----------|--------------|------|----------|
 | product.md | `skills/doc/product-template.md` | steering | vision, non-goals, terminology |
 | tech.md | `skills/doc/tech-template.md` | steering | tech-stack, coding-conventions, forbidden-expressions |
-| structure.md | `skills/doc/structure-template.md` | steering | directory-layout, agent-includes-catalog |
+| structure.md | `skills/doc/structure-template.md` | steering | directory-layout, agent-catalog |
 
 ---
 
