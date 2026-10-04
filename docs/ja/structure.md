@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (98 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (97 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -36,7 +36,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (134 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (133 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -255,7 +255,6 @@ wholework/
 - `scripts/check-eager-load-capability.sh` — eager-load される共有モジュール (verify-patterns.md、verify-executor.md) に混入した capability ガイダンスを検出する。/audit drift Step 2 から呼び出される
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの整合性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md の frontmatter と構文を検証
-- `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複を検出
 - `scripts/check-verify-dirty.sh` — /verify Step 1 用のセッション認識ダーティファイル分類器 (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (attribution-undetermined フォールバック) の 7 分類。own-issue-scope と foreign-session は Issue 自身の Spec の `## Changed Files` マニフェストに対して判定される。owning Issue が OPEN かつアクティブな `phase/*` ラベル (`phase/done` 以外) を持つ、無関係な spec ファイルも `gh issue view` によって foreign-session に再分類され、`gh` 失敗時は既存の blocking 分類にフォールバックする。stderr に classify=... を出力する)
 - `scripts/check-session-findings-disposition.sh` — L3 の `session.md` 内で正規の disposition タグを欠く `## Findings` の箇条書きを検出する。コミット直前に `skills/auto/SKILL.md` Step 5 から warn-only で呼び出される
 - `scripts/check-skill-change-observation-ac.sh` — Issue 本文が `skills/*/SKILL.md` を参照しているにもかかわらず `session=next` を欠くマージ後 `verify-type: observation` AC を検出する。`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
