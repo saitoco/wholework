@@ -334,7 +334,7 @@ that UNCERTAIN state — not `/verify` — is the responsibility of re-running `
 
 ### Checkbox Updates
 
-For "Pre-merge (auto-verified)" conditions that PASS in Step 7 verification, update Issue checkboxes:
+For "Pre-merge (auto-verified)" conditions that PASS in Step 8 verification, update Issue checkboxes:
 
 Write to `.tmp/issue-body-$ISSUE_NUMBER.md` using the Write tool, then run:
 ```bash
@@ -350,7 +350,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$
 
 ## Step 9: CI Status Check
 
-After Step 7, wait for all CI checks to reach terminal state, then check the PR's overall CI status:
+After Step 8, wait for all CI checks to reach terminal state, then check the PR's overall CI status:
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh "$NUMBER"
@@ -547,7 +547,7 @@ Run this section after the Base Branch Conflict Pre-check above, before evaluati
 
 **Workflow path (opt-in)**: After the Base Branch Conflict Pre-check above, when `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
 
-**In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
+**In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 8 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 8 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
 
 ### 10.0. Lightweight Integrated Review (REVIEW_DEPTH=light only)
 
@@ -729,7 +729,7 @@ Reason: {explanation}"""
 
 ## Step 11: Post Review Results
 
-Integrate Steps 7 (acceptance criteria verification), 8 (CI status), and 10 (parallel review) and post as a GitHub Pull Request Review.
+Integrate Steps 8 (acceptance criteria verification), 9 (CI status), and 10 (parallel review) and post as a GitHub Pull Request Review.
 
 Before posting, emit a progress line so the watchdog resets its silence counter:
 ```bash
@@ -737,15 +737,15 @@ echo "progress: Posting review results for PR #$NUMBER..."
 ```
 
 1. `mkdir -p .tmp`
-2. **When Step 9 was run (both full and light mode)**: `.tmp/review-body-$NUMBER.md` already generated in Step 9 (no Write needed). **When Step 9 was entirely skipped** (only when Issue number was not extractable and Step 7 was also skipped): write Review body (acceptance criteria table + CI status) to `.tmp/review-body-$NUMBER.md`
+2. **When Step 10 was run (both full and light mode)**: `.tmp/review-body-$NUMBER.md` already generated in Step 10 (no Write needed). **When Step 10 was entirely skipped** (only when Issue number was not extractable and Step 8 was also skipped): write Review body (acceptance criteria table + CI status) to `.tmp/review-body-$NUMBER.md`
 3. Post review to PR via script:
 
-When Step 9 was run (with line comments):
+When Step 10 was run (with line comments):
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md" ".tmp/review-comments-$NUMBER.json"
 ```
 
-When Step 9 was skipped (no line comments):
+When Step 10 was skipped (no line comments):
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md"
 ```
@@ -803,22 +803,22 @@ Recommended fix:
 Next: run `/merge $NUMBER`.
 ```
 
-(When Step 9 was entirely skipped, replace Code Review section with:)
+(When Step 10 was entirely skipped, replace Code Review section with:)
 ```markdown
 ## Code Review
 
-Step 9 skipped (Issue number not extractable, Step 7 also skipped).
+Step 10 skipped (Issue number not extractable, Step 8 also skipped).
 ```
 
 (When MUST issues exist, change the footer to:)
 ```
 ---
-MUST issues found. After fixing in Step 11 and posting response summary in Step 13, run `/merge $NUMBER`.
+MUST issues found. After fixing in Step 12 and posting response summary in Step 14, run `/merge $NUMBER`.
 ```
 
-### review-only mode: Branch after Step 10 completes
+### review-only mode: Branch after Step 11 completes
 
-If `REVIEW_ONLY=true`, skip Steps 11/12/13/retrospective and output the following completion report. No status label transition (maintain `phase/review`).
+If `REVIEW_ONLY=true`, skip Steps 12/13/14/retrospective and output the following completion report. No status label transition (maintain `phase/review`).
 
 ```
 ## Review Complete (review-only mode)
@@ -834,7 +834,7 @@ Fixes should be handled by the user or Copilot.
 
 ## Step 12: Issue Resolution and Fixes
 
-**With `--review-only` mode**: skip Step 11 and output review-only completion report.
+**With `--review-only` mode**: skip this step (Step 12) and output review-only completion report.
 
 After posting Step 10 review results, if Claude review issues exist:
 
@@ -875,7 +875,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 If `scripts/validate-skill-syntax.py` exists, read `skills/review/skill-dev-recheck.md` and follow "Step 12.3: Re-run validate-skill-syntax".
 
 After fixes, run a lightweight re-check focused on changed areas:
-- Light re-check (not full Step 7+9 re-run) focused on changed areas
+- Light re-check (not full Step 8+10 re-run) focused on changed areas
 - Check for new issues
 - Re-run tests/validation — if this re-check selects a full-suite run, the `## Non-Interactive Mode Behavior` section's foreground execution constraint applies here too (no `run_in_background: true`, explicit `timeout` inside the 600000 ms ceiling, and the parallel `bats --jobs ...` form for a whole bats suite); see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"
 - If new MUST issues found in re-check, return to Step 12.2
@@ -893,15 +893,15 @@ After fixes, run a lightweight re-check focused on changed areas:
 - [aspect name] filename:line — issue summary (skip reason)
 ```
 
-**If no issues**: skip Step 11 and proceed to Step 13.
+**If no issues**: skip Step 12 and proceed to Step 13.
 
 ---
 
 ## Step 13: Acceptance Criteria Consistency Check
 
-**With `--review-only` mode**: skip Step 12 and output review-only completion report.
+**With `--review-only` mode**: skip Step 13 and output review-only completion report.
 
-After Step 11 issue resolution (including when Step 11 was skipped), check consistency between changes and acceptance criteria.
+After Step 12 issue resolution (including when Step 12 was skipped), check consistency between changes and acceptance criteria.
 
 ### 13.1. Policy Change Detection
 
@@ -920,7 +920,7 @@ Policy change detection patterns:
 
 Assess whether any changes contradict the acceptance criteria (verify command text or condition descriptions).
 
-**If no policy changes** (or no implementation changes in Step 7/12): skip this step and proceed to Step 13.
+**If no policy changes** (or no implementation changes in Step 7/12): skip this step and proceed to Step 14.
 
 ### 13.2. Update Issue Body (only on policy change detection)
 
@@ -996,11 +996,11 @@ Template:
 
 The `<!-- review-summary -->` marker line must be included verbatim even when the heading is localized, and must be placed as the **first line of the comment body** (before the heading). `reconcile-phase-state.sh` detects review completion via this language-independent marker.
 
-**If no Claude response (Step 11 skipped)**: omit Claude section.
+**If no Claude response (Step 12 was skipped)**: omit Claude section.
 
 **If Step 10 was entirely skipped**: replace Claude review section with "Step 10 skipped (Issue number not extractable)". **In light mode (`REVIEW_DEPTH=light`)**: include `review-light` agent results in the Claude review section showing all 4 aspects.
 
-**If no acceptance criteria updates (Step 12 skipped)**: omit that section.
+**If no acceptance criteria updates (Step 13 skipped)**: omit that section.
 
 ### 14.2. Post PR Comment
 
