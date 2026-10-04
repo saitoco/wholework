@@ -334,9 +334,13 @@ if [[ -z "$PHASE_ACTIVITY_TABLE" ]]; then
   PHASE_ACTIVITY_TABLE="| (no phase events) | 0 |"
 fi
 
-# Sub-Issue Completion Timeline — per-issue with Route, Phase breakdown, PR, Recovery, Notes
+# Sub-Issue Completion Timeline — per-issue with Route, Phase breakdown, PR, Recovery, Notes.
+# Issues that only ran as a skill nested inside another Issue's review/merge phase (e.g. the
+# /verify that /review's Event-based observation scan dispatches) are listed in a separate
+# "Nested dispatch" table instead of among the batch targets (issue #1499).
 ISSUE_NUMS_FOR_TABLE=$(echo "$PROCESSED_ISSUES_JSON" | jq -r '.[]' 2>/dev/null || true)
 COMPLETION_TIMELINE_TABLE=""
+NESTED_TIMELINE_TABLE=""
 for _num in $ISSUE_NUMS_FOR_TABLE; do
   _issue_events=$(echo "$EVENTS_JSON" | jq --argjson n "$_num" '[.[] | select(.issue == $n)]' 2>/dev/null || echo "[]")
   _first_ts=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "phase_start") | .ts] | sort | first // "?"' 2>/dev/null || echo "?")
@@ -376,6 +380,33 @@ for _num in $ISSUE_NUMS_FOR_TABLE; do
     ) | if length == 0 then "—" else join(" → ") end
   ' 2>/dev/null || echo "—")
   [[ -z "$_phase_breakdown" ]] && _phase_breakdown="—"
+  # Nested dispatch detection (issue #1499). emit_event() adds a "pr" field only from the
+  # EMIT_PR_NUMBER exported by the review/merge phase wrappers, so a phase_start that carries
+  # "pr" but is neither a review nor a merge phase was emitted by a skill nested in another
+  # Issue's phase, and its "pr" is that parent phase's PR number. An Issue is a nested dispatch
+  # only when every phase_start it recorded is of that kind and it has no sub_start: a batch
+  # target that was also dispatched nested stays among the batch targets.
+  _is_nested=$(echo "$_issue_events" | jq -r '
+    def nested_start: .event == "phase_start" and .pr != null and (.phase != "review" and .phase != "merge");
+    ([.[] | select(nested_start)] | length) as $n_nested |
+    ([.[] | select(.event == "sub_start" or (.event == "phase_start" and (nested_start | not)))] | length) as $n_other |
+    ($n_nested > 0 and $n_other == 0)
+  ' 2>/dev/null || echo "false")
+  if [[ "$_is_nested" == "true" ]]; then
+    # Parent phase: the review/merge phase_start of another Issue that carries the same "pr".
+    _parent=$(echo "$EVENTS_JSON" | jq -r --argjson n "$_num" '
+      ([.[] | select(.issue == $n and .event == "phase_start" and .pr != null) | .pr] | first) as $pr |
+      if $pr == null then "?"
+      else
+        ([.[] | select(.event == "phase_start" and .pr == $pr and .issue != $n and (.phase == "review" or .phase == "merge"))] | sort_by(.ts) | first) as $p |
+        if $p == null then "PR #\($pr)" else "#\($p.issue) \($p.phase) (PR #\($pr))" end
+      end
+    ' 2>/dev/null || echo "?")
+    [[ "$_last_ts" == "?" ]] && _last_ts="(completion not recorded)"
+    NESTED_TIMELINE_TABLE+="| #${_num} | ${_parent} | ${_first_ts} – ${_last_ts} | ${_phase_breakdown} |
+"
+    continue
+  fi
   # PR lookup
   _pr_col="—"
   if [[ "$NO_GITHUB" == "false" ]]; then
@@ -436,6 +467,14 @@ for _num in $ISSUE_NUMS_FOR_TABLE; do
 "
 done
 [[ -z "$COMPLETION_TIMELINE_TABLE" ]] && COMPLETION_TIMELINE_TABLE="| (no events) | — | — | — | — | — | — |"
+NESTED_TIMELINE_SECTION=""
+if [[ -n "$NESTED_TIMELINE_TABLE" ]]; then
+  NESTED_TIMELINE_SECTION="#### Nested dispatch (inside another Issue's phase)
+
+| Issue | Parent phase | Duration | Phase breakdown |
+|---|---|---|---|
+${NESTED_TIMELINE_TABLE}"
+fi
 
 # Token Usage Aggregate — per-issue if schema has issue granularity, else session total
 TOKEN_USAGE_TABLE=$(echo "$EVENTS_JSON" | jq -r '
@@ -707,7 +746,7 @@ ${PHASE_ACTIVITY_TABLE}
 | Issue | Size/Route | Duration | Phase breakdown | PR | Recovery | Notes |
 |---|---|---|---|---|---|---|
 ${COMPLETION_TIMELINE_TABLE}
-
+${NESTED_TIMELINE_SECTION}
 ### Token Usage Aggregate
 
 ${TOKEN_USAGE_HEADER}

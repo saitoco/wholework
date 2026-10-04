@@ -591,3 +591,51 @@ ${NESTED_TIMELINE_SECTION}
 
 - saito / MEMBER / first-class / ## Issue Retrospective (曖昧点の自動解決と `/spec` への調査メモ。欠落の原因は emit 経路側の可能性が高い) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981366913
 - saito / MEMBER / first-class / ℹ️ Triage AC audit (注意喚起: 新規テストの検出力。欠陥を再現する入力で修正前に FAIL することの確認の依頼) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981379525
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec のコードどおりに適用した (テストは Spec のコードブロックを抽出して挿入し、実装は 3 つの script と 2 つの文書に字面どおり反映)
+
+### Design Gaps/Ambiguities
+- bats が未インストールだったため、bats 本体は実行していない。代わりに `.tmp/` に簡易ランナー (`@test` / `setup` / `run` / `$status` / `$output` を扱うもの。bats 本体ではない) を作って検証した。`bats tests/` 全件の確認は push 後の CI の `Run bats tests` job に委ねる (pr route。`/review` が CI を参照する)
+- Pre-implementation FAIL 確認: 新規テスト 7 件のうち、欠陥を再現する 5 件が実装前に FAIL し、対照の 2 件が PASS することを確認した (期待どおり)。
+  - `run-auto-sub.bats` 2 件: FAIL
+  - `emit-skill-event.bats` 1 件目: FAIL / 2 件目: PASS (相対パスが git 外で変わらないことの退行ガード)
+  - `get-auto-session-report.bats` 1・2 件目: FAIL / 3 件目: PASS (batch 対象でもある Issue は主表に残ることの退行ガード)
+  - 実装後は 7 件とも PASS。各 Step の (a) を先に追加して FAIL を確認してから (b) に進む順序を守った
+- 影響を受ける既存テストを簡易ランナーで実行した結果: `run-auto-sub` 101 件、`emit-skill-event` 21 件、`emit-event` 33 件、`get-auto-session-report` 22 件、`run-spec` / `run-review` / `run-issue` / `run-merge` / `run-code` / `claude-watchdog` / `wait-ci-checks` / `auto-sub-observability` / `audit-auto-session` が全件 PASS。`run-fact-matching` の `apply-run-fact-match` 3 件 (tier 判定) は FAIL だが、Spec の Notes が簡易ランナーと bats 本体の差による既存の事象として事前に記録したものと一致し、今回の変更とは無関係と判断した
+- Step 10: pre-merge の rubric 4 件は実装で満たされるが、`command "bats tests/"` は bats 未インストールのため UNCERTAIN。「全件 PASS」の条件を満たさないので、Issue 本文のチェックボックスは変更していない (`/review` が PR の CI を参照して確定する)
+- `CLAUDE_PLUGIN_ROOT` が未設定の環境だったため、modules / scripts はリポジトリ直下の相対パスで参照した
+
+### Rework
+- worktree の isolation guard が `sed` の `r` コマンドや `xargs` 経由の `sh` を拒否したため、テストの挿入は python3、並列実行は `.tmp/runall.sh` に切り替えた。実装の手戻りは無し
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Changed Files・Implementation Steps と PR の diff は字面どおり一致していた。構造的な乖離は無い。`/code` が Spec のコードブロックをそのまま適用したことで、逸脱の余地が小さかった
+- Code Retrospective の「`bats tests/` 全件は CI に委ねる (UNCERTAIN)」は、CI の `Run bats tests` が 2 run とも成功したため解消済み。Spec の Uncertainty 2 (macOS / bash 3.2) は、Spec が定めた範囲 (CI の `macOS shell compatibility` の `bash -n`) が成功したことで確認を終えた
+
+### Recurring issues
+- 同種の指摘が 2 件あった: 新規 bats テストの素の `[[ ]]` に `|| false` が無い (SHOULD、修正済み) こと。`scripts/check-bare-bracket-assertions.sh` は `$output` / `$status` だけを走査するため、`$nested_row` のようなテスト内ローカル変数への assertion は検出されず、CI も通る。検査範囲の拡張は別途検討の余地がある (今回は Issue 化せず記録のみ)
+- 文書の記号 (a)/(b)/(c) と、コードコメントの (a)/(b)/(c)/(d) が食い違う: Spec が文書側の文言を指定していたため逸脱ではないが、分類を後から拡張した箇所では、文書とコードの記号の対応が崩れやすい
+
+### Acceptance criteria verification difficulty
+- Pre-merge 5 件はすべて PASS (rubric 4 件は diff で、`bats tests/` は CI で判定)。UNCERTAIN は無かった
+- Parser/Validator Edge Case 事前計測 (`emit-event.sh` / `run-auto-sub.sh` を実行) で、空白を含む main repo root パスで anchor 先が切れる点と、複数の `#N` を含む subject が丸ごと除外される点が見つかった。どちらも CONSIDER で、前者は既存の `git worktree list` idiom と同じ既知の制約として今回は修正せず見送った (follow-up 候補)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 指摘は無く、レビュー結果は COMMENT で投稿した。SHOULD 1 件 (bats の `|| false`) と、文書・コメントの CONSIDER 2 件をその場で修正した
+- `emit-event.sh` の空白パス・正規化の CONSIDER 2 件は、既存 idiom と同じ制約で実害が小さいため見送った
+
+### Deferred Items
+- `emit-event.sh` の `awk '{print $2}'` を行全体の取得に直すか (pointer 由来の `_root` も同じ idiom): follow-up 候補
+- Post-merge の observation AC (nested dispatch が起きた `/auto --batch` 実行での観察) は、nested dispatch が発生した実行を待つ
+
+### Notes for Next Phase
+- Pre-merge AC 5 件はチェック済み。CI は修正 commit の push 後にもう一度走る (修正は assertion・文書・コメントのみ)
+- `scripts/collect-run-facts.sh` と `scripts/hook-worktree-path-guard.sh` の同根の相対パス問題は、Spec の Notes のとおり意図的に範囲外

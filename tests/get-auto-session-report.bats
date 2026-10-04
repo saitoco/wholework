@@ -394,3 +394,67 @@ FIXTURE_EOF
     echo "$output" | grep -q "within 600s of watchdog limit"
     echo "$output" | grep -q "Phase silent windows > threshold | 1 (spec:1)"
 }
+
+@test "Timeline: an Issue dispatched inside another Issue's review phase is listed apart from batch targets, with no unknown end time (issue #1499)" {
+    # Models session 1123127-1791088655: the review of #1491 (PR #1498) ran a nested /verify for
+    # #1365. Its phase_start carries the review's PR number in "pr", and it never recorded a
+    # phase_complete.
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-10-04T05:30:00Z","issue":100,"event":"sub_start","session_id":"session-nested","size":"M"}
+{"ts":"2026-10-04T05:31:00Z","issue":100,"event":"phase_start","session_id":"session-nested","phase":"code-pr"}
+{"ts":"2026-10-04T05:50:00Z","issue":100,"event":"phase_complete","session_id":"session-nested","phase":"code-pr"}
+{"ts":"2026-10-04T06:00:00Z","issue":100,"event":"phase_start","session_id":"session-nested","pr":900,"phase":"review"}
+{"ts":"2026-10-04T06:14:00Z","issue":200,"event":"phase_start","session_id":"session-nested","pr":900,"phase":"verify"}
+{"ts":"2026-10-04T06:20:00Z","issue":100,"event":"phase_complete","session_id":"session-nested","pr":900,"phase":"review"}
+{"ts":"2026-10-04T06:21:00Z","issue":100,"event":"sub_complete","session_id":"session-nested","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-nested" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    batch_rows="$(echo "$output" | sed -n '/^### Sub-Issue Completion Timeline/,/^#### Nested dispatch/p')"
+    nested_rows="$(echo "$output" | sed -n '/^#### Nested dispatch/,/^### Token Usage Aggregate/p')"
+    echo "$batch_rows" | grep -q "| #100 |"
+    if echo "$batch_rows" | grep -q "| #200 |"; then false; fi
+    echo "$nested_rows" | grep -q "| #200 | #100 review (PR #900) |"
+    echo "$nested_rows" | grep -q "(completion not recorded)"
+    if echo "$nested_rows" | grep -q "– ?"; then false; fi
+}
+
+@test "Timeline: a nested Issue that recorded phase_complete shows its end time and phase duration (issue #1499)" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-10-04T05:30:00Z","issue":100,"event":"sub_start","session_id":"session-nested-done","size":"M"}
+{"ts":"2026-10-04T06:00:00Z","issue":100,"event":"phase_start","session_id":"session-nested-done","pr":900,"phase":"review"}
+{"ts":"2026-10-04T06:14:00Z","issue":200,"event":"phase_start","session_id":"session-nested-done","pr":900,"phase":"verify"}
+{"ts":"2026-10-04T06:18:00Z","issue":200,"event":"phase_complete","session_id":"session-nested-done","pr":900,"phase":"verify"}
+{"ts":"2026-10-04T06:20:00Z","issue":100,"event":"phase_complete","session_id":"session-nested-done","pr":900,"phase":"review"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-nested-done" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    nested_row="$(echo "$output" | grep "| #200 |")"
+    [[ "$nested_row" == *"| #100 review (PR #900) |"* ]] || false
+    [[ "$nested_row" == *"2026-10-04T06:14:00Z – 2026-10-04T06:18:00Z"* ]] || false
+    [[ "$nested_row" == *"verify 4m"* ]] || false
+    if [[ "$nested_row" == *"(completion not recorded)"* ]]; then false; fi
+}
+
+@test "Timeline: a batch target that was also dispatched nested stays among batch targets, and no nested table appears without nested events (issue #1499)" {
+    # #300 is a batch target of its own (sub_start + code-patch) and is also dispatched once from
+    # #100's review. It must stay a batch row: only an Issue whose every phase_start is nested counts
+    # as a nested dispatch. #100's own review phase_start carries "pr" too but is a review phase.
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-10-04T05:00:00Z","issue":300,"event":"sub_start","session_id":"session-both","size":"S"}
+{"ts":"2026-10-04T05:01:00Z","issue":300,"event":"phase_start","session_id":"session-both","phase":"code-patch"}
+{"ts":"2026-10-04T05:10:00Z","issue":300,"event":"phase_complete","session_id":"session-both","phase":"code-patch"}
+{"ts":"2026-10-04T06:00:00Z","issue":100,"event":"sub_start","session_id":"session-both","size":"M"}
+{"ts":"2026-10-04T06:01:00Z","issue":100,"event":"phase_start","session_id":"session-both","pr":900,"phase":"review"}
+{"ts":"2026-10-04T06:14:00Z","issue":300,"event":"phase_start","session_id":"session-both","pr":900,"phase":"verify"}
+{"ts":"2026-10-04T06:20:00Z","issue":100,"event":"phase_complete","session_id":"session-both","pr":900,"phase":"review"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-both" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "| #300 |"
+    echo "$output" | grep -q "| #100 |"
+    if echo "$output" | grep -q "^#### Nested dispatch"; then false; fi
+}

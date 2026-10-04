@@ -1642,6 +1642,131 @@ MOCK
     grep -q "concurrent_commit_detected.*commit_sha=ccc3333" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "concurrent_commit_detected: a commit of a nested-dispatched Issue is not emitted during the review phase (issue #1499)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export AUTO_SESSION_ID="session-1499"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # Mock run-review.sh: while the review phase runs, a /verify nested in it (for another Issue,
+    # #1365) records its phase_start. In production emit_event() adds the "pr" field from the
+    # EMIT_PR_NUMBER that run_phase_with_recovery exports for review/merge phases, so the nested
+    # event carries this review phase's PR number (99 under the default gh mock).
+    cat > "$MOCK_DIR/run-review.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_REVIEW_LOG"
+printf '{"ts":"%s","issue":1365,"event":"phase_start","session_id":"%s","pr":%s,"phase":"verify"}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$AUTO_SESSION_ID" "$EMIT_PR_NUMBER" >> "$AUTO_EVENTS_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    # Mock git: origin/main has one commit whose subject names the nested Issue (#1365), like the
+    # consumed-comments commit a nested /verify makes.
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "eee5555 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"eee5555"* ]]; then
+  echo "Add consumed comments fallback for issue #1365 (verify phase)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    # Positive control: before any nested phase_start exists (code-pr phase) the same commit is
+    # still flagged, so the fixture does reach the emit path.
+    grep -q "concurrent_commit_detected phase=code-pr commit_sha=eee5555" "$BATS_TEST_TMPDIR/emit.log"
+    # The review phase recorded the nested phase_start, so its commit is not a concurrent commit.
+    ! grep -q "concurrent_commit_detected phase=review " "$BATS_TEST_TMPDIR/emit.log"
+}
+
+@test "concurrent_commit_detected: nested exclusion does not hide sibling sub-issues, other sessions or earlier windows (issue #1499)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export AUTO_SESSION_ID="session-1499"
+    export EMIT_ISSUE_NUMBER="42"
+
+    # Recorded long before this run: same session and same PR number, but outside the review
+    # phase window (#2002).
+    printf '%s\n' '{"ts":"2020-01-01T00:00:00Z","issue":2002,"event":"phase_start","session_id":"session-1499","pr":99,"phase":"verify"}' > "$AUTO_EVENTS_LOG"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # Mock run-review.sh records three phase_start events during the review phase:
+    #   #1365: nested /verify of this session (inherits this phase's PR number) -> excluded
+    #   #2001: a parallel sibling sub-issue of the same session (no pr field)  -> still detected
+    #   #2003: another session's run that happens to carry the same PR number -> still detected
+    cat > "$MOCK_DIR/run-review.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_REVIEW_LOG"
+NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf '{"ts":"%s","issue":1365,"event":"phase_start","session_id":"%s","pr":%s,"phase":"verify"}\n' "$NOW" "$AUTO_SESSION_ID" "$EMIT_PR_NUMBER" >> "$AUTO_EVENTS_LOG"
+printf '{"ts":"%s","issue":2001,"event":"phase_start","session_id":"%s","phase":"code-patch"}\n' "$NOW" "$AUTO_SESSION_ID" >> "$AUTO_EVENTS_LOG"
+printf '{"ts":"%s","issue":2003,"event":"phase_start","session_id":"other-session","pr":%s,"phase":"verify"}\n' "$NOW" "$EMIT_PR_NUMBER" >> "$AUTO_EVENTS_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"log origin/main"* ]]; then
+  printf '%s\n' "eee5555 Test User" "fff6666 Test User" "ggg7777 Test User" "hhh8888 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"eee5555"* ]]; then
+  echo "Add consumed comments fallback for issue #1365 (verify phase)"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"fff6666"* ]]; then
+  echo "chore: patch (closes #2001)"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"ggg7777"* ]]; then
+  echo "chore: patch (closes #2002)"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"hhh8888"* ]]; then
+  echo "chore: patch (closes #2003)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "concurrent_commit_detected phase=review commit_sha=fff6666" "$BATS_TEST_TMPDIR/emit.log"
+    grep -q "concurrent_commit_detected phase=review commit_sha=ggg7777" "$BATS_TEST_TMPDIR/emit.log"
+    grep -q "concurrent_commit_detected phase=review commit_sha=hhh8888" "$BATS_TEST_TMPDIR/emit.log"
+    ! grep -q "concurrent_commit_detected phase=review commit_sha=eee5555" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "review/merge phase events emit issue=<real Issue number> and pr=<PR number> (issue #987)" {
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
     export EMIT_ISSUE_NUMBER="42"
