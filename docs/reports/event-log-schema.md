@@ -143,6 +143,8 @@ Emitted by `run-auto-sub.sh` at the end of each phase when commits on `origin/ma
 
 **Emission point**: `run-auto-sub.sh` `run_phase_with_recovery()`, after `wrapper_exit`. One event per concurrent commit found. No periodic polling — checked once at phase end to minimize overhead.
 
+**Exclusions**: a commit is not counted when (a) its subject references this phase's own Issue number (for review/merge phases both the PR number and the originating Issue number, Issues #895 and #974), (b) its subject references no Issue number at all, which is taken as this phase's own intermediate commit (Issue #1427), or (c) its subject references an Issue that a skill nested in this phase worked on, identified from a `phase_start` event of the same session that carries this phase's PR number in `pr` (Issue #1499, see `modules/event-emission.md`). A commit that references any other Issue number is emitted.
+
 ---
 
 ### 5. `ci_wait`
