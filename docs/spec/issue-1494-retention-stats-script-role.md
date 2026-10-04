@@ -138,3 +138,30 @@ Changed Files にスクリプトを含むため sync candidate check を実施�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1-3 were applied as written (docs/structure.md、docs/ja/structure.md、スクリプトのヘッダー Role 段落と `--help` の `sed` 範囲 2,60p)。
+
+### Design Gaps/Ambiguities
+- bats がこの実行環境に無く、`bats tests/collect-verify-retention-stats.bats` (Implementation Steps 4) は実行できなかった。変更はコメントと `sed` の範囲のみで、同テストは `--from-cache` 経路のみを検証し `--help` 出力を見ないため影響しないと判断。代替として `bash scripts/collect-verify-retention-stats.sh --help` で Role 段落の出力と末尾行 (`(scripts/gh-label-transition.sh removes the previous phase/* label).`) が従来どおりであることを直接確認した。pending: CI での bats 実行 (この Issue の AC に bats は含まれないため Step 14 の CI 確認対象外)。
+- 受入条件の rubric は Issue 本文に 1 件のみで、docs/structure.md の文言が「standalone measurement tool」と「not called by `/audit stats --retention`」を含むことを grep で確認して PASS とした。
+
+### Rework
+- None. Spec に従い fetch 経路 (引数なし / `--cache`) は実行していない。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 方式 (b) を Spec どおり実装。`skills/audit/SKILL.md` は無変更 (`grep -c collect-verify-retention-stats` は 0 のまま)。
+- 最終 Implementation Step (スクリプト) の diff を未コミットで Step 11 に持ち越し、`closes #1494` 付きの単一コミットにした。
+
+### Deferred Items
+- bats テスト (`tests/collect-verify-retention-stats.bats`) は実行環境に bats が無く未実行。ロジック不変のため影響なしと判断、CI で確認される。
+- Post-merge AC (opportunistic: 次回 `/audit stats --retention` で Section 8 がスクリプトを呼ばず従来どおり集計されること) は未確認のまま `phase/verify` で待機する。
+
+### Notes for Next Phase
+- Pre-merge AC (rubric) は Step 10 でチェック済み。`/verify` では Post-merge の opportunistic AC のみが残る。
+- docs/translation-sync は structure.md IN_SYNC を確認済み。
