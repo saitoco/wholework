@@ -3,6 +3,16 @@
 # Measure phase/verify retention by verify-type: how much post-merge AC is still
 # waiting, how much has already been resolved, and how old the waiting is.
 #
+# Role: standalone measurement tool, run by hand. It is NOT called by
+#   `/audit stats --retention`; that skill's Section 8 counts waiting AC in-session
+#   from Issue bodies (skills/audit/SKILL.md) under its own definition -- fenced
+#   code blocks excluded, the `ac-tier: preview` rule, the Manual-waiting
+#   executability breakdown -- none of which this script applies, so the two can
+#   differ for the same repository state. Use this script to re-measure a past
+#   report's population (--window) or the resolved side (phase/done), which
+#   Section 8 does not report. It is also the reference implementation of the
+#   verify-type tag extraction rule (modules/verify-classifier.md).
+#
 # Usage:
 #   scripts/collect-verify-retention-stats.sh [--window <YYYY-MM-DD>] [--cache <path>]
 #                                             [--from-cache] [--format text|tsv]
@@ -106,7 +116,7 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         --help|-h)
-            sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,60p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *)
