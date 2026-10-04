@@ -89,6 +89,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-10-04 12:36 UTC: manual-recovery-label-backfill
+
+### Context
+- Issue #1502, phase: issue
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: missing-phase-label
+- run-issue.sh exited 1 via silent no-op detection: the /issue refinement (Existing Issue Refinement path, triaged Issue) completed including the Issue Retrospective comment, but Step 3 (gh-label-transition.sh issue) was skipped. Second occurrence today after #1494. Backfilled the label manually and resumed.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-10-04 08:05 UTC: manual-recovery-label-backfill
 
 ### Context
