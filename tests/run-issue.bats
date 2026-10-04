@@ -2,7 +2,7 @@
 
 # Tests for run-issue.sh
 # Mocks: claude, claude-watchdog.sh, phase-banner.sh, gh, reconcile-phase-state.sh,
-#        emit-event.sh (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
+#        gh-label-transition.sh, emit-event.sh (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-issue.sh"
 
@@ -120,6 +120,16 @@ echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    # Mock gh-label-transition.sh: log args, exit with LABEL_TRANSITION_EXIT (default 0)
+    LABEL_TRANSITION_LOG="$BATS_TEST_TMPDIR/label_transition.log"
+    export LABEL_TRANSITION_LOG
+    cat > "$MOCK_DIR/gh-label-transition.sh" <<'MOCK'
+#!/bin/bash
+echo "$*" >> "$LABEL_TRANSITION_LOG"
+exit "${LABEL_TRANSITION_EXIT:-0}"
+MOCK
+    chmod +x "$MOCK_DIR/gh-label-transition.sh"
 
     # Create SKILL.md fixture
     mkdir -p "$BATS_TEST_TMPDIR/skills/issue"
@@ -263,6 +273,142 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     [[ "$output" != *"Warning:"* ]]
+}
+
+# Replace the gh mock so `gh issue view N --json comments --jq <program>` applies the real
+# production jq program to the given fixture JSON (same top-level shape as gh's output).
+# GH_COMMENTS_FAIL=1 makes the comments lookup exit 1. Other gh calls keep the default behavior.
+_use_issue_comments() {
+    printf '%s' "$1" > "$BATS_TEST_TMPDIR/comments.json"
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json comments"* ]]; then
+  [[ "${GH_COMMENTS_FAIL:-0}" == "1" ]] && exit 1
+  PROG=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --jq|-q) PROG="$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  jq -r "$PROG" "$BATS_TEST_TMPDIR/comments.json"
+  exit $?
+fi
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+}
+
+_use_reconcile_false() {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"issue"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+}
+
+_retro_comments() {
+    # $1 = authorAssociation, $2 = createdAt, $3 = body (JSON string literal body, already escaped)
+    printf '{"comments":[{"authorAssociation":"%s","body":"%s","createdAt":"%s"}]}' "$1" "$3" "$2"
+}
+
+@test "backfill: exit 0 + matches_expected:false + Issue Retrospective posted during this run backfills phase/issue and exits 0" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z '## Issue Retrospective\nbody')"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ "$(cat "$LABEL_TRANSITION_LOG")" = "123 issue" ]
+    [[ "$output" == *"Backfilling phase/issue"* ]] || false
+    grep -q "wrapper_exit phase=issue exit_code=0" "$EMIT_LOG"
+    grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "backfill: Issue Retrospective older than the run start is not evidence" {
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2000-01-01T00:00:00Z '## Issue Retrospective\nbody')"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
+    [[ "$output" == *"silent no-op"* ]] || false
+}
+
+@test "backfill: Issue Retrospective from an external author is not evidence" {
+    _use_reconcile_false
+    _use_issue_comments '{"comments":[{"authorAssociation":"NONE","body":"## Issue Retrospective","createdAt":"2099-12-31T23:59:59Z"},{"authorAssociation":"CONTRIBUTOR","body":"## Issue Retrospective","createdAt":"2099-12-31T23:59:59Z"}]}'
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
+}
+
+@test "backfill: heading mentioned mid-body is not evidence" {
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z 'intro\n## Issue Retrospective')"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
+}
+
+@test "backfill: comment lookup failure is fail-closed" {
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z '## Issue Retrospective')"
+    export GH_COMMENTS_FAIL=1
+    run bash "$SCRIPT" 123
+    unset GH_COMMENTS_FAIL
+    [ "$status" -eq 1 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
+}
+
+@test "backfill: label transition failure keeps exit 1" {
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z '## Issue Retrospective')"
+    export LABEL_TRANSITION_EXIT=1
+    run bash "$SCRIPT" 123
+    unset LABEL_TRANSITION_EXIT
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"backfill failed"* ]] || false
+}
+
+@test "backfill: exit 143 + matches_expected:false is not backfilled" {
+    export WHOLEWORK_RETRY_ON_KILL_MAX_SEC=0
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+exit 143
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    _use_reconcile_false
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z '## Issue Retrospective')"
+    run bash "$SCRIPT" 123
+    unset WHOLEWORK_RETRY_ON_KILL_MAX_SEC
+    [ "$status" -eq 143 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
+}
+
+@test "backfill: no label transition when matches_expected:true" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true,"phase":"issue"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    _use_issue_comments "$(_retro_comments MEMBER 2099-12-31T23:59:59Z '## Issue Retrospective')"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ ! -s "$LABEL_TRANSITION_LOG" ]
 }
 
 @test "emit: phase_start emitted when EMIT_PHASE_NAME is not set" {
