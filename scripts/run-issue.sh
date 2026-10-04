@@ -53,6 +53,23 @@ _maybe_emit_phase_complete() {
 }
 trap '_maybe_emit_phase_complete' EXIT
 
+# _issue_retro_posted_since <utc-iso8601>
+# Returns 0 only when a first-class author (OWNER/MEMBER/COLLABORATOR) posted a comment whose body
+# starts with "## Issue Retrospective" at or after the given time. Every other outcome (malformed
+# argument, gh failure, empty or non-timestamp output, no matching comment) returns 1: the check is
+# fail-closed, because a wrong backfill would mask a real silent no-op while a missed backfill only
+# restores the pre-existing stop.
+_issue_retro_posted_since() {
+  local _since="$1" _out
+  [[ "$_since" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
+  _out=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[]
+    | select(.authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR")
+    | select((.body // "") | test("^\\s*## Issue Retrospective"))
+    | select(.createdAt >= "'"$_since"'")
+    | .createdAt] | sort | last // empty' 2>/dev/null) || return 1
+  [[ "$_out" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T ]]
+}
+
 _EMIT_PHASE_OWNED=""
 if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   _EMIT_PHASE_OWNED=1
@@ -107,6 +124,7 @@ ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR" "issue"
 
+_RUN_START_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || _RUN_START_TS=""
 SECONDS=0
 set +e
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
@@ -146,8 +164,21 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
       EXIT_CODE=0
     fi
   elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
-    echo "Warning: claude exited 0 but issue phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-    EXIT_CODE=1
+    # phase/issue is backfilled here (after claude exits), never before it starts: /issue Step 1
+    # resolves its comment cutoff to "consume everything" only while no phase/* label exists, and
+    # the completion check and /auto's resume path both read the label (see modules/l0-surfaces.md
+    # "Pre-pipeline comment coverage"). The backfilled label's timestamp becomes the next phase's
+    # cutoff. Only exit 0 is eligible: a killed run (143) is never treated as complete.
+    if _issue_retro_posted_since "$_RUN_START_TS"; then
+      echo "Warning: claude exited 0 but phase/issue is missing although /issue posted its Issue Retrospective during this run. Backfilling phase/issue. reconcile: $_reconcile_out" >&2
+      if ! "$SCRIPT_DIR/gh-label-transition.sh" "$ISSUE_NUMBER" issue; then
+        echo "Warning: phase/issue backfill failed for issue #${ISSUE_NUMBER}; issue phase did not complete (silent no-op)." >&2
+        EXIT_CODE=1
+      fi
+    else
+      echo "Warning: claude exited 0 but issue phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
+      EXIT_CODE=1
+    fi
   fi
 fi
 
