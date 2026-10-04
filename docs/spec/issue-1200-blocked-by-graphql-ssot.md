@@ -19,6 +19,12 @@ No new comments since last phase.
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5354378700
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5369695516
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5378424680
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1200#issuecomment-5381824393
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5383999122
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5579808822
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5653266326
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5957351100
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1200#issuecomment-5978127196
 ## Overview
 
 blocked-by 関係の判定 (gate・依存チェック・依存グラフ構築) を Issue body の `Blocked by #N` テキスト grep から GitHub native の GraphQL `blockedBy` 関係へ移す。body テキストは廃止せず、**書き込みトリガー (入力ショートカット)** として存続させる (Issue 本文の候補 1 を採用)。
