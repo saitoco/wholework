@@ -12,7 +12,7 @@
 #   scripts/opportunistic-search.sh /verify --facts .tmp/facts-session1.json
 #   scripts/opportunistic-search.sh --event pr-review-full
 #   scripts/opportunistic-search.sh --event auto-run --dry-run
-#   scripts/opportunistic-search.sh --event pr-review-full --context-file /tmp/spec.md
+#   scripts/opportunistic-search.sh --event pr-review-full --context-file .tmp/spec.md
 #   scripts/opportunistic-search.sh --event auto-run --facts-file .tmp/run-facts-session1.json
 #   scripts/opportunistic-search.sh --event auto-run --session 12345-1786000000
 #   scripts/opportunistic-search.sh --event pr-review-full --execution-context fork
