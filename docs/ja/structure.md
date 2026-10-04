@@ -13,7 +13,7 @@ wholework/
 │   ├── plugin.json      # Plugin マニフェスト (name: "wholework")
 │   └── marketplace.json # Marketplace マニフェスト (name: "saitoco-wholework")
 ├── hooks/               # Plugin レベルの hook 定義
-│   └── hooks.json       # UserPromptSubmit hook (session-auto-rename オプトイン)
+│   └── hooks.json       # UserPromptSubmit hook (session-auto-rename オプトイン) + PreToolUse hook (worktree パスガード)
 ├── skills/              # Claude Code skills (skill ごとに 1 サブディレクトリ)
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill 定義 (必須)
@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent 定義 (8 ファイル)
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (99 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト (98 ファイル)
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -169,7 +169,7 @@ wholework/
 - `scripts/emit-skill-event.sh` — 非 wrapper emit 箇所向けに `scripts/emit-event.sh` を単一コマンドでラップするスクリプト。`emit-skill-event.sh <issue> <event> [--require-session-id|--unconditional] [--emit-issue <N>] [--session-id <SID>] [key=value ...]` または `emit-skill-event.sh --persist-session <sid-or-empty> <issue>` の形で呼び出す。内部で `emit-event.sh` を source し `restore_auto_session_pointer()`/`persist_auto_session_pointer()` を呼び出すことで、worktree isolation guard が拒否する `source` を伴う複合コマンドを回避する (#1458)。`skills/verify/SKILL.md` が直接使用するほか、`modules/opportunistic-verify.md` / `modules/retro-proposals.md` (#1461) 経由で、これら 2 module を読む 6 skill (`auto`/`code`/`issue`/`review`/`spec`/`verify`) からも呼ばれる
 - `scripts/append-consumed-comments-section.sh` — フェーズ自身の作業ブランチ上で Spec に `## Consumed Comments` を追記する。呼び出し元の網羅的なリスト、`--no-push` の使い方、フェーズごとの二次層カバレッジは [`modules/l0-surfaces.md`](../modules/l0-surfaces.md) § "Bash wrapper fallback" (SSoT) を参照
 - `scripts/dedupe-phase-handoff-section.sh` — `## Phase Handoff` セクション用の決定的な二次層ローテーションフォールバック: 2 個以上の `## Phase Handoff` 見出しを持つ Spec ファイルを最後 (最新) の 1 個に折りたたむ。呼び出し元リスト (`code`/`review`/`merge`) は [`modules/phase-handoff.md`](../modules/phase-handoff.md) § "Deterministic rotation fallback" を参照
-- `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: worktree セッション中に親リポジトリの絶対 file_path を伴う Edit/Write 呼び出しをブロックする (`modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions` の構造的な強制)
+- `scripts/hook-worktree-path-guard.sh` — PreToolUse hook (Edit/Write/NotebookEdit/Read): worktree セッション中に親リポジトリの絶対 file_path を伴う呼び出しをブロックする (`modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions` の構造的な強制)
 
 **GitHub API ユーティリティ:**
 - `scripts/gh-graphql.sh` — キャッシュ付き GraphQL クエリ実行

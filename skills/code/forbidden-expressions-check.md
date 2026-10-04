@@ -17,7 +17,7 @@ Run forbidden expressions check locally:
 bash scripts/check-forbidden-expressions.sh
 ```
 
-This is equivalent to the CI `forbidden-expressions` job and detects prohibited expressions before reaching CI. If the check fails, fix the issues before continuing (same as test failures).
+This is equivalent to the CI `check-forbidden-expressions` job and detects prohibited expressions before reaching CI. If the check fails, fix the issues before continuing (same as test failures).
 
 ## Retrospective Guard
 

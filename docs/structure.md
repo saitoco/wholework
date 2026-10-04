@@ -20,7 +20,7 @@ wholework/
 │   ├── plugin.json      # Plugin manifest (name: "wholework")
 │   └── marketplace.json # Marketplace manifest (name: "saitoco-wholework")
 ├── hooks/               # Plugin-level hook definitions
-│   └── hooks.json       # UserPromptSubmit hook (session-auto-rename opt-in)
+│   └── hooks.json       # UserPromptSubmit hook (session-auto-rename opt-in) + PreToolUse hook (worktree path guard)
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (99 files)
+├── scripts/             # Utility scripts used by skills and agents (98 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -176,7 +176,7 @@ Key modules:
 - `scripts/emit-skill-event.sh` — single-command wrapper around `scripts/emit-event.sh` for non-wrapper emit sites: `emit-skill-event.sh <issue> <event> [--require-session-id|--unconditional] [--emit-issue <N>] [--session-id <SID>] [key=value ...]` or `emit-skill-event.sh --persist-session <sid-or-empty> <issue>`; internally sources `emit-event.sh` and calls `restore_auto_session_pointer()`/`persist_auto_session_pointer()`, avoiding the `source`-based compound command the worktree isolation guard rejects (#1458); used by `skills/verify/SKILL.md` directly, and by `modules/opportunistic-verify.md` / `modules/retro-proposals.md` (#1461), which extends its reach to the 6 skills (`auto`/`code`/`issue`/`review`/`spec`/`verify`) that read those modules
 - `scripts/append-consumed-comments-section.sh` — appends `## Consumed Comments` to Spec on the phase's own working branch; see [`modules/l0-surfaces.md`](../modules/l0-surfaces.md) § "Bash wrapper fallback" (the SSoT) for the exhaustive list of callers, `--no-push` usage, and secondary-layer coverage per phase
 - `scripts/dedupe-phase-handoff-section.sh` — deterministic Secondary-layer rotation fallback for the `## Phase Handoff` section: collapses a Spec file with 2+ `## Phase Handoff` headings down to the last (most recent) one; see [`modules/phase-handoff.md`](../modules/phase-handoff.md) § "Deterministic rotation fallback" for the caller list (`code`/`review`/`merge`)
-- `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: blocks Edit/Write calls with parent-repo absolute file_path while inside a worktree session (structural enforcement of `modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions`)
+- `scripts/hook-worktree-path-guard.sh` — PreToolUse hook (Edit/Write/NotebookEdit/Read): blocks calls with parent-repo absolute file_path while inside a worktree session (structural enforcement of `modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions`)
 
 **GitHub API utilities:**
 - `scripts/gh-graphql.sh` — GraphQL query executor with caching

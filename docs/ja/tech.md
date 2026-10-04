@@ -6,7 +6,7 @@
 
 - **Bash/Shell Script**: Wrapper スクリプト (`scripts/run-*.sh`)、ユーティリティスクリプト
 - **Markdown**: Skill 定義 (`SKILL.md`)、agent 定義 (`agents/*.md`)、共有モジュール (`modules/*.md`)、ドキュメント
-- **Python**: 検証スクリプト (`scripts/validate-skill-syntax.py`)
+- **Python**: 検証スクリプト (`scripts/validate-skill-syntax.py`)。python3 は実行時にも使用される (主要依存関係を参照)
 - **GitHub Actions**: CI/CD ワークフロー (`.github/workflows/`)
 
 ## 主要依存関係
@@ -18,6 +18,7 @@
 | GitHub Copilot | コードレビュー (Step 7)、Issue からの自動実装 |
 | bats (Bash Automated Testing System) | シェルスクリプトテスト |
 | jq | verify-executor / gh-graphql / get-issue-* ヘルパーが使用する JSON プロセッサ |
+| python3 | 実行時依存 (標準ライブラリのみ): `scripts/gh-pr-review.sh` のレビュー投稿、`scripts/run-review.sh` / `scripts/run-merge.sh` の Issue 番号抽出、`html_check` verify command (`scripts/html-selector-match.py`)、`WHOLEWORK_SPAWN_DETACH` の detach シム |
 
 ## アーキテクチャ決定
 

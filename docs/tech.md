@@ -15,7 +15,7 @@ English | [日本語](ja/tech.md)
 
 - **Bash/Shell Script**: Wrapper scripts (`scripts/run-*.sh`), utility scripts
 - **Markdown**: Skill definitions (`SKILL.md`), agent definitions (`agents/*.md`), shared modules (`modules/*.md`), documentation
-- **Python**: Validation scripts (`scripts/validate-skill-syntax.py`)
+- **Python**: Validation scripts (`scripts/validate-skill-syntax.py`); python3 is also used at runtime (see Key Dependencies)
 - **GitHub Actions**: CI/CD workflows (`.github/workflows/`)
 
 ## Key Dependencies
@@ -27,6 +27,7 @@ English | [日本語](ja/tech.md)
 | GitHub Copilot | Code review (Step 7), automatic implementation from Issues |
 | bats (Bash Automated Testing System) | Shell script testing |
 | jq | JSON processor used by verify-executor / gh-graphql / get-issue-* helpers |
+| python3 | Runtime dependency (standard library only): review posting in `scripts/gh-pr-review.sh`, Issue-number extraction in `scripts/run-review.sh` / `scripts/run-merge.sh`, `html_check` verify command (`scripts/html-selector-match.py`), and the `WHOLEWORK_SPAWN_DETACH` detach shim |
 
 ## Architecture Decisions
 
