@@ -184,3 +184,34 @@ echo "progress: Confirming bats ACs against CI for issue #$NUMBER..."
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1490#issuecomment-5976638245
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Step 1〜4 を Spec の字面どおりに実装した (frontmatter と Step 10 と Step 14 の挿入文、`tests/code.bats` の新規 10 件、`docs/workflow.md` と `docs/ja/workflow.md` の 1 段落)。
+
+### Design Gaps/Ambiguities
+- Spec は `step10_section` を「既存の関数」としていたが、`tests/code.bats` には無かった (他の bats ファイルの定義と取り違えたとみられる)。`step14_section` と同じ形で `tests/code.bats` に新規定義した。テストの内容には影響しない。
+- bats 未インストール (`command -v bats` が何も出力しない、GNU `parallel` も無い) のため、新規テスト 10 件とスイート全体はローカルで実行できなかった。Spec の指示どおり、実装前の SKILL.md に対する各アンカーの `grep -cF` が 0 件 (= 新規テストは実装前に FAIL する構造) であること、実装後は 16 アンカーが 1 件以上あり、`$(git rev-parse` が 0 件であることを直接確認した。bats の実行は push 後の CI の `Run bats tests` job に委ねる。
+- この Issue の Pre-merge AC には `bats tests/` 型の `command` AC が無いため、Step 10 の bats-absent 除外 (この Issue が足す手順) は対象 0 件で、Step 14 の CI 確認も発火しない (自分自身の手順は、実装前の SKILL.md で動くため使えない)。
+
+### Rework
+- なし。
+
+### Verification Notes
+- Confirmed pre-implementation FAIL for 10 new test(s) (構造: 各アンカーが変更前の SKILL.md に 0 件。bats の実行そのものは未実施、上記のとおり)。
+- `validate-skill-syntax.py` 0 error / 0 warning、`check-forbidden-expressions.sh` 違反なし、`check-language-convention.py` 違反なし (merge base からの diff)。`check-bare-bracket-assertions.sh` の警告は既存テスト由来で、新規テストは `|| false` 形式。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 手順は Spec どおり Step 10 (除外) と Step 14 (push 後の CI 確認) に分けて `skills/code/SKILL.md` に置いた。補助文書へは出していない (AC の rubric / grep が SKILL.md を直接指すため)。
+- AC のチェックは「完了した bats job の conclusion が success」のときだけ行い、それ以外は未チェックのまま `/verify` に委ねる (fail-closed)。phase の進行は止めない (fail-open)。
+
+### Deferred Items
+- なし。この Issue の Pre-merge AC 1〜3 は Step 10 でチェック済み。Post-merge の opportunistic AC (bats の無い環境の patch route で CI 確認が働くことの観察) は未チェックのまま。
+
+### Notes for Next Phase
+- 新規テスト 10 件はローカルの bats で未実行。`/verify` は push 後の CI の `Run bats tests` job の結果を確認すること。
+- `gh run watch --compact --interval 30` の非 TTY での出力量は未計測 (Spec の Uncertainties)。次に bats の無い環境で patch route の `/code` が走ったときに観察する。
