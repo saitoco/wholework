@@ -133,14 +133,14 @@
 - Spec Notes の「スコープ外の観測」(ラッパーが相対パスの `AUTO_EVENTS_LOG` を export する場合、worktree 配下のイベントが worktree ローカルに出うる) は本 PR でも未対応のまま。`/verify` の retrospective で改善提案として集約する
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `review-light` (4 観点) で指摘 0 件、CI 17 ジョブすべて SUCCESS のため、Step 12 の修正コミットなしで完了とした
-- AC1〜AC4 すべて PASS とし Issue のチェックボックスを更新した (AC4 は CI の bats ジョブで確認)
+- pre-merge AC は全件チェック済み、review 完了シグナルも organic (fallback 由来でない) のためゲートを通過した
+- 競合・CI 待ちなし (mergeable=clean) で、`merge-strategy` 既定の squash で PR #1505 をマージした
 
 ### Deferred Items
 - 相対パスの `AUTO_EVENTS_LOG` を wrapper が export する場合のイベント出力先の問題は本 Issue の対象外のまま (`/verify` の retrospective で改善提案として集約)
 
 ### Notes for Next Phase
-- Post-merge 条件は無い。`/merge 1505` に進める
+- Post-merge 条件は無い。`/verify 1501` では pre-merge AC の最終確認のみ行えばよい
