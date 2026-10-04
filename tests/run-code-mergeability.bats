@@ -57,6 +57,7 @@ load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { return 0; }
 MOCK
 

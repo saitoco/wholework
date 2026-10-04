@@ -23,12 +23,15 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
 PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+# read_pgid_pointer() is defined in emit-event.sh, so source it before the pointer read below.
+source "$SCRIPT_DIR/emit-event.sh"
 # Primary: PGID-based file (Issue #770). No fallback to auto-session-current: that file is
 # written only by /auto Step 1, so a wrapper invoked outside /auto has no claim to it and
 # reading it risks misattributing a concurrent /auto session's session_id (Issue #1317).
-AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
+# The pointer is adopted only when it was written after that PGID's leader started, so a
+# remnant left by an earlier owner of the same PGID is ignored (Issue #1491, #1503).
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(read_pgid_pointer ".tmp/auto-session-${PGID}" "${PGID}")}"
 export AUTO_SESSION_ID
-source "$SCRIPT_DIR/emit-event.sh"
 
 _maybe_emit_phase_complete() {
   local _exit_code=$?
