@@ -103,3 +103,34 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (AC1 の修正方針は Spec に委任、AC2 の file_contains は EMIT_ISSUE_NUMBER= で検出力を確保、Background 事実確認済み) / https://github.com/saitoco/wholework/issues/1501#issuecomment-5979615264
+- code phase: `phase/ready` 付与 (2026-10-04T12:07:00Z) 以降の新規コメントなし
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1〜4 をそのとおり実装した (Spec 提案の `event-emission.md` 段落はそのまま採用)
+
+### Design Gaps/Ambiguities
+- `bats` がこのホストに未インストールのため、AC4 (`bats tests/hook-worktree-path-guard.bats`) と新規テスト 2 件はローカルで実行できず、CI の bats ジョブを最終ゲートとする (pr route のため `/review` が CI を参照する)。代わりに hook を直接実行して新規テスト (a)/(b) と同じ手順を再現した: 修正前 (`git show HEAD:...` の旧版) は `EMIT_ISSUE_NUMBER=4242` でも `issue=0`、修正後は `4242`、未設定時は `0`、いずれも exit 2
+- Step 10 の verify-executor full mode のうち `command "bats ..."` は bats 不在のため UNCERTAIN とし、AC1〜AC4 のチェックボックスは更新していない (`/review` が PR の CI で確認する)
+
+### Rework
+- なし
+
+### Pre-implementation FAIL check
+- Confirmed pre-implementation FAIL for 1 new test(s) (テスト (a) 相当の手動再現。旧 hook は `issue=0` で `4242` と不一致)。テスト (b) は未設定時の既定動作の固定であり修正前後とも PASS する想定
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- hook の `emit_event` 呼び出しから `EMIT_ISSUE_NUMBER` の接頭辞代入だけを削除し、継承値は `emit_event()` 既定の `${EMIT_ISSUE_NUMBER:-0}` に任せた (Spec Notes の決定どおり。`WHOLEWORK_ISSUE_NUMBER` のフォールバックは残さない)
+- `AUTO_EVENTS_LOG` の接頭辞代入は維持した
+
+### Deferred Items
+- AC4 (`bats tests/hook-worktree-path-guard.bats`) と新規 bats 2 件は bats 不在のためローカル未実行 — PR の CI bats ジョブで確認 (`/review`)
+- Spec Notes の「スコープ外の観測」(ラッパーが相対パスの `AUTO_EVENTS_LOG` を export するため、worktree 配下のイベントが worktree ローカルの `.tmp/auto-events.jsonl` に出る可能性) は本 Issue の対象外のまま。`/verify` の retrospective で改善提案として集約
+
+### Notes for Next Phase
+- 変更は `scripts/hook-worktree-path-guard.sh` (代入削除とコメント 2 行)、`scripts/emit-event.sh` (コメントのみ)、`modules/event-emission.md` (段落追加)、`tests/hook-worktree-path-guard.bats` (テスト 2 件追加)
+- `check-forbidden-expressions.sh` / `check-language-convention.py` はローカルで問題なし
