@@ -143,3 +143,31 @@ no。複数の既存項目を分類する監査ではなく、不具合の修正
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (issue フェーズ): 方針 a と b の選択を spec に委ねる判断と、選択を左右する制約の記録。要件の変更なし / https://github.com/saitoco/wholework/issues/1507#issuecomment-5981013102
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps どおりに実装した。逸脱なし。Step 4 の「1 件目が FAIL することを確認」は、ローカルに bats が無いため bats ではなく自前の最小ハーネス (`.tmp/harness.sh`、同じ 8 シナリオを同じモック構成で実行) で代替した。変更前の `run-issue.sh` では 1 件目と 6 件目が FAIL、変更後は 8 件すべて PASS
+- 新規テストの `[[ "$output" == ... ]]` のうち、後続の文が続く 3 箇所には `|| false` を付けた (bash 3.2 の `set -e` 非伝播対策。`scripts/check-bare-bracket-assertions.sh` の推奨に従う)
+
+### Design Gaps/Ambiguities
+- 実行環境 (headless) に bats が無く、`bats tests/` の AC (Pre-merge 4 件目) はローカルで評価できなかった。Step 14 の CI-based bats AC confirmation に回す。bats-core を取得して実行する試みは権限判定で拒否されたため追わなかった
+- 本番の jq プログラムは、fixture 6 パターンと実 `gh` (#1507 の `/issue` retro、`2026-10-04T14:24:12Z`) で評価し、期待どおりの出力になることを確認した
+
+### Rework
+- 自前ハーネスの初回実行で 1 件目が FAIL したが、原因はハーネス側 (親環境の `EMIT_PHASE_NAME` が残り `_EMIT_PHASE_OWNED` が空になっていた) で、bats の `setup()` と同じ `unset` を足して解消した。実装側の不具合ではない
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の方針 b どおり、`run-issue.sh` の完了判定の `matches_expected:false` 分岐で、実行開始後に first-class author が投稿した `## Issue Retrospective` を根拠に `gh-label-transition.sh $ISSUE_NUMBER issue` で補完し exit 0 にした。根拠が確認できない場合 (形式不正・gh 失敗・外部 author・見出しが本文途中・開始前のコメント) は従来どおり exit 1 (fail-closed)
+- 起動前にラベルを付けない方針 a は採らず、`skills/issue/SKILL.md` と `modules/l0-surfaces.md` は変更していない (cutoff の非退行を維持)
+
+### Deferred Items
+- `bats tests/` (Pre-merge 4 件目) は bats 未導入のためローカル未実行。push 後の CI の `Run bats tests` ジョブで確認する (Step 14)
+- Post-merge の観察条件 (リファイン 10 件以上で `missing-phase-label` の手動復旧 0 件) は `/verify` で扱う
+
+### Notes for Next Phase
+- 補完されたラベルの付与時刻は `/issue` 終了後になり、次フェーズの cutoff になる (Spec Notes に記録済み。`run-merge.sh` の事後補完と同型)
+- retro の skip condition に該当し、かつラベルも抜けた残余ケースは補完されず、従来どおり exit 1 で止まる。Post-merge で残余の記録が出た場合は別途検討する
