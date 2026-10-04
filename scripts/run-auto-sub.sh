@@ -55,7 +55,10 @@ if _should_detach; then
   # emitted events would lose their session_id.
   if [[ -z "${AUTO_SESSION_ID:-}" ]]; then
     _detach_pgid=$(ps -o pgid= -p $$ | tr -d ' ')
-    AUTO_SESSION_ID="$(cat ".tmp/auto-session-${_detach_pgid}" 2>/dev/null || echo '')"
+    # This shim runs before the main-path source below, so source emit-event.sh here for
+    # read_pgid_pointer() (Issue #1503).
+    source "$SCRIPT_DIR/emit-event.sh"
+    AUTO_SESSION_ID="$(read_pgid_pointer ".tmp/auto-session-${_detach_pgid}" "${_detach_pgid}")"
   fi
   if [[ -n "${AUTO_SESSION_ID:-}" ]]; then
     export AUTO_SESSION_ID
@@ -466,11 +469,14 @@ LOG_PREFIX="[#${SUB_NUMBER}]"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
 PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
+# read_pgid_pointer() is defined in emit-event.sh, so source it before the pointer read below.
+source "$SCRIPT_DIR/emit-event.sh"
+# The pointer is adopted only when it was written after that PGID's leader started, so a
+# remnant left by an earlier owner of the same PGID is ignored (Issue #1491, #1503).
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(read_pgid_pointer ".tmp/auto-session-${PGID}" "${PGID}")}"
 export AUTO_SESSION_ID
 export EMIT_ISSUE_NUMBER="$SUB_NUMBER"
 
-source "$SCRIPT_DIR/emit-event.sh"
 source "$SCRIPT_DIR/retry-on-kill.sh"
 
 _maybe_emit_phase_complete() {
