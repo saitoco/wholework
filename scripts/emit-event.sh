@@ -107,9 +107,11 @@
 #   ac_index=<n>                  acceptance condition index (1-based) the question was asked for
 #   response=<response>           Claude Execute | Manual Verification (Show Guide) | SKIP
 #
-# worktree-path-block: hook-worktree-path-guard.sh blocked an Edit/Write/NotebookEdit call
+# worktree-path-block: hook-worktree-path-guard.sh blocked an Edit/Write/NotebookEdit/Read call
 #   that passed a parent-repo absolute path while the session was inside a worktree
-#   tool=<name>                   Edit | Write | NotebookEdit
+#   (issue = EMIT_ISSUE_NUMBER inherited from the calling wrapper, 0 outside wrappers;
+#   see modules/event-emission.md)
+#   tool=<name>                   Edit | Write | NotebookEdit | Read
 #   cwd=<path>                    working directory at block time
 #   file_path=<path>              the blocked absolute path
 #   worktree_root=<path>          the worktree root the session was inside

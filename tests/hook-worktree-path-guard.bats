@@ -94,3 +94,24 @@ teardown() {
     [ -f "$FIXTURE_PARENT/.tmp/auto-events.jsonl" ]
     [ ! -f "$FIXTURE_WORKTREE/.tmp/auto-events.jsonl" ]
 }
+
+@test "inside worktree + parent-repo absolute path -> event issue field carries inherited EMIT_ISSUE_NUMBER" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/events.jsonl"
+    export EMIT_ISSUE_NUMBER=4242
+    cd "$FIXTURE_WORKTREE"
+    INPUT=$(printf '{"tool_name":"Edit","tool_input":{"file_path":"%s/docs/foo.md"}}' "$FIXTURE_PARENT")
+    run bash -c "echo '$INPUT' | \"$SCRIPT\""
+    [ "$status" -eq 2 ]
+    run jq -r 'select(.event == "worktree-path-block") | .issue' "$AUTO_EVENTS_LOG"
+    [ "$output" = "4242" ]
+}
+
+@test "inside worktree + parent-repo absolute path -> event issue field is 0 when EMIT_ISSUE_NUMBER is unset" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/events.jsonl"
+    cd "$FIXTURE_WORKTREE"
+    INPUT=$(printf '{"tool_name":"Edit","tool_input":{"file_path":"%s/docs/foo.md"}}' "$FIXTURE_PARENT")
+    run bash -c "echo '$INPUT' | \"$SCRIPT\""
+    [ "$status" -eq 2 ]
+    run jq -r 'select(.event == "worktree-path-block") | .issue' "$AUTO_EVENTS_LOG"
+    [ "$output" = "0" ]
+}

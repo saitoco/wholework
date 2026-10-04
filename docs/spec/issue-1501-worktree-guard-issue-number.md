@@ -103,3 +103,44 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (AC1 の修正方針は Spec に委任、AC2 の file_contains は EMIT_ISSUE_NUMBER= で検出力を確保、Background 事実確認済み) / https://github.com/saitoco/wholework/issues/1501#issuecomment-5979615264
+- code phase: `phase/ready` 付与 (2026-10-04T12:07:00Z) 以降の新規コメントなし
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1〜4 をそのとおり実装した (Spec 提案の `event-emission.md` 段落はそのまま採用)
+
+### Design Gaps/Ambiguities
+- `bats` がこのホストに未インストールのため、AC4 (`bats tests/hook-worktree-path-guard.bats`) と新規テスト 2 件はローカルで実行できず、CI の bats ジョブを最終ゲートとする (pr route のため `/review` が CI を参照する)。代わりに hook を直接実行して新規テスト (a)/(b) と同じ手順を再現した: 修正前 (`git show HEAD:...` の旧版) は `EMIT_ISSUE_NUMBER=4242` でも `issue=0`、修正後は `4242`、未設定時は `0`、いずれも exit 2
+- Step 10 の verify-executor full mode のうち `command "bats ..."` は bats 不在のため UNCERTAIN とし、AC1〜AC4 のチェックボックスは更新していない (`/review` が PR の CI で確認する)
+
+### Rework
+- なし
+
+### Pre-implementation FAIL check
+- Confirmed pre-implementation FAIL for 1 new test(s) (テスト (a) 相当の手動再現。旧 hook は `issue=0` で `4242` と不一致)。テスト (b) は未設定時の既定動作の固定であり修正前後とも PASS する想定
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note (Spec の Implementation Steps 1〜4 と PR diff は一致。`review-light` の 4 観点で指摘 0 件)
+
+### Recurring Issues
+- Nothing to note
+
+### Acceptance Criteria Verification Difficulty
+- AC4 (`command "bats ..."`) は `/code` 時点で bats 不在のため UNCERTAIN 扱いだったが、`/review` で CI の `Run bats tests` ジョブ (`tests/` 全体) の結果を参照して PASS と判定できた。verify command の書き方に問題は無い
+- Spec Notes の「スコープ外の観測」(ラッパーが相対パスの `AUTO_EVENTS_LOG` を export する場合、worktree 配下のイベントが worktree ローカルに出うる) は本 PR でも未対応のまま。`/verify` の retrospective で改善提案として集約する
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `review-light` (4 観点) で指摘 0 件、CI 17 ジョブすべて SUCCESS のため、Step 12 の修正コミットなしで完了とした
+- AC1〜AC4 すべて PASS とし Issue のチェックボックスを更新した (AC4 は CI の bats ジョブで確認)
+
+### Deferred Items
+- 相対パスの `AUTO_EVENTS_LOG` を wrapper が export する場合のイベント出力先の問題は本 Issue の対象外のまま (`/verify` の retrospective で改善提案として集約)
+
+### Notes for Next Phase
+- Post-merge 条件は無い。`/merge 1505` に進める
