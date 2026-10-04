@@ -611,18 +611,31 @@ ${NESTED_TIMELINE_SECTION}
 ### Rework
 - worktree の isolation guard が `sed` の `r` コマンドや `xargs` 経由の `sh` を拒否したため、テストの挿入は python3、並列実行は `.tmp/runall.sh` に切り替えた。実装の手戻りは無し
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Changed Files・Implementation Steps と PR の diff は字面どおり一致していた。構造的な乖離は無い。`/code` が Spec のコードブロックをそのまま適用したことで、逸脱の余地が小さかった
+- Code Retrospective の「`bats tests/` 全件は CI に委ねる (UNCERTAIN)」は、CI の `Run bats tests` が 2 run とも成功したため解消済み。Spec の Uncertainty 2 (macOS / bash 3.2) は、Spec が定めた範囲 (CI の `macOS shell compatibility` の `bash -n`) が成功したことで確認を終えた
+
+### Recurring issues
+- 同種の指摘が 2 件あった: 新規 bats テストの素の `[[ ]]` に `|| false` が無い (SHOULD、修正済み) こと。`scripts/check-bare-bracket-assertions.sh` は `$output` / `$status` だけを走査するため、`$nested_row` のようなテスト内ローカル変数への assertion は検出されず、CI も通る。検査範囲の拡張は別途検討の余地がある (今回は Issue 化せず記録のみ)
+- 文書の記号 (a)/(b)/(c) と、コードコメントの (a)/(b)/(c)/(d) が食い違う: Spec が文書側の文言を指定していたため逸脱ではないが、分類を後から拡張した箇所では、文書とコードの記号の対応が崩れやすい
+
+### Acceptance criteria verification difficulty
+- Pre-merge 5 件はすべて PASS (rubric 4 件は diff で、`bats tests/` は CI で判定)。UNCERTAIN は無かった
+- Parser/Validator Edge Case 事前計測 (`emit-event.sh` / `run-auto-sub.sh` を実行) で、空白を含む main repo root パスで anchor 先が切れる点と、複数の `#N` を含む subject が丸ごと除外される点が見つかった。どちらも CONSIDER で、前者は既存の `git worktree list` idiom と同じ既知の制約として今回は修正せず見送った (follow-up 候補)
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps を字面どおり適用した (Spec が一時コピーで事前検証済みで、境界条件とテストを保つ必要があるため)
-- 各 Step の (a) 新規テストを先に追加し、実装前に FAIL することを確認してから (b) 実装に進んだ (欠陥を再現する 5 件が FAIL、対照 2 件が PASS)
+- MUST 指摘は無く、レビュー結果は COMMENT で投稿した。SHOULD 1 件 (bats の `|| false`) と、文書・コメントの CONSIDER 2 件をその場で修正した
+- `emit-event.sh` の空白パス・正規化の CONSIDER 2 件は、既存 idiom と同じ制約で実害が小さいため見送った
 
 ### Deferred Items
-- `bats tests/` 全件の確認 (Pre-merge の最後の AC) は、bats 未インストールのため未実行。push 後の CI の `Run bats tests` job で確認する
+- `emit-event.sh` の `awk '{print $2}'` を行全体の取得に直すか (pointer 由来の `_root` も同じ idiom): follow-up 候補
 - Post-merge の observation AC (nested dispatch が起きた `/auto --batch` 実行での観察) は、nested dispatch が発生した実行を待つ
 
 ### Notes for Next Phase
-- bats 本体は未実行で、簡易ランナーで検証した。差が出た場合は CI の結果を見て `/review` か fix で直す
-- 簡易ランナーでは `run-fact-matching` の `apply-run-fact-match` 3 件が FAIL するが、Spec が既存の事象として記録済みで今回の変更とは無関係
-- `scripts/collect-run-facts.sh` と `scripts/hook-worktree-path-guard.sh` の同根の相対パス問題は、Spec の Notes のとおり意図的に範囲外 (follow-up 候補)
+- Pre-merge AC 5 件はチェック済み。CI は修正 commit の push 後にもう一度走る (修正は assertion・文書・コメントのみ)
+- `scripts/collect-run-facts.sh` と `scripts/hook-worktree-path-guard.sh` の同根の相対パス問題は、Spec の Notes のとおり意図的に範囲外
