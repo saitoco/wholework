@@ -149,6 +149,33 @@ Issue 本文の Post-merge 条件は「スクリプト内部の `mktemp` を Non
 - Changed Files に `.claude/` 配下はなく、`git add -f` は不要
 - Pre-merge AC1 の rubric は 2 つの解決方法のうち「適用範囲の明記」側で PASS する。文書に「スクリプト内部の `mktemp` は対象外」と読める記述 (`docs/product.md` の Scope と `modules/filesystem-scope.md` の Temporary Files) が残っていること
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 を Spec どおりに実装した (テキストは Spec の記載をそのまま使用)。
+
+### Design Gaps/Ambiguities
+- Pre-merge AC2 (`bats` 8 本) はこの実行環境に bats が未導入のためローカルで評価できなかった。スクリプト本体は無変更 (`scripts/opportunistic-search.sh` のコメント 1 行のみ) で、`bash -n` による構文確認のみ実施。AC2 は未チェックのまま残し、push 後の CI `Run bats tests` の結果で確認する (Step 14)。
+- `filesystem-scope.md` の `### Prohibited Patterns` 表の最終行の Fix 列は Spec 想定の文言と異なっていた (`Always pass ...` で始まる行) が、挿入位置 (表の直後・`## Approved Patterns` の直前) に影響はなかった。
+
+### Rework
+- なし (`### Temporary Files` 挿入の Edit が 1 回アンカー不一致で失敗し、行末の文言を合わせて再実行した程度)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の方針どおり「適用範囲の明記」で解決した。スクリプト本体の `mktemp` は変更していない。
+- `docs/product.md` と `docs/ja/product.md` は同一コミットで更新し、`check-translation-sync.sh` で `IN_SYNC` を確認した。
+
+### Deferred Items
+- Pre-merge AC2 (`bats` 8 本の PASS): bats 未導入のため pending post-push CI confirmation (Step 14)。
+- Post-merge の `/tmp` 残留確認 (opportunistic) は Spec 方針により N/A。`/verify` で N/A として明示的にチェックして閉じること。
+
+### Notes for Next Phase
+- Pre-merge AC1 (rubric) は `/code` で PASS 判定してチェック済み。
+- `docs/versioning.md` の Gate 4 `/tmp/en.txt` リダイレクトは範囲外のまま (Spec Notes「範囲外の観察」参照)。
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (曖昧点の自動解決と、8 スクリプトとも EXIT trap 等で後始末済みのため適用範囲明記が有力候補という所見) / https://github.com/saitoco/wholework/issues/1492#issuecomment-5977500709
