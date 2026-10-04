@@ -360,3 +360,33 @@ Since Issue #1491, step 4 also rejects such a stale pointer on its own (see "Sta
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec の字面どおりに実装した (コード・テスト・`modules/event-emission.md`・`docs/product.md` / `docs/ja/product.md`)
+
+### Design Gaps/Ambiguities
+- bats が未インストールの環境だったため、`bats tests/` と新規 8 件の bats 実行は未実施 (bats 未実行)。代わりに 8 件を素の bash のハーネスで再現し、変更前の `scripts/emit-event.sh` では 7 件が FAIL (t1 のみ PASS)、変更後は全件 PASS を確認した。pr route なので、AC3 (`bats tests/`) は PR の CI `Run bats tests` job と `/review` の CI 参照で確定する
+- Confirmed pre-implementation FAIL for 7 new test(s) (残る 1 件は退行ガードで、実装前も PASS する想定どおり)。変更前の `emit-event.sh` は `git archive HEAD` で取り出して比較した (`git stash` は共有スタックを避けるため使っていない)
+- `scripts/check-bare-bracket-assertions.sh` は既存テストの 1031 件を警告するが、新規 8 件には bare assertion が無い (出力・status の assertion はすべて `|| false` つき)
+- AC1 / AC2 の rubric は実装内容とドキュメントの記載を直接確認してチェックを付けた。AC3 は bats 未実行のため `- [ ]` のまま残している
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の字面どおり、読み取り時検証 (`read_pgid_pointer()`: pointer の mtime とリーダーの `ps -o etime=` の経過時間の比較、slack 60 秒、fail-closed) を実装した。書き込み側と wrapper の inline 読み取りは変えていない
+- 実装前後の挙動比較は、bats が無いため素のハーネスで行った (変更前 7 件 FAIL / 変更後 全件 PASS)
+
+### Deferred Items
+- AC3 `command "bats tests/"` は bats 未実行のため未チェック。PR #1498 の CI `Run bats tests` job の結果で `/review` が確定する (pending CI confirmation)
+- Post-merge の observation AC (`/auto --batch` の Timeline 観察) は `/verify` で扱う。Spec の Notes のとおり、変更の有無によらず PASS になる見込みが高い
+- 5 つの `run-*.sh` と `run-auto-sub.sh` の inline な pointer 読み取り、issue-scoped pointer の残存は意図的に範囲外 (follow-up 候補。`modules/event-emission.md` に記録済み)
+
+### Notes for Next Phase
+- `/review` は CI の `Run bats tests` job の結果を確認すること。ローカルでは bats を実行していない
+- macOS の `ps -o etime=` の実機形式は未確認 (Spec の Uncertainties)。想定と違えば `_process_elapsed_seconds` が空を返し、step 4 は常に fail-closed になる (誤帰属はしない)
