@@ -110,5 +110,31 @@
 - 文字列照合系の verify command の存在確認: `check-file-overlap` は変更前に `docs/structure.md` (1 件) と `.claude/settings.json.template` (1 件) に存在し、`file_not_contains` は削除の確認として成立する。削除対象の 2 ファイルも現在存在する
 - Simplicity: Pre-merge の検証項目は Issue 本文の AC (7 件) と 1:1 で同期するため light の上限 (5 件) を超えるが、Issue 本文との件数一致を優先する。Implementation Steps は 5 件に収めた
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりに実施した
+
+### Design Gaps/Ambiguities
+- Spec Step 2 の `str.replace` 対象文字列はインデントが 4 スペースと記載されていたが、実ファイルは 6 スペースだった。1 回目の置換は後続行のインデントを壊したため (行頭 2 スペース分が次の行に残った)、`git checkout` で戻して 6 スペースの完全一致で置換し直した。`assert` で変更有無を確認する手順が、置換漏れではなく「置換のずれ」を diff で見つける契機になった
+- ローカルに bats が無いため `bats tests/` (AC 7) は未実行。Step 10 の bats-absent 扱いに従い、AC 7 はチェックせず push 後の CI (Step 14) で確認する
+
+### Rework
+- `.claude/settings.json.template` の置換を 1 回やり直した (上記のインデント不一致が原因)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 削除方針は Spec / Issue 本文の Auto-Resolved Ambiguity Points どおり。`docs/ja/structure.md` も同一コミットで同期した (`check-translation-sync.sh` の判定がコミット時刻基準のため)
+- ファイル数コメントは実数と一致する値 (`scripts/` 97、`tests/` 133) に更新した
+
+### Deferred Items
+- AC 7 (`bats tests/` 全件 PASS): ローカルに bats が無いため未チェック。push 後の CI の bats ジョブ結果で確認する (pending post-push CI confirmation)
+
+### Notes for Next Phase
+- 取り残し確認 (`git grep -n "check-file-overlap" -- skills modules agents scripts tests .claude docs/structure.md`) は 0 件。残る参照は過去 Spec / セッション記録 / `docs/migration-notes.md` (と `docs/ja/`) の履歴のみ
+- AC 1〜6 は `/code` Step 10 でチェック済み
+
 ## Consumed Comments
 No new comments since last phase.
