@@ -725,14 +725,16 @@ run_phase_with_recovery() {
   # originating Issue number instead — callers
   # set _EXTRA_SELF_ISSUE to that Issue number so both are excluded (issue #974).
   #
-  # Per-commit classification is 3-way (issue #1427): a self-issue-number match is
-  # always self (a); a commit whose subject references some *other* issue number is a
-  # true concurrent commit (b); a commit whose subject references no issue number at
-  # all is assumed to be this phase's own free-form intermediate commit (c) — e.g. the
-  # Step 8 "commit after each step completes" WIP commits `/code` patch route makes,
-  # which carry no #N reference until the final Step 11 commit. (c) trades detection of
-  # genuinely concurrent no-issue-number commits (rare, and indistinguishable from a
-  # same-phase WIP commit by subject alone) for eliminating this false-positive class.
+  # Per-commit classification is 4-way (issues #1427, #1499): a self-issue-number match is
+  # always self (a); a commit whose subject references an Issue that a skill nested in this
+  # phase worked on is that nested dispatch's own commit (d); a commit whose subject
+  # references some *other* issue number is a true concurrent commit (b); a commit whose
+  # subject references no issue number at all is assumed to be this phase's own free-form
+  # intermediate commit (c) — e.g. the Step 8 "commit after each step completes" WIP commits
+  # `/code` patch route makes, which carry no #N reference until the final Step 11 commit.
+  # (c) trades detection of genuinely concurrent no-issue-number commits (rare, and
+  # indistinguishable from a same-phase WIP commit by subject alone) for eliminating this
+  # false-positive class.
   local _commits
   _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
   if [[ -n "$_commits" ]]; then
@@ -743,12 +745,36 @@ run_phase_with_recovery() {
       _self_issue_pattern="#(${issue}|${_EXTRA_SELF_ISSUE})([^0-9]|$)"
     fi
     local _any_issue_pattern="#[0-9]+([^0-9]|$)"
+    # (d) nested dispatch (issue #1499): Issues whose phase_start was recorded while this phase
+    # ran, by a descendant of this phase's wrapper. emit_event() adds the "pr" field from the
+    # EMIT_PR_NUMBER exported above for review/merge phases, so a skill nested in this phase
+    # (e.g. the /verify that /review's Event-based observation scan dispatches) records its
+    # phase_start with this phase's PR number, the same session_id and its own Issue number.
+    # Requiring the PR number keeps parallel sibling sub-issues of the same session (no "pr",
+    # or another PR's) detectable as concurrent. Any failure leaves the set empty, which keeps
+    # the classification as it was before: this is an observability signal, not a gate, so a
+    # missed exclusion only costs a misleading event while a wrong exclusion would hide one.
+    local _nested_pattern="" _nested_alts="" _nested_issue
+    if [[ -n "${EMIT_PR_NUMBER:-}" && -n "${AUTO_SESSION_ID:-}" && -f "${AUTO_EVENTS_LOG:-}" ]]; then
+      while IFS= read -r _nested_issue; do
+        [[ "$_nested_issue" =~ ^[0-9]+$ ]] || continue
+        _nested_alts="${_nested_alts:+${_nested_alts}|}${_nested_issue}"
+      done <<< "$(grep "\"session_id\":\"${AUTO_SESSION_ID}\"" "${AUTO_EVENTS_LOG}" 2>/dev/null \
+        | jq -rs --argjson pr "${EMIT_PR_NUMBER}" --argjson self "${EMIT_ISSUE_NUMBER}" --argjson since "${PHASE_START}" \
+            '[.[] | select(.event == "phase_start" and .pr == $pr and .issue != $self and ((.ts | try fromdateiso8601 catch 0) >= $since)) | .issue] | unique | .[]' 2>/dev/null || true)"
+      if [[ -n "$_nested_alts" ]]; then
+        _nested_pattern="#(${_nested_alts})([^0-9]|$)"
+      fi
+    fi
     while IFS= read -r _commit_line; do
       [[ -z "$_commit_line" ]] && continue
       local _sha="${_commit_line%% *}"
       local _author="${_commit_line#* }"
       local _subject; _subject=$(git log -1 --format="%s" "$_sha" 2>/dev/null || true)
       if [[ "$_subject" =~ $_self_issue_pattern ]]; then
+        continue
+      fi
+      if [[ -n "$_nested_pattern" && "$_subject" =~ $_nested_pattern ]]; then
         continue
       fi
       if [[ ! "$_subject" =~ $_any_issue_pattern ]]; then
