@@ -296,18 +296,29 @@ export AUTO_SESSION_ID
 ### Rework
 - worktree 隔離ガードが複合コマンド (`python3 - <<EOF`、`for` ループ、パイプ + `git diff`) を拒否したため、変換スクリプトを `.tmp/` に Write してから単独コマンドで実行する形に切り替えた。実装の手戻りではないが、言語規約チェックの `git diff | python3` も同じ理由でスクリプト経由にした
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 構造的な乖離なし。Spec の Changed Files 15 件と PR の変更ファイルが一致し、7 箇所の読み取り、`modules/event-emission.md` の 3 箇所、stub、リプレイテストの置き換え、新規テストの件数も Spec どおりだった
+- review-spec が Spec の Uncertainties (macOS の `ps -o etime=` の形式が未検証) を MUST で指摘したが、既存の #1491 のコードと既に明記された fail-closed の範囲であり、Spec からの逸脱ではないため CONSIDER に引き下げた。未検証の不確定事項を Spec に書いたままにすると、レビューで MUST として再浮上しやすい。次回以降は、PR 内での扱い (確認済み・既知の制約として明記・follow-up Issue 化のどれか) まで Spec に決めて書くと判断が早い
+
+### Recurring issues
+- Code Retrospective の記述 (新規テストの `status` 検査に `|| false` を足した) と実装の食い違いが 1 件あった (`auto-sub-observability.bats` と `run-auto-sub.bats` に未適用)。実害はなく、CI の Bare Bracket Assertions check も PASS している。retrospective の記述は適用範囲まで書くと食い違いを避けられる
+
+### Acceptance criteria verification difficulty
+- UNCERTAIN なし。AC4 (`bats tests/`) は CI reference (head SHA の `Run bats tests` job) で PASS と確定できた。Phase Handoff に CI 参照の手順が書かれていたので判断に迷わなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `read_pgid_pointer` は保護なし (`|| echo ''` なし) で直接呼ぶ。関数の欠落を全テストの失敗で検出するため (Spec の設計判断どおり)
-- `run-auto-sub.sh` の detach 経路は shim 内で `source "$SCRIPT_DIR/emit-event.sh"` し、pre-detach の PGID で読む。flag 未設定の既定経路には影響しない
+- `--non-interactive` では Workflow の再起動保証がないため、`capabilities.workflow: true` でも静的な Task fan-out (review-spec + review-bug ×2) を前景で実行した
+- review-spec の MUST (macOS の `ps -o etime=` 形式が未検証) は CONSIDER に引き下げた。`read_pgid_pointer()` 本体は #1491 で導入済み、fail-closed は event-emission.md に明記済み、誤帰属は起きない。結果は `COMMENT` で投稿し、`REQUEST_CHANGES` にはしていない
 
 ### Deferred Items
-- AC4 (`bats tests/` 全件 PASS): bats-core の実行が権限分類器に拒否され、ローカルでは 2/8 ファイルのみ確認。PR の CI `Run bats tests` job で確定する (未チェックのまま)
-- 新規 stale テストの実装前 FAIL のローカル確認: 未実施 (Spec のプロトタイプで確認済み)
+- macOS 実機での `ps -o etime= -p $$` と `bats tests/emit-event.bats` の確認: 未実施 (CI の macOS job は `bash -n` のみ)。想定と違うと全 wrapper のイベントが `session_id` を失う (fail-closed)
+- 新規 stale テストの `|| false` の揃え (`auto-sub-observability.bats` / `run-auto-sub.bats`): 実害がないため修正しなかった
 
 ### Notes for Next Phase
-- `/review` は AC4 を CI 参照 (`modules/verify-executor.md` § "CI Reference Fallback") で確定すること。CI の bats が 6 ファイル (`run-code` `run-review` `run-merge` `run-auto-sub` `auto-sub-observability` `run-code-mergeability`) で FAIL する場合は、stub への `read_pgid_pointer` 追加漏れや新規テストの `ps` mock 干渉を疑う
-- AC1〜3 は `/code` 時点で PASS と判定済みで Issue 上でチェック済み
-- macOS の `ps -o etime=` の出力形式 (Spec の Uncertainties) は未検証のまま。想定と違うと全 wrapper のイベントが session_id を失う (fail-closed)
+- Pre-merge AC は 4 件すべて PASS で Issue 上でもチェック済み。`/merge` は追加の対応なしで進められる
+- CI は全 17 チェック PASS (head SHA `8ece4010`)。レビューで未解決の MUST はない
