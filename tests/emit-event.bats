@@ -283,3 +283,105 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == "GONE" ]]
 }
+
+# Prints a `touch -t` timestamp (YYYYMMDDhhmm.SS) for N days ago: GNU date first, BSD date as fallback.
+_days_ago_touch_ts() {
+    date -d "$1 days ago" +%Y%m%d%H%M.%S 2>/dev/null || date -v-"$1"d +%Y%m%d%H%M.%S
+}
+
+# ps mock for the PGID pointer tests (Issue #1491): the caller's PGID is fixed at 424242 and the
+# leader's elapsed time comes from MOCK_ETIME (default 10:00; set but empty means no such process).
+_mock_ps_for_pgid_pointer() {
+    cat > "$MOCK_DIR/ps" <<'MOCK'
+#!/bin/bash
+case "$*" in
+    *pgid=*) printf '%s\n' "424242" ;;
+    *etime=*) printf '%s\n' "${MOCK_ETIME-10:00}" ;;
+    *) exit 1 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/ps"
+}
+
+@test "restore_auto_session_pointer adopts a PGID pointer written after its process-group leader started (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    mkdir -p "$BATS_TEST_TMPDIR/work8/.tmp"
+    echo "pgid-session-1491" > "$BATS_TEST_TMPDIR/work8/.tmp/auto-session-424242"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work8\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "SID=[pgid-session-1491] LOG=[.tmp/auto-events.jsonl]" ] || false
+}
+
+@test "restore_auto_session_pointer ignores a PGID pointer left by an earlier owner of the same PGID (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    mkdir -p "$BATS_TEST_TMPDIR/work9/.tmp"
+    echo "stale-session-1491" > "$BATS_TEST_TMPDIR/work9/.tmp/auto-session-424242"
+    touch -t 202401010000 "$BATS_TEST_TMPDIR/work9/.tmp/auto-session-424242"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work9\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "SID=[] LOG=[]" ] || false
+}
+
+@test "read_pgid_pointer fails closed when the process-group leader cannot be inspected (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    mkdir -p "$BATS_TEST_TMPDIR/work10"
+    echo "orphan-session" > "$BATS_TEST_TMPDIR/work10/auto-session-424242"
+    export MOCK_ETIME=""
+    run bash -c "source \"$SCRIPT\" && read_pgid_pointer \"$BATS_TEST_TMPDIR/work10/auto-session-424242\" 424242"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ] || false
+}
+
+@test "_process_elapsed_seconds parses the real ps etime of a live process (Issue #1491)" {
+    run bash -c "source \"$SCRIPT\" && _process_elapsed_seconds \$\$"
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+$ ]] || false
+}
+
+@test "_process_elapsed_seconds parses every POSIX etime shape including zero-padded fields (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    local pair
+    for pair in "00:00=0" "05:12=312" "08:09=489" "01:05:12=3912" "09:09:09=32949" "2-03:04:05=183845" "1-18:18:45=152325"; do
+        export MOCK_ETIME="${pair%%=*}"
+        run bash -c "source \"$SCRIPT\" && _process_elapsed_seconds 1"
+        [ "$status" -eq 0 ]
+        [ "$output" = "${pair#*=}" ] || false
+    done
+}
+
+@test "_process_elapsed_seconds rejects an empty or unparsable etime (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    local bad
+    for bad in "" "abc" "12" "1:2:3:4" "aa:bb" "-05:00" "1-"; do
+        export MOCK_ETIME="$bad"
+        run bash -c "source \"$SCRIPT\" && _process_elapsed_seconds 1"
+        [ "$status" -eq 1 ]
+        [ -z "$output" ] || false
+    done
+}
+
+@test "read_pgid_pointer compares the pointer age with the leader's elapsed time, not a fixed cap (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    mkdir -p "$BATS_TEST_TMPDIR/work11"
+    echo "older-than-leader" > "$BATS_TEST_TMPDIR/work11/ptr-31d"
+    touch -t "$(_days_ago_touch_ts 31)" "$BATS_TEST_TMPDIR/work11/ptr-31d"
+    echo "newer-than-leader" > "$BATS_TEST_TMPDIR/work11/ptr-29d"
+    touch -t "$(_days_ago_touch_ts 29)" "$BATS_TEST_TMPDIR/work11/ptr-29d"
+    export MOCK_ETIME="30-00:00:00"
+    run bash -c "source \"$SCRIPT\" && read_pgid_pointer \"$BATS_TEST_TMPDIR/work11/ptr-29d\" 424242"
+    [ "$status" -eq 0 ]
+    [ "$output" = "newer-than-leader" ] || false
+    run bash -c "source \"$SCRIPT\" && read_pgid_pointer \"$BATS_TEST_TMPDIR/work11/ptr-31d\" 424242"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ] || false
+}
+
+@test "restore_auto_session_pointer does not abort a set -e caller when the PGID pointer is stale (Issue #1491)" {
+    _mock_ps_for_pgid_pointer
+    mkdir -p "$BATS_TEST_TMPDIR/work12/.tmp"
+    echo "stale-session-1491" > "$BATS_TEST_TMPDIR/work12/.tmp/auto-session-424242"
+    touch -t 202401010000 "$BATS_TEST_TMPDIR/work12/.tmp/auto-session-424242"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work12\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && set -euo pipefail && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"survived SID=[\${AUTO_SESSION_ID:-}]\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "survived SID=[]" ] || false
+}

@@ -203,6 +203,62 @@ persist_auto_session_pointer() {
   printf '%s\n' "${_sid}" > "${_pointer_file}"
 }
 
+# Seconds a PGID pointer may predate the start of its process-group leader and still be
+# treated as written by that group. It absorbs the 1-second granularity of `ps -o etime=`
+# and of file mtimes plus minor clock skew, and stays far below the time an OS needs to
+# recycle a PGID.
+_PGID_POINTER_SLACK_SEC=60
+
+# Prints the elapsed running time of process $1 in whole seconds, parsed from
+# `ps -o etime=` (POSIX format [[dd-]hh:]mm:ss). Prints nothing and returns 1 when the
+# process does not exist or the value cannot be parsed. 10# forces decimal: zero-padded
+# fields such as 08 or 09 are otherwise rejected as invalid octal. bash 3.2+ compatible.
+_process_elapsed_seconds() {
+  local _etime _rest _d=0 _h=0 _m=0 _s=0 _f
+  _etime="$(ps -o etime= -p "$1" 2>/dev/null | tr -d ' ')"
+  [[ -z "${_etime}" ]] && return 1
+  if [[ "${_etime}" == *-* ]]; then
+    _d="${_etime%%-*}"
+    _etime="${_etime#*-}"
+  fi
+  case "${_etime}" in
+    *:*:*) _h="${_etime%%:*}"; _rest="${_etime#*:}"; _m="${_rest%%:*}"; _s="${_rest#*:}" ;;
+    *:*)   _m="${_etime%%:*}"; _s="${_etime#*:}" ;;
+    *) return 1 ;;
+  esac
+  for _f in "${_d}" "${_h}" "${_m}" "${_s}"; do
+    [[ "${_f}" =~ ^[0-9]+$ ]] || return 1
+  done
+  echo $(( 10#${_d} * 86400 + 10#${_h} * 3600 + 10#${_m} * 60 + 10#${_s} ))
+}
+
+# Prints the session id stored in PGID pointer file $1, but only when the file was last
+# written no earlier than the start of process-group leader $2 (minus
+# _PGID_POINTER_SLACK_SEC). A PGID pointer is only meaningful for the lifetime of the Bash
+# tool call (process group) that wrote it, nothing deletes it afterwards, and the OS
+# recycles PGID numbers, so a file left behind by an earlier owner of the same number must
+# never be adopted: doing so attributes this group's events to a session that ended long
+# ago (Issue #1491). Fail-closed: when the file is absent or unreadable, or the leader's
+# elapsed time or the file's mtime cannot be determined, nothing is printed and the caller
+# resolves no session id (same policy as #1224 / #1317: prefer session_id loss over
+# misattribution). Otherwise the file content is printed exactly as `cat` would. Every
+# failure path returns 0, so a `set -e` caller is never aborted. The stat form follows
+# scripts/gh-graphql.sh. bash 3.2+ compatible.
+read_pgid_pointer() {
+  local _file="$1" _pgid="$2" _elapsed _mtime _now
+  [[ -f "${_file}" ]] || return 0
+  _elapsed="$(_process_elapsed_seconds "${_pgid}")" || return 0
+  if [ "$(uname)" = "Darwin" ]; then
+    _mtime="$(stat -f '%m' "${_file}" 2>/dev/null)" || return 0
+  else
+    _mtime="$(stat -c '%Y' "${_file}" 2>/dev/null)" || return 0
+  fi
+  [[ "${_mtime}" =~ ^[0-9]+$ ]] || return 0
+  _now="$(date +%s)"
+  (( _now - _mtime <= _elapsed + _PGID_POINTER_SLACK_SEC )) || return 0
+  cat "${_file}" 2>/dev/null || true
+}
+
 # Restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from pointer files when the caller's
 # environment does not already have AUTO_EVENTS_LOG set. Issue #902 Fix Cycle —
 # /verify runs via in-session Skill() calls (e.g. /auto --batch List mode), so
@@ -219,7 +275,10 @@ persist_auto_session_pointer() {
 #   3. optional $1 (issue number) is given and
 #      ${root}/.tmp/auto-session-issue-<N> exists -> adopt it (issue-scoped pointer, written by
 #                                                  persist_auto_session_pointer() above)
-#   4. ${root}/.tmp/auto-session-<PGID> exists -> adopt it
+#   4. ${root}/.tmp/auto-session-<PGID> exists and is not stale
+#                                              -> adopt it (read_pgid_pointer(): the file must
+#                                                  not predate the start of its process-group
+#                                                  leader; Issue #1491)
 #   5. none of the above                       -> no-op, fail-closed. Issue #1224: this
 #                                                  function previously fell back to
 #                                                  ${root}/.tmp/auto-session-current here, but
@@ -238,6 +297,8 @@ persist_auto_session_pointer() {
 # issue-scoped is checked before PGID because in-session /verify never has a matching PGID
 # pointer (each Bash tool call gets a fresh process group), and OS PGID reuse could otherwise
 # pick up a stale pointer left by an unrelated session.
+# Since Issue #1491 step 4 also rejects such a stale pointer itself (read_pgid_pointer()),
+# which covers callers that have no issue-scoped pointer.
 #
 # Issue #1006: pointer file lookup and AUTO_EVENTS_LOG must not be CWD-relative,
 # because /verify Step 11's FAIL-branch emits run after Worktree Entry (CWD =
@@ -260,7 +321,7 @@ restore_auto_session_pointer() {
   fi
   if [[ -z "${_sid}" ]]; then
     local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
-    _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || echo '')"
+    _sid="$(read_pgid_pointer "${_prefix}.tmp/auto-session-${_pgid}" "${_pgid}")"
   fi
   [[ -z "${_sid}" ]] && return 0
   AUTO_SESSION_ID="${AUTO_SESSION_ID:-$_sid}"
