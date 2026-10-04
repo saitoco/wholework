@@ -232,6 +232,11 @@ Implementation Step 8 が新規分岐ロジック (Level 3 × tier のルーテ�
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1271#issuecomment-5379723282
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5379759357
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5384000484
+- saito / MEMBER / first-class / ## Verify Result: #1271 (re-evaluation) / https://github.com/saitoco/wholework/issues/1271#issuecomment-5386298697
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5579811267
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5653267437
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5957356007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1271#issuecomment-5978129212
 ## issue retrospective
 
 (`/issue` フェーズの retrospective コメントから転記。verify command の原文マーカーは、Spec 内で実マーカーとして解釈されないよう記法を崩して引用している)
