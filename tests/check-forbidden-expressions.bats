@@ -8,6 +8,7 @@ setup() {
   mkdir -p "$BATS_TEST_TMPDIR/agents"
   mkdir -p "$BATS_TEST_TMPDIR/tests"
   mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+  mkdir -p "$BATS_TEST_TMPDIR/scripts"
   cd "$BATS_TEST_TMPDIR"
 }
 
@@ -126,4 +127,29 @@ setup() {
   echo "The deprecated term \`Issue Spec\` is no longer used" > docs/spec/note.md
   run bash "$SCRIPT"
   [ "$status" -eq 0 ]
+}
+
+@test "detection: deprecated term in scripts dir exits 1" {
+  echo "# use verification hint here" > scripts/bad.sh
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"verification hint"* ]]
+}
+
+@test "exclusion: own definition file scripts/check-forbidden-expressions.sh is not flagged" {
+  echo '  "verification hint"' > scripts/check-forbidden-expressions.sh
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+@test "false positive: Dispatcher and Dispatches word forms are not flagged" {
+  printf '%s\n' '# --- Dispatcher ---' '# Dispatches to the phase handler' > scripts/router.sh
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+@test "detection: other file mentioning the checker path is still flagged" {
+  echo "see scripts/check-forbidden-expressions.sh for verification hint" > docs/guide.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
 }

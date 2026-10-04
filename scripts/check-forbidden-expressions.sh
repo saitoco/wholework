@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCAN_DIRS="skills/ modules/ agents/ tests/ docs/"
+SCAN_DIRS="skills/ modules/ agents/ tests/ docs/ scripts/"
 VIOLATIONS=0
 
 # Deprecated terms from docs/product.md § Terms (Formerly called column)
@@ -17,6 +17,7 @@ DEPRECATED_TERMS=(
   "検証ヒント"
 )
 
+# Self-reference exclusions: this script and its bats file hold every deprecated term as literals.
 check_term() {
   local term="$1"
   local grep_flags="$2"
@@ -29,6 +30,7 @@ check_term() {
     | grep -v 'Formerly called' \
     | grep -v '旧称' \
     | grep -v 'tests/check-forbidden-expressions.bats' \
+    | grep -v '^scripts/check-forbidden-expressions.sh:' \
     | grep -iv "| $term |" \
     | grep -v '^docs/sessions/' \
     | grep -v '^docs/reports/' \
@@ -49,8 +51,9 @@ check_term() {
 for TERM in "${DEPRECATED_TERMS[@]}"; do
   case "$TERM" in
     "Dispatch")
-      # Case-sensitive: avoids false positive "command dispatch" in prose
-      check_term "$TERM" "-r" "$TERM" || VIOLATIONS=1
+      # Word boundary + case-sensitive: avoids false positives "command dispatch" in prose
+      # and longer words that start with the term (e.g. noun and plural forms)
+      check_term "$TERM" "-rE" '\bDispatch\b' || VIOLATIONS=1
       ;;
     "Design file")
       # Word boundary: avoids false positive "design files" (plural)

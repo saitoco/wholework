@@ -1,6 +1,6 @@
 #!/bin/bash
 # observation-trigger.sh
-# Dispatch observation-type ACs when a named event fires.
+# Trigger observation-type ACs when a named event fires.
 #
 # Usage:
 #   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>] [--execution-context <main|fork>]
