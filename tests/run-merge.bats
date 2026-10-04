@@ -92,6 +92,7 @@ MOCK
     unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { return 0; }
 _emit_comments_consumed() { :; }
 MOCK
@@ -520,6 +521,7 @@ MOCK
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     # Override emit-event.sh mock to capture emit_event calls
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 MOCK
 
@@ -564,6 +566,7 @@ MOCK
 @test "test_result: TAP format with not ok lines counts failures correctly" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 MOCK
 
@@ -607,6 +610,7 @@ MOCK
 @test "test_result: passing test description containing 'not ok' substring is not counted as a failure" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 MOCK
 
@@ -649,6 +653,7 @@ MOCK
     RUN_LIST_LOG="$BATS_TEST_TMPDIR/run-list-args.log"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { :; }
 MOCK
 
@@ -691,6 +696,7 @@ MOCK
 @test "emit: phase_start emitted when EMIT_PHASE_NAME is not set" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 MOCK
     run bash "$SCRIPT" 88
@@ -702,6 +708,7 @@ MOCK
 @test "emit: EMIT_ISSUE_NUMBER uses resolved issue number, not PR number" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$1 issue=\$EMIT_ISSUE_NUMBER" >> "${EMIT_LOG}"; }
 MOCK
     run bash "$SCRIPT" 88
@@ -719,6 +726,7 @@ exit 1
 MOCK
     chmod +x "$MOCK_DIR/gh-extract-issue-from-pr.sh"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$1 issue=\$EMIT_ISSUE_NUMBER" >> "${EMIT_LOG}"; }
 MOCK
     run bash "$SCRIPT" 88
@@ -729,6 +737,7 @@ MOCK
 @test "emit: phase_start not emitted when EMIT_PHASE_NAME is pre-set (no double emit)" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 MOCK
     export EMIT_PHASE_NAME="merge"
@@ -742,6 +751,7 @@ MOCK
 @test "emit: phase_complete emitted on success" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 _emit_comments_consumed() { :; }
 MOCK
@@ -820,20 +830,60 @@ MOCK
 }
 
 @test "AUTO_SESSION_ID does not fall back to .tmp/auto-session-current when PGID file absent (Issue #1317, no misattribution)" {
-    # Issue #1317: run-merge.sh's inline AUTO_SESSION_ID resolve no longer falls back to
-    # .tmp/auto-session-current — that file is written only by /auto Step 1, so a wrapper
-    # invoked outside /auto (e.g. a manual `/merge` run while another /auto session is
-    # active) has no claim to it. Reproduces the same shell snippet as scripts/run-merge.sh
-    # with the PGID file absent and .tmp/auto-session-current holding a DIFFERENT
-    # (concurrent) session's ID, and asserts AUTO_SESSION_ID resolves to empty (fail-closed)
-    # rather than adopting it.
+    # Issue #1317: a wrapper invoked outside /auto has no claim to .tmp/auto-session-current
+    # (written only by /auto Step 1), so it must not adopt a concurrent session's id. Runs the
+    # real wrapper (Issue #1503) with the PGID pointer absent and a different session's id in
+    # .tmp/auto-session-current, and asserts the emitted events carry no session id.
+    _use_real_pgid_pointer_reader
     mkdir -p .tmp
     echo "concurrent-session-sid-12345-1782604910" > .tmp/auto-session-current
-    # Intentionally do NOT create .tmp/auto-session-${PGID}
+    # Intentionally do NOT create .tmp/auto-session-424242
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ] || false
+    grep -q 'sid=\[\] phase_start' "$EMIT_LOG" || false
+    if grep -q 'concurrent-session-sid' "$EMIT_LOG"; then false; fi
+}
 
-    unset AUTO_SESSION_ID
-    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
+# Issue #1503: run-merge.sh resolves AUTO_SESSION_ID through the real read_pgid_pointer().
+# The stub sources the real emit-event.sh (read_pgid_pointer/_process_elapsed_seconds) and then
+# replaces emit_event() with a recorder that logs the session id in effect; ps is mocked so the
+# caller's PGID is fixed at 424242 and the leader's elapsed time comes from MOCK_ETIME (default 10:00).
+_use_real_pgid_pointer_reader() {
+    unset AUTO_SESSION_ID EMIT_PHASE_NAME EMIT_ISSUE_NUMBER
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+source "$(dirname "$BATS_TEST_FILENAME")/../scripts/emit-event.sh"
+emit_event() { echo "sid=[\${AUTO_SESSION_ID:-}] \$*" >> "${EMIT_LOG}"; }
+_emit_comments_consumed() { :; }
+_append_consumed_comments_section() { :; }
+MOCK
+    cat > "$MOCK_DIR/ps" <<'MOCK'
+#!/bin/bash
+case "$*" in
+    *pgid=*) printf '%s\n' "424242" ;;
+    *etime=*) printf '%s\n' "${MOCK_ETIME-10:00}" ;;
+    *) exit 1 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/ps"
+}
 
-    [ -z "$AUTO_SESSION_ID" ]
+@test "AUTO_SESSION_ID adopts a PGID pointer written after its process-group leader started (Issue #1503)" {
+    _use_real_pgid_pointer_reader
+    mkdir -p .tmp
+    echo "fresh-sid-1503" > .tmp/auto-session-424242
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ] || false
+    grep -q 'sid=\[fresh-sid-1503\] phase_start' "$EMIT_LOG" || false
+}
+
+@test "AUTO_SESSION_ID ignores a PGID pointer left by an earlier owner of the same PGID (Issue #1503)" {
+    _use_real_pgid_pointer_reader
+    mkdir -p .tmp
+    echo "stale-sid-1503" > .tmp/auto-session-424242
+    touch -t 202401010000 .tmp/auto-session-424242
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ] || false
+    grep -q 'sid=\[\] phase_start' "$EMIT_LOG" || false
+    if grep -q 'stale-sid-1503' "$EMIT_LOG"; then false; fi
 }

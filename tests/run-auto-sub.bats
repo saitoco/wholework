@@ -41,6 +41,7 @@ MOCK
 
     # Mock emit-event.sh (sourced by run-auto-sub.sh via emit-event.sh)
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { :; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -647,6 +648,7 @@ MOCK
     # in #1181 since the Spec-write path it exercised no longer exists).
     export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} pr=${EMIT_PR_NUMBER:-<unset>} $*" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -947,6 +949,7 @@ MOCK
 
     export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} $*" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -983,6 +986,7 @@ MOCK
 
     export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} $*" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -1141,6 +1145,7 @@ MOCK
 
     # Override emit-event.sh mock to record calls
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1188,6 +1193,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1236,6 +1242,7 @@ MOCK
 
     # Override emit-event.sh mock to record calls
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1261,6 +1268,7 @@ MOCK
 
     # Override emit-event.sh mock to record calls
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1286,6 +1294,7 @@ MOCK
 
     # Override emit-event.sh mock to record calls
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1330,6 +1339,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1373,6 +1383,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1419,6 +1430,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1462,6 +1474,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1507,6 +1520,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1556,6 +1570,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1595,6 +1610,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -1631,6 +1647,7 @@ MOCK
     export EMIT_ISSUE_NUMBER="42"
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+read_pgid_pointer() { cat "\$1" 2>/dev/null || true; }
 emit_event() {
   echo "phase=\${EMIT_PHASE_NAME:-} issue=\${EMIT_ISSUE_NUMBER:-} pr=\${EMIT_PR_NUMBER:-<unset>} event=\$1" >> "$BATS_TEST_TMPDIR/emit.log"
 }
@@ -2019,6 +2036,7 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "$@" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -2106,6 +2124,7 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "$@" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -2371,6 +2390,7 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "$@" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -2413,6 +2433,7 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() { echo "$@" >> "$EMIT_LOG"; }
 _emit_comments_consumed() { :; }
 restore_auto_session_pointer() { :; }
@@ -2788,19 +2809,45 @@ MOCK
     [[ "$output" == *"detached child pid="* ]]
 }
 
-@test "spawn-detach: AUTO_SESSION_ID resolved from pre-detach PGID pointer and burned into child env" {
+# Issue #1503: the spawn-detach shim resolves AUTO_SESSION_ID through the real
+# read_pgid_pointer(). The stub only sources the real emit-event.sh; ps is mocked so the
+# caller's PGID is fixed at 424242 (the writer side and the shim therefore point at the same
+# pointer) and the leader's elapsed time comes from MOCK_ETIME (default 10:00).
+_use_real_pgid_pointer_reader_for_detach() {
+    unset AUTO_SESSION_ID EMIT_PHASE_NAME EMIT_ISSUE_NUMBER
+    printf 'source "%s/../scripts/emit-event.sh"\n' "$(dirname "$BATS_TEST_FILENAME")" > "$MOCK_DIR/emit-event.sh"
+    cat > "$MOCK_DIR/ps" <<'MOCK'
+#!/bin/bash
+case "$*" in
+    *pgid=*) printf '%s\n' "424242" ;;
+    *etime=*) printf '%s\n' "${MOCK_ETIME-10:00}" ;;
+    *) exit 1 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/ps"
     cat > "$MOCK_DIR/bash" <<'MOCK'
 #!/bin/bash
-echo "child AUTO_SESSION_ID=${AUTO_SESSION_ID:-} DETACHED=${_WHOLEWORK_DETACHED:-}"
+echo "child AUTO_SESSION_ID=[${AUTO_SESSION_ID:-}] DETACHED=${_WHOLEWORK_DETACHED:-}"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/bash"
     export WHOLEWORK_SPAWN_DETACH=1
-    # Write the pointer file keyed by the PGID the script will observe pre-detach.
-    # The wrapper /bin/bash -c process exec's into the script (same pid/pgid), so
-    # the pointer key computed here is exactly what the shim reads.
+}
+
+@test "spawn-detach: AUTO_SESSION_ID resolved from pre-detach PGID pointer and burned into child env" {
+    _use_real_pgid_pointer_reader_for_detach
+    # Write the pointer file keyed by the PGID the script will observe pre-detach (the mocked
+    # ps reports the same PGID to the writer and to the shim).
     run /bin/bash -c "mkdir -p .tmp && pgid=\$(ps -o pgid= -p \$\$ | tr -d ' ') && echo sess-detach-test > \".tmp/auto-session-\${pgid}\" && exec /bin/bash '$SCRIPT' --write-manual-recovery"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"AUTO_SESSION_ID=sess-detach-test"* ]]
-    [[ "$output" == *"DETACHED=1"* ]]
+    [[ "$output" == *"AUTO_SESSION_ID=[sess-detach-test]"* ]] || false
+    [[ "$output" == *"DETACHED=1"* ]] || false
+}
+
+@test "spawn-detach: a PGID pointer left by an earlier owner of the same PGID is ignored (Issue #1503)" {
+    _use_real_pgid_pointer_reader_for_detach
+    run /bin/bash -c "mkdir -p .tmp && pgid=\$(ps -o pgid= -p \$\$ | tr -d ' ') && echo stale-detach-sid > \".tmp/auto-session-\${pgid}\" && touch -t 202401010000 \".tmp/auto-session-\${pgid}\" && exec /bin/bash '$SCRIPT' --write-manual-recovery"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"AUTO_SESSION_ID=[]"* ]] || false
+    [[ "$output" == *"DETACHED=1"* ]] || false
 }

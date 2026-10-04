@@ -25,6 +25,7 @@ MOCK
     # Mock emit-event.sh (sourced by run-auto-sub.sh) — writes a minimal JSONL line
     # so that event-format-check and append-no-clobber assertions can validate output.
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() {
     local event_name="$1"
     mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
@@ -128,6 +129,7 @@ teardown() {
 @test "backfill-emit: exits 0 with phase_start only emits phase_complete with backfilled" {
     # Override emit-event.sh to suppress completion events, leaving phase_start as last event
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+read_pgid_pointer() { cat "$1" 2>/dev/null || true; }
 emit_event() {
     local event_name="$1"; shift
     case "$event_name" in
@@ -236,17 +238,14 @@ HELPER
     grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
 }
 
-@test "session-isolation: PGID-specific pointer file is read when AUTO_SESSION_ID is unset" {
-    # Obtain the PGID of the current shell (same as run-auto-sub.sh will see)
-    local pgid
-    pgid=$(ps -o pgid= -p $$ | tr -d ' ')
-
-    # Write a test session_id into the PGID-specific pointer file
-    mkdir -p "$BATS_TEST_TMPDIR/.tmp"
-    printf 'test-session-pgid\n' > "$BATS_TEST_TMPDIR/.tmp/auto-session-${pgid}"
-
-    # Override emit-event.sh to capture the session_id value
-    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+# Issue #1503: run-auto-sub.sh (main path) resolves AUTO_SESSION_ID through the real
+# read_pgid_pointer(). The stub sources the real emit-event.sh and then replaces emit_event()
+# with a JSONL recorder that includes the session id; ps is mocked so the caller's PGID is fixed
+# at 424242 and the leader's elapsed time comes from MOCK_ETIME (default 10:00).
+_use_real_pgid_pointer_reader() {
+    unset AUTO_SESSION_ID EMIT_PHASE_NAME EMIT_ISSUE_NUMBER
+    printf 'source "%s/../scripts/emit-event.sh"\n' "$(dirname "$BATS_TEST_FILENAME")" > "$MOCK_DIR/emit-event.sh"
+    cat >> "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() {
     local event_name="$1"
     mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
@@ -256,10 +255,35 @@ emit_event() {
 }
 _emit_comments_consumed() { :; }
 MOCK
+    cat > "$MOCK_DIR/ps" <<'MOCK'
+#!/bin/bash
+case "$*" in
+    *pgid=*) printf '%s\n' "424242" ;;
+    *etime=*) printf '%s\n' "${MOCK_ETIME-10:00}" ;;
+    *) exit 1 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/ps"
+}
 
-    # Unset AUTO_SESSION_ID so run-auto-sub.sh reads from the pointer file
-    unset AUTO_SESSION_ID
+@test "session-isolation: PGID-specific pointer file is read when AUTO_SESSION_ID is unset" {
+    _use_real_pgid_pointer_reader
+    mkdir -p "$BATS_TEST_TMPDIR/.tmp"
+    printf 'test-session-pgid\n' > "$BATS_TEST_TMPDIR/.tmp/auto-session-424242"
+
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     grep -q '"session_id":"test-session-pgid"' "$AUTO_EVENTS_LOG"
+}
+
+@test "session-isolation: a PGID pointer left by an earlier owner of the same PGID is ignored (Issue #1503)" {
+    _use_real_pgid_pointer_reader
+    mkdir -p "$BATS_TEST_TMPDIR/.tmp"
+    printf 'stale-session-pgid\n' > "$BATS_TEST_TMPDIR/.tmp/auto-session-424242"
+    touch -t 202401010000 "$BATS_TEST_TMPDIR/.tmp/auto-session-424242"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q '"event":"phase_start"' "$AUTO_EVENTS_LOG"
+    if grep -q 'stale-session-pgid' "$AUTO_EVENTS_LOG"; then false; fi
 }
