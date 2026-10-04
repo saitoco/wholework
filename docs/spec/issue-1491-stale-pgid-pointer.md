@@ -375,18 +375,31 @@ No new comments since last phase.
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+- 乖離なし。`read_pgid_pointer()` / `_process_elapsed_seconds()`、`modules/event-emission.md`、`docs/product.md` / `docs/ja/product.md` は Implementation Steps 1〜4 と一致していた。範囲外とした項目 (wrapper の inline 読み取り、issue-scoped pointer) も Spec と `modules/event-emission.md` に既知のギャップとして記載済み
+
+### 繰り返し発生した指摘
+- 指摘はすべて CONSIDER の 4 件で、同種の指摘の繰り返しはない。Parser/Validator Edge Case Pre-check の実測 (桁あふれ etime、未来 mtime、`set -u` 下の引数省略) が 3 件を占めた。いずれも fail-closed の方針とコメントの記述 ("Every failure path returns 0") に対する端の穴で、実害は現状ない。静的な読み取りだけでは見つけにくい種類のため、実測の価値があった
+- 未対応の CONSIDER (follow-up 候補): (1) 未来 mtime の拒否 (`_mtime > _now + slack`) または文書化、(2) etime の桁数制限、(3) `${1:-}` / `${2:-}` での引数省略対策、(4) 60 秒 slack の境界を固定するテスト
+
+### 受け入れ条件の検証の難しさ
+- AC3 (`command "bats tests/"`) は safe mode では直接実行できず、ローカルにも bats が無かったため、CI の `Run bats tests` job (SUCCESS) を参照して PASS とした。UNCERTAIN は発生しなかった
+- AC1 / AC2 の rubric は `/code` 時点でチェック済みで、実装とドキュメントを再確認して PASS と判断した
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の字面どおり、読み取り時検証 (`read_pgid_pointer()`: pointer の mtime とリーダーの `ps -o etime=` の経過時間の比較、slack 60 秒、fail-closed) を実装した。書き込み側と wrapper の inline 読み取りは変えていない
-- 実装前後の挙動比較は、bats が無いため素のハーネスで行った (変更前 7 件 FAIL / 変更後 全件 PASS)
+- `--light` (Size M) のため review-light 1 エージェントで 4 観点を実行した。Edge Case Pre-check は `scripts/emit-event.sh` の parser/validator 変更に対して発火し、実測した結果を review-light に渡した
+- AC3 は CI の `Run bats tests` job が SUCCESS だったため PASS とし、Issue のチェックボックスを更新した
+- MUST / SHOULD の指摘がないため、コードの修正は行っていない。CONSIDER 4 件は実害がないので Skipped とした
 
 ### Deferred Items
-- AC3 `command "bats tests/"` は bats 未実行のため未チェック。PR #1498 の CI `Run bats tests` job の結果で `/review` が確定する (pending CI confirmation)
-- Post-merge の observation AC (`/auto --batch` の Timeline 観察) は `/verify` で扱う。Spec の Notes のとおり、変更の有無によらず PASS になる見込みが高い
-- 5 つの `run-*.sh` と `run-auto-sub.sh` の inline な pointer 読み取り、issue-scoped pointer の残存は意図的に範囲外 (follow-up 候補。`modules/event-emission.md` に記録済み)
+- Post-merge の observation AC (`/auto --batch` で Sub-Issue Completion Timeline を観察) は `/verify` で扱う
+- 未対応の CONSIDER 4 件 (未来 mtime、桁あふれ etime、引数省略時の `set -u`、slack 境界テスト) と、wrapper の inline 読み取り・issue-scoped pointer は follow-up 候補
 
 ### Notes for Next Phase
-- `/review` は CI の `Run bats tests` job の結果を確認すること。ローカルでは bats を実行していない
-- macOS の `ps -o etime=` の実機形式は未確認 (Spec の Uncertainties)。想定と違えば `_process_elapsed_seconds` が空を返し、step 4 は常に fail-closed になる (誤帰属はしない)
+- PR の CI 17 件はすべて SUCCESS で、review は `COMMENTED` (REQUEST_CHANGES なし)。`/merge 1498` に進める
+- macOS の `ps -o etime=` の実機形式は未確認 (Spec の Uncertainties)。`macOS shell compatibility` job は SUCCESS だが、想定と違えば step 4 は常に fail-closed になる (誤帰属はしない)
