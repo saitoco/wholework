@@ -591,3 +591,38 @@ ${NESTED_TIMELINE_SECTION}
 
 - saito / MEMBER / first-class / ## Issue Retrospective (曖昧点の自動解決と `/spec` への調査メモ。欠落の原因は emit 経路側の可能性が高い) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981366913
 - saito / MEMBER / first-class / ℹ️ Triage AC audit (注意喚起: 新規テストの検出力。欠陥を再現する入力で修正前に FAIL することの確認の依頼) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981379525
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec のコードどおりに適用した (テストは Spec のコードブロックを抽出して挿入し、実装は 3 つの script と 2 つの文書に字面どおり反映)
+
+### Design Gaps/Ambiguities
+- bats が未インストールだったため、bats 本体は実行していない。代わりに `.tmp/` に簡易ランナー (`@test` / `setup` / `run` / `$status` / `$output` を扱うもの。bats 本体ではない) を作って検証した。`bats tests/` 全件の確認は push 後の CI の `Run bats tests` job に委ねる (pr route。`/review` が CI を参照する)
+- Pre-implementation FAIL 確認: 新規テスト 7 件のうち、欠陥を再現する 5 件が実装前に FAIL し、対照の 2 件が PASS することを確認した (期待どおり)。
+  - `run-auto-sub.bats` 2 件: FAIL
+  - `emit-skill-event.bats` 1 件目: FAIL / 2 件目: PASS (相対パスが git 外で変わらないことの退行ガード)
+  - `get-auto-session-report.bats` 1・2 件目: FAIL / 3 件目: PASS (batch 対象でもある Issue は主表に残ることの退行ガード)
+  - 実装後は 7 件とも PASS。各 Step の (a) を先に追加して FAIL を確認してから (b) に進む順序を守った
+- 影響を受ける既存テストを簡易ランナーで実行した結果: `run-auto-sub` 101 件、`emit-skill-event` 21 件、`emit-event` 33 件、`get-auto-session-report` 22 件、`run-spec` / `run-review` / `run-issue` / `run-merge` / `run-code` / `claude-watchdog` / `wait-ci-checks` / `auto-sub-observability` / `audit-auto-session` が全件 PASS。`run-fact-matching` の `apply-run-fact-match` 3 件 (tier 判定) は FAIL だが、Spec の Notes が簡易ランナーと bats 本体の差による既存の事象として事前に記録したものと一致し、今回の変更とは無関係と判断した
+- Step 10: pre-merge の rubric 4 件は実装で満たされるが、`command "bats tests/"` は bats 未インストールのため UNCERTAIN。「全件 PASS」の条件を満たさないので、Issue 本文のチェックボックスは変更していない (`/review` が PR の CI を参照して確定する)
+- `CLAUDE_PLUGIN_ROOT` が未設定の環境だったため、modules / scripts はリポジトリ直下の相対パスで参照した
+
+### Rework
+- worktree の isolation guard が `sed` の `r` コマンドや `xargs` 経由の `sh` を拒否したため、テストの挿入は python3、並列実行は `.tmp/runall.sh` に切り替えた。実装の手戻りは無し
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps を字面どおり適用した (Spec が一時コピーで事前検証済みで、境界条件とテストを保つ必要があるため)
+- 各 Step の (a) 新規テストを先に追加し、実装前に FAIL することを確認してから (b) 実装に進んだ (欠陥を再現する 5 件が FAIL、対照 2 件が PASS)
+
+### Deferred Items
+- `bats tests/` 全件の確認 (Pre-merge の最後の AC) は、bats 未インストールのため未実行。push 後の CI の `Run bats tests` job で確認する
+- Post-merge の observation AC (nested dispatch が起きた `/auto --batch` 実行での観察) は、nested dispatch が発生した実行を待つ
+
+### Notes for Next Phase
+- bats 本体は未実行で、簡易ランナーで検証した。差が出た場合は CI の結果を見て `/review` か fix で直す
+- 簡易ランナーでは `run-fact-matching` の `apply-run-fact-match` 3 件が FAIL するが、Spec が既存の事象として記録済みで今回の変更とは無関係
+- `scripts/collect-run-facts.sh` と `scripts/hook-worktree-path-guard.sh` の同根の相対パス問題は、Spec の Notes のとおり意図的に範囲外 (follow-up 候補)
