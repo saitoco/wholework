@@ -309,16 +309,16 @@ export AUTO_SESSION_ID
 - UNCERTAIN なし。AC4 (`bats tests/`) は CI reference (head SHA の `Run bats tests` job) で PASS と確定できた。Phase Handoff に CI 参照の手順が書かれていたので判断に迷わなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--non-interactive` では Workflow の再起動保証がないため、`capabilities.workflow: true` でも静的な Task fan-out (review-spec + review-bug ×2) を前景で実行した
-- review-spec の MUST (macOS の `ps -o etime=` 形式が未検証) は CONSIDER に引き下げた。`read_pgid_pointer()` 本体は #1491 で導入済み、fail-closed は event-emission.md に明記済み、誤帰属は起きない。結果は `COMMENT` で投稿し、`REQUEST_CHANGES` にはしていない
+- マージ戦略は `resolve-merge-strategy.sh --flag` の結果 `--squash` を採用した。PR は競合なし (`mergeable=true`、CI success、approved) で、そのままマージした
+- pre-merge AC ゲートは未チェック 0 件、review-incomplete-fallback なしで通過した
 
 ### Deferred Items
-- macOS 実機での `ps -o etime= -p $$` と `bats tests/emit-event.bats` の確認: 未実施 (CI の macOS job は `bash -n` のみ)。想定と違うと全 wrapper のイベントが `session_id` を失う (fail-closed)
-- 新規 stale テストの `|| false` の揃え (`auto-sub-observability.bats` / `run-auto-sub.bats`): 実害がないため修正しなかった
+- macOS 実機での `ps -o etime= -p $$` と `bats tests/emit-event.bats` の確認: review から引き継ぎ、未実施 (CI の macOS job は `bash -n` のみ)
+- 新規 stale テストの `|| false` の揃え: review から引き継ぎ、実害がないため対応していない
 
 ### Notes for Next Phase
-- Pre-merge AC は 4 件すべて PASS で Issue 上でもチェック済み。`/merge` は追加の対応なしで進められる
-- CI は全 17 チェック PASS (head SHA `8ece4010`)。レビューで未解決の MUST はない
+- post-merge の検証条件はなし。verify は state=CLOSED と `phase/verify` ラベルの確認が中心になる
+- macOS で想定と違う場合、全 wrapper のイベントが `session_id` を失う (fail-closed)。該当環境があれば確認する
