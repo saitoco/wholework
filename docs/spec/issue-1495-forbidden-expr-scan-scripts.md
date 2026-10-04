@@ -138,3 +138,31 @@ triage 時の Size は S。Changed Files は 3 件だが、`scripts/observation-
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (回帰テスト用 AC の追加判断と、Background の検出 3 種類への訂正) / https://github.com/saitoco/wholework/issues/1495#issuecomment-5977709784
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を Spec どおりに実装し、1 コミットにまとめた (`SCAN_DIRS` の拡張だけを先にコミットしていない)
+
+### Design Gaps/Ambiguities
+- この環境には `bats` が未導入だったため、Pre-merge AC3 (`bats tests/check-forbidden-expressions.bats`) はローカルで評価できない。AC3 はチェックを付けず、push 後の CI `Run bats tests` ジョブの結果で確認する (Step 14 の CI-based bats AC confirmation 対象)
+- 新規テスト T2〜T4 は、`.tmp/fx/` の空フィクスチャ構造にテストと同じ入力を作ってチェッカーを直接実行し、期待どおりの終了コード (T2 = 0、T3 = 0、T4 = 1) を確認した。bats の `run` 経由の実行そのものは未確認
+
+### Rework
+- なし
+
+### Pre-implementation FAIL Check
+- Confirmed pre-implementation FAIL for 1 new test(s): T1 (`scripts/` 配下の検出) は、`SCAN_DIRS` から `scripts/` を外した旧実装のコピーで exit 0 (テストの期待は exit 1 なので FAIL)、新実装で exit 1 になることを確認した。T2〜T4 は各フィルタ (自己除外、単語境界、行頭アンカー) の構造から識別力を導いた (Spec Notes「テスト」のとおり)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `check_term` の自己参照の除外は、行頭アンカー付き (`^scripts/check-forbidden-expressions.sh:`) にした。他ファイルがこのパスに言及しつつ廃止語も含む行を見逃さないため (T4 で保護)
+- 旧称 Dispatch のケースは単語境界付きの ERE に変更し、`reconcile-phase-state.sh` の見出しコメントは変更しなかった
+
+### Deferred Items
+- Pre-merge AC3 (bats) は、ローカルに `bats` がないため、push 後の CI 結果で確認する (チェックなしのまま残している)
+
+### Notes for Next Phase
+- `/verify` は AC3 を CI の `Run bats tests` ジョブの結果で判定すること。CI が FAIL なら新規テスト 4 件 (T1〜T4) を最初に疑う
