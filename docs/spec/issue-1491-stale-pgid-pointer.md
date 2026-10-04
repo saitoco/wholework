@@ -389,17 +389,15 @@ No new comments since last phase.
 - AC1 / AC2 の rubric は `/code` 時点でチェック済みで、実装とドキュメントを再確認して PASS と判断した
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` (Size M) のため review-light 1 エージェントで 4 観点を実行した。Edge Case Pre-check は `scripts/emit-event.sh` の parser/validator 変更に対して発火し、実測した結果を review-light に渡した
-- AC3 は CI の `Run bats tests` job が SUCCESS だったため PASS とし、Issue のチェックボックスを更新した
-- MUST / SHOULD の指摘がないため、コードの修正は行っていない。CONSIDER 4 件は実害がないので Skipped とした
+- マージ方式は `resolve-merge-strategy.sh` が `--squash` を返したため squash で実行した (競合なし、CI 全件 SUCCESS、リベース不要)
+- pre-merge AC は 3 件すべてチェック済み、review 完了は organic (fallback ではない) だったためゲートは通過した
 
 ### Deferred Items
-- Post-merge の observation AC (`/auto --batch` で Sub-Issue Completion Timeline を観察) は `/verify` で扱う
-- 未対応の CONSIDER 4 件 (未来 mtime、桁あふれ etime、引数省略時の `set -u`、slack 境界テスト) と、wrapper の inline 読み取り・issue-scoped pointer は follow-up 候補
+- Post-merge の observation AC (`/auto --batch` を並行セッション稼働中に実行し、Sub-Issue Completion Timeline を観察) は `/verify` で扱う
+- review で Skipped とした CONSIDER 4 件は follow-up 候補のまま
 
 ### Notes for Next Phase
-- PR の CI 17 件はすべて SUCCESS で、review は `COMMENTED` (REQUEST_CHANGES なし)。`/merge 1498` に進める
-- macOS の `ps -o etime=` の実機形式は未確認 (Spec の Uncertainties)。`macOS shell compatibility` job は SUCCESS だが、想定と違えば step 4 は常に fail-closed になる (誤帰属はしない)
+- `/verify 1491` へ進める。macOS の `ps -o etime=` 実機形式は未確認で、想定と違えば fail-closed (誤帰属はしない)
