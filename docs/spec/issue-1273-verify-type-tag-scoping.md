@@ -71,6 +71,10 @@ No new comments since last phase.
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5378426842
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5384000588
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5579811573
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1273#issuecomment-5579903007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5653267594
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5957356608
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1273#issuecomment-5978129403
 ## Changed Files
 
 - `modules/verify-classifier.md`: `### Tag Extraction Rule (consumers)` セクションを新設 — タグは HTML コメント内からのみ読むという正準ルール、awk 形 (`[ \t]*`) と `grep -E` 形 (`[[:space:]]*`) の両方の canonical pattern、および consumer 一覧を記載 (SSoT)
