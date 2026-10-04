@@ -89,6 +89,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-10-04 08:05 UTC: manual-recovery-label-backfill
+
+### Context
+- Issue #1494, phase: issue
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: missing-phase-label
+- run-issue.sh exited 1 via silent no-op detection: the /issue refinement (Background additions, Post-merge AC rewrite, Issue Retrospective comment) completed, but the phase/issue label transition was skipped. Backfilled the label manually and resumed.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-10-03 03:55 UTC: manual-recovery-respawn
 
 ### Context
