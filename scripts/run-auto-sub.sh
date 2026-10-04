@@ -734,7 +734,9 @@ run_phase_with_recovery() {
   # `/code` patch route makes, which carry no #N reference until the final Step 11 commit.
   # (c) trades detection of genuinely concurrent no-issue-number commits (rare, and
   # indistinguishable from a same-phase WIP commit by subject alone) for eliminating this
-  # false-positive class.
+  # false-positive class. A subject that references several issue numbers is skipped as soon
+  # as one of them matches (a) or (d), so a concurrent commit that also names a self or nested
+  # Issue is not reported.
   local _commits
   _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
   if [[ -n "$_commits" ]]; then

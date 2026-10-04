@@ -432,9 +432,9 @@ FIXTURE_EOF
     run bash "$SCRIPT" "session-nested-done" --metrics-only --no-github
     [ "$status" -eq 0 ]
     nested_row="$(echo "$output" | grep "| #200 |")"
-    [[ "$nested_row" == *"| #100 review (PR #900) |"* ]]
-    [[ "$nested_row" == *"2026-10-04T06:14:00Z – 2026-10-04T06:18:00Z"* ]]
-    [[ "$nested_row" == *"verify 4m"* ]]
+    [[ "$nested_row" == *"| #100 review (PR #900) |"* ]] || false
+    [[ "$nested_row" == *"2026-10-04T06:14:00Z – 2026-10-04T06:18:00Z"* ]] || false
+    [[ "$nested_row" == *"verify 4m"* ]] || false
     if [[ "$nested_row" == *"(completion not recorded)"* ]]; then false; fi
 }
 
