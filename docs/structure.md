@@ -43,7 +43,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (135 files)
+├── tests/               # Bats test files for scripts (134 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -197,7 +197,6 @@ Key modules:
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/html-selector-match.py` — standard-library-only Python CSS selector matcher (compound selectors + descendant/`>`/`+`/`~` combinator chains) used by `modules/verify-executor.md`'s `html_check` verify command; reads HTML from stdin via `curl | python3 html-selector-match.py "selector"` and prints the match count
 - `scripts/handle-permission-mode-failure.sh` — diagnose likely `--permission-mode auto` classifier failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
-- `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label
 - `scripts/get-issue-priority.sh` — get issue priority field

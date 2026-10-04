@@ -36,7 +36,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (135 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル (134 ファイル)
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -190,7 +190,6 @@ wholework/
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/html-selector-match.py` — 標準ライブラリのみを使う Python の CSS セレクタマッチャ (複合セレクタ + descendant/`>`/`+`/`~` コンビネータチェーン)。`modules/verify-executor.md` の `html_check` verify command で使用される。`curl | python3 html-selector-match.py "selector"` で stdin から HTML を読み、マッチ件数を出力する
 - `scripts/handle-permission-mode-failure.sh` — `--permission-mode auto` classifier の失敗の可能性を診断し、修復ヒントを stderr に出力する (ヒューリスティック: exit!=0 かつ elapsed<=30s)
-- `scripts/get-verify-permission.sh` — verify command ハンドラファイルから権限値を抽出
 - `scripts/get-issue-size.sh` — issue の size ラベルを取得
 - `scripts/get-issue-type.sh` — issue の type ラベルを取得
 - `scripts/get-issue-priority.sh` — issue の priority フィールドを取得
