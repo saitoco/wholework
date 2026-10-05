@@ -163,6 +163,35 @@
 - Costly / irreversible な Implementation Step: なし (文書編集と軽量なテスト実行のみ)。外部サービスへのログインを要する Step: なし
 - 出所 (provenance) は上記 Uncertainties を参照
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。Entry draft の事実 (日付・Issue 番号・件数・セッション ID・引用文言) はそのまま転記し、相互参照 bullet 2 件も Spec の原文どおり追加した
+
+### Design Gaps/Ambiguities
+- 実行環境に bats が無く (`command -v bats` が空)、`tests/orchestration-fallbacks.bats` と、`modules/orchestration-fallbacks.md` を参照する他 3 つのテスト (`run-auto-sub` / `run-code` / `run-spec`) を実行できなかった。代わりに構造検査を手動で再現した: 必須 5 セクションが各 22 件で一致、Rationale 内の `#N` 参照あり (awk による同等検査)。AC はすべて `file_contains` / `rubric` で bats の `command` AC は無いため、Step 10 の bats-absent 除外と Step 14 の CI 確認の対象外
+- 検証済み: `check-forbidden-expressions.sh` と language-convention check (merge-base 6fe36641 との diff) は出力なし・exit 0、`validate-skill-syntax.py skills/` は 0 error。`check-bare-bracket-assertions.sh` の 1016 件の警告は既存の tests/ 由来で、本変更 (tests/ 無変更) とは無関係
+- Pre-implementation FAIL 確認: 新規テストの追加なし (N/A)
+
+### Rework
+- なし。ただし Issue 本文の checkbox 更新用の一時ファイルを Write ツールでなく Bash リダイレクトで作成してしまった (Notes の規約違反、内容への影響なし・削除済み)
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1500#issuecomment-5987864250
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Entry draft を Spec の原文どおり `modules/orchestration-fallbacks.md` に追加し (`## harness-oom-stop`)、`external-kill-parent-respawn` に相互参照 bullet 2 件を追加した。コード変更・`skills/auto/SKILL.md` の変更はなし (Spec の判断どおり)
+- 書き込み前に識別子 (`_find_known_recoveries_issue`、`harness-stop` 等の通知クラス、`THRESHOLD=3`、`detect-external-kill.sh`、archive ファイル、`cause: harness-oom-stop` 4 件) を grep で再確認した
+
+### Deferred Items
+- bats 未導入のため `tests/orchestration-fallbacks.bats` ほか 3 テストを実行できず、構造検査 (必須 5 セクションの件数一致・Rationale 内の `#N` 参照) を awk / grep で手動再現した。CI の bats ジョブが push 後の本確認になる
+- Post-merge の observation AC (2026-11-02 以降の最初の `/auto` 完了時に `cause: harness-oom-stop` の新規エントリがないこと) は未確認のまま `/verify` に残る
+
+### Notes for Next Phase
+- Pre-merge AC 4 件 (file_contains 3 + rubric 4 の組) は Issue 本文でチェック済み。Post-merge の observation AC のみ未チェック
+- 2026-11-02 より前に `/verify` が走る場合は観測期間不足で SKIPPED が期待される。期間内に `cause: harness-oom-stop` の新規エントリがあれば FAIL (再発 = 緩和策不足。コード側の施策は別 Issue で扱う)
+- push 後の CI (`Run bats tests`) の結果を確認すること: 新エントリは必須 5 セクションの件数一致と Rationale の `#N` 参照を既存テストが自動検査する
