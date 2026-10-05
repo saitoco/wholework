@@ -592,6 +592,8 @@ ${NESTED_TIMELINE_SECTION}
 - saito / MEMBER / first-class / ## Issue Retrospective (曖昧点の自動解決と `/spec` への調査メモ。欠落の原因は emit 経路側の可能性が高い) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981366913
 - saito / MEMBER / first-class / ℹ️ Triage AC audit (注意喚起: 新規テストの検出力。欠陥を再現する入力で修正前に FAIL することの確認の依頼) / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981379525
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981958469
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1499#issuecomment-5981984094
 ## Code Retrospective
 
 ### Deviations from Design
