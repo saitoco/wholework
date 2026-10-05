@@ -116,14 +116,14 @@ FIXTURE_EOF
 }
 
 @test "success: phase silent window threshold violation appears in Summary and Notes" {
-    # spec phase: WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800, SILENT_MARGIN=600, threshold=1200
-    # max_sec=1500 > 1200 => violation
+    # spec phase: WATCHDOG_TIMEOUT_SPEC_DEFAULT=2964, SILENT_MARGIN=600, threshold=2364
+    # max_sec=2400 > 2364 => violation
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-15T10:00:00Z","issue":500,"event":"sub_start","session_id":"abc-666","size":"M"}
 {"ts":"2026-06-15T10:00:01Z","issue":500,"event":"phase_start","session_id":"abc-666","phase":"spec"}
-{"ts":"2026-06-15T10:25:00Z","issue":500,"event":"max_silent_window","session_id":"abc-666","phase":"spec","max_sec":1500}
-{"ts":"2026-06-15T10:25:01Z","issue":500,"event":"phase_complete","session_id":"abc-666","phase":"spec"}
-{"ts":"2026-06-15T10:25:02Z","issue":500,"event":"sub_complete","session_id":"abc-666","exit_code":"0"}
+{"ts":"2026-06-15T10:40:01Z","issue":500,"event":"max_silent_window","session_id":"abc-666","phase":"spec","max_sec":2400}
+{"ts":"2026-06-15T10:40:02Z","issue":500,"event":"phase_complete","session_id":"abc-666","phase":"spec"}
+{"ts":"2026-06-15T10:40:03Z","issue":500,"event":"sub_complete","session_id":"abc-666","exit_code":"0"}
 FIXTURE_EOF
 
     export WHOLEWORK_CONFIG_PATH=/dev/null
