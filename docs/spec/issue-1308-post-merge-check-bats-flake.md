@@ -70,6 +70,22 @@ macOS (BSD) の `mktemp(1)` は man page に明記されている通り、**末�
 - saito / MEMBER / first-class / `/issue 1308 --non-interactive` による refinement 完了後の Issue Retrospective コメント。Background への非決定性記録の明文化、Pre-merge AC のループ実行化、Post-merge observation AC 新設、Related Issues セクション新設などの反映内容の要約 (内容はすでに Issue 本文に反映済みで、本 Spec の設計に影響する新規情報はなし) / https://github.com/saitoco/wholework/issues/1308#issuecomment-5241844509
 - code フェーズ (`phase/ready` ラベル付与以降): No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1308#issuecomment-5242401478
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5243104067
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5255763606
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5296392283
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5304277991
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5310552674
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5327738998
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5341252552
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5354386801
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5369702638
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5378427462
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5384001260
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5579813511
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5653268426
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5957360319
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1308#issuecomment-5978130761
 ## Code Retrospective
 
 ### Deviations from Design
