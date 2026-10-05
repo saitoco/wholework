@@ -64,6 +64,17 @@
 |---|---|---|---|---|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective。Pre-merge AC 1 の rubric 常時 PASS リスク指摘 (Pattern 2) を受け「または当該フォールバックを残す設計判断とその安全性の根拠が明示的に文書化されている」の削除で対応済み (Issue body に反映済み)。AC 4 の bats タイムアウトに関する参考情報 (CI reference fallback 条件を満たすため恒久的 UNCERTAIN に該当しないと判断済み、対応不要)。Autonomous Auto-Resolve Log で「`.tmp/auto-session-current` file 自体の存続要否は `/spec` の判断に委ねる」「`session_id` 空の event の集計側ハンドリングは追加 AC を設けない」の 2 点を明記 | https://github.com/saitoco/wholework/issues/1317#issuecomment-5327871143 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1317#issuecomment-5328705720
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5329382916
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5341253313
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5354387422
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5369703247
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5378427684
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5384001448
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5579814134
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5653268679
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5957361471
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1317#issuecomment-5978131309
 ## Code Retrospective
 
 ### Deviations from Design
