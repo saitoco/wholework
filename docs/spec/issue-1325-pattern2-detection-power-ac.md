@@ -17,6 +17,9 @@ No new comments since last phase.
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5384001640
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5579814787
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5653269006
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1325#issuecomment-5653376926
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5957362616
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1325#issuecomment-5978131827
 ## Overview
 
 `/verify 1130` の実測で、AC が「新規テストが追加されている」ことを正しく確認して PASS したにもかかわらず、追加されたテスト自体に検出力がなく回帰を捕まえられないケースが確認された。既存の `skills/triage/skill-dev-verify-audit.md` Pattern 2 のサブパターンはいずれもこれを被覆していない。
