@@ -1124,6 +1124,8 @@ A verify command that pins a literal numeric value expected to change over time 
 <!-- verify: command "test \"$(find scripts -maxdepth 1 -type f | wc -l)\" -eq \"$(grep 'Utility scripts used by skills and agents' docs/structure.md | grep -oE '[0-9]+')\"" -->
 ```
 
+The example above names the `docs/structure.md` script-count comment as it existed when this section was written; that comment was removed in #1510, so substitute the document and anchor text of whichever hand-maintained count the acceptance condition actually pins.
+
 Use `-E`/`-o` for extraction, not `-P` (PCRE) — BSD `grep` on macOS does not support `-P`, and this form must be portable to both local macOS environments and CI.
 
 **Why this cannot be resolved pre-merge**: while concurrent PRs are still open, `/review` (safe mode) has no way to observe a sibling PR's not-yet-merged change, so the collision is invisible at review time regardless of verify command shape. `command` verify commands additionally execute only in full mode — in `/review` (safe mode) they return UNCERTAIN (see § "Out-of-Tree File References" note on verify mode above) — so post-merge (`/verify`, full mode) is the only phase where a dynamic comparison can actually execute and catch a lost increment.
@@ -1134,7 +1136,7 @@ Use `-E`/`-o` for extraction, not `-P` (PCRE) — BSD `grep` on macOS does not s
 3. If concurrent-PR risk exists, replace the literal pin with a post-merge dynamic comparison per the recommended pattern above, classified `verify-type: auto` (a verify command is present).
 4. If no concurrent-PR risk exists (an exclusive counter unlikely to collide), the literal pre-merge pin is acceptable as-is — this section does not require converting every numeric AC.
 
-**Scope**: this pattern generalizes beyond `docs/structure.md`'s `(N files)` comment to any literal-numeric-pinning acceptance condition that counts files, lines, or entries in a document shared across concurrently-worked-on PRs.
+**Scope**: this pattern generalizes beyond the former `docs/structure.md` `(N files)` comment (removed in #1510) to any literal-numeric-pinning acceptance condition that counts files, lines, or entries in a document shared across concurrently-worked-on PRs.
 
 ### 32. Multi-File `command` Verify Commands — Early Timeout-Risk Detection
 

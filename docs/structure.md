@@ -25,11 +25,11 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (46 files)
+├── modules/             # Shared modules referenced by skills
 │   └── <module-name>.md
-├── agents/              # Agent definitions (8 files)
+├── agents/              # Agent definitions
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (97 files)
+├── scripts/             # Utility scripts used by skills and agents
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -43,7 +43,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (133 files)
+├── tests/               # Bats test files for scripts
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -86,7 +86,7 @@ wholework/
 
 > **Maintenance rule**: Keep the tables and lists in this section aligned with the actual files. When a file listed below is added, removed, renamed, or has its role/description changed, update the corresponding entry here in the same change. `/audit drift` detects divergence but manual upkeep is still expected.
 >
-> When adding or removing a file in `modules/` or `scripts/`, also update the file count comment (e.g., `(29 files)`) in the Directory Layout section above. Avoid pinning the new count as a literal value in the verify command — it does not survive concurrent PRs that touch the same line. Instead use a post-merge dynamic comparison; see `modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience" for the pattern and rationale.
+> The Directory Layout section deliberately carries no file-count comments. A count is derived information: it drifts each time a file is added or removed (recurring drift: #1280, #1403, #1504), and a literal count on a shared line is lost silently when concurrent PRs each bump it (see `modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience"). Do not add counts back — describe each directory by its role. When a verify command needs a file count, compare against the live directory (for example `find <dir> -maxdepth 1 -type f | wc -l`) rather than a number written in a document.
 
 ### Skills
 

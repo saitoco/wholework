@@ -132,25 +132,21 @@ A trigger opens the question; it does not by itself authorize the tag. Run the g
 | 1 | Base branch CI is green | `gh run list --branch main --workflow Test --limit 10 --json conclusion,status` — no `failure`, and no `status` other than `completed` (an in-progress run must not be read as green) |
 | 2 | No open PR carrying unreleased work | `gh pr list --state open` — empty, or only PRs still in review/CI |
 | 3 | No known test failure or regression | Open Issues describing a reproducible failure in the shipped surface are resolved or explicitly deferred with a recorded reason |
-| 4 | Documentation drift check passes | See the four checks below |
+| 4 | Documentation drift check passes | See the three checks below |
 | 5 | No stale or untriaged Issues | `/audit stats` reports 0 stale (90d+) and 0 untriaged |
 
 **Gate 4 — documentation drift checks:**
 
 ```sh
-# a. structure.md file counts match reality (EN and JA)
-ls scripts/ | wc -l ; ls tests/ | wc -l ; ls modules/*.md | wc -l
-grep -E '\([0-9]+ files\)' docs/structure.md
-
-# b. config keys agree between the user-facing reference and the implementation SSoT
+# a. config keys agree between the user-facing reference and the implementation SSoT
 #    (docs/guide/customization.md § Available Keys vs modules/detect-config-markers.md)
 
-# c. every top-level docs/*.md has a docs/ja/ mirror
+# b. every top-level docs/*.md has a docs/ja/ mirror
 ls docs/*.md | sed 's|docs/||' | sort > /tmp/en.txt
 ls docs/ja/*.md | sed 's|docs/ja/||' | sort > /tmp/ja.txt
 comm -23 /tmp/en.txt /tmp/ja.txt   # must be empty
 
-# d. plugin.json version matches the tag about to be created
+# c. plugin.json version matches the tag about to be created
 jq -r '.version' .claude-plugin/plugin.json
 ```
 

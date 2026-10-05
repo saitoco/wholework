@@ -123,25 +123,21 @@ Claude Code の応答フロー:
 | 1 | base branch の CI が緑 | `gh run list --branch main --workflow Test --limit 10 --json conclusion,status` — `failure` がなく、`status` がすべて `completed` であること (実行中の run を緑と誤認しないため) |
 | 2 | 未リリースの成果を抱えた open PR がない | `gh pr list --state open` — 空、またはレビュー/CI 待ちの PR のみ |
 | 3 | 既知のテスト FAIL・リグレッションがない | 出荷面で再現する failure を記述した open Issue が解消済み、または理由を記録した上で明示的に見送られていること |
-| 4 | ドキュメント drift チェックが通る | 下記 4 項目を参照 |
+| 4 | ドキュメント drift チェックが通る | 下記 3 項目を参照 |
 | 5 | stale / untriaged Issue がない | `/audit stats` が stale (90 日以上) 0 件・untriaged 0 件を報告すること |
 
 **ゲート 4 — ドキュメント drift チェック:**
 
 ```sh
-# a. structure.md のファイルカウントが実数と一致 (英日とも)
-ls scripts/ | wc -l ; ls tests/ | wc -l ; ls modules/*.md | wc -l
-grep -E '（[0-9]+ ファイル）' docs/ja/structure.md
-
-# b. 利用者向けリファレンスと実装 SSoT の config キーが一致
+# a. 利用者向けリファレンスと実装 SSoT の config キーが一致
 #    (docs/guide/customization.md § Available Keys と modules/detect-config-markers.md)
 
-# c. top-level の docs/*.md すべてに docs/ja/ の対訳が存在する
+# b. top-level の docs/*.md すべてに docs/ja/ の対訳が存在する
 ls docs/*.md | sed 's|docs/||' | sort > /tmp/en.txt
 ls docs/ja/*.md | sed 's|docs/ja/||' | sort > /tmp/ja.txt
 comm -23 /tmp/en.txt /tmp/ja.txt   # 空であること
 
-# d. plugin.json のバージョンが、これから打つタグと一致
+# c. plugin.json のバージョンが、これから打つタグと一致
 jq -r '.version' .claude-plugin/plugin.json
 ```
 

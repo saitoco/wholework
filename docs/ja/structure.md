@@ -18,11 +18,11 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill 定義 (必須)
 │       └── *.md         # 補助的な phase/guideline ファイル (任意)
-├── modules/             # skills から参照される共有モジュール (46 ファイル)
+├── modules/             # skills から参照される共有モジュール
 │   └── <module-name>.md
-├── agents/              # Agent 定義 (8 ファイル)
+├── agents/              # Agent 定義
 │   └── <agent-name>.md
-├── scripts/             # skills と agents が使用するユーティリティスクリプト (97 ファイル)
+├── scripts/             # skills と agents が使用するユーティリティスクリプト
 │   ├── git-hooks/       # Git hook スクリプト (commit-msg DCO 強制)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -36,7 +36,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル (133 ファイル)
+├── tests/               # スクリプト用の Bats テストファイル
 │   ├── <script-name>.bats
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
@@ -79,7 +79,7 @@ wholework/
 
 > **メンテナンスルール**: このセクションの表とリストは実際のファイルと整合させること。以下に列挙されたファイルが追加・削除・リネームされたり、役割/説明が変わった場合は、同じ変更の中で該当エントリを更新すること。`/audit drift` が乖離を検出するが、手動でのメンテナンスは引き続き必要である。
 >
-> `modules/` または `scripts/` にファイルを追加・削除する場合は、上記 Directory Layout セクションのファイル数コメント (例: `(29 files)`) も更新すること。新しい件数を verify command にリテラル値として固定しないこと (同じ行を触る並行 PR に耐えられない)。代わりに post-merge の動的比較を使うこと。パターンと根拠は `modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience" を参照。
+> Directory Layout セクションには、意図的にファイル数コメントを置かない。件数は派生情報であり、ファイルを追加・削除するたびにずれる (繰り返し発生したずれ: #1280, #1403, #1504)。また、共有行に書かれた件数リテラルは、並行 PR がそれぞれ加算すると黙って失われる (`modules/verify-patterns.md` § "Literal Numeric Pinning ACs — Concurrent PR Resilience" を参照)。件数を書き戻さず、各ディレクトリは役割で説明すること。verify command でファイル数が必要な場合は、文書に書かれた数値ではなく実ディレクトリとの比較 (例: `find <dir> -maxdepth 1 -type f | wc -l`) を使うこと。
 
 ### Skills
 
