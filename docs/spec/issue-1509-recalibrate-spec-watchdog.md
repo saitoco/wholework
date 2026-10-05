@@ -188,16 +188,13 @@ Nothing to note (指摘は `docs/ja/tech.md` の `。` 直後の余分な半角�
 - 検証コマンド付きの AC 1〜4 はすべて決定的に判定でき、UNCERTAIN は発生しなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Size M の `--light` (review-light 1 エージェント) で実施し、MUST / SHOULD の指摘はなかった
-- AC 5 は CI の bats ジョブ SUCCESS を根拠に PASS として Issue のチェックボックスを更新した
-- CONSIDER (`docs/ja/tech.md` の余分な半角スペース) は 1 文字の修正で PR ブランチに反映した
+- マージ戦略は `resolve-merge-strategy.sh` の結果 (squash) を使用し、競合なし・CI 成功のため rebase は不要だった
 
 ### Deferred Items
-- Post-merge の observation AC (再較正後の Size M 以上の spec 3 件の観測) は、サンプル待ちで `/verify` では SKIPPED になる想定
+- Post-merge の observation AC (再較正後の Size M 以上の spec 3 件の観測) は `/verify` では SKIPPED になる想定
 
 ### Notes for Next Phase
-- 全 CI ジョブは SUCCESS。レビュー修正 (docs の 1 文字削除) 後の CI は再実行されるため、`/merge` は CI 結果を確認してからマージすること
-- 本 PR は `closes #1509` を含むが、Post-merge AC が未チェックのまま残る
+- `closes #1509` による自動クローズと `phase/verify` ラベルを確認すること
