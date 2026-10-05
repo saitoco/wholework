@@ -26,7 +26,14 @@ WATCHDOG_TIMEOUT_DEFAULT=2700
 #     #1201 hit a watchdog_kill at 2600, then completed with max_silent_window=
 #     4110s (76.1% of a 5400s override) on immediate retry — the same #903-style
 #     x1.3 factor applied to 4110s lands within the already-validated 5400s
-WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800
+#   - SPEC_DEFAULT raised 1800->2964 (#1509, 2026-10): the #1301 project override
+#     (2340s) was reached at 88-97% in three consecutive /auto --batch sessions
+#     (max_silent_window 2280s / 2060s / 2190s, no kill). Spec samples over the
+#     override period (N=95) recorded p95 1770s / max 2280s. The same #903-style
+#     x1.3 factor applied to the 2280s max gives 2964s (2280/2964 = 76.9%, under
+#     the 80% trigger). The override was promoted to this global default — see
+#     docs/tech.md § Watchdog timeout calibration
+WATCHDOG_TIMEOUT_SPEC_DEFAULT=2964
 WATCHDOG_TIMEOUT_CODE_DEFAULT=4680
 WATCHDOG_TIMEOUT_REVIEW_DEFAULT=5400
 WATCHDOG_TIMEOUT_MERGE_DEFAULT=600

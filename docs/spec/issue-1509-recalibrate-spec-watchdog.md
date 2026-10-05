@@ -160,3 +160,44 @@ era / Size 別は、同じ式に `($sizes["\(.session_id)|\(.issue)"])` (`sub_st
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 曖昧点の自動解決 (2850s 下限と実効値判定) と AC 変更理由の記録。global default 昇格時は tests/watchdog-defaults.bats の更新が必要との注記 / https://github.com/saitoco/wholework/issues/1509#issuecomment-5987169878
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1–4 を Spec どおりに実施)
+
+### Design Gaps/Ambiguities
+- 実行環境に bats が無く、`bats tests/` (Pre-merge AC 5) と更新した 3 本の bats をローカルで実行できなかった。代わりに `scripts/get-auto-session-report.sh` を同じフィクスチャ (`max_sec` 2400、`WHOLEWORK_CONFIG_PATH=/dev/null` と 3600 の override) で直接実行し、既定値では `within 600s of watchdog limit` が出て override では出ないことを確認した (近似確認であり AC の根拠ではない)。AC 5 は未チェックのまま、PR の CI で確認する
+- `scripts/check-bare-bracket-assertions.sh` は既存テスト全体に 1016 件の警告を出す。本変更とは無関係の既存事象
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告する。本変更とは無関係の既存事象 (`tech.md` と `customization.md` は IN_SYNC)
+- PR 本文の末尾に付けるべき attribution 行を `gh pr create` 時に入れ忘れ、後から `gh pr edit` で追加しようとしたが権限分類器に拒否された。PR は有効なので、追加は行っていない
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+Nothing to note (Spec の Changed Files 9 件がすべて変更され、スコープ外の変更もなかった)
+
+### 繰り返し発生した指摘
+Nothing to note (指摘は `docs/ja/tech.md` の `。` 直後の余分な半角スペース 1 件 (CONSIDER) のみで、修正済み)
+
+### 受入条件検証の難しさ
+- AC 5 (`bats tests/`) は実行環境に bats がなくローカル検証できず、CI の `Run bats tests` ジョブ結果 (SUCCESS) を根拠に PASS とした。`command` 型の AC は safe mode では CI 参照が前提になる
+- 検証コマンド付きの AC 1〜4 はすべて決定的に判定でき、UNCERTAIN は発生しなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Size M の `--light` (review-light 1 エージェント) で実施し、MUST / SHOULD の指摘はなかった
+- AC 5 は CI の bats ジョブ SUCCESS を根拠に PASS として Issue のチェックボックスを更新した
+- CONSIDER (`docs/ja/tech.md` の余分な半角スペース) は 1 文字の修正で PR ブランチに反映した
+
+### Deferred Items
+- Post-merge の observation AC (再較正後の Size M 以上の spec 3 件の観測) は、サンプル待ちで `/verify` では SKIPPED になる想定
+
+### Notes for Next Phase
+- 全 CI ジョブは SUCCESS。レビュー修正 (docs の 1 文字削除) 後の CI は再実行されるため、`/merge` は CI 結果を確認してからマージすること
+- 本 PR は `closes #1509` を含むが、Post-merge AC が未チェックのまま残る
