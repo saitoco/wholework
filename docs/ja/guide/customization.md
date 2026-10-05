@@ -42,7 +42,7 @@ production-url: https://yourapp.example.com
 watchdog-timeout-seconds: 3600
 
 # フェーズ別上書き（オプション; watchdog-timeout-seconds より優先）
-# watchdog-timeout-spec-seconds: 1800
+# watchdog-timeout-spec-seconds: 2964
 # watchdog-timeout-code-seconds: 4680
 # watchdog-timeout-review-seconds: 5400
 # watchdog-timeout-merge-seconds: 600
@@ -129,7 +129,7 @@ capabilities:
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
-| `watchdog-timeout-spec-seconds` | integer | `""` (フォールバック: `1800`) | `/spec` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `1800`。 |
+| `watchdog-timeout-spec-seconds` | integer | `""` (フォールバック: `2964`) | `/spec` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `2964`。 |
 | `watchdog-timeout-code-seconds` | integer | `""` (フォールバック: `4680`) | `/code` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `4680`。 |
 | `watchdog-timeout-review-seconds` | integer | `""` (フォールバック: `5400`) | `/review` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `5400`。 |
 | `watchdog-timeout-merge-seconds` | integer | `""` (フォールバック: `600`) | `/merge` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `600`。 |
