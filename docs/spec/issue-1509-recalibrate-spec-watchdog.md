@@ -160,3 +160,32 @@ era / Size 別は、同じ式に `($sizes["\(.session_id)|\(.issue)"])` (`sub_st
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 曖昧点の自動解決 (2850s 下限と実効値判定) と AC 変更理由の記録。global default 昇格時は tests/watchdog-defaults.bats の更新が必要との注記 / https://github.com/saitoco/wholework/issues/1509#issuecomment-5987169878
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1–4 を Spec どおりに実施)
+
+### Design Gaps/Ambiguities
+- 実行環境に bats が無く、`bats tests/` (Pre-merge AC 5) と更新した 3 本の bats をローカルで実行できなかった。代わりに `scripts/get-auto-session-report.sh` を同じフィクスチャ (`max_sec` 2400、`WHOLEWORK_CONFIG_PATH=/dev/null` と 3600 の override) で直接実行し、既定値では `within 600s of watchdog limit` が出て override では出ないことを確認した (近似確認であり AC の根拠ではない)。AC 5 は未チェックのまま、PR の CI で確認する
+- `scripts/check-bare-bracket-assertions.sh` は既存テスト全体に 1016 件の警告を出す。本変更とは無関係の既存事象
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告する。本変更とは無関係の既存事象 (`tech.md` と `customization.md` は IN_SYNC)
+- PR 本文の末尾に付けるべき attribution 行を `gh pr create` 時に入れ忘れ、後から `gh pr edit` で追加しようとしたが権限分類器に拒否された。PR は有効なので、追加は行っていない
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の判断どおり project override ではなく global default (2964s = 実測最大 2280s × 1.3) へ昇格し、`.wholework.yml` の spec override を削除した
+- override 判別力を保つため、`get-auto-session-report.bats` の override テストは override 値 3600 / 観測値 2400 に変更した (旧既定 1800 が前提の値では新既定で判別できないため)
+
+### Deferred Items
+- AC 5 (`bats tests/` 全件 PASS) は実行環境に bats が無くローカル未確認。PR の CI 結果で確認する
+- Post-merge の observation AC (再較正後の Size M 以上の spec 3 件の観測) は、サンプル待ちで `/verify` では SKIPPED になる想定
+
+### Notes for Next Phase
+- `/review` は CI の bats ジョブ結果で AC 5 を確認すること。変更した 3 本の bats の期待値 (閾値 2364s、2400 > 2364) が CI で通るかが焦点
+- `docs/tech.md` の `Follow-up (#1509)` と `.wholework.yml` のコメントに、実測値 (2280s / 2060s / 2190s) と ×1.3 係数の根拠を記録済み
