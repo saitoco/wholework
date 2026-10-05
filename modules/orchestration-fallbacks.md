@@ -607,6 +607,7 @@ Record the judgment as a dedicated line in the entry's `### Diagnosis`, in the s
 - `.tmp/auto-events.jsonl` has no `wrapper_exit` event for the phase, and no backfilled `phase_complete` event either — the `_maybe_emit_phase_complete()` EXIT trap fires on exit 0/143 but never ran, meaning the wrapper's own process (not just its leaf `claude -p` child) was killed before its trap could execute
 - Not a watchdog timeout: observed silent windows (e.g. "silent for 480s", "silent for 1260s") are well under the phase's configured watchdog timeout
 - Not a jetsam/OOM kill: `/Library/Logs/DiagnosticReports/` and `~/Library/Logs/DiagnosticReports/` show no matching `JetsamEvent-*` report for the kill window
+- Not `harness-oom-stop` either: if the stopped task's notification itself names low system memory as the reason (`was stopped because the system is running low on memory`), the pattern is `harness-oom-stop` — see `#harness-oom-stop` for the wording table that separates the two. The `Not a jetsam/OOM kill` check above cannot, since neither is an OS-level kill
 - Elapsed time to kill is not fixed (observed range: roughly 2–22 minutes across 7 occurrences)
 
 ### Applicable Phases
@@ -631,6 +632,7 @@ Record the judgment as a dedicated line in the entry's `### Diagnosis`, in the s
 - **Accumulation is not a failure signal.** Each `manual-recovery-respawn` entry in `docs/reports/orchestration-recoveries.md` records the compensating layer (parent-session respawn) doing its job, not damage from an unhandled failure
 - **No work loss occurs.** The respawn mechanism has succeeded in every observed occurrence (17/17) — the `phase/*` label and `code_phase_milestone` checkpoint resume the killed phase rather than restarting it from scratch (see Fallback Steps above)
 - **The root cause is out of scope for wholework.** Per the Rationale above, resolution depends on upstream Claude Code harness issues; wholework has no lever to reduce the kill frequency itself. Treat `manual-recovery-respawn` recurrence as an expected, self-healing condition rather than an actionable defect, unless a future occurrence violates the 17/17 no-work-loss track record
+- **Scope**: this policy does not cover `harness-oom-stop`, where accumulation is a signal and a respawn can itself be stopped again (#1461) — see `#harness-oom-stop`, Operational Policy
 
 ### Threshold Detection Handling
 `collect-recovery-candidates.sh`'s threshold detection (default `--threshold 3`) will keep surfacing `manual-recovery-respawn` as a repeat candidate, since the fallback fires on every external kill and each firing adds a new dated entry. As of #1390, the decision is to leave the threshold detection mechanism itself unchanged — neither status-quo-unmodified nor exclude, but a distinct handling: keep detecting, but rely on this Operational Policy section (reachable from the resulting Issue, or found directly by whoever investigates) to close each newly-opened Issue quickly as "expected recovery, no action needed" rather than either suppressing detection or treating every recurrence as a fresh incident.
@@ -641,6 +643,70 @@ This is deliberately not the same as either of the two obvious alternatives, bec
 - **The existing title-based Issue link is already silently broken.** `_find_known_recoveries_issue()` (`scripts/run-auto-sub.sh`) links a recovery entry to its filed Issue via an exact title match (`_search_recoveries_issue()`). #1014 was filed under the exact-matchable title `recoveries: manual-recovery-respawn` but was renamed to `recoveries: manual-recovery-respawn の再発原因を特定・解消` at 2026-07-14T17:50:15Z, just before closing (confirmed via `gh api repos/saitoco/wholework/issues/1014/timeline`). `docs/reports/orchestration-recoveries.md` reflects this: entries through 2026-07-29 show `起票済み #1014`, but every entry from 2026-08-07 onward shows `未起票` — the rename silently broke the link. #1390 itself uses the same Japanese descriptive-title convention (`recoveries: respawn を補償層の正常な復旧として扱う運用方針を明文化`), so future entries will not auto-link to it either, for the identical reason.
 
 A permanent fix — either a rename-resistant linking mechanism (e.g. keyed on Issue number rather than title text), or an open/closed-independent "accepted" exclusion category that does not depend on Issue state at all — is left as a follow-up Issue candidate. Neither is implemented as part of this entry; this section only records the judgment and its basis so a future investigator does not have to re-derive it.
+
+---
+
+## harness-oom-stop
+
+### Symptom
+- A background `run-*.sh` wrapper (in practice `run-auto-sub.sh`, launched from the parent `/auto` session) is stopped while it runs (in #1462, right after the spec phase's `phase_complete`), and the stopped task's notification gives low system memory as the reason: `Background command "..." was stopped because the system is running low on memory`, with `status: killed` and no numeric exit code
+- The wrapper leaves no `Exit code:` trailer of its own and no `wrapper_exit` event, so its exit code is logged as `unknown` — the same missing-exit signature as `external-kill-parent-respawn`. The `phase/*` label and PR state are as they were before the stop, and a respawn resumes from them
+- `scripts/detect-external-kill.sh` matched this signature for #1462 but returned `no-match` for both stops of #1461, because the concatenated `run-auto-sub.sh` log still carried the inner `run-spec.sh`'s `Exit code: 0` trailer (Icebox #1093). The notification wording, not the detector, decides this pattern: when the detector says `no-match` but the notification states the memory reason, treat it as this pattern, as the #1461 handling did
+- Telling it apart from `external-kill-parent-respawn`: that entry's `Not a jetsam/OOM kill` check cannot separate the two, because neither is an OS-level kill — this stop is performed by the harness itself. Decide from the stop notification's wording:
+
+  | Stop notification wording | Pattern | `--notification` class |
+  |---|---|---|
+  | `... was stopped because the system is running low on memory` (a reason is stated; no exit code) | `harness-oom-stop` (this entry) | `harness-stop` |
+  | `... failed with exit code N` (numeric exit code, e.g. 137) | `external-kill-parent-respawn` | `external-signal` |
+  | only `killed` or `was stopped` (no reason, no exit code) | `external-kill-parent-respawn`, unless the debug log below says otherwise | `indeterminate` |
+
+- A bare `was stopped` can be settled from the parent session's debug log (`~/.claude/debug/<session-id>.txt`) when debug logging was on: Claude Code records there why background tasks were stopped
+
+### Applicable Phases
+- Any phase launched as a background wrapper by the parent `/auto` session: `run-auto-sub.sh`, `run-code.sh`, `run-spec.sh`, `run-review.sh`, `run-merge.sh`
+- Observed so far — the 4 entries with `cause: harness-oom-stop` in `docs/reports/orchestration-recoveries.md`: the spec phase twice and the review phase twice
+
+  | Logged (UTC) | Issue | Phase | Stops | Outcome |
+  |---|---|---|---|---|
+  | 2026-09-09 08:45 | #1462 | spec (just after `phase_complete`) | 1 | respawn resumed from `phase/ready`; success |
+  | 2026-09-10 02:57 | #1461 | review `--full` (Size L fan-out) | 2 | the respawn was stopped again and the parent session stopped for user judgement (Outcome: failed); a later re-run, with nothing changed, completed |
+  | 2026-09-13 12:21 | #1468 | review (light) | 2 | third attempt completed |
+  | 2026-10-03 03:55 | #1477 | spec | 1 | respawn completed |
+
+- The same wording was first logged on 2026-09-08 for #1457 (review, stopped twice at the start of `--full`) under the cause slug `oom-kill-review-full-fanout`. It is the same pattern, but `collect-recovery-candidates.sh` groups by slug, so it is outside the 4-entry count above. Record every new occurrence with `--cause harness-oom-stop`
+
+### Fallback Steps
+1. Confirm the signature with the table above and keep the notification's raw wording for `--diagnosis`
+2. If it can be taken without a permission prompt, take a one-line host memory snapshot before respawning (for example `free -m` on Linux, `memory_pressure` on macOS) and add it to the `--diagnosis` text. None of the 4 entries above records a snapshot taken at the time of the stop, so this is what lets a later reader tell a real shortage from a misfire (see Rationale)
+3. Respawn the same `run-*.sh` with the same arguments — the `phase/*` label (SSoT) and the `code_phase_milestone` checkpoint restore existing progress. Do not enter Tier 1/2/3: the stop is not a phase failure
+4. After the respawned phase completes, record it via `#manual-recovery-spec-write` with recovery type `respawn`: always pass `--cause harness-oom-stop` (the group key that `collect-recovery-candidates.sh` and the watch below count), `--notification harness-stop`, and a `--diagnosis` carrying the raw wording and the snapshot; omit `EXIT_CODE`, which cannot be observed
+
+### Escalation
+- A second stop of the same phase — the respawn itself is stopped, as in #1461 — is still not a phase failure: do not enter Tier 1/2/3, because the label and PR state are intact and the same respawn remains valid
+- Before each further respawn, take a fresh snapshot (Fallback Steps 2). If available memory is clearly low (for example `MemAvailable` near zero, or `memory_pressure` reporting a critical level), do not relaunch into it: stop and report instead. If memory looks normal, respawn at once — the stop is then unexplained, and the third attempt completed in #1457 and #1468
+- Respawn at most twice per Issue and phase within one parent session (three launches in total). If the third launch is stopped as well, stop there: leave the `phase/*` label as it is (a later `/auto N` resumes from it), record the stop with `--cause harness-oom-stop` and a `--diagnosis` saying the respawn was stopped again, and report `cause: harness-oom-stop` in the `skills/auto/SKILL.md` Step 6 stop banner (the convention `cause: ci-infra-outage` already uses) so that a person decides
+- The bound is a procedure for the parent session and is not enforced by code. A mechanical cap and a pre-respawn memory check are the code-side options deferred under Issue #1500 (see Mitigation Status and Recurrence Watch)
+
+### Rationale
+- Introduced in Issue #1500: `manual-recovery-respawn/harness-oom-stop` reached the repeat-detection threshold (4 entries against the default `--threshold 3`), yet its cause, signature, and handling were recorded nowhere except the log entries themselves
+- Cause: a documented behavior of the Claude Code harness. Its documentation states that on macOS and Linux it stops running background tasks when the operating system reports critical memory pressure, provided the session has been idle for at least 30 minutes with no turn or subagent running (v2.1.193 or later; [Interactive mode — background bash commands](https://code.claude.com/docs/en/interactive-mode) and the `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP` entry of [Environment variables](https://code.claude.com/docs/en/env-vars), both retrieved 2026-10-05). A parent `/auto` session waiting on a long background wrapper can meet that idle condition, which is consistent with the stops landing in long phases (spec, review). Because the harness stops the task itself, the wrapper never gets to write an exit trailer or emit `wrapper_exit`
+- "Low on memory" is the harness's judgement, not a free-memory measurement. On a macOS host with 48 GB of physical memory (session `90128-1788933783`, the 2026-09 stops), a 725-sample, 60-minute measurement of a later successful `review --full` re-run found total `claude` RSS peaking at 2.65 GB (the fan-out added 0.26 GB), the memory-pressure level normal in 94% of the samples (warning for 245 s), and `Pages free` down to 52 MB without a stop (#1146 comment of 2026-09-13). On Linux, upstream reports show the stop firing while `MemAvailable` is high and `MemFree` is low ([anthropics/claude-code#78674](https://github.com/anthropics/claude-code/issues/78674), [#92228](https://github.com/anthropics/claude-code/issues/92228); both open when checked on 2026-10-05). A stop therefore does not prove the host was short of memory, and a memory increase may not remove the trigger — take the snapshot in Fallback Steps 2 on a recurrence instead of re-deriving this
+- The 2026-10-03 stop (#1477) occurred on the host ct112; the 2026-09 stops were observed on a macOS host, which the ct112 memory increase below does not touch
+- Kept separate from `external-kill-parent-respawn` because that entry's policy rests on two premises that do not hold here: a root cause that is upstream-gated with no lever on the wholework side, and a respawn that has always succeeded (see Operational Policy below)
+- See also #1146 (the external-kill investigation, where the 2026-09 stops were first aggregated) and Icebox #1093 (`detect-external-kill.sh` false negative on concatenated logs)
+
+### Operational Policy: what differs from external-kill-parent-respawn
+- **Accumulation is a signal here.** Unlike the upstream-gated external kill, this stop has host-side and harness-side levers (see below), so repeat entries after the mitigation are actionable. An Issue filed for `manual-recovery-respawn/harness-oom-stop` is therefore not closed as "expected recovery, no action needed"
+- **A respawn can fail.** #1461's respawn was stopped again and its review did not complete in that session (Outcome: failed); of the 4 entries, 3 recorded success and 1 failed. The "17/17, no work loss" track record in `external-kill-parent-respawn` was counted as of #1390 (2026-08-17), before these entries, and does not carry over
+- **Completed work is not lost.** In every entry the label and PR state were intact and the respawn resumed from them (#1462 from `phase/ready`; #1457's PR #1459 stayed OPEN with CI green), so the cost of a stop is the repeated time, not lost output
+- **Keep the tracking Issue's exact title** (`recoveries: manual-recovery-respawn/harness-oom-stop`): `_find_known_recoveries_issue()` links log entries to it by exact title match, and renaming it silently breaks the link, as #1014's rename did (see `external-kill-parent-respawn`, Threshold Detection Handling)
+
+### Mitigation Status and Recurrence Watch
+- **Applied (host side)**: the memory of ct112, the host that runs the parent session and its wrappers, was increased after the #1477 entry (2026-10-03 03:55 UTC). Sizes before and after were not recorded
+- **Result so far**: the next batch (session `1123127-1791088655`, 2026-10-04, `/auto --batch` of 8 Issues over about 4 hours) had no stop of this kind: no Tier 1/2/3 recovery, no watchdog kill, and its single manual intervention was an unrelated label backfill (#1494). One 4-hour batch is a small sample, so this is encouraging, not proof
+- **Watch** (Issue #1500 Post-merge, `verify-type: observation`): for 30 days from 2026-10-03 (until 2026-11-02), `docs/reports/orchestration-recoveries.md` (and `docs/reports/orchestration-recoveries-archive.md` if entries were rotated) must hold no `cause: harness-oom-stop` entry dated after 2026-10-03 03:55 UTC. The baseline is the 4 entries above (`grep -c "cause: harness-oom-stop" docs/reports/orchestration-recoveries.md`); finding them still present confirms the scan ran against the right file
+- **Levers not applied**: (a) harness opt-out — setting `CLAUDE_CODE_DISABLE_BG_SHELL_PRESSURE_REAP=1` in the parent session's environment (for example through the `env` block of a Claude Code `settings.json`) turns off memory-pressure stops, at the price of dropping that protection entirely; (b) code-side — a memory check before respawn and a cap on repeated stops in `/auto` (this entry's Escalation bound is the manual form of the cap). Neither is justified without a recurrence
+- **If it recurs**: the mitigation was insufficient. Compare the snapshots recorded in `--diagnosis`, then decide on the levers above in a separate Issue; do not close the recurrence as expected recovery
 
 ---
 
