@@ -136,3 +136,29 @@ Issue が `/spec` に委ねた「件数の数え方」は、方針 b では件�
 - AC1 / AC2 の rubric は、方針 a・b のどちらでも成り立つ書き方になっている。本設計は AC1 の (b) と AC2 の「方針 b を採った場合」の条件に直接対応する
 - AC2 の件数コメント残存確認が規定文中の例示を誤検出しないよう、Maintenance rule に `(N files)` 形式の文字列を残さない (Implementation Steps の 1)
 - #1280 の Post-merge 観察条件 (次回 `/audit drift` で件数ドリフトが検出されない) は、本変更で検出対象の件数自体がなくなる。判定は別 Issue (#1280) の `/verify` で扱い、本 Issue のスコープ外とする
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 を Spec の記述どおりに実施した
+
+### Design Gaps/Ambiguities
+- Spec の Step 2 は `docs/ja/structure.md` のメンテナンスルール第 2 段落を「`modules/` または `scripts/` にファイルを追加・削除する場合は` で始まる」と記しており、実ファイルの冒頭と一致した (英語ミラーの対訳ではなく日本語の段落だった)。Spec の記述は正確で、置換は問題なく適用できた
+- ローカル環境に bats / GNU parallel が未インストールで、全 bats スイートは実行できなかった。変更は docs と `modules/verify-patterns.md` の説明文のみで、変更した文面 (`Literal Numeric Pinning` 等) を参照するテストは `grep` で 0 件と確認済み。AC3 は CI の `Run bats tests` 結果で `/verify` が確認する
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の採用方針 b (件数コメントの廃止) をそのまま実装した。4 箇所の件数コメントを EN/JA 双方から削除し、Maintenance rule を「件数を書き戻さない」旨に置き換えた
+- 再導入を検出する機械的ガードは Spec の判断どおり追加していない
+
+### Deferred Items
+- AC3 (CI の `Run bats tests` ジョブの成功) は push 後の `/verify` で確認する。実装時点ではローカルに bats がなく、チェックを外したまま残した
+
+### Notes for Next Phase
+- AC1 / AC2 は `/code` Step 10 で確認済みでチェックを入れた (`grep` で件数コメントの残存 0 件、Gate 4 のチェック a 削除を確認)
+- #1280 の Post-merge 観察条件は本変更で対象自体が消えるため、#1280 の `/verify` 側で判定すること
