@@ -96,3 +96,4 @@ Post-merge manual 条件 (`~/` 展開が実際に機能するかの実地検証)
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Post-merge 検証結果: FAIL（revert 済み） / https://github.com/saitoco/wholework/issues/80#issuecomment-4219871707
 - saito / MEMBER / first-class / <!-- wholework-event: type=batch-verify-dispatch phase=audit issue=80 --> / https://github.com/saitoco/wholework/issues/80#issuecomment-5391866931
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/80#issuecomment-5391892623
