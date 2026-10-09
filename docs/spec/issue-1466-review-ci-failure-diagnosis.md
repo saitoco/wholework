@@ -66,6 +66,11 @@
 - **saito** (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。`session=next` タグ欠落の修正、曖昧性の自動解決記録 (決定性判別手段の選定と件数不一致シグナル追加方法を `/spec` に委任)、前フェーズ (`/triage`) からの Consumed Comments 引き継ぎを含む。いずれも Issue 本文の内容と重複しており、本 Spec に対する新規の指示は含まれていなかった。 https://github.com/saitoco/wholework/issues/1466#issuecomment-5651664760
 - `/code` フェーズ: cutoff (`phase/ready` ラベル付与時刻 2026-09-13T06:48:09Z) 以降の新規コメントなし。
 
+- saito / MEMBER / first-class / ⚠️ この `/verify` 実行は、session キャッシュされた古い `skills/verify/SKILL.md` を実行している可能性が高い。St / https://github.com/saitoco/wholework/issues/1466#issuecomment-5652143493
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1466#issuecomment-5653270750
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1466#issuecomment-5957369862
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1466#issuecomment-5978134171
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1466#issuecomment-6073963697
 ## Code Retrospective
 
 ### Deviations from Design
