@@ -201,3 +201,55 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (置き換え対象を既存の全箇所とする判断、ヘルパーのファイル名・置き場所・読み込み方は `/spec` に委ねる判断、ヘルパー自体のテストに欠陥の再現入力を含める判断、Size L と PR ルートの根拠、bats がない環境の確認方法を対象外とする判断の記録。`/spec` への追加要求はなし) / https://github.com/saitoco/wholework/issues/1514#issuecomment-6075277926
+
+## issue retrospective
+
+### 判断の記録
+
+- **置き換え対象は既存の全箇所とした (`tests/worktree-lifecycle.bats` の `section()` を含む 9 ファイル)** — 理由: 目的が「個別実装による同種の失敗を防ぐ」ことなので、一部だけ共通化すると個別実装が残り、目的を満たさない。2026-10-09 時点の計測値 (8 ファイル・約 63 箇所) を Background に残し、AC はそのファイル一覧で判定できるようにした
+- **共通ヘルパーのファイル名・置き場所・読み込み方は AC で固定しなかった** — 理由: 実装方式は `/spec` が決める。AC は「`tests/` 配下に 1 つ」「`.bats` から読み込める」「フェンス内の見出し風の行を見出しとして扱わない」という振る舞いだけを `rubric` で問う
+- **共通ヘルパー自体のテストの AC に、欠陥を再現する入力 (フェンス内の `## ` 行) を明記した** — 理由: 再現入力のないテストは検出力を持たない (#1130 の前例)。今回の CI 失敗と同じ形の入力で節が打ち切られないことを問う
+- **Size は L とした** — 変更ファイルは 9 + 共通ヘルパー + そのテストで約 11。機械的な置き換えなので複雑度で 1 段下げた。テストの共有構造の変更にあたるため、PR ルート (M 以上) は必須
+- **Post-merge の AC は置かなかった** — 結果は CI の bats テストと Pre-merge の `rubric` で判定できる
+- ローカルに bats がない環境での確認方法は対象外とし、Notes に明記した (必要なら別 Issue)
+
+## spec retrospective
+
+### Minor observations
+
+- Issue Background の計測コマンド (`grep -nE "awk .*(\^##|/\^#)"`) は 1 行の awk しか拾わず、`awk -v anchor=... '` で始まる複数行 awk (`tests/orchestration-fallbacks.bats`) を取りこぼした。件数の計測を grep 1 本に頼ると、書き方の違う同種実装が漏れる
+- 旧実装の終了条件は箇所ごとにばらばらで (同じレベルのみ / `### Step ` のみ / 明示した次の見出し / `## ` のみ)、文面だけでは統一後の挙動差を判断できなかった。プロトタイプで全呼び出しの出力を新旧比較したことで、差分が 3 件に限られ、すべてアサーションに影響しないことを Spec 段階で確定できた
+- 作業環境の awk は mawk。プロトタイプを mawk で動かしたので、区間表現を使わない設計の互換性もあわせて確認できた
+
+### Judgment rationale
+
+- `tests/orchestration-fallbacks.bats` の 1 箇所は置き換え対象に含めたが、受入条件 2 の rubric には加えなかった。同じファイルに置き換え対象外の構造検査 awk (全エントリ走査) が残るため、ファイルを列挙に加えると「インラインの awk が残っていない」の判定が曖昧になる
+- ヘルパーは見出しが見つからないとき終了ステータス 1 を返す設計にした。見出しの改名でテストが空の節に対して素通りする (否定形アサーションが常に PASS する) 弱点を、`s="$(md_section ...)"` 形式の呼び出しで検出できる。現状の全呼び出しで見出しが見つかることを確認したので、既存テストは壊れない
+- `load` は拡張子なしの形を選んだ。bats-core の文書は拡張子付きの指定を推奨するが、古い bats は `.bash` を常に付けるため、拡張子付きだと読み込みに失敗する
+- `### 9. When to Use` の節は旧実装より狭くなる (次の `## ` → 次の `### `) が、テスト名の意図 (section 9) に合うので `END_LEVEL` で旧範囲を再現しなかった
+
+### Uncertainty resolution
+
+- bats `load` のパス解決と拡張子の扱い: 公式文書で確認した (テストファイルのディレクトリ基準、`.bash` 付きの名前を先に探す)。`bats tests/` が `.bats` だけを再帰なしで実行するため、`tests/helpers/*.bash` はテストとして実行されない
+- 置き換えによる判定の変化: プロトタイプの新旧比較で解消 (Notes「同値性の事前確認」)。`/code` 時点で SKILL.md が変わっている可能性に備え、Implementation Step 6 で同じ比較を実ヘルパーを `source` するハーネスで再実行する
+- 新規ロジックのテスト要件: `tests/markdown-section.bats` に (a)〜(i) の 9 ケース (フェンス内の `## ` / `### ` で打ち切られない、開始前のフェンス内の同名行で開始しない、インデントされたフェンス、`END_LEVEL` 上書き、既定の終了レベル、EOF まで、見出しなしで 1、`#` なし prefix で 2、リテラル一致) を追加し、スイートが PASS すること
+
+## Phase Handoff
+
+### Key Decisions
+
+- 共通ヘルパーは `tests/helpers/markdown-section.bash` の `md_section FILE HEADING_PREFIX [END_LEVEL]`。`load 'helpers/markdown-section'` (拡張子なし) で読み込む
+- フェンス判定は `/^[ \t]*```/` (l0-surfaces の AC 列挙規約と同じ) で、ファイル先頭から追跡する。終了は「開始見出しのレベル (または `END_LEVEL`) 以下の次の見出し」に統一した
+- 見出しが見つからないと終了ステータス 1、`#` で始まらない prefix を `END_LEVEL` なしで渡すと 2
+- 置き換え対象は Background の 8 ファイル + `worktree-lifecycle.bats` + `orchestration-fallbacks.bats` の 1 箇所。番号付きリスト・太字ラベル・`sed` 範囲抽出・全エントリ走査は対象外 (Notes の Exclusions)
+
+### Deferred Items
+
+- ローカルに bats がない環境での確認方法 (Issue の対象外)
+- Exclusions に挙げた見出しベースでない切り出し (`spec.bats` の太字ラベルなど) のフェンス対応は扱わない
+
+### Notes for Next Phase
+
+- 置き換え後の出力が変わるのは 3 箇所だけ (code Step 11 / Step 14 が伸びる、`review-rubric-safe` の section 9 が狭まる)。いずれもアサーションは PASS のまま見込みだが、Step 6 の同値性チェックで実ヘルパーを `source` して再確認すること (関数本体を写したハーネスは #1512 でヘルパーの不具合を見逃した)
+- `tests/auto-batch.bats` のインライン `run bash -c "awk ..."` は `bash -c` の中でシェル関数を呼べないため、`run grep -q 'X' <<< "$(list_mode_section)"` の形に書き換える。行番号を比べる 2 テストは節内の相対行番号を保つこと
+- `docs/tech.md` と `docs/structure.md` を変えるので、`docs/ja/` の 2 ファイルも同期する (コードフェンス数を一致させる)
