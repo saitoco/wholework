@@ -153,15 +153,18 @@ step5_section() {
 }
 
 # Extract Notable judgment sub-step (L3 auto-retrospective step 3): from
-# "3. **Notable judgment**" to the next numbered sub-step heading (Issue #913)
+# "3. **Notable judgment**" to the next numbered sub-step heading (Issue #913).
+# A numbered list item is not a Markdown heading, so md_section does not apply. Like
+# md_section, exits 1 when the start line is not found (Issue #1517).
 notable_judgment_section() {
-    awk '/^3\. \*\*Notable judgment\*\*/{found=1} found && /^4\. \*\*/{exit} found{print}' "$1"
+    awk '/^3\. \*\*Notable judgment\*\*/{found=1} found && /^4\. \*\*/{exit} found{print} END{if (!found) exit 1}' "$1"
 }
 
 @test "Notable judgment section uses jq -sc aggregation, not a raw events dump" {
-    run notable_judgment_section "$SKILL_FILE"
-    [[ "$output" == *"jq -sc"* ]]
-    [[ "$output" != *"jq -c 'select(.session_id"* ]]
+    # Plain assignment (not run) so a missing section fails the test (Issue #1517)
+    section="$(notable_judgment_section "$SKILL_FILE")"
+    [[ "$section" == *"jq -sc"* ]] || false
+    [[ "$section" != *"jq -c 'select(.session_id"* ]] || false
 }
 
 @test "Notable judgment section references all four aggregated count fields" {
@@ -173,16 +176,42 @@ notable_judgment_section() {
 }
 
 @test "Notable judgment section no longer references the non-existent watchdog_timeout event" {
-    run notable_judgment_section "$SKILL_FILE"
-    [[ "$output" != *"watchdog_timeout"* ]]
+    # Plain assignment (not run) so a missing section fails the test (Issue #1517)
+    section="$(notable_judgment_section "$SKILL_FILE")"
+    [[ "$section" != *"watchdog_timeout"* ]] || false
+}
+
+@test "Notable judgment section helper returns status 1 with empty output when the start line is missing" {
+    cat > "$BATS_TEST_TMPDIR/doc.md" <<'EOF'
+3. **Notable judgement** (renamed)
+   - body
+4. **Fetch the Metrics section**
+EOF
+    run notable_judgment_section "$BATS_TEST_TMPDIR/doc.md"
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
 }
 
 # Extract the jq aggregation command embedded in the Notable judgment sub-step
 # (first fenced ```bash block only — later blocks in the same sub-step cover the
-# "commit events.jsonl and stop" git sequence, not the aggregation itself)
+# "commit events.jsonl and stop" git sequence, not the aggregation itself).
+# Fails with notable_judgment_section's status when the sub-step is not found; the section
+# is captured first because a pipeline would report only the second awk's status (Issue #1517).
 notable_judgment_jq_command() {
-    awk '/^3\. \*\*Notable judgment\*\*/{found=1} found && /^4\. \*\*/{exit} found{print}' "$1" \
-        | awk '/```bash/{p=1; next} p && /```/{exit} p'
+    local section
+    section="$(notable_judgment_section "$1")" || return
+    printf '%s\n' "$section" | awk '/```bash/{p=1; next} p && /```/{exit} p'
+}
+
+@test "Notable judgment jq command helper returns status 1 with empty output when the start line is missing" {
+    cat > "$BATS_TEST_TMPDIR/doc.md" <<'EOF'
+3. **Notable judgement** (renamed)
+   - body
+4. **Fetch the Metrics section**
+EOF
+    run notable_judgment_jq_command "$BATS_TEST_TMPDIR/doc.md"
+    [ "$status" -eq 1 ]
+    [ -z "$output" ]
 }
 
 @test "Notable judgment jq aggregation produces zeroed counts on an empty events file" {
