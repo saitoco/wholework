@@ -285,3 +285,30 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 ### Notes for Next Phase
 
 - Post-merge の受け入れ条件はなく、`/verify` は主に Issue のクローズ状態と `phase/verify` ラベルの確認になる
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を振る舞い (`rubric`) で書き、ヘルパーの名前や置き場所を固定しなかったため、`/spec` が `tests/helpers/markdown-section.bash` と `md_section` を自由に決められた。AC 3 に欠陥を再現する入力 (フェンス内の `## ` 行) を明記したことが、`/code` の変異テストにつながった
+
+#### design
+- Spec のテストケース (c) はフィクスチャの `## ` 行までインデントしていたため検出力がなく、`/code` が変異テストで気づいて直した。テストケースを Spec に書く段階で「修正前の実装で FAIL するか」を確かめる観点が抜けていた
+
+#### code
+- bats が環境になく、`/tmp` に bats-core を取得して全 135 ファイルを直列実行で確認した。#1512 では同じ環境で bats を回せずヘルパーの不具合を見逃したが、今回は実行で確認できた
+- 否定アサーションを `! ... | grep -q` で書くと常に PASS になる落とし穴 (#1292 で明文化済み) を、補助関数 `refute_output_has` で回避した
+
+#### review
+- MUST 0 件、SHOULD 1 件 (END_LEVEL 上書きテストに兄弟見出しがなく既定値と区別できない) を修正済み。CONSIDER 5 件は範囲外として持ち越した
+
+#### merge
+- CI 全件成功、競合なしで squash merge
+
+#### verify
+- Pre-merge 4 件はすべて `/review` でチェック済み。Post-merge の条件はなく、Issue は `phase/done` で完了
+
+### Improvement Proposals
+- `tests/helpers/markdown-section.bash` の `md_section` を堅牢にする: 数値でない END_LEVEL を拒否する、FILE が存在しないときの awk の exit 2 を文書上の exit 2 (見出し未検出とは別の意味) と区別する、`awk -v` がバックスラッシュを解釈するため見出しの前方一致がリテラル一致にならない点を直す (#1514 の review で CONSIDER として持ち越し)
+- 節の中身を否定アサーションだけで検査するテストで、見出しが改名されて節が空になっても素通りする。`run xxx_section` + `[[ "$output" != ... ]]` や `<<< "$(...)"` の呼び出し形では `md_section` の見出し未検出 (exit 1) が活きないため、`s="$(md_section ...)"` で受けて失敗を伝える形に統一する (review-spec と review-bug の両方が指摘。bats の否定アサーションの落とし穴は #1292 でも扱った)
