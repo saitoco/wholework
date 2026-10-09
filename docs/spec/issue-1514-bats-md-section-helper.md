@@ -270,19 +270,18 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 - review-bug 系のサブエージェントは、ワークツリーの隔離ガードが `source` と `bash -c` を拒否したため、ヘルパーの awk 本体を直接渡して同値性を比較した。実ヘルパーを `source` する計測はオーケストレーター側のスクリプトファイル経由でのみ可能だった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- SHOULD 1 件 (END_LEVEL 上書きテストの検出力) は修正し、CONSIDER 5 件は本 PR の範囲外としてスキップした (ヘルパーの誤用耐性と、否定アサーションの素通り)
-- Workflow 経路は再起動保証のない実行面のため使わず、静的な Task fan-out を前景で実行した
+- PR #1515 は CI 全件 SUCCESS・レビュー承認済み・競合なしのため、リベースやテストの再実行なしに `--squash` (`resolve-merge-strategy.sh` の解決結果) でマージした
+- pre-merge AC は未チェック 0 件、review 完了も fallback 由来ではなかったため、ゲートは通過した
 
 ### Deferred Items
 
-- 数値でない END_LEVEL の検証、FILE 不在時の終了ステータス (awk の exit 2 と文書上の exit 2 の衝突)、`awk -v` のバックスラッシュ解釈は、ヘルパーの堅牢化として別 Issue 候補
-- 否定アサーションのテストを `s="$(md_section ...)"` で受ける形に統一する案も別 Issue 候補
+- 数値でない END_LEVEL の検証、FILE 不在時の終了ステータスの衝突、`awk -v` のバックスラッシュ解釈は、ヘルパーの堅牢化として別 Issue 候補 (review から継続)
+- 否定アサーションのテストを `s="$(md_section ...)"` で受ける形に統一する案も別 Issue 候補 (review から継続)
 
 ### Notes for Next Phase
 
-- 検出された MUST はなく、CI も全件 SUCCESS。`/merge 1515` に進める
-- Issue #1514 の AC はすべて `[x]` (AC 4 は本レビューで更新)。Post-merge 条件はなし
+- Post-merge の受け入れ条件はなく、`/verify` は主に Issue のクローズ状態と `phase/verify` ラベルの確認になる
