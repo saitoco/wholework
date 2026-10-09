@@ -128,6 +128,12 @@ Issue 本文は「行数一致時のみハッシュを追加検証する二段�
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1468#issuecomment-5652635164
 
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1468#issuecomment-5653236658
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1468#issuecomment-5653270923
+- saito / MEMBER / first-class / ## 2 例目の取りこぼし観測 (downstream repo, 2026-09-13) / https://github.com/saitoco/wholework/issues/1468#issuecomment-5653377795
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1468#issuecomment-5957370458
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1468#issuecomment-5978134392
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1468#issuecomment-6073964014
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
