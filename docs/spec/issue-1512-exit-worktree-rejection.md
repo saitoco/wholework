@@ -195,3 +195,45 @@ AC の番号は `## Verification > Pre-merge` の並び順 (AC1〜AC5)。
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (AC の対象を ExitWorktree の失敗全般にしたこと、完了報告の 3 項目への具体化、対応方針 2〜4 を AC に含めない判断の記録。`/spec` への追加要求はなし) / https://github.com/saitoco/wholework/issues/1512#issuecomment-6073274423
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps どおりに実装した。Step 1 (モジュール) → Step 2 (3 スキル) → Step 3 (bats) → Step 4 (`docs/structure.md`・`docs/ja/structure.md`) の順で、構成の変更はない
+- Step 4 の判断: `docs/structure.md` の Key Files 2 行 (`modules/worktree-lifecycle.md`・`scripts/detect-foreign-worktree.sh`) を更新し、`docs/ja/structure.md` を同期した。Directory Layout の `tests/` 行はファイル単位の列挙がないため変更しなかった
+
+### Design Gaps/Ambiguities
+- 環境に bats がなかったため、`tests/worktree-lifecycle.bats` を bats では実行できなかった。`@test` を関数に変換する plain bash の再現ハーネス (一時ファイル、コミットしていない) で 17 件の PASS を確認した。bats 固有の挙動 (`run` の status 取り扱いなど) は CI の `Run bats tests` で確認する。既存の `tests/code.bats`・`tests/review.bats` もローカルでは実行できていない (Step 14 の順序検査は、挿入した段落に検査対象の 2 文字列を含めないことで影響を避けた)
+- 新規テストの「実装前 FAIL 確認」は、追加した assert が新節・新文言のみを対象とする (節単位に抽出して検査する) ため、実装前の状態では FAIL することをコードの読み取りで確認した。実行による確認は bats がないため行っていない
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告するが、今回の変更とは無関係 (既存の状態)
+
+### Rework
+- Comment Consumption を Step 4 のラベル遷移 (`phase/code`) より後に実施したため、cutoff を `phase/code` ではなく直前の `phase/ready` のタイムスタンプで解決した。新しいコメントはなかった (最新のコメントは `phase/ready` の 5 秒前)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps 1〜4 と PR の差分に構造的な乖離はなかった。AC1〜AC4 (rubric・`file_contains`) は PASS と判定した
+
+### Recurring issues
+- 構造テストの `section()` ヘルパー (見出しの先頭一致で節を切り出す awk) がコードフェンス内の `## ...` 行を見出しと誤認し、`/review` の Completion Report を途中で打ち切って CI の `Run bats tests` が FAIL した。`/code` の再現ハーネスは、テスト本体だけを plain bash に写していたため、この種の不具合は検出できなかった。Markdown の節抽出ヘルパーは「フェンス内を見出しとして扱わない」ことを前提にすべき
+- `section "$CODE_SKILL" "### Step 14:" 3` も同じ原因で途中打ち切りになっていたが、追記位置が前にあるため偶然 PASS していた
+
+### Acceptance criteria verification difficulty
+- AC5 (`github_check "gh pr checks" "Run bats tests"`) は CI の実行結果に依存し、`/code` 時点では未確認になる。bats がローカルにない環境では、テストが初回に CI で FAIL するリスクが残る。UNCERTAIN は発生しなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- CI の `Run bats tests` FAIL の原因はテストヘルパー (`section()`) のフェンス内見出し誤認であり、SKILL.md 側の記述は正しかったため、テスト側を修正した (SKILL.md の見出し構造は変えない)
+- `path:` 形式の stale 再利用で `WORKTREE_PATH` / `WORKTREE_BRANCH` を取る方法を、相対パスと現在のブランチではなく `git worktree list --porcelain` に統一した (`/review` の stale worktree は PR ブランチをチェックアウト済みのことがあり、Step C の `git branch -D` が PR ブランチを消すのを避けるため)
+
+### Deferred Items
+- Step A の `none` 判定が cwd 次第で失敗を成功と見誤る余地 (CONSIDER): 通常の cwd は worktree ルートのため見送り
+- `/spec`・`/verify` の SKILL.md への Leftover worktree report の組み込み: 拒否が観測された場合の後続 Issue 候補
+- Post-merge の 2 件 (対話セッションから `/review N` を実行した後の worktree 残存の有無、親セッションの閉じ込めの有無) は manual 確認のまま
+
+### Notes for Next Phase
+- `/merge` の前に、fix コミット (80329293) 後の CI で `Run bats tests` が PASS したことを確認する。AC5 は PASS を確認するまで未チェックのまま
+- bats はローカルになく、ヘルパーの修正は `section()` を取り出した plain bash の検査 (18 件) で確認した。bats 固有の挙動は CI で確認する

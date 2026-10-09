@@ -816,6 +816,11 @@ Rows 3–4 bound the wait to **4 wait calls** (counter values 0, 1, 2, 3) — 4 
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit section appropriate for the route.
 
+`/code` is a `context: fork` skill, so when it is launched from an interactive session it runs as a subagent and `ExitWorktree` can be rejected with `cwd override`. In either Exit section, follow the module's `Exit failure handling` and do not end this Step with a one-line warning. When it ends with `WORKTREE_LEFTOVER=true`:
+- patch / operate route: nothing was pushed, so skip the deferred bats AC confirmation against CI, the Implementation Complete comment, and the label transition below. State in the Completion Report that the work is committed on `$WORKTREE_BRANCH` but not yet merged into `$BASE_BRANCH`.
+- pr route: the PR was already pushed in Step 12, so the deliverable is intact.
+- Any route: skip Step 15, and put the module's Leftover worktree report (path, checked-out branch, recovery steps) in the Completion Report.
+
 **patch route (merge-to-main pattern):**
 Follow "Exit: merge-to-main section". After push completes, transition the label (patch route skips `/merge`, so label transition happens here).
 
@@ -917,13 +922,13 @@ Follow "Exit: push-and-remove section" (push was done in Step 12, so only delete
 
 ### Step 15: Opportunistic Verification
 
-Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/code`. Skip this step if not configured.
+Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/code`. Skip this step if not configured, or if Step 14 ended with `WORKTREE_LEFTOVER=true`.
 
 ## Completion Report
 
-Output the route-specific prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section.
+Output the route-specific prefix, then (when Step 14 ended with `WORKTREE_LEFTOVER=true`) the module's Leftover worktree report, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section.
 
-- **patch route prefix**: "Direct commit and push to main complete."
+- **patch route prefix**: "Direct commit and push to main complete." (when Step 14 ended with `WORKTREE_LEFTOVER=true`, use instead: "Committed on the worktree branch but not yet merged into the base branch. See the leftover worktree report below.")
 - **pr route prefix**: "PR creation complete."
 - **pr route prefix (preview build failed after fix attempts exhausted)**: "PR creation complete (preview build FAILED — N check(s) failing after M fix attempts)."
 - **operate route prefix (`L2`/`L3`, operations executed)**: "External operations executed. Execution Log posted to the Issue."

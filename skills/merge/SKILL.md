@@ -357,6 +357,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 
 `gh pr merge "$NUMBER" $MERGE_FLAG --delete-branch` in Step 4 has already merged and deleted the remote branch, so call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
 
+`/merge` is a `context: fork` skill, so when it is launched from an interactive session it runs as a subagent and this call can be rejected with `cwd override` or have no effect. After the call, follow the module's `Exit failure handling`. The merge itself is already complete, so a failure here does not turn the result into a failure. Do not end this Step with a one-line warning. If the worktree could not be removed, set `WORKTREE_LEFTOVER=true` and put the module's Leftover worktree report (path, checked-out branch, recovery steps) in the Completion Report.
+
 ## Completion Report
 
 Extract the related Issue number from the PR body.
@@ -366,7 +368,7 @@ Extract the related Issue number from the PR body.
 2. Search the PR body for `closes #N`, `Related to #N`, or `Issue #N`
 3. If not found, search the PR title for `Issue #N`
 
-Output "Merge complete." as a fixed prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+Output "Merge complete." as a fixed prefix, then (when Step 7 ended with `WORKTREE_LEFTOVER=true`) the module's Leftover worktree report, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=merge`
 - `ISSUE_NUMBER=$ISSUE_NUMBER`
 - `RESULT=success`

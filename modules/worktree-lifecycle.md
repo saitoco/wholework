@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides a shared worktree Entry/Exit lifecycle common to all skills (/spec, /code, /verify, /review, /merge). Transparently manages EnterWorktree/ExitWorktree to structurally eliminate commit contamination risk and synchronization overhead.
+Provides a shared worktree Entry/Exit lifecycle common to all skills (/spec, /code, /verify, /review, /merge). Transparently manages EnterWorktree/ExitWorktree to structurally eliminate commit contamination risk and synchronization overhead. It also defines what to do when `ExitWorktree` is rejected or has no effect (`Exit failure handling`), so a skill never ends with a leftover worktree that goes unreported.
 
 ## Input
 
@@ -34,7 +34,11 @@ The calling skill enters the worktree with the following steps:
      - **No uncommitted changes**, or changes **consistent with this phase's intended work** (e.g., for `/code`, matching the Spec's Implementation Steps at `docs/spec/issue-N-*.md`) → **reuse**: call `EnterWorktree(path: ".claude/worktrees/$WORKTREE_NAME")` instead of step 3's `name` form.
      - Changes that **contradict or only partially match** the intended work, or nothing to compare against → **discard**: remove the stale worktree and branch (`git worktree remove --force ".claude/worktrees/$WORKTREE_NAME"`; `git branch -D "worktree-${WORKTREE_NAME//\//+}"`), then proceed to step 3 to create a fresh worktree.
 
-3. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`
+3. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`, then record `WORKTREE_PATH` (absolute path) and `WORKTREE_BRANCH` from its return value (`Created worktree at <path> on branch <branch>`) immediately:
+   - `EnterWorktree` replaces `/` in the name with `+` (`review/pr-5` becomes `.claude/worktrees/review+pr-5` on branch `worktree-review+pr-5`). The Exit sections below use these two recorded values and do not re-derive them from `$WORKTREE_NAME`.
+   - In the `EnterWorktree(path: ...)` form (stale reuse in step 2), do not take the values from the path string passed in (its `/` is not replaced by `+`, and it is relative) or from `git branch --show-current` (a stale `/review` worktree may already have the PR branch checked out). Read both from `git worktree list --porcelain` as described in the last bullet: the absolute `worktree <path>` line and the `branch refs/heads/worktree-<name with / replaced by +>` line of that entry.
+   - `/review` checks out the PR branch after Entry, but `WORKTREE_BRANCH` stays the branch `EnterWorktree` created, as recorded right after Entry.
+   - If the values are no longer at hand, read them back from `git worktree list --porcelain`: the `worktree <path>` line and the `branch refs/heads/worktree-<name with / replaced by +>` line of the same entry.
 
 4. **Run worktree initialization hook**: Run only if `.claude/hooks/worktree-init.sh` exists:
    ```bash
@@ -62,9 +66,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh [--base "$BASE_BRANCH"]
 
 **When `ENTERED_WORKTREE=true`**:
 
-1. Call `ExitWorktree(action: "keep")` to return to the original directory (do not delete the worktree branch)
+1. Call `ExitWorktree(action: "keep")` to return to the original directory (do not delete the worktree branch). Then verify the exit with Step A of `### Exit failure handling: ExitWorktree rejected or ineffective` below and follow that section if it failed. If it ends with `WORKTREE_LEFTOVER=true`, do not run steps 3 and 4: the merge into the base branch must run from the main checkout, which this session cannot reach.
 
-2. Retain `WORKTREE_BRANCH` with the branch name worked on in the worktree (confirmable after calling EnterWorktree)
+2. Use the `WORKTREE_BRANCH` recorded at Entry (step 3 of the Entry section) in the steps below
 
 3. Run the new script which acquires a short-lived lock, merges the worktree branch into the base branch, performs the conflict marker check, and pushes — all as a single atomic unit:
 
@@ -74,11 +78,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh [--base "$BASE_BRANCH"]
 
    The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure, and worktree-branch rebase fallback when base has advanced while the worktree was running — see `modules/orchestration-fallbacks.md#ff-only-merge-fallback`), conflict marker check, `git push origin <base>`, and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
 
-4. **Cleanup** (output warning and continue if any command fails):
+4. **Cleanup**: run these as two separate plain commands, substituting the recorded values literally:
    ```bash
-   git worktree remove ".claude/worktrees/$WORKTREE_NAME" 2>/dev/null || echo "Warning: Failed to remove worktree directory. Please remove manually: .claude/worktrees/$WORKTREE_NAME"
-   git branch -d "$WORKTREE_BRANCH" 2>/dev/null || echo "Warning: Failed to delete branch. Please delete manually: $WORKTREE_BRANCH"
+   git worktree remove "$WORKTREE_PATH"
    ```
+   ```bash
+   git branch -d "$WORKTREE_BRANCH"
+   ```
+   Then confirm with `git worktree list --porcelain` and `git branch --list "$WORKTREE_BRANCH"` that both are gone. If either remains, do not stop at a warning: continue with Step D of `### Exit failure handling: ExitWorktree rejected or ineffective` (the merge has already landed, so recovery item b is not needed).
 
 ### Exit: push-and-remove Section (used by /code PR, /review, /merge)
 
@@ -90,15 +97,72 @@ The calling skill exits the worktree with the following steps after completing p
 
 1. Confirm push is complete inside the worktree (push is assumed completed by calling skill)
 
-2. Call `ExitWorktree(action: "remove", discard_changes: true)` to delete the worktree and return to the original directory
-   - **If deletion fails**: Output warning message and guide manual deletion; skill continues normally:
-     ```
-     Warning: Failed to remove worktree. Please remove manually.
-     ```
+2. Call `ExitWorktree(action: "remove", discard_changes: true)` to delete the worktree and return to the original directory. Then verify the exit and the deletion with Step A of `### Exit failure handling: ExitWorktree rejected or ineffective` below and follow that section if it failed.
+   - This section never ends with a one-line warning alone. Either the worktree and its branch are gone, or `WORKTREE_LEFTOVER=true` is set and the calling skill puts the Leftover worktree report in its completion report.
+
+### Exit failure handling: ExitWorktree rejected or ineffective (used by both Exit sections)
+
+**Background (Issue #1512)**: A skill with `context: fork` runs as a subagent when launched from an interactive session. This is not the headless "fork context" of `modules/execution-context.md` (`run-*.sh` starting `claude -p`). `EnterWorktree` succeeds in such a subagent and moves the parent session's working directory into the worktree too, but `ExitWorktree` can be rejected with this error:
+
+```
+ExitWorktree cannot be called from a subagent with a cwd override (isolation: "worktree" or explicit cwd) — it would mutate the parent session's process-wide working directory. This agent is already isolated; use Bash with `cd` for directory changes within it.
+```
+
+After a rejection the worktree stays on disk with its branch checked out, and the parent session's working directory stays inside it, so git operations on the main checkout are refused by the worktree isolation guard until the parent calls `ExitWorktree(action: "keep")` itself. The conditions that trigger the rejection are not identified, and `cwd override` is not the only failure shape (a worktree entered with `EnterWorktree(path: ...)` is not deleted by `ExitWorktree(action: "remove")`). So every branch below depends on the observed result, not on the error text. When a check cannot be completed or its output is unexpected, treat the exit as not done and fall to Step D (fail-closed) instead of deleting anything.
+
+Run each command below as a plain single command: no `$(...)` and no `&&` chaining (the worktree isolation guard refuses them). Always wrap the path and the branch in double quotes.
+
+**Step A - verify**: After `ExitWorktree`, whatever it returned, run this as its own command:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "$WORKTREE_NAME"
+```
+
+- `none`: the exit worked. When the call was `action: "remove"`, also run `git worktree list --porcelain` and `git branch --list "$WORKTREE_BRANCH"`. If the worktree or the branch is still listed, run the two commands of Step C directly.
+- Anything else (`own`, or `foreign <path>`; `/review` checks out the PR branch, so even its own worktree can report `foreign`): treat it as a failure, whether the call returned the `cwd override` error, the no-op message "no worktree session is active", or any other message, and go to Step B.
+
+**Step B - retry once**: Repeat the same `ExitWorktree` call exactly once and redo Step A. Do not repeat it a second time. The same error text has been reported as intermittent upstream (anthropics/claude-code#52538).
+
+**Step C - alternative cleanup (push-and-remove only)**: If the failed call was `action: "remove"`, call `ExitWorktree(action: "keep")` and redo Step A. When it reports `none`, the session is back in the main repository (this is the usual result for a worktree entered with `path:`). Given that the Exit section's step 1 confirmed the push, run these one at a time with the recorded values substituted literally:
+
+```bash
+git worktree remove --force "$WORKTREE_PATH"
+```
+```bash
+git branch -D "$WORKTREE_BRANCH"
+```
+
+The branch already being absent is fine. If git refuses because the worktree is locked, run `git worktree unlock "$WORKTREE_PATH"` and retry the removal once. `--force` and `-D` carry the same contract as `discard_changes: true` (the work is pushed). If both succeed the Exit is complete. If `keep` is also rejected, or a command fails, go to Step D.
+
+**Step D - leave and report**:
+
+1. Do not delete the worktree the session stands in, and do not `cd` or use `git -C` to get out of it for that purpose. Deleting it would strand the parent session, which shares the working directory, on a removed path; a `cd` to the parent repository is the failure path described in "Do not `cd` back to the parent repository" below; and the isolation guard refuses redirected git.
+2. Set `WORKTREE_LEFTOVER=true` and read the branch checked out in the worktree. While the session is still inside the worktree, run `git branch --show-current`. If the session is already back in the main repository (a merge-to-main cleanup failure), read the branch recorded for the `WORKTREE_PATH` entry in `git worktree list --porcelain`. For `/review` and `/merge` this can be the PR branch rather than `WORKTREE_BRANCH`.
+3. If the failed call was the merge-to-main `ExitWorktree(action: "keep")`, do not run that section's steps 3 and 4 (the commits in the worktree are not merged into the base branch), and include recovery item b in the report. Also do not run the calling skill's steps that assume the work landed on the base branch (for example the `/spec` Issue comment with the Spec link and the label transition to `ready`, the `/code` patch route Implementation Complete comment and the transition to `verify`, and the `/verify` completion report). Report them as pending items to finish after item b. If the exit worked and only the cleanup failed, the merge is done, so neither item b nor the pending items apply.
+4. Continue the calling skill's remaining steps that need no main checkout and are not held back by item 3, but skip every step that dispatches a nested skill (Opportunistic Verification and Event-based observation scan), because the nested skill would inherit the leftover worktree session.
+5. Put the Leftover worktree report below in the last message the calling skill returns (its completion report). A subagent's intermediate output is not shown to the parent session.
+
+**Leftover worktree report (fixed format)**: Output these three items with the placeholders replaced by real values. Keep the numbering. The text may be translated into the session language, and it must not be shortened to a one-line warning. The items are limited to (1) path, (2) checked-out branch, (3) recovery steps for the parent session; put the reason and any unmerged state in the heading line and in item 3.
+
+```
+Worktree left behind: ExitWorktree could not clean up (<one-line reason>). The parent session's working directory may still be inside it.
+
+1. Path: <WORKTREE_PATH>
+2. Checked-out branch: <output of git branch --show-current> (worktree branch created by EnterWorktree: <WORKTREE_BRANCH>)
+3. Recovery (run in the parent session, in this order):
+   a. If the working directory is still inside the worktree (check with pwd, or git commands on the main checkout are refused as "isolated in the worktree"), call ExitWorktree(action: "keep") to return to the main repository.
+   b. Only when the base-branch merge did not run (merge-to-main): from the main repository, run <plugin path>/scripts/worktree-merge-push.sh --from "<WORKTREE_BRANCH>" [--base "<BASE_BRANCH>"], then finish the calling skill's steps that follow the push (for /code patch route: the Implementation Complete comment and the verify label transition).
+   c. git worktree remove "<WORKTREE_PATH>"   (if git reports the worktree is locked, run git worktree unlock "<WORKTREE_PATH>" first)
+   d. git branch -D "<WORKTREE_BRANCH>"   (git branch -d is enough after a merge-to-main merge)
+```
+
+A leftover that is not recovered right away can also be reclaimed later with `scripts/reclaim-stale-worktrees.sh` (dry-run by default) once the Issue is CLOSED or the PR is MERGED; see "Broader stale worktree/branch reclaim" in Notes.
 
 ## Output
 
 - `ENTERED_WORKTREE`: `true` (EnterWorktree was executed) or `false` (skipped)
+- `WORKTREE_PATH`, `WORKTREE_BRANCH`: recorded at Entry from the `EnterWorktree` return value
+- `WORKTREE_LEFTOVER`: `true` when `Exit failure handling` could not clean up the worktree (the calling skill must include the Leftover worktree report in its completion report); `false` otherwise (default)
 - After executing the Entry section, the worktree's filesystem becomes accessible
 
 ## Notes
@@ -217,6 +281,8 @@ When a Step targets a gitignored parent-repo path:
 3. Call `EnterWorktree(path: ".claude/worktrees/{WORKTREE_NAME}")` to resume the worktree session. Use `path`, not `name` — `name` creates a *new* worktree and abandons the one already in progress.
 
 Steps that operate on version-controlled files do not need this round trip; those files are already visible inside the worktree.
+
+A worktree re-entered with `EnterWorktree(path: ...)` is not deleted by `ExitWorktree(action: "remove")`, so a push-and-remove skill that made this round trip finishes through Step C of `Exit failure handling`.
 
 ### `mv` rejected, `cp` (overwrite) allowed for gitignored parent-repo paths
 

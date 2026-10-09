@@ -1071,9 +1071,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 
 Since the retrospective push (`git push origin HEAD`) is complete, call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
 
+`/review` is a `context: fork` skill, so when it is launched from an interactive session it runs as a subagent and this call can be rejected with `cwd override` or have no effect. After the call, follow the module's `Exit failure handling` (verify with `detect-foreign-worktree.sh`, retry once, alternative cleanup, otherwise leave the worktree and report it). Do not end this section with a one-line warning. If the worktree could not be removed, set `WORKTREE_LEFTOVER=true` and put the module's Leftover worktree report (path, checked-out branch, which is the PR branch here, and recovery steps) in the Completion Report below.
+
 ## Opportunistic Verification
 
 **Precondition (run first, before anything below in this section):**
+
+**Leftover check**: if the `## Worktree Exit (push-and-remove)` section ended with `WORKTREE_LEFTOVER=true`, skip this entire section (both Opportunistic Verification and the Event-based observation scan) and output `Skipping Opportunistic Verification — the worktree could not be removed (see the leftover worktree report).` The nested `Skill(skill="wholework:verify", ...)` would inherit the leftover worktree session, and the `own` branch below ("complete that section") cannot be satisfied once `ExitWorktree` has been rejected.
 
 This section — including the Event-based observation scan below, which runs regardless of the `opportunistic-verify` setting — dispatches nested `Skill(skill="wholework:verify", ...)` calls in the same session and CWD. That dispatch is only safe once the preceding `## Worktree Exit (push-and-remove)` section has completed (Issue #930 / #1000); otherwise `/verify` inherits this session's still-active worktree.
 
@@ -1086,7 +1090,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "review/pr-$NUMBER"
 **Worktree context branches (exhaustive):**
 
 - **`none`**: Worktree Exit already completed (or `ENTERED_WORKTREE=false` — no worktree was ever created). Continue with this section.
-- **`own`**: the `## Worktree Exit (push-and-remove)` section above has not run, or did not complete, and this session is still inside `review/pr-$NUMBER`. Go back and complete that section, then re-run this assertion. Do not dispatch nested `/verify` until this reports `none`.
+- **`own`**: the `## Worktree Exit (push-and-remove)` section above has not run, or did not complete, and this session is still inside `review/pr-$NUMBER`. Go back and complete that section (if that section ended with `WORKTREE_LEFTOVER=true`, do not retry; follow the Leftover check above), then re-run this assertion. Do not dispatch nested `/verify` until this reports `none`.
 - **`foreign <path>`**: CWD is inside a different skill's worktree. Call `ExitWorktree(action: "keep")`, then `cd <path>` to return to the main repository root, then re-run this assertion. If it still does not report `none`, skip this entire section (both opportunistic verification and the Event-based observation scan) and output `Warning: skipping Opportunistic Verification — could not return to the main repository root from <path>.`
 
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/review`. Skip if not set.
@@ -1117,6 +1121,8 @@ After posting the Step 14 summary, output a review response summary to the termi
 - Claude review response: {response count} resolved, {skip count} skipped
 - Lightweight re-check: {result}
 ```
+
+**If `WORKTREE_LEFTOVER=true`**: after the block above, output the module's Leftover worktree report (path, checked-out branch, recovery steps) and add the line `Opportunistic Verification: skipped (worktree not removed)`.
 
 **If Copilot/Claude response was skipped (including Step 7 skip due to settings)**: omit the corresponding line.
 
