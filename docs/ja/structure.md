@@ -38,6 +38,7 @@ wholework/
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
 ├── tests/               # スクリプト用の Bats テストファイル
 │   ├── <script-name>.bats
+│   ├── helpers/         # load で読み込む bats 共有ヘルパー (markdown-section.bash)
 │   └── fixtures/        # テストフィクスチャファイル
 ├── docs/                # ドキュメントと steering document
 │   ├── structure.md     # このファイル

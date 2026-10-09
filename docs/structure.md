@@ -45,6 +45,7 @@ wholework/
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
 ├── tests/               # Bats test files for scripts
 │   ├── <script-name>.bats
+│   ├── helpers/         # Shared bats helpers loaded with load (markdown-section.bash)
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
