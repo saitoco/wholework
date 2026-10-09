@@ -100,6 +100,11 @@ Issue Scope 節は "`skills/review/workflow-guidance.md` にも同じ軸を反�
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ⚠️ この `/verify` 実行は、session キャッシュされた古い `skills/verify/SKILL.md` を実行している可能性が高い。St / https://github.com/saitoco/wholework/issues/1470#issuecomment-5652602904
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1470#issuecomment-5653271130
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1470#issuecomment-5957371071
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1470#issuecomment-5978134638
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1470#issuecomment-6073964304
 ## Code Retrospective
 
 ### Deviations from Design
