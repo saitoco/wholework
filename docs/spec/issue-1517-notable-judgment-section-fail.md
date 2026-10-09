@@ -202,3 +202,32 @@ Implementation Step 4 の変異確認 (開始行を改名した SKILL.md に対�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-3 を Spec の置き換え後コードのとおりに実装した (変更は `tests/auto.bats` のみ)
+
+### Design Gaps/Ambiguities
+- なし。変異確認 (開始行を `3. **Notable judgement**` に改名した作業コピー) の結果は Spec の期待値どおり: 29 件中 FAIL 5 件 (`uses jq -sc aggregation`、`references all four aggregated count fields`、`no longer references the non-existent watchdog_timeout event`、jq 集計 2 件)、PASS 24 件 (新規単体テスト 2 件を含む)
+- 再調査コマンドの再実行で、範囲内 2 テストの `[section]` 欄がどちらも `section="$(notable_judgment_section "$SKILL_FILE")"` の代入行になることを確認した
+- `scripts/check-bare-bracket-assertions.sh` は `references all four ...` の 4 行を報告するが、Spec で意図的に変更対象外としたもの (情報提供のみ)
+- Pre-implementation FAIL Check は Spec Notes のとおり対象外 (新規テストは終了ステータスと出力の検査)。代わりに /spec リハーサルで検出力を確認済み
+- 実行環境に `bats` が PATH に無く、`/tmp/bats-dl/src/bin/bats` (bats-core) を使用した。受け入れ条件に bats コマンドを使うものは無いので、bats-absent AC の持ち越しは発生しない
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `notable_judgment_section` に `END{if (!found) exit 1}` を足し、`notable_judgment_jq_command` は節を先に代入で受けてから 2 段目の awk に渡す形にした (パイプラインは最後の awk の終了ステータスしか返さないため)
+- 否定アサーションの 2 テストは `section="$(...)"` の素の代入 + `|| false` で受ける形にし、肯定アサーションだけのテストは変更しなかった
+
+### Deferred Items
+- 受け入れ条件 3 (`github_check "gh run list ..."`) は patch route の実装コミットが push されるまで評価できないため未チェックのまま。`/verify` で評価する
+
+### Notes for Next Phase
+- 受け入れ条件 1・2 (rubric) は /code Step 10 でチェック済み。変更は `tests/auto.bats` のみ
+- 終了行 `4. **` を改名した場合は節が延びる方向にずれるが、素通りはしない (Spec Notes に記載済み)
