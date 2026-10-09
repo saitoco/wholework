@@ -13,6 +13,21 @@
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 2026-08-17 00:29Z 付近の Issue Retrospective コメント。Size S→M へのスコープ統合根拠 (3 ギャップの統合理由)・曖昧性自動解決 1 件 (検出結果の報告先)・AC 変更点 (3→7 件への拡張) を記録。現在の Issue 本文に既に反映済みであり、追加対応なし。https://github.com/saitoco/wholework/issues/1387#issuecomment-5311198358
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / AC audit コメント。AC3 (旧) の rubric が「値をイベントとして記録する処理」と「flag を読んで detach する既存処理 (PR #1143, `run-auto-sub.sh:35,48`)」を区別できず、実装 0 行で PASS しうる空撃ちリスクを指摘。修復案 (rubric 文言の明示的除外 + 補助 grep 併記) を提示。本 Spec 作成時に Issue 本文の AC3 を提案通り書き換え、補助 AC (`grep "spawn_detach"`) を追加した (対応済み)。https://github.com/saitoco/wholework/issues/1387#issuecomment-5311207555
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1387#issuecomment-5312904137
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5313205411
+- saito / MEMBER / first-class / ## 実データ検証: `detect-unrecorded-kills.sh` を実際のバーストに対して実行しました / https://github.com/saitoco/wholework/issues/1387#issuecomment-5323937301
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5327741730
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5341256247
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5354389691
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5369705775
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /verify execution) / https://github.com/saitoco/wholework/issues/1387#issuecomment-5378409556
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5378428946
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5384002068
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5579816105
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5653269694
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5957364980
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5978132770
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6073961521
 ## Changed Files
 
 - `scripts/run-auto-sub.sh`: `run_phase_with_recovery()` 内の `emit_event "phase_start" "phase=${phase}"` (現状 653 行目付近) に `spawn_detach=<0|1>` フィールドを追加。bash 3.2+ 互換 (既存の `[[ -n ... ]]` 判定と同じ書き方)
