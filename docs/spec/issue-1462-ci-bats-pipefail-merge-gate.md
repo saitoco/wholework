@@ -64,6 +64,11 @@ GitHub Actions の `run:` ステップは `shell:` を明示しない場合、�
 
 - saito / MEMBER / first-class / <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=1462 decision=blo / https://github.com/saitoco/wholework/issues/1462#issuecomment-5598052214
 - saito / MEMBER / first-class / <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=1462 decision=blo / https://github.com/saitoco/wholework/issues/1462#issuecomment-5598708784
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=1462 ac=5 exe / https://github.com/saitoco/wholework/issues/1462#issuecomment-5598995674
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1462#issuecomment-5653270456
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1462#issuecomment-5957368232
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1462#issuecomment-5978133805
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1462#issuecomment-6073963053
 ## Code Retrospective
 
 ### Deviations from Design
