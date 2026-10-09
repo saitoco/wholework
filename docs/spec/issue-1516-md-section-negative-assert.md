@@ -201,3 +201,32 @@ awk 'function flush() { if (name != "" && sec != "" && neg != "") printf "%s:%d:
 
 - saito / MEMBER / first-class / triage の AC 監査: AC3 の `section_contains` の見出し引数に先頭の `###` を含めており恒久的に UNCERTAIN になる (Pattern 6 サブパターン 1)、`###` を除く修正案 / https://github.com/saitoco/wholework/issues/1516#issuecomment-6077186316
 - saito / MEMBER / first-class / Issue Retrospective: 対象範囲を `md_section` とラッパー関数に限定した判断、CI 確認の AC を patch route 形にした判断、AC3 の欠陥は `/spec` が Comment Consumption で拾って修正する旨 / https://github.com/saitoco/wholework/issues/1516#issuecomment-6077189908
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1〜4 を記載どおりに実施した。
+
+### Design Gaps/Ambiguities
+- 着手前の再調査コマンドは Spec の想定どおり範囲内 6 件で、増減はなかった。
+- bats は PATH に無く、前回の取得先 `/tmp/bats-dl/src/bin/bats` が残っていたためそれを使った。bats-core の再取得は不要だった。
+- worktree 隔離ガードが複合コマンド (関数定義と `;` 連結を含む変異確認ループ) を拒否したため、変異確認は `sed -i` / bats / `git checkout --` を 1 コマンドずつに分けて実施した。Spec の Step 4 は「単純なコマンドにする」と書いていたが、変異確認のループも同様に分割が必要な点は書かれていなかった。
+- 新規の文字列一致アサーション (verification-style test) は追加していない (既存テストの受け方の変更のみ)。そのため Pre-implementation FAIL Check は対象外。代わりに変異確認で検出力を確認した。
+
+### Rework
+- なし。変異確認 (6 テストすべてで見出しを壊して FAIL を確認、各変異後に `git checkout --` で復元) は初回で期待どおりの結果だった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 否定アサーション 6 テストを、節を素の代入 `section="$(wrapper)"` で受ける形に統一した (Spec の決定どおり。`md_section` 側の変更や lint の新設は行わない)。
+- 実装は 2 コミットに分けた: テスト 4 ファイルの変更と、`docs/tech.md` / `docs/ja/tech.md` の同一コミット (`closes #1516` を付与)。
+
+### Deferred Items
+- AC4 (CI `test.yml` 成功の確認、`github_check "gh run list"`): 実装コミットの push 前は評価できないため未チェックのまま。push 後の CI 結果を `/verify` で判定する。
+- `tests/auto.bats` の `notable_judgment_section` (inline awk、否定アサーションあり) は Issue 本文で範囲外。必要なら別 Issue。
+
+### Notes for Next Phase
+- Issue 本文の AC1〜3 は `/code` でチェック済み (rubric 2 件と `section_contains` 1 件)。AC4 だけが残る。
+- bats をローカル実行できたため (`/tmp/bats-dl/src/bin/bats`)、変更 4 ファイルと `tests/markdown-section.bats` は全件 PASS を確認済み。CI の全体結果は未確認。
