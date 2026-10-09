@@ -133,3 +133,13 @@ Post-merge AC (`observation event=auto-run session=next`) を **UNCERTAIN** と�
 ### Improvement Proposals
 
 - **「率の改善」を要求する observation AC は、ベースライン値とサンプル数閾値が AC 自身に明記されていないと原理的に PASS 判定できない。** 本 AC の後半節「UNCERTAIN/SKIPPED 率が改善することを観察する」は、比較対象のベースライン率がどこにも記録されておらず、何件観測すれば判定してよいかも定義されていない。結果として、evidence source が実際に機能して PASS を 1 件生んだ (#1329) にもかかわらず AC 全体は UNCERTAIN に留まる。同種の「率 / 割合 / 頻度の改善」を問う AC は将来も書かれうるため、`modules/verify-classifier.md` の observation 型の記述に「定量的改善を問う条件は、(a) ベースライン値とその測定元、(b) 判定に必要な最小サンプル数、の両方を条件文自身に含めること」という要件を追加すべき。変更対象は `modules/verify-classifier.md` と、AC を生成する `skills/issue/SKILL.md` の該当ステップの 2 ファイル。
+
+## Verify Retrospective (2026-10-09 observation dispatch)
+
+### Phase-by-Phase Review
+
+#### verify
+- session `2370909-1791514180` (`/auto 1512`) の observation dispatch で再判定した。この session で処理した observation AC は本 Issue が最初で、新しい evidence (修正後の率のサンプル) は増えていない。前回 (2026-09-18) と同じ理由で UNCERTAIN を維持した
+
+### Improvement Proposals
+- N/A (前回の提案「定量的改善を問う AC にはベースラインと最小サンプル数を明記する」と同じ。重複して起票しない)
