@@ -210,20 +210,30 @@ AC の番号は `## Verification > Pre-merge` の並び順 (AC1〜AC5)。
 ### Rework
 - Comment Consumption を Step 4 のラベル遷移 (`phase/code`) より後に実施したため、cutoff を `phase/code` ではなく直前の `phase/ready` のタイムスタンプで解決した。新しいコメントはなかった (最新のコメントは `phase/ready` の 5 秒前)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps 1〜4 と PR の差分に構造的な乖離はなかった。AC1〜AC4 (rubric・`file_contains`) は PASS と判定した
+
+### Recurring issues
+- 構造テストの `section()` ヘルパー (見出しの先頭一致で節を切り出す awk) がコードフェンス内の `## ...` 行を見出しと誤認し、`/review` の Completion Report を途中で打ち切って CI の `Run bats tests` が FAIL した。`/code` の再現ハーネスは、テスト本体だけを plain bash に写していたため、この種の不具合は検出できなかった。Markdown の節抽出ヘルパーは「フェンス内を見出しとして扱わない」ことを前提にすべき
+- `section "$CODE_SKILL" "### Step 14:" 3` も同じ原因で途中打ち切りになっていたが、追記位置が前にあるため偶然 PASS していた
+
+### Acceptance criteria verification difficulty
+- AC5 (`github_check "gh pr checks" "Run bats tests"`) は CI の実行結果に依存し、`/code` 時点では未確認になる。bats がローカルにない環境では、テストが初回に CI で FAIL するリスクが残る。UNCERTAIN は発生しなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 拒否の条件が未特定のため、`Exit failure handling` はエラー文ではなく `detect-foreign-worktree.sh` の結果で分岐させ、確認が完了できない場合は削除側ではなく Step D (残して報告) に倒す (fail-closed) 設計にした
-- 自分が立っている worktree は削除せず、`ExitWorktree(action: "keep")` で退出できた後だけ Bash で `git worktree remove --force` と `git branch -D` を実行する (Step C)
-- 完了報告の定型 (Leftover worktree report) は、パス・チェックアウト中のブランチ・親セッションでの復旧手順の 3 項目に限定し、復旧手順は `ExitWorktree(action: "keep")` → `git worktree remove` → `git branch -D` の順にした
+- CI の `Run bats tests` FAIL の原因はテストヘルパー (`section()`) のフェンス内見出し誤認であり、SKILL.md 側の記述は正しかったため、テスト側を修正した (SKILL.md の見出し構造は変えない)
+- `path:` 形式の stale 再利用で `WORKTREE_PATH` / `WORKTREE_BRANCH` を取る方法を、相対パスと現在のブランチではなく `git worktree list --porcelain` に統一した (`/review` の stale worktree は PR ブランチをチェックアウト済みのことがあり、Step C の `git branch -D` が PR ブランチを消すのを避けるため)
 
 ### Deferred Items
-- 拒否される条件の特定は未実施 (Spec Notes の「後続の検証方法」を参照)。条件が分かれば、Entry 側で回避する設計を再検討する余地がある
+- Step A の `none` 判定が cwd 次第で失敗を成功と見誤る余地 (CONSIDER): 通常の cwd は worktree ルートのため見送り
+- `/spec`・`/verify` の SKILL.md への Leftover worktree report の組み込み: 拒否が観測された場合の後続 Issue 候補
 - Post-merge の 2 件 (対話セッションから `/review N` を実行した後の worktree 残存の有無、親セッションの閉じ込めの有無) は manual 確認のまま
-- `/spec`・`/verify` の SKILL.md には保留手順を明記していない。これらで拒否が観測された場合は後続 Issue の候補
 
 ### Notes for Next Phase
-- bats がローカルになかったため、`tests/worktree-lifecycle.bats` は CI の `Run bats tests` が初めての実行になる。FAIL した場合は節抽出の `awk` (見出しの先頭一致) と `run grep -c` の扱いを確認する
-- Pre-merge の AC1〜AC4 (rubric と `file_contains`) は `/code` Step 10 で自己判定して Issue 上でチェック済み。AC5 (`github_check "gh pr checks"`) は未チェックのまま `/review` で確認する
-- Step 14 の順序検査 (`tests/code.bats`) は、`skills/code/SKILL.md` Step 14 に追加した段落が `CI-based bats AC confirmation` と `Implementation Complete comment (patch route, before label transition)` の文字列を含まないことに依存する
+- `/merge` の前に、fix コミット (80329293) 後の CI で `Run bats tests` が PASS したことを確認する。AC5 は PASS を確認するまで未チェックのまま
+- bats はローカルになく、ヘルパーの修正は `section()` を取り出した plain bash の検査 (18 件) で確認した。bats 固有の挙動は CI で確認する
