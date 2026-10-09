@@ -239,7 +239,25 @@ step0_section() {
 - `HEADING_PREFIX` is matched literally against the start of a line. The heading line itself is the first line of the output.
 - The section ends just before the next heading whose level is at most the start heading's level. Pass `END_LEVEL` to override (for example `md_section "$F" "### Batch Completion Report" 2` ends only at a `## ` heading).
 - Lines inside a code fence (a line starting with optional whitespace and three backticks toggles the fence) are never treated as headings, so template examples with `## ` lines in a fence do not cut the section short. Fence tracking starts at the top of the file.
-- The exit status is 1 when the heading is not found (output is empty) and 2 when `END_LEVEL` is omitted and `HEADING_PREFIX` does not start with `#`. Use `s="$(md_section ...)"` so a renamed heading fails the test instead of passing against an empty section.
+- The exit status is 1 when the heading is not found (output is empty) and 2 when `END_LEVEL` is omitted and `HEADING_PREFIX` does not start with `#`.
+
+Receive the section with a plain assignment in the test body (`s="$(md_section ...)"`, or `s="$(step0_section "$FILE")"` for a wrapper function) so that a renamed heading fails the test instead of passing against an empty section. bats runs the test body under `set -e`, which turns the failed assignment into a test failure:
+
+```bash
+@test "Step 0 does not mention the removed flag" {
+    section="$(step0_section "$SKILL_FILE")"
+    [[ "$section" != *"--removed-flag"* ]]
+}
+```
+
+This matters most for a negative assertion, a check that something is absent from the section (`[[ "$section" != *foo* ]]`, `run grep ...` followed by `[ "$status" -ne 0 ]`, `if ... | grep -q foo; then false; fi`). An empty section satisfies every negative assertion, so a renamed heading would pass silently. Do not put a form that discards the exit status in front of one:
+
+- `run step0_section "$FILE"` followed by `[[ "$output" != ... ]]`: `run` always succeeds and keeps the status in `$status`.
+- `grep ... <<< "$(step0_section "$FILE")"`: a here-string does not propagate the command substitution's status.
+- `step0_section "$FILE" | grep ...`: a pipeline reports only its last command's status.
+- `local s="$(step0_section "$FILE")"`: `local` returns 0; declare with `local s` first, then assign on the next line.
+
+A positive assertion (`step0_section "$FILE" | grep -q foo`, or `[[ "$output" == *foo* ]]` after `run`) fails on an empty section by itself, so it may keep those forms.
 
 This replaced per-test inline `awk` that did not track fences; one of them cut a section short in the CI failure of Issue #1512 / PR #1513. `bats tests/` runs only `.bats` files and does not recurse, so `tests/helpers/*.bash` is not executed as a test.
 

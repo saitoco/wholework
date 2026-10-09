@@ -230,7 +230,25 @@ step0_section() {
 - `HEADING_PREFIX` は行頭に対するリテラル一致。見出し行そのものが出力の 1 行目になる。
 - 節は、開始見出しのレベル以下の次の見出しの直前で終わる。`END_LEVEL` で上書きできる (例: `md_section "$F" "### Batch Completion Report" 2` は `## ` 見出しでのみ終わる)。
 - コードフェンス内 (行頭の空白に続けて 3 個のバッククォートで始まる行でフェンス内外を切り替える) の行は見出しとして扱わない。フェンス内のテンプレート例にある `## ` 行で節が途中打ち切りにならない。フェンスの追跡はファイル先頭から始める。
-- 見出しが見つからないと終了ステータス 1 (出力は空)、`END_LEVEL` 省略かつ `HEADING_PREFIX` が `#` で始まらないと終了ステータス 2。`s="$(md_section ...)"` の形で呼べば、見出しの改名時に空の節に対して素通りせず、テストが失敗する。
+- 見出しが見つからないと終了ステータス 1 (出力は空)、`END_LEVEL` 省略かつ `HEADING_PREFIX` が `#` で始まらないと終了ステータス 2。
+
+節はテスト本体の素の代入 (`s="$(md_section ...)"`、ラッパー関数なら `s="$(step0_section "$FILE")"`) で受ける。こうすれば、見出しの改名時に空の節に対して素通りせず、テストが失敗する。bats はテスト本体を `set -e` で実行するため、代入の失敗がそのままテストの失敗になる。
+
+```bash
+@test "Step 0 does not mention the removed flag" {
+    section="$(step0_section "$SKILL_FILE")"
+    [[ "$section" != *"--removed-flag"* ]]
+}
+```
+
+特に重要なのが否定アサーション (節の中に何かが無いことの検査。`[[ "$section" != *foo* ]]`、`run grep ...` のあとの `[ "$status" -ne 0 ]`、`if ... | grep -q foo; then false; fi`) である。空の節はどの否定アサーションも満たすため、見出しが改名されても黙って PASS する。否定アサーションの前段に、終了ステータスを捨てる次の形を置かない。
+
+- `run step0_section "$FILE"` のあとに `[[ "$output" != ... ]]`: `run` は常に成功し、ステータスは `$status` に残る。
+- `grep ... <<< "$(step0_section "$FILE")"`: here-string はコマンド置換のステータスを伝えない。
+- `step0_section "$FILE" | grep ...`: パイプラインは最後のコマンドのステータスだけを返す。
+- `local s="$(step0_section "$FILE")"`: `local` が 0 を返す。先に `local s` と宣言し、次の行で代入する。
+
+肯定アサーション (`step0_section "$FILE" | grep -q foo`、`run` のあとの `[[ "$output" == *foo* ]]`) は、空の節ではそれだけで失敗するため、これらの形のままでよい。
 
 これは、フェンスを追跡しないテストごとのインライン `awk` を置き換えたもの。そのうち 1 つが Issue #1512 / PR #1513 の CI 失敗で節を途中で打ち切った。`bats tests/` は `.bats` ファイルだけを再帰なしで実行するため、`tests/helpers/*.bash` はテストとして実行されない。
 
