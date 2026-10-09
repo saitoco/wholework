@@ -5,9 +5,11 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL.md"
 
-# Extract Step 3a section: from "### Step 3a:" to the next "### " heading
+load 'helpers/markdown-section'
+
+# Extract Step 3a section: from "### Step 3a:" to the next heading of level 3 or higher
 step3a_section() {
-    awk '/^### Step 3a:/{found=1} found && /^### / && !/^### Step 3a:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 3a:"
 }
 
 @test "Step 3a section contains route demotion" {
@@ -25,9 +27,9 @@ step3a_section() {
     [[ "$output" == *"ALWAYS_PR"* ]]
 }
 
-# Extract Step 3 section: from "### Step 3:" to the next "### " heading (Issue #1482)
+# Extract Step 3 section: from "### Step 3:" to the next heading of level 3 or higher (Issue #1482)
 step3_section() {
-    awk '/^### Step 3:/{found=1} found && /^### / && !/^### Step 3:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 3:"
 }
 
 @test "Step 3 section has phase/verify resume branch" {
@@ -72,9 +74,9 @@ step3_section() {
     [[ "$output" == *"run-spec.sh"* ]] || false
 }
 
-# Extract Step 2a section: from "### Step 2a:" to the next "### " heading
+# Extract Step 2a section: from "### Step 2a:" to the next heading of level 3 or higher
 step2a_section() {
-    awk '/^### Step 2a:/{found=1} found && /^### / && !/^### Step 2a:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 2a:"
 }
 
 @test "Step 2a fix-cycle section exists in SKILL.md" {
@@ -117,9 +119,9 @@ step2a_section() {
     grep -q "EFFECTIVE_STOP_AT" "$SKILL_FILE"
 }
 
-# Extract Step 2 section: from "### Step 2:" to the next "### " heading
+# Extract Step 2 section: from "### Step 2:" to the next heading of level 3 or higher
 step2_section() {
-    awk '/^### Step 2:/{found=1} found && /^### / && !/^### Step 2:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 2:"
 }
 
 @test "Step 2 section describes stop-at flag parsing" {
@@ -135,9 +137,9 @@ step2_section() {
     [[ "$output" == *"merge"* ]]
 }
 
-# Extract Step 5 section: from "### Step 5:" to the next "### " heading
+# Extract Step 5 section: from "### Step 5:" to the next heading of level 3 or higher
 step5_section() {
-    awk '/^### Step 5:/{found=1} found && /^### / && !/^### Step 5:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 5:"
 }
 
 @test "Step 5 section contains next-action guidance for stop-at" {

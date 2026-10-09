@@ -8,6 +8,8 @@
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 CATALOG="$PROJECT_ROOT/modules/orchestration-fallbacks.md"
 
+load 'helpers/markdown-section'
+
 @test "orchestration-fallbacks: catalog file exists" {
     test -f "$CATALOG"
 }
@@ -98,11 +100,7 @@ ARCHIVE="$PROJECT_ROOT/docs/reports/orchestration-fallbacks-archive.md"
     grep -q '^## ci-flake-retry' "$ARCHIVE"
     # Each archived entry retains the same 5-section structure as the live catalog schema.
     for anchor in "gh-pr-list-head-glob" "ci-flake-retry"; do
-        block=$(awk -v anchor="## $anchor" '
-            $0 == anchor { capture = 1; next }
-            capture && /^## / { capture = 0 }
-            capture { print }
-        ' "$ARCHIVE")
+        block=$(md_section "$ARCHIVE" "## $anchor")
         echo "$block" | grep -q '^### Symptom'
         echo "$block" | grep -q '^### Applicable Phases'
         echo "$block" | grep -q '^### Fallback Steps'

@@ -6,40 +6,42 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/review/SKILL.md"
 
+load 'helpers/markdown-section'
+
 # Extract the "## Opportunistic Verification" section from SKILL.md.
 # The section ends at the next level-2 (## ) heading (## Completion Report).
 opportunistic_verification_section() {
-    awk '/^## Opportunistic Verification/{found=1} /^## / && !/Opportunistic Verification/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "## Opportunistic Verification"
 }
 
 # Extract the "## Step 8: Static Acceptance Criteria Verification" section from SKILL.md.
 # The section ends at the next level-2 (## ) heading (## Step 9: CI Status Check).
 step8_section() {
-    awk '/^## Step 8: Static Acceptance Criteria Verification/{found=1} /^## Step 9/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "## Step 8: Static Acceptance Criteria Verification"
 }
 
 # Extract the "## Step 9: CI Status Check" section from SKILL.md.
 # The section ends at the next level-2 (## ) heading (## Step 10: Multi-perspective Code Review).
 step9_section() {
-    awk '/^## Step 9: CI Status Check/{found=1} /^## Step 10/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "## Step 9: CI Status Check"
 }
 
 # Extract the "## Non-Interactive Mode Behavior" section from SKILL.md.
 # The section ends at the next level-2 (## ) heading (## Review-only Mode).
 non_interactive_mode_behavior_section() {
-    awk '/^## Non-Interactive Mode Behavior/{found=1} /^## Review-only Mode/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "## Non-Interactive Mode Behavior"
 }
 
 # Extract the "### 12.3. Lightweight Re-check" section from SKILL.md.
 # The section ends at the next level-3 (### ) heading (### 12.4. Record Fix Results).
 step12_3_section() {
-    awk '/^### 12.3. Lightweight Re-check/{found=1} /^### 12.4/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### 12.3. Lightweight Re-check"
 }
 
 # Extract the "### 12.2. Fix Work" section from SKILL.md.
 # The section ends at the next level-3 (### ) heading (### 12.3. Lightweight Re-check).
 step12_2_section() {
-    awk '/^### 12.2. Fix Work/{found=1} /^### 12.3/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### 12.2. Fix Work"
 }
 
 @test "Opportunistic Verification: DESIGN_FILE_PATH resolution present" {

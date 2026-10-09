@@ -5,14 +5,16 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/code/SKILL.md"
 
-# Extract Step 0 section: from "### Step 0:" to the next "### " heading
+load 'helpers/markdown-section'
+
+# Extract Step 0 section: from "### Step 0:" to the next heading of level 3 or higher
 step0_section() {
-    awk '/^### Step 0:/{found=1} found && /^### / && !/^### Step 0:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 0:"
 }
 
-# Extract Follow-up Issue Creation section: from "#### Follow-up Issue Creation" to the next heading
+# Extract Follow-up Issue Creation section: from "#### Follow-up Issue Creation" to the next heading of level 4 or higher
 followup_issue_section() {
-    awk '/^#### Follow-up Issue Creation/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+    md_section "$1" "#### Follow-up Issue Creation"
 }
 
 @test "Step 0 section contains always-pr keyword" {
@@ -47,9 +49,9 @@ followup_issue_section() {
     [[ "$output" == *"gh issue list"* ]]
 }
 
-# Extract Step 8 section: from "### Step 8:" to the next "### " heading
+# Extract Step 8 section: from "### Step 8:" to the next heading of level 3 or higher
 step8_section() {
-    awk '/^### Step 8:/{found=1} found && /^### / && !/^### Step 8:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 8:"
 }
 
 @test "Step 8 section describes patch route final-step commit deferral and pr route exclusion" {
@@ -59,9 +61,9 @@ step8_section() {
     [[ "$output" == *"does not apply to pr route"* ]]
 }
 
-# Extract Step 11 section: from "### Step 11:" to the next "### " heading
+# Extract Step 11 section: from "### Step 11:" to the next heading of level 3 or higher
 step11_section() {
-    awk '/^### Step 11:/{found=1} found && /^### / && !/^### Step 11:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 11:"
 }
 
 @test "Step 11 patch route commit template includes closes NUMBER inline" {
@@ -87,15 +89,15 @@ step11_section() {
     [[ "$output" == *"--allow-empty"* ]]
 }
 
-# Extract Step 9 section: from "### Step 9:" to the next "### " heading
+# Extract Step 9 section: from "### Step 9:" to the next heading of level 3 or higher
 step9_section() {
-    awk '/^### Step 9:/{found=1} found && /^### / && !/^### Step 9:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 9:"
 }
 
 # Extract Behavioral Change Detection subsection: from "#### Behavioral Change Detection"
-# to the next heading (any level)
+# to the next heading of level 4 or higher
 behavioral_change_detection_section() {
-    awk '/^#### Behavioral Change Detection/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+    md_section "$1" "#### Behavioral Change Detection"
 }
 
 @test "Step 9 section states execution surface constraint (run_in_background) at a branch-independent position" {
@@ -147,9 +149,9 @@ behavioral_change_detection_section() {
 }
 
 # Extract New Verification-Test Pre-implementation FAIL Check subsection: from its heading
-# to the next heading (any level)
+# to the next heading of level 4 or higher
 new_verification_test_fail_check_section() {
-    awk '/^#### New Verification-Test Pre-implementation FAIL Check/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+    md_section "$1" "#### New Verification-Test Pre-implementation FAIL Check"
 }
 
 @test "code skill documents New Verification-Test Pre-implementation FAIL Check heading" {
@@ -174,9 +176,9 @@ new_verification_test_fail_check_section() {
     [[ "$output" == *"pre-implementation FAIL"* ]]
 }
 
-# Extract Step 10 section: from "### Step 10:" to the next "### " heading
+# Extract Step 10 section: from "### Step 10:" to the next heading of level 3 or higher
 step10_section() {
-    awk '/^### Step 10:/{found=1} found && /^### / && !/^### Step 10:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 10:"
 }
 
 @test "Step 10 Patch route verify command check fires for both patch and operate route" {
@@ -235,15 +237,11 @@ LANG_CHECK_DOC="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/code/l
 }
 
 # bats-absent CI confirmation for patch route (Issue #1490)
+# (step10_section is defined above)
 
-# Extract Step 10 section: from "### Step 10:" to the next "### " heading
-step10_section() {
-    awk '/^### Step 10:/{found=1} found && /^### / && !/^### Step 10:/{exit} found{print}' "$1"
-}
-
-# Extract Step 14 section: from "### Step 14:" to the next "### " heading
+# Extract Step 14 section: from "### Step 14:" to the next heading of level 3 or higher
 step14_section() {
-    awk '/^### Step 14:/{found=1} found && /^### / && !/^### Step 14:/{exit} found{print}' "$1"
+    md_section "$1" "### Step 14:"
 }
 
 @test "SKILL.md allowed-tools pre-approves gh run list, gh run watch and git rev-parse for the bats CI confirmation" {
