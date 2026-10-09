@@ -234,22 +234,41 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 - 置き換えによる判定の変化: プロトタイプの新旧比較で解消 (Notes「同値性の事前確認」)。`/code` 時点で SKILL.md が変わっている可能性に備え、Implementation Step 6 で同じ比較を実ヘルパーを `source` するハーネスで再実行する
 - 新規ロジックのテスト要件: `tests/markdown-section.bats` に (a)〜(i) の 9 ケース (フェンス内の `## ` / `### ` で打ち切られない、開始前のフェンス内の同名行で開始しない、インデントされたフェンス、`END_LEVEL` 上書き、既定の終了レベル、EOF まで、見出しなしで 1、`#` なし prefix で 2、リテラル一致) を追加し、スイートが PASS すること
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/markdown-section.bats` の否定アサーションは、Spec の想定にあった `! echo ... | grep -q` ではなく、ファイル内の補助関数 `refute_output_has` で書いた。bats は否定パイプラインを失敗として扱わないため、`!` 形式だと「含まないこと」の検証が常に PASS してしまう
+- `tests/auto-completion-report.bats` を含め、旧実装のコメントにあった終了条件の説明を新しい終了条件 (開始見出しのレベル以下の次の見出し) に合わせて直した。Spec の対応表にはコメント修正の記載がなかったが、手順 4 の「説明コメントを直す」を全ファイルに適用した
+- `tests/code.bats` の重複定義 `step10_section()` は、後者を削除して前者を共有した (手順 5 が許容していた対応)
+
+### Design Gaps/Ambiguities
+
+- Spec のテストケース (c) 「インデントされたフェンス内の `## ` 行」は、フィクスチャの `## ` 行までインデントしていると、フェンス処理がなくても見出しとして扱われないため検出力がなかった。フェンス内の行を行頭から書く形に直し、フェンス判定を外した変異版で 3 件 (a / b / c) が FAIL することを確認した
+- 作業環境に bats も GNU parallel もなかった。bats-core v1.11.1 を `/tmp` に取得して実行し、`--jobs` が使えないため全 135 ファイルを 4 つに分けた直列実行で全件 PASS を確認した (`modules/test-runner.md` の `--jobs` 不可時の分割実行に従った)
+- ワークツリーの隔離ガード (`worktree isolation guard`) が、glob を含む `bats` の引数や `&` による並列起動を「git でないと示せない」として拒否した。リテラルのファイル名を並べた単純なコマンドに分けて回避した
+
+### Rework
+
+- 変異テストでテストケース (c) の検出力不足に気づき、フィクスチャを 1 回直した。それ以外のやり直しはない
+- 置き換え前後の同値性チェック (plain bash ハーネスが実ヘルパーを `source`) の結果は、33 呼び出し中 31 件が同一、差分は Spec の想定どおり 3 件 (code Step 11 / Step 14、`review-rubric-safe` の section 9。ハーネスの対象外だった `review-rubric-safe` と `worktree-lifecycle` は bats の実行結果で確認)。bats が使えたため、各テストのアサーションが新しい範囲でも PASS することを実行で確認できた
+
 ## Phase Handoff
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 共通ヘルパーは `tests/helpers/markdown-section.bash` の `md_section FILE HEADING_PREFIX [END_LEVEL]`。`load 'helpers/markdown-section'` (拡張子なし) で読み込む
-- フェンス判定は `/^[ \t]*```/` (l0-surfaces の AC 列挙規約と同じ) で、ファイル先頭から追跡する。終了は「開始見出しのレベル (または `END_LEVEL`) 以下の次の見出し」に統一した
-- 見出しが見つからないと終了ステータス 1、`#` で始まらない prefix を `END_LEVEL` なしで渡すと 2
-- 置き換え対象は Background の 8 ファイル + `worktree-lifecycle.bats` + `orchestration-fallbacks.bats` の 1 箇所。番号付きリスト・太字ラベル・`sed` 範囲抽出・全エントリ走査は対象外 (Notes の Exclusions)
+- 置き換えは Spec の対応表どおり行った。単一行のラッパー関数は `md_section "$1" "<見出し>"` に機械変換し、`auto-batch.bats` のインライン 27 箇所は `run grep ... <<< "$(xxx_mode_section)"` の形にした (行番号を比べる 2 テストは節内の相対行番号のまま)
+- `tests/markdown-section.bats` の否定アサーションは補助関数 `refute_output_has` に集約した (`! cmd | grep` は bats で失敗にならないため)
+- `docs/tech.md` に `### BATS Markdown Section Extraction` を追加し、`docs/ja/` ミラーと `docs/structure.md` の `tests/helpers/` 行も同期した
 
 ### Deferred Items
 
-- ローカルに bats がない環境での確認方法 (Issue の対象外)
-- Exclusions に挙げた見出しベースでない切り出し (`spec.bats` の太字ラベルなど) のフェンス対応は扱わない
+- Exclusions に挙げた見出しベースでない切り出し (`spec.bats` の太字ラベルなど) のフェンス対応は扱っていない
+- CI の `Run bats tests` (`github_check "gh pr checks"`) は PR 作成後の `/review` で確認する。Issue の AC では未チェックのまま
 
 ### Notes for Next Phase
 
-- 置き換え後の出力が変わるのは 3 箇所だけ (code Step 11 / Step 14 が伸びる、`review-rubric-safe` の section 9 が狭まる)。いずれもアサーションは PASS のまま見込みだが、Step 6 の同値性チェックで実ヘルパーを `source` して再確認すること (関数本体を写したハーネスは #1512 でヘルパーの不具合を見逃した)
-- `tests/auto-batch.bats` のインライン `run bash -c "awk ..."` は `bash -c` の中でシェル関数を呼べないため、`run grep -q 'X' <<< "$(list_mode_section)"` の形に書き換える。行番号を比べる 2 テストは節内の相対行番号を保つこと
-- `docs/tech.md` と `docs/structure.md` を変えるので、`docs/ja/` の 2 ファイルも同期する (コードフェンス数を一致させる)
+- ローカルでは bats-core v1.11.1 を `/tmp/bats-dl` に取得して全 135 ファイルを実行し、全件 PASS を確認済み。CI の結果が違う場合は apt 版 bats での `load 'helpers/markdown-section'` (拡張子なし) の解決を最初に疑うこと
+- 置き換え対象ファイルは `tests/helpers/markdown-section.bash` を最上位で `load` している。bats の数え上げフェーズで `load` が解決できない古い版の場合に備え、失敗時は `setup()` 内への移動を検討する
+- `docs/ja/tech.md` のコードフェンス数は英語版と一致させてある
