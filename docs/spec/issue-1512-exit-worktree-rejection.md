@@ -236,3 +236,29 @@ AC の番号は `## Verification > Pre-merge` の並び順 (AC1〜AC5)。
 ### Notes for Next Phase
 - `/verify` では、対話セッションから `/review N` を実行して `.claude/worktrees/review+pr-N` が残らないか、残った場合に完了報告へ復旧手順が出るかを確認する
 - 拒否の発生条件は未特定のため、再現しない場合は観測待ちとして扱う
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を「ExitWorktree の失敗全般」と「完了報告の 3 項目」に具体化したことで、実装前の警告 1 行で PASS してしまう余地がなくなった。rubric 4 件は `/review` で問題なく判定できた
+- Post-merge の 2 件は対話セッションの fork でしか再現しないため manual のまま。拒否条件も未特定なので、実観測まで `phase/verify` に残る
+
+#### design
+- 結果ベースの分岐 (Step A〜D) にしたことで、拒否条件を特定しなくても実装できた。対応方針 2 (`EnterWorktree` を使わない形) は採用せず、後続候補として残っている
+
+#### code
+- 環境に bats がなく、`/code` は plain bash の再現ハーネスで確認した。このハーネスはテスト本体だけを写していたため、ヘルパー (`section()`) の不具合を検出できなかった
+
+#### review
+- `section()` がコードフェンス内の `## ...` を見出しと誤認して CI の `Run bats tests` が FAIL し、`/review` が修正 (80329293) した。`/review` が CI 結果で拾えたのは有効だったが、同じ種類の awk 節抽出ヘルパーが `tests/code.bats`・`tests/review.bats`・`tests/verify.bats` など 9 ファイルに個別実装されている
+
+#### merge
+- 競合なし、CI success、squash merge で問題なし
+
+#### verify
+- Pre-merge 5 件はチェック済みで SKIPPED。Post-merge 2 件は対話セッションから `/review` を実行する必要があり、ユーザー確認待ち (`phase/verify`)
+
+### Improvement Proposals
+- bats テストの Markdown 節抽出ヘルパー (見出しの先頭一致で節を切り出す awk) を、コードフェンスを見出しとして扱わない共通ヘルパーとして `tests/` に 1 つ用意し、各 `.bats` の個別実装を置き換える。今回 `tests/worktree-lifecycle.bats` でフェンス内の `## ...` 誤認により CI が FAIL し、同種の個別実装が 9 ファイルにある
