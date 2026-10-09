@@ -253,22 +253,36 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 - 変異テストでテストケース (c) の検出力不足に気づき、フィクスチャを 1 回直した。それ以外のやり直しはない
 - 置き換え前後の同値性チェック (plain bash ハーネスが実ヘルパーを `source`) の結果は、33 呼び出し中 31 件が同一、差分は Spec の想定どおり 3 件 (code Step 11 / Step 14、`review-rubric-safe` の section 9。ハーネスの対象外だった `review-rubric-safe` と `worktree-lifecycle` は bats の実行結果で確認)。bats が使えたため、各テストのアサーションが新しい範囲でも PASS することを実行で確認できた
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- 構造的な乖離はなかった。変更ファイル 17 件は Spec の Changed Files と一致し、残存チェック (インライン awk と `section()` の残り) も 0 件だった
+- 唯一の SHOULD は Spec のテストケース (d) の後半。`### Child` に END_LEVEL 2 を渡すケースが、同レベルの兄弟見出しのないフィクスチャだったため既定値と区別できなかった。兄弟見出しを足して修正済み
+
+### 繰り返し出た指摘
+
+- 否定アサーションだけのテストで、見出しの改名が空の節に対して素通りする点を review-spec と review-bug の両方が指摘した。ヘルパーの狙い (見出し未検出で exit 1) が、`run xxx_section` + `[[ "$output" != ... ]]` や `<<< "$(...)"` の呼び出し形では活きない。旧実装も素通りで退行ではないため本 PR では直さず、`s="$(md_section ...)"` で受ける形への統一を follow-up の候補とする
+
+### 受け入れ条件の検証の難しさ
+
+- UNCERTAIN は 0 件。AC 1〜3 は rubric、AC 4 は `github_check` で、CI が両トリガーで pass していたため判定に迷いはなかった
+- review-bug 系のサブエージェントは、ワークツリーの隔離ガードが `source` と `bash -c` を拒否したため、ヘルパーの awk 本体を直接渡して同値性を比較した。実ヘルパーを `source` する計測はオーケストレーター側のスクリプトファイル経由でのみ可能だった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 置き換えは Spec の対応表どおり行った。単一行のラッパー関数は `md_section "$1" "<見出し>"` に機械変換し、`auto-batch.bats` のインライン 27 箇所は `run grep ... <<< "$(xxx_mode_section)"` の形にした (行番号を比べる 2 テストは節内の相対行番号のまま)
-- `tests/markdown-section.bats` の否定アサーションは補助関数 `refute_output_has` に集約した (`! cmd | grep` は bats で失敗にならないため)
-- `docs/tech.md` に `### BATS Markdown Section Extraction` を追加し、`docs/ja/` ミラーと `docs/structure.md` の `tests/helpers/` 行も同期した
+- SHOULD 1 件 (END_LEVEL 上書きテストの検出力) は修正し、CONSIDER 5 件は本 PR の範囲外としてスキップした (ヘルパーの誤用耐性と、否定アサーションの素通り)
+- Workflow 経路は再起動保証のない実行面のため使わず、静的な Task fan-out を前景で実行した
 
 ### Deferred Items
 
-- Exclusions に挙げた見出しベースでない切り出し (`spec.bats` の太字ラベルなど) のフェンス対応は扱っていない
-- CI の `Run bats tests` (`github_check "gh pr checks"`) は PR 作成後の `/review` で確認する。Issue の AC では未チェックのまま
+- 数値でない END_LEVEL の検証、FILE 不在時の終了ステータス (awk の exit 2 と文書上の exit 2 の衝突)、`awk -v` のバックスラッシュ解釈は、ヘルパーの堅牢化として別 Issue 候補
+- 否定アサーションのテストを `s="$(md_section ...)"` で受ける形に統一する案も別 Issue 候補
 
 ### Notes for Next Phase
 
-- ローカルでは bats-core v1.11.1 を `/tmp/bats-dl` に取得して全 135 ファイルを実行し、全件 PASS を確認済み。CI の結果が違う場合は apt 版 bats での `load 'helpers/markdown-section'` (拡張子なし) の解決を最初に疑うこと
-- 置き換え対象ファイルは `tests/helpers/markdown-section.bash` を最上位で `load` している。bats の数え上げフェーズで `load` が解決できない古い版の場合に備え、失敗時は `setup()` 内への移動を検討する
-- `docs/ja/tech.md` のコードフェンス数は英語版と一致させてある
+- 検出された MUST はなく、CI も全件 SUCCESS。`/merge 1515` に進める
+- Issue #1514 の AC はすべて `[x]` (AC 4 は本レビューで更新)。Post-merge 条件はなし
