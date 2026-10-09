@@ -230,3 +230,30 @@ awk 'function flush() { if (name != "" && sec != "" && neg != "") printf "%s:%d:
 ### Notes for Next Phase
 - Issue 本文の AC1〜3 は `/code` でチェック済み (rubric 2 件と `section_contains` 1 件)。AC4 だけが残る。
 - bats をローカル実行できたため (`/tmp/bats-dl/src/bin/bats`)、変更 4 ファイルと `tests/markdown-section.bats` は全件 PASS を確認済み。CI の全体結果は未確認。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- triage の AC 監査で、AC3 の `section_contains` の見出し引数に `###` が入っていて恒久的に UNCERTAIN になる欠陥が見つかった。`/spec` が Comment Consumption でこれを拾い、Issue 本文を修正した。監査から修正までの経路が設計どおりに機能した。
+- 呼び出し形ごとの挙動を使い捨てプローブで実測し、表にした (A〜J)。`local s="$(...)"` が終了ステータスを隠す F の形まで押さえたので、規約の「前段に置いてはいけない 4 つの形」に根拠が付いた。
+
+#### design
+- 素の代入に統一する判断は、既存の `code.bats` と `worktree-lifecycle.bats` の書き方と揃っていて、テストの検査行も増えない。lint の新設は範囲外として見送った。
+
+#### code
+- 手戻りはなかった。変異確認 (見出しを壊すと 6 テスト・7 件が FAIL) で検出力を確かめている。
+- worktree の隔離ガードが、変異確認のループ (関数定義と `;` の連結) を拒否した。Spec の Step 4 は「単純なコマンドにする」としか書いておらず、ループも分割が要る点が抜けていた。同じ拒否はこのセッションの `/auto` 側でも複数回起きている。
+
+#### review
+- patch route なので review フェーズはない。
+
+#### merge
+- main へ直接 push し、CI (test.yml) は success だった。
+
+#### verify
+- AC1〜3 は `/code` でチェック済みのため SKIPPED とし、残る AC4 (CI) は PASS だった。FAIL も UNCERTAIN もない。
+
+### Improvement Proposals
+- `tests/auto.bats` の `notable_judgment_section` は inline awk で、否定アサーション (L164・L177) の前段で節が取れなかったときに素通りする。本 Issue の範囲外とした残りの 1 件で、`md_section` への置き換えと素の代入への変更をまとめて行う。
