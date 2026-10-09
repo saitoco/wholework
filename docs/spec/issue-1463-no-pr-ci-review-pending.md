@@ -246,6 +246,11 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 - saito / MEMBER / first-class / Issue Retrospective: 方向性 B (自動検出による新 verdict) の採用、具体的な検出方法は `/spec` に委任、補足の merge Phase Handoff 誤記はスコープ外、AC を新規追加 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672
 - saito / MEMBER / first-class / ## Spec Phase: Autonomous Auto-Resolve Log / https://github.com/saitoco/wholework/issues/1463#issuecomment-5651004555
 
+- saito / MEMBER / first-class / ⚠️ この `/verify` 実行は、session キャッシュされた古い `skills/verify/SKILL.md` を実行している可能性が高い。St / https://github.com/saitoco/wholework/issues/1463#issuecomment-5651579965
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5653270604
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5957369070
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5978133986
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6073963333
 ## issue retrospective
 
 (Issue コメント https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672 から転記)
