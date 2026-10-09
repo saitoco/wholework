@@ -195,3 +195,35 @@ AC の番号は `## Verification > Pre-merge` の並び順 (AC1〜AC5)。
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (AC の対象を ExitWorktree の失敗全般にしたこと、完了報告の 3 項目への具体化、対応方針 2〜4 を AC に含めない判断の記録。`/spec` への追加要求はなし) / https://github.com/saitoco/wholework/issues/1512#issuecomment-6073274423
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps どおりに実装した。Step 1 (モジュール) → Step 2 (3 スキル) → Step 3 (bats) → Step 4 (`docs/structure.md`・`docs/ja/structure.md`) の順で、構成の変更はない
+- Step 4 の判断: `docs/structure.md` の Key Files 2 行 (`modules/worktree-lifecycle.md`・`scripts/detect-foreign-worktree.sh`) を更新し、`docs/ja/structure.md` を同期した。Directory Layout の `tests/` 行はファイル単位の列挙がないため変更しなかった
+
+### Design Gaps/Ambiguities
+- 環境に bats がなかったため、`tests/worktree-lifecycle.bats` を bats では実行できなかった。`@test` を関数に変換する plain bash の再現ハーネス (一時ファイル、コミットしていない) で 17 件の PASS を確認した。bats 固有の挙動 (`run` の status 取り扱いなど) は CI の `Run bats tests` で確認する。既存の `tests/code.bats`・`tests/review.bats` もローカルでは実行できていない (Step 14 の順序検査は、挿入した段落に検査対象の 2 文字列を含めないことで影響を避けた)
+- 新規テストの「実装前 FAIL 確認」は、追加した assert が新節・新文言のみを対象とする (節単位に抽出して検査する) ため、実装前の状態では FAIL することをコードの読み取りで確認した。実行による確認は bats がないため行っていない
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告するが、今回の変更とは無関係 (既存の状態)
+
+### Rework
+- Comment Consumption を Step 4 のラベル遷移 (`phase/code`) より後に実施したため、cutoff を `phase/code` ではなく直前の `phase/ready` のタイムスタンプで解決した。新しいコメントはなかった (最新のコメントは `phase/ready` の 5 秒前)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 拒否の条件が未特定のため、`Exit failure handling` はエラー文ではなく `detect-foreign-worktree.sh` の結果で分岐させ、確認が完了できない場合は削除側ではなく Step D (残して報告) に倒す (fail-closed) 設計にした
+- 自分が立っている worktree は削除せず、`ExitWorktree(action: "keep")` で退出できた後だけ Bash で `git worktree remove --force` と `git branch -D` を実行する (Step C)
+- 完了報告の定型 (Leftover worktree report) は、パス・チェックアウト中のブランチ・親セッションでの復旧手順の 3 項目に限定し、復旧手順は `ExitWorktree(action: "keep")` → `git worktree remove` → `git branch -D` の順にした
+
+### Deferred Items
+- 拒否される条件の特定は未実施 (Spec Notes の「後続の検証方法」を参照)。条件が分かれば、Entry 側で回避する設計を再検討する余地がある
+- Post-merge の 2 件 (対話セッションから `/review N` を実行した後の worktree 残存の有無、親セッションの閉じ込めの有無) は manual 確認のまま
+- `/spec`・`/verify` の SKILL.md には保留手順を明記していない。これらで拒否が観測された場合は後続 Issue の候補
+
+### Notes for Next Phase
+- bats がローカルになかったため、`tests/worktree-lifecycle.bats` は CI の `Run bats tests` が初めての実行になる。FAIL した場合は節抽出の `awk` (見出しの先頭一致) と `run grep -c` の扱いを確認する
+- Pre-merge の AC1〜AC4 (rubric と `file_contains`) は `/code` Step 10 で自己判定して Issue 上でチェック済み。AC5 (`github_check "gh pr checks"`) は未チェックのまま `/review` で確認する
+- Step 14 の順序検査 (`tests/code.bats`) は、`skills/code/SKILL.md` Step 14 に追加した段落が `CI-based bats AC confirmation` と `Implementation Complete comment (patch route, before label transition)` の文字列を含まないことに依存する
