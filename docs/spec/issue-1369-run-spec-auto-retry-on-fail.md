@@ -86,6 +86,10 @@ No new comments since last phase.
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-5384001970
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-5579815829
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-5653269530
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1369#issuecomment-5730181097
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-5957364399
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-5978132572
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1369#issuecomment-6073961194
 ## Code Retrospective
 
 ### Deviations from Design
