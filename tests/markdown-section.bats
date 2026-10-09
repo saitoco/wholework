@@ -100,12 +100,16 @@ body
 ### Child
 child body
 
+### Sibling
+sibling body
+
 ## Next
 after
 EOF
     run md_section "$FIXTURE" "## Target"
     [ "$status" -eq 0 ]
     echo "$output" | grep -q '^child body$'
+    echo "$output" | grep -q '^sibling body$'
     refute_output_has '^## Next$'
 
     run md_section "$FIXTURE" "## Target" 3
@@ -114,9 +118,17 @@ EOF
     refute_output_has '^### Child$'
     refute_output_has '^child body$'
 
+    run md_section "$FIXTURE" "### Child"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q '^child body$'
+    refute_output_has '^### Sibling$'
+    refute_output_has '^sibling body$'
+
     run md_section "$FIXTURE" "### Child" 2
     [ "$status" -eq 0 ]
     echo "$output" | grep -q '^child body$'
+    echo "$output" | grep -q '^### Sibling$'
+    echo "$output" | grep -q '^sibling body$'
     refute_output_has '^## Next$'
 }
 
