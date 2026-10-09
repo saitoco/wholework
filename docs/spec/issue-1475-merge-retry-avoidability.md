@@ -182,6 +182,10 @@ AC2 の `section_contains "modules/orchestration-fallbacks.md" "auto-retry-on-fa
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1475#issuecomment-5965395129
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1475#issuecomment-5965593039
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1475#issuecomment-5965874304
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1475#issuecomment-5978135057
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1475#issuecomment-6073964973
 ## Code Retrospective
 
 ### Deviations from Design
