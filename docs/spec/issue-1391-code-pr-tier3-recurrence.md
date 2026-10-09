@@ -77,6 +77,18 @@ code phase (cutoff 2026-08-18T10:30:22Z 以降): No new comments since last phas
 review phase (cutoff 2026-08-18T10:37:58Z 以降):
 - saito / MEMBER / first-class / `/code` の Change Tracking コメント (Issue AC Pre-merge を Spec の 4件の verify command に更新した旨の報告)。review 開始時点で既に Issue body に反映済みであることを確認済み、review 側でのアクション不要 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327243554
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-executability phase=verify issue=1391 ac=5 exe / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327630065
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5327742310
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5341256978
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5354390220
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5369706472
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5378429304
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5384002235
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5579816664
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5653270014
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5957366323
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-5978133218
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1391#issuecomment-6073962078
 ## Code Retrospective
 
 ### Deviations from Design
