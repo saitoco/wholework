@@ -59,6 +59,15 @@
 |---|---|---|---|---|
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective コメント (triage 結果: Type=Bug, Size=S, Value=3, Theme=concurrency の判定根拠、および Ambiguity 自動解決ログ・AC の Pre-merge/Post-merge 構造修正の記録)。内容は既に現在の Issue body に反映済みであり、本 Spec 作成にあたって追加のアクションは不要と判断。 | https://github.com/saitoco/wholework/issues/1427#issuecomment-5371380417 |
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1427#issuecomment-5372009126
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5375268179
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5381171830
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5384990970
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5579816954
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5653270131
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5957367105
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-5978133403
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1427#issuecomment-6073962408
 ## Notes
 
 ### Option A (本 Issue で採用) vs Option B (SHA 追跡) の再検討 — 先例 #996 との関係
