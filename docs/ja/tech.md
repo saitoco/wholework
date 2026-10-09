@@ -215,6 +215,25 @@ CI は速度のため bats スイート全体を並列 (`bats --jobs $(nproc) te
 より低レベルのツール (`gh api graphql` など) をモックすることなく、
 任意の兄弟スクリプトをテストごとに差し替えられる。
 
+### BATS の Markdown 節抽出
+
+Markdown ファイル (例: `SKILL.md` のステップ) から見出しを起点に 1 つの節を切り出すテストは、個別の `awk` を書かない。共通ヘルパー `tests/helpers/markdown-section.bash` を読み込み、`md_section FILE HEADING_PREFIX [END_LEVEL]` を呼ぶ。
+
+```bash
+load 'helpers/markdown-section'
+
+step0_section() {
+    md_section "$1" "### Step 0:"
+}
+```
+
+- `HEADING_PREFIX` は行頭に対するリテラル一致。見出し行そのものが出力の 1 行目になる。
+- 節は、開始見出しのレベル以下の次の見出しの直前で終わる。`END_LEVEL` で上書きできる (例: `md_section "$F" "### Batch Completion Report" 2` は `## ` 見出しでのみ終わる)。
+- コードフェンス内 (行頭の空白に続けて 3 個のバッククォートで始まる行でフェンス内外を切り替える) の行は見出しとして扱わない。フェンス内のテンプレート例にある `## ` 行で節が途中打ち切りにならない。フェンスの追跡はファイル先頭から始める。
+- 見出しが見つからないと終了ステータス 1 (出力は空)、`END_LEVEL` 省略かつ `HEADING_PREFIX` が `#` で始まらないと終了ステータス 2。`s="$(md_section ...)"` の形で呼べば、見出しの改名時に空の節に対して素通りせず、テストが失敗する。
+
+これは、フェンスを追跡しないテストごとのインライン `awk` を置き換えたもの。そのうち 1 つが Issue #1512 / PR #1513 の CI 失敗で節を途中で打ち切った。`bats tests/` は `.bats` ファイルだけを再帰なしで実行するため、`tests/helpers/*.bash` はテストとして実行されない。
+
 ## 禁止表現
 
 | Expression | Reason | Alternative |

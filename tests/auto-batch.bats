@@ -6,143 +6,145 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL.md"
 
+load 'helpers/markdown-section'
+
 # Extract the "### List mode (--batch N1 N2 ...)" section from SKILL.md
 list_mode_section() {
-    awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### List mode"
 }
 
 # Extract the "### Count mode (--batch N)" section from SKILL.md
 count_mode_section() {
-    awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Count mode"
 }
 
 # Extract the "### Until mode (--batch --until <query>)" section from SKILL.md
 until_mode_section() {
-    awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Until mode"
 }
 
 @test "List mode section: wholework:verify Skill invocation present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'wholework:verify'"
+    run grep -q 'wholework:verify' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: phase/verify label check present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/verify'"
+    run grep -q 'phase/verify' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: non-interactive skip behavior present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'non-interactive'"
+    run grep -q 'non-interactive' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: blocked-by check present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'blocked'"
+    run grep -q 'blocked' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: get-blocked-by.sh referenced (GraphQL read window)" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'get-blocked-by.sh'"
+    run grep -q 'get-blocked-by.sh' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: body grep read path removed" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'json body'"
+    run grep -q 'json body' <<< "$(list_mode_section)"
     [ "$status" -ne 0 ]
 }
 
 @test "List mode section: phase/done gate condition present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/done'"
+    run grep -q 'phase/done' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: --batch --resume in blocked warning present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q -- '--batch --resume'"
+    run grep -q -- '--batch --resume' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: Issue Retrospective Transcription reference present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
+    run grep -q 'Step 4b' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: AUTO_STOP_AT retained for verify gate" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'AUTO_STOP_AT'"
+    run grep -q 'AUTO_STOP_AT' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "List mode section: auto-stop-at merge skip behavior present" {
-    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'auto-stop-at=merge'"
+    run grep -q 'auto-stop-at=merge' <<< "$(list_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: Issue Retrospective Transcription reference present" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
+    run grep -q 'Step 4b' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: wholework:verify Skill invocation present" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'wholework:verify'"
+    run grep -q 'wholework:verify' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: phase/verify label check present" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/verify'"
+    run grep -q 'phase/verify' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: AUTO_STOP_AT retained for verify gate" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'AUTO_STOP_AT'"
+    run grep -q 'AUTO_STOP_AT' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: auto-stop-at merge skip behavior present" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'auto-stop-at=merge'"
+    run grep -q 'auto-stop-at=merge' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Count mode section: non-interactive skip behavior present" {
-    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'non-interactive'"
+    run grep -q 'non-interactive' <<< "$(count_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: resolve-batch-query.sh referenced" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'resolve-batch-query.sh'"
+    run grep -q 'resolve-batch-query.sh' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: --max-rounds default of 3 documented" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'default.*\`3\`'"
+    run grep -q 'default.*`3`' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: write_batch reused" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'write_batch'"
+    run grep -q 'write_batch' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: delete_batch reused" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'delete_batch'"
+    run grep -q 'delete_batch' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: PROCESSED exclusion across rounds described" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'PROCESSED'"
+    run grep -q 'PROCESSED' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: --checkin-per-round ignored in non-interactive mode" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q -- '--checkin-per-round ignored in non-interactive mode'"
+    run grep -q -- '--checkin-per-round ignored in non-interactive mode' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: List mode reused for per-round Issue processing" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'List mode'"
+    run grep -q 'List mode' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 
 @test "Until mode section: round-ordering.md referenced between ROUND_LIST recording and write_batch" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -n 'Record the output as .ROUND_LIST.\|round-ordering.md\|auto-checkpoint.sh write_batch'"
+    run grep -n 'Record the output as .ROUND_LIST.\|round-ordering.md\|auto-checkpoint.sh write_batch' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
     record_line=$(echo "$output" | grep 'Record the output' | head -1 | cut -d: -f1)
     ordering_line=$(echo "$output" | grep 'round-ordering.md' | head -1 | cut -d: -f1)
@@ -152,7 +154,7 @@ until_mode_section() {
 }
 
 @test "Until mode section: triage insertion between step 2 and step 3" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -n 'wholework:triage\|resolve-batch-query.sh --query'"
+    run grep -n 'wholework:triage\|resolve-batch-query.sh --query' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
     triage_line=$(echo "$output" | grep 'wholework:triage' | head -1 | cut -d: -f1)
     query_line=$(echo "$output" | grep 'resolve-batch-query.sh --query' | head -1 | cut -d: -f1)
@@ -160,7 +162,7 @@ until_mode_section() {
 }
 
 @test "Until mode section: triage insertion adopted-approach rationale present" {
-    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Adopted approach'"
+    run grep -q 'Adopted approach' <<< "$(until_mode_section)"
     [ "$status" -eq 0 ]
 }
 

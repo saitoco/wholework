@@ -11,25 +11,10 @@ CODE_SKILL="$PROJECT_ROOT/skills/code/SKILL.md"
 REVIEW_SKILL="$PROJECT_ROOT/skills/review/SKILL.md"
 MERGE_SKILL="$PROJECT_ROOT/skills/merge/SKILL.md"
 
-# Extract a section: from a line starting with $2 to the next heading of the
-# same or a higher level (level given by $3, the number of leading '#').
-# Lines inside a fenced code block are never treated as headings.
-# Usage: section FILE HEADING_PREFIX LEVEL
-section() {
-    awk -v prefix="$2" -v level="$3" '
-        index($0, prefix) == 1 && !infence { found = 1; print; next }
-        found && substr($0, 1, 3) == "```" { infence = !infence; print; next }
-        found && infence { print; next }
-        found {
-            match($0, /^#+/)
-            if (RLENGTH > 0 && RLENGTH <= level && substr($0, RLENGTH + 1, 1) == " ") exit
-            print
-        }
-    ' "$1"
-}
+load 'helpers/markdown-section'
 
 failure_section() {
-    section "$MODULE" "### Exit failure handling" 3
+    md_section "$MODULE" "### Exit failure handling" 3
 }
 
 # Line number of the first line in stdin matching the fixed string $1
@@ -53,8 +38,8 @@ line_of() {
 }
 
 @test "worktree-lifecycle: both Exit sections reference Exit failure handling" {
-    m="$(section "$MODULE" "### Exit: merge-to-main" 3)"
-    p="$(section "$MODULE" "### Exit: push-and-remove" 3)"
+    m="$(md_section "$MODULE" "### Exit: merge-to-main" 3)"
+    p="$(md_section "$MODULE" "### Exit: push-and-remove" 3)"
     printf '%s\n' "$m" | grep -qF 'Exit failure handling'
     printf '%s\n' "$p" | grep -qF 'Exit failure handling'
 }
@@ -120,44 +105,44 @@ line_of() {
 }
 
 @test "worktree-lifecycle: Output section lists WORKTREE_LEFTOVER" {
-    o="$(section "$MODULE" "## Output" 2)"
+    o="$(md_section "$MODULE" "## Output" 2)"
     printf '%s\n' "$o" | grep -qF 'WORKTREE_LEFTOVER'
     printf '%s\n' "$o" | grep -qF 'WORKTREE_PATH'
     printf '%s\n' "$o" | grep -qF 'WORKTREE_BRANCH'
 }
 
 @test "worktree-lifecycle: code Step 14 references Exit failure handling and the Leftover worktree report" {
-    s="$(section "$CODE_SKILL" "### Step 14:" 3)"
+    s="$(md_section "$CODE_SKILL" "### Step 14:" 3)"
     printf '%s\n' "$s" | grep -qF 'Exit failure handling'
     printf '%s\n' "$s" | grep -qF 'Leftover worktree report'
 }
 
 @test "worktree-lifecycle: review Worktree Exit references Exit failure handling and the Leftover worktree report" {
-    s="$(section "$REVIEW_SKILL" "## Worktree Exit (push-and-remove)" 2)"
+    s="$(md_section "$REVIEW_SKILL" "## Worktree Exit (push-and-remove)" 2)"
     printf '%s\n' "$s" | grep -qF 'Exit failure handling'
     printf '%s\n' "$s" | grep -qF 'Leftover worktree report'
 }
 
 @test "worktree-lifecycle: merge Step 7 references Exit failure handling and the Leftover worktree report" {
-    s="$(section "$MERGE_SKILL" "### Step 7:" 3)"
+    s="$(md_section "$MERGE_SKILL" "### Step 7:" 3)"
     printf '%s\n' "$s" | grep -qF 'Exit failure handling'
     printf '%s\n' "$s" | grep -qF 'Leftover worktree report'
 }
 
 @test "worktree-lifecycle: Completion Report of code, review and merge references the Leftover worktree report" {
     for f in "$CODE_SKILL" "$REVIEW_SKILL" "$MERGE_SKILL"; do
-        s="$(section "$f" "## Completion Report" 2)"
+        s="$(md_section "$f" "## Completion Report" 2)"
         printf '%s\n' "$s" | grep -qF 'Leftover worktree report'
     done
 }
 
 @test "worktree-lifecycle: review Opportunistic Verification skips on WORKTREE_LEFTOVER" {
-    s="$(section "$REVIEW_SKILL" "## Opportunistic Verification" 2)"
+    s="$(md_section "$REVIEW_SKILL" "## Opportunistic Verification" 2)"
     printf '%s\n' "$s" | grep -qF 'WORKTREE_LEFTOVER'
     printf '%s\n' "$s" | grep -qF 'Skipping Opportunistic Verification'
 }
 
 @test "worktree-lifecycle: code Step 15 skips on WORKTREE_LEFTOVER" {
-    s="$(section "$CODE_SKILL" "### Step 15:" 3)"
+    s="$(md_section "$CODE_SKILL" "### Step 15:" 3)"
     printf '%s\n' "$s" | grep -qF 'WORKTREE_LEFTOVER'
 }

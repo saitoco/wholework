@@ -6,10 +6,12 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL.md"
 
+load 'helpers/markdown-section'
+
 # Extract the "### Batch Completion Report" section from SKILL.md.
-# The section ends at the next level-2 (## ) heading (## Notes).
+# The section ends at the next level-2 (## ) heading (## Notes), so END_LEVEL 2 is passed.
 batch_completion_section() {
-    awk '/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Batch Completion Report" 2
 }
 
 @test "Batch Completion Report: Pending manual confirmation block present" {

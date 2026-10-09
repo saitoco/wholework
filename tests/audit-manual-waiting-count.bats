@@ -6,10 +6,12 @@
 
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/audit/SKILL.md"
 
+load 'helpers/markdown-section'
+
 # Extract the "#### Manual Waiting Count" section from SKILL.md.
-# The section ends at the next level-4 (#### ) or level-3 (### ) heading.
+# The section ends at the next heading of level 4 or higher (#### , ### , ## , # ).
 manual_waiting_count_section() {
-    awk '/^#### Manual Waiting Count/{found=1} /^#### / && !/Manual Waiting Count/{found=0} /^### / {found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "#### Manual Waiting Count"
 }
 
 @test "Manual Waiting Count: preview-ac-unverified marker resolution present" {

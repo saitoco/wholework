@@ -224,6 +224,25 @@ overridable via the `WHOLEWORK_SCRIPT_DIR` environment variable. BATS tests set
 substitution of arbitrary sibling scripts without falling back to mocking
 lower-level tools such as `gh api graphql`.
 
+### BATS Markdown Section Extraction
+
+Tests that cut one section out of a Markdown file starting at a heading (for example a `SKILL.md` step) must not write their own `awk`. Load the shared helper `tests/helpers/markdown-section.bash` and call `md_section FILE HEADING_PREFIX [END_LEVEL]`:
+
+```bash
+load 'helpers/markdown-section'
+
+step0_section() {
+    md_section "$1" "### Step 0:"
+}
+```
+
+- `HEADING_PREFIX` is matched literally against the start of a line. The heading line itself is the first line of the output.
+- The section ends just before the next heading whose level is at most the start heading's level. Pass `END_LEVEL` to override (for example `md_section "$F" "### Batch Completion Report" 2` ends only at a `## ` heading).
+- Lines inside a code fence (a line starting with optional whitespace and three backticks toggles the fence) are never treated as headings, so template examples with `## ` lines in a fence do not cut the section short. Fence tracking starts at the top of the file.
+- The exit status is 1 when the heading is not found (output is empty) and 2 when `END_LEVEL` is omitted and `HEADING_PREFIX` does not start with `#`. Use `s="$(md_section ...)"` so a renamed heading fails the test instead of passing against an empty section.
+
+This replaced per-test inline `awk` that did not track fences; one of them cut a section short in the CI failure of Issue #1512 / PR #1513. `bats tests/` runs only `.bats` files and does not recurse, so `tests/helpers/*.bash` is not executed as a test.
+
 ## Forbidden Expressions
 
 | Expression | Reason | Alternative |

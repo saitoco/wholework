@@ -8,12 +8,14 @@ PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 
+load 'helpers/markdown-section'
+
 @test "verify-executor: rubric translation table row is Mode-independent" {
     grep -q "Mode-independent" "$VERIFY_EXECUTOR"
 }
 
 @test "verify-executor: Rubric Command Semantics section mentions always_allow for safe mode" {
-    awk '/Rubric Command Semantics/{f=1; next} f && /^### /{exit} f' "$VERIFY_EXECUTOR" | grep -q "always_allow"
+    md_section "$VERIFY_EXECUTOR" "### Rubric Command Semantics" | grep -q "always_allow"
 }
 
 @test "verify-executor: rubric safe mode behavior does not say returns UNCERTAIN in safe mode" {
@@ -24,5 +26,5 @@ VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 }
 
 @test "verify-patterns: section 9 mentions /review pre-merge rubric dispatch" {
-    awk '/When to Use.*rubric/,/^## /' "$VERIFY_PATTERNS" | grep -q "/review"
+    md_section "$VERIFY_PATTERNS" "### 9. When to Use" | grep -q "/review"
 }

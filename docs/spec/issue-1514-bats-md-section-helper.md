@@ -234,22 +234,55 @@ bats テストが SKILL.md などの Markdown から見出しを起点に節を�
 - 置き換えによる判定の変化: プロトタイプの新旧比較で解消 (Notes「同値性の事前確認」)。`/code` 時点で SKILL.md が変わっている可能性に備え、Implementation Step 6 で同じ比較を実ヘルパーを `source` するハーネスで再実行する
 - 新規ロジックのテスト要件: `tests/markdown-section.bats` に (a)〜(i) の 9 ケース (フェンス内の `## ` / `### ` で打ち切られない、開始前のフェンス内の同名行で開始しない、インデントされたフェンス、`END_LEVEL` 上書き、既定の終了レベル、EOF まで、見出しなしで 1、`#` なし prefix で 2、リテラル一致) を追加し、スイートが PASS すること
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/markdown-section.bats` の否定アサーションは、Spec の想定にあった `! echo ... | grep -q` ではなく、ファイル内の補助関数 `refute_output_has` で書いた。bats は否定パイプラインを失敗として扱わないため、`!` 形式だと「含まないこと」の検証が常に PASS してしまう
+- `tests/auto-completion-report.bats` を含め、旧実装のコメントにあった終了条件の説明を新しい終了条件 (開始見出しのレベル以下の次の見出し) に合わせて直した。Spec の対応表にはコメント修正の記載がなかったが、手順 4 の「説明コメントを直す」を全ファイルに適用した
+- `tests/code.bats` の重複定義 `step10_section()` は、後者を削除して前者を共有した (手順 5 が許容していた対応)
+
+### Design Gaps/Ambiguities
+
+- Spec のテストケース (c) 「インデントされたフェンス内の `## ` 行」は、フィクスチャの `## ` 行までインデントしていると、フェンス処理がなくても見出しとして扱われないため検出力がなかった。フェンス内の行を行頭から書く形に直し、フェンス判定を外した変異版で 3 件 (a / b / c) が FAIL することを確認した
+- 作業環境に bats も GNU parallel もなかった。bats-core v1.11.1 を `/tmp` に取得して実行し、`--jobs` が使えないため全 135 ファイルを 4 つに分けた直列実行で全件 PASS を確認した (`modules/test-runner.md` の `--jobs` 不可時の分割実行に従った)
+- ワークツリーの隔離ガード (`worktree isolation guard`) が、glob を含む `bats` の引数や `&` による並列起動を「git でないと示せない」として拒否した。リテラルのファイル名を並べた単純なコマンドに分けて回避した
+
+### Rework
+
+- 変異テストでテストケース (c) の検出力不足に気づき、フィクスチャを 1 回直した。それ以外のやり直しはない
+- 置き換え前後の同値性チェック (plain bash ハーネスが実ヘルパーを `source`) の結果は、33 呼び出し中 31 件が同一、差分は Spec の想定どおり 3 件 (code Step 11 / Step 14、`review-rubric-safe` の section 9。ハーネスの対象外だった `review-rubric-safe` と `worktree-lifecycle` は bats の実行結果で確認)。bats が使えたため、各テストのアサーションが新しい範囲でも PASS することを実行で確認できた
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- 構造的な乖離はなかった。変更ファイル 17 件は Spec の Changed Files と一致し、残存チェック (インライン awk と `section()` の残り) も 0 件だった
+- 唯一の SHOULD は Spec のテストケース (d) の後半。`### Child` に END_LEVEL 2 を渡すケースが、同レベルの兄弟見出しのないフィクスチャだったため既定値と区別できなかった。兄弟見出しを足して修正済み
+
+### 繰り返し出た指摘
+
+- 否定アサーションだけのテストで、見出しの改名が空の節に対して素通りする点を review-spec と review-bug の両方が指摘した。ヘルパーの狙い (見出し未検出で exit 1) が、`run xxx_section` + `[[ "$output" != ... ]]` や `<<< "$(...)"` の呼び出し形では活きない。旧実装も素通りで退行ではないため本 PR では直さず、`s="$(md_section ...)"` で受ける形への統一を follow-up の候補とする
+
+### 受け入れ条件の検証の難しさ
+
+- UNCERTAIN は 0 件。AC 1〜3 は rubric、AC 4 は `github_check` で、CI が両トリガーで pass していたため判定に迷いはなかった
+- review-bug 系のサブエージェントは、ワークツリーの隔離ガードが `source` と `bash -c` を拒否したため、ヘルパーの awk 本体を直接渡して同値性を比較した。実ヘルパーを `source` する計測はオーケストレーター側のスクリプトファイル経由でのみ可能だった
+
 ## Phase Handoff
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 共通ヘルパーは `tests/helpers/markdown-section.bash` の `md_section FILE HEADING_PREFIX [END_LEVEL]`。`load 'helpers/markdown-section'` (拡張子なし) で読み込む
-- フェンス判定は `/^[ \t]*```/` (l0-surfaces の AC 列挙規約と同じ) で、ファイル先頭から追跡する。終了は「開始見出しのレベル (または `END_LEVEL`) 以下の次の見出し」に統一した
-- 見出しが見つからないと終了ステータス 1、`#` で始まらない prefix を `END_LEVEL` なしで渡すと 2
-- 置き換え対象は Background の 8 ファイル + `worktree-lifecycle.bats` + `orchestration-fallbacks.bats` の 1 箇所。番号付きリスト・太字ラベル・`sed` 範囲抽出・全エントリ走査は対象外 (Notes の Exclusions)
+- SHOULD 1 件 (END_LEVEL 上書きテストの検出力) は修正し、CONSIDER 5 件は本 PR の範囲外としてスキップした (ヘルパーの誤用耐性と、否定アサーションの素通り)
+- Workflow 経路は再起動保証のない実行面のため使わず、静的な Task fan-out を前景で実行した
 
 ### Deferred Items
 
-- ローカルに bats がない環境での確認方法 (Issue の対象外)
-- Exclusions に挙げた見出しベースでない切り出し (`spec.bats` の太字ラベルなど) のフェンス対応は扱わない
+- 数値でない END_LEVEL の検証、FILE 不在時の終了ステータス (awk の exit 2 と文書上の exit 2 の衝突)、`awk -v` のバックスラッシュ解釈は、ヘルパーの堅牢化として別 Issue 候補
+- 否定アサーションのテストを `s="$(md_section ...)"` で受ける形に統一する案も別 Issue 候補
 
 ### Notes for Next Phase
 
-- 置き換え後の出力が変わるのは 3 箇所だけ (code Step 11 / Step 14 が伸びる、`review-rubric-safe` の section 9 が狭まる)。いずれもアサーションは PASS のまま見込みだが、Step 6 の同値性チェックで実ヘルパーを `source` して再確認すること (関数本体を写したハーネスは #1512 でヘルパーの不具合を見逃した)
-- `tests/auto-batch.bats` のインライン `run bash -c "awk ..."` は `bash -c` の中でシェル関数を呼べないため、`run grep -q 'X' <<< "$(list_mode_section)"` の形に書き換える。行番号を比べる 2 テストは節内の相対行番号を保つこと
-- `docs/tech.md` と `docs/structure.md` を変えるので、`docs/ja/` の 2 ファイルも同期する (コードフェンス数を一致させる)
+- 検出された MUST はなく、CI も全件 SUCCESS。`/merge 1515` に進める
+- Issue #1514 の AC はすべて `[x]` (AC 4 は本レビューで更新)。Post-merge 条件はなし

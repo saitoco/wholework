@@ -7,52 +7,54 @@
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SKILL_FILE="$PROJECT_ROOT/skills/verify/SKILL.md"
 
+load 'helpers/markdown-section'
+
 # Extract the "### Step 2: Detect and Update Base Branch" section from SKILL.md.
-# The section ends at the next level-3 (### Step ) heading.
+# The section ends at the next heading of level 3 or higher.
 step2_section() {
-    awk '/^### Step 2: Detect and Update Base Branch/{found=1} /^### Step / && !/Step 2: Detect and Update Base Branch/{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Step 2: Detect and Update Base Branch"
 }
 
 # Extract the "### Step 5: Verify Each Condition (Pre-merge Only)" section from SKILL.md.
-# The section ends at the next level-3 (### Step ) heading.
+# The section ends at the next heading of level 3 or higher.
 step5_section() {
-    awk '/^### Step 5: /{found=1} /^### Step / && !/Step 5: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Step 5: "
 }
 
 # Extract the "#### Step 8c: Observation Post-merge Conditions" section from SKILL.md.
-# The section ends at the next heading (level-3 or level-4).
+# The section ends at the next heading of level 4 or higher.
 step8c_section() {
-    awk '/^#### Step 8c: /{found=1} (/^#### / || /^### /) && !/Step 8c: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "#### Step 8c: "
 }
 
 # Extract the "### Step 6: Update Pre-merge Checkboxes (Immediate Lock-in)" section from SKILL.md.
-# The section ends at the next level-3 (### Step ) heading.
+# The section ends at the next heading of level 3 or higher.
 step6_section() {
-    awk '/^### Step 6: /{found=1} /^### Step / && !/Step 6: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Step 6: "
 }
 
 # Extract the "#### Step 8a: Auto-verify Post-merge Conditions with Hints" section from SKILL.md.
-# The section ends at the next heading (level-3 or level-4).
+# The section ends at the next heading of level 4 or higher.
 step8a_section() {
-    awk '/^#### Step 8a: /{found=1} (/^#### / || /^### /) && !/Step 8a: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "#### Step 8a: "
 }
 
 # Extract the "#### Step 8b: Manual Post-merge Conditions" section from SKILL.md.
-# The section ends at the next heading (level-3 or level-4).
+# The section ends at the next heading of level 4 or higher.
 step8b_section() {
-    awk '/^#### Step 8b: /{found=1} (/^#### / || /^### /) && !/Step 8b: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "#### Step 8b: "
 }
 
 # Extract the "### Step 9: Post Comment on Issue" section from SKILL.md.
-# The section ends at the next level-3 (### Step ) heading.
+# The section ends at the next heading of level 3 or higher.
 step9_section() {
-    awk '/^### Step 9: /{found=1} /^### Step / && !/Step 9: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Step 9: "
 }
 
 # Extract the "### Step 1: Check Working Directory Safety" section from SKILL.md.
-# The section ends at the next level-3 (### Step ) heading.
+# The section ends at the next heading of level 3 or higher.
 step1_section() {
-    awk '/^### Step 1: /{found=1} /^### Step / && !/Step 1: /{found=0} found{print}' "$SKILL_FILE"
+    md_section "$SKILL_FILE" "### Step 1: "
 }
 
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
