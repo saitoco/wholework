@@ -49,7 +49,9 @@ until_mode_section() {
 }
 
 @test "List mode section: body grep read path removed" {
-    run grep -q 'json body' <<< "$(list_mode_section)"
+    # Plain assignment (not run) so a missing heading fails the test (Issue #1516)
+    section="$(list_mode_section)"
+    run grep -q 'json body' <<< "$section"
     [ "$status" -ne 0 ]
 }
 

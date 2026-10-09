@@ -159,9 +159,11 @@ step1_section() {
 }
 
 @test "Step 6 Re-runs description no longer re-verifies already-checked conditions" {
-    if step6_section | grep -q -F "Re-verify even if already checked"; then false; fi
-    step6_section | grep -q -F "skipped by default"
-    step6_section | grep -q -F "Only conditions still at \`- [ ]\` are (re-)verified"
+    # Plain assignment (not run) so a missing heading fails the test (Issue #1516)
+    section="$(step6_section)"
+    if printf '%s\n' "$section" | grep -q -F "Re-verify even if already checked"; then false; fi
+    printf '%s\n' "$section" | grep -q -F "skipped by default"
+    printf '%s\n' "$section" | grep -q -F "Only conditions still at \`- [ ]\` are (re-)verified"
 }
 
 @test "Step 8b: records executability judgment via verify-executability-marker.sh vocabulary" {

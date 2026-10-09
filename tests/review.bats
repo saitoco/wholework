@@ -153,9 +153,10 @@ step12_2_section() {
 }
 
 @test "Non-Interactive Mode Behavior: job count is resolved as a separate literal step, not inline command substitution" {
-    run non_interactive_mode_behavior_section
-    [[ "$output" != *'bats --jobs $('* ]]
-    [[ "$output" == *"bats --jobs <N> tests/"* ]]
+    # Plain assignment (not run) so a missing heading fails the test (Issue #1516)
+    section="$(non_interactive_mode_behavior_section)"
+    [[ "$section" != *'bats --jobs $('* ]]
+    [[ "$section" == *"bats --jobs <N> tests/"* ]]
 }
 
 @test "Step 12.3: parallel bats form is referenced for full-suite re-checks" {
