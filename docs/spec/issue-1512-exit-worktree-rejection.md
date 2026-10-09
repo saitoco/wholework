@@ -223,17 +223,16 @@ AC の番号は `## Verification > Pre-merge` の並び順 (AC1〜AC5)。
 - AC5 (`github_check "gh pr checks" "Run bats tests"`) は CI の実行結果に依存し、`/code` 時点では未確認になる。bats がローカルにない環境では、テストが初回に CI で FAIL するリスクが残る。UNCERTAIN は発生しなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI の `Run bats tests` FAIL の原因はテストヘルパー (`section()`) のフェンス内見出し誤認であり、SKILL.md 側の記述は正しかったため、テスト側を修正した (SKILL.md の見出し構造は変えない)
-- `path:` 形式の stale 再利用で `WORKTREE_PATH` / `WORKTREE_BRANCH` を取る方法を、相対パスと現在のブランチではなく `git worktree list --porcelain` に統一した (`/review` の stale worktree は PR ブランチをチェックアウト済みのことがあり、Step C の `git branch -D` が PR ブランチを消すのを避けるため)
+- pre-merge AC は全件チェック済み、review の完了も fallback 起源ではなかったため、ゲートは通過した
+- マージ戦略は `resolve-merge-strategy.sh` の結果 (`--squash`) を使い、競合なし・CI success で `gh pr merge` を実行した
 
 ### Deferred Items
-- Step A の `none` 判定が cwd 次第で失敗を成功と見誤る余地 (CONSIDER): 通常の cwd は worktree ルートのため見送り
-- `/spec`・`/verify` の SKILL.md への Leftover worktree report の組み込み: 拒否が観測された場合の後続 Issue 候補
 - Post-merge の 2 件 (対話セッションから `/review N` を実行した後の worktree 残存の有無、親セッションの閉じ込めの有無) は manual 確認のまま
+- `/spec`・`/verify` への Leftover worktree report の組み込みは、拒否が観測された場合の後続 Issue 候補
 
 ### Notes for Next Phase
-- `/merge` の前に、fix コミット (80329293) 後の CI で `Run bats tests` が PASS したことを確認する。AC5 は PASS を確認するまで未チェックのまま
-- bats はローカルになく、ヘルパーの修正は `section()` を取り出した plain bash の検査 (18 件) で確認した。bats 固有の挙動は CI で確認する
+- `/verify` では、対話セッションから `/review N` を実行して `.claude/worktrees/review+pr-N` が残らないか、残った場合に完了報告へ復旧手順が出るかを確認する
+- 拒否の発生条件は未特定のため、再現しない場合は観測待ちとして扱う
