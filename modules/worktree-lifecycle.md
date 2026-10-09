@@ -36,7 +36,7 @@ The calling skill enters the worktree with the following steps:
 
 3. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`, then record `WORKTREE_PATH` (absolute path) and `WORKTREE_BRANCH` from its return value (`Created worktree at <path> on branch <branch>`) immediately:
    - `EnterWorktree` replaces `/` in the name with `+` (`review/pr-5` becomes `.claude/worktrees/review+pr-5` on branch `worktree-review+pr-5`). The Exit sections below use these two recorded values and do not re-derive them from `$WORKTREE_NAME`.
-   - In the `EnterWorktree(path: ...)` form (stale reuse in step 2), use the path passed in as `WORKTREE_PATH`, and read `WORKTREE_BRANCH` by running `git branch --show-current` inside the worktree.
+   - In the `EnterWorktree(path: ...)` form (stale reuse in step 2), do not take the values from the path string passed in (its `/` is not replaced by `+`, and it is relative) or from `git branch --show-current` (a stale `/review` worktree may already have the PR branch checked out). Read both from `git worktree list --porcelain` as described in the last bullet: the absolute `worktree <path>` line and the `branch refs/heads/worktree-<name with / replaced by +>` line of that entry.
    - `/review` checks out the PR branch after Entry, but `WORKTREE_BRANCH` stays the branch `EnterWorktree` created, as recorded right after Entry.
    - If the values are no longer at hand, read them back from `git worktree list --porcelain`: the `worktree <path>` line and the `branch refs/heads/worktree-<name with / replaced by +>` line of the same entry.
 

@@ -13,10 +13,13 @@ MERGE_SKILL="$PROJECT_ROOT/skills/merge/SKILL.md"
 
 # Extract a section: from a line starting with $2 to the next heading of the
 # same or a higher level (level given by $3, the number of leading '#').
+# Lines inside a fenced code block are never treated as headings.
 # Usage: section FILE HEADING_PREFIX LEVEL
 section() {
     awk -v prefix="$2" -v level="$3" '
-        index($0, prefix) == 1 { found = 1; print; next }
+        index($0, prefix) == 1 && !infence { found = 1; print; next }
+        found && substr($0, 1, 3) == "```" { infence = !infence; print; next }
+        found && infence { print; next }
         found {
             match($0, /^#+/)
             if (RLENGTH > 0 && RLENGTH <= level && substr($0, RLENGTH + 1, 1) == " ") exit
