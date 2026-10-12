@@ -290,6 +290,7 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 警告の実装位置と fetch の要否は Spec で決める旨の Auto-Resolve Log と、Background の事実確認の結果 / https://github.com/saitoco/wholework/issues/1519#issuecomment-6116710481
 - 上記以外の新規コメントなし (`/code` 開始時点。`phase/ready` 付与 (2026-10-12T02:59:41Z) より後のコメントは 0 件)
+- verify フェーズ (cutoff: `phase/verify` の付与、2026-10-12T03:28:57Z): No new comments since last phase.
 
 ## Phase Handoff
 <!-- phase: merge -->
@@ -316,3 +317,31 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 
 ### Acceptance Criteria Verification Difficulty
 UNCERTAIN は無かった。rubric 2 件は文面で判定できた。manual の post-merge AC は、実セッションで LLM 手順が走るかを確かめる必要があり、マージ後の `/verify` に委ねる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC は rubric 2 件 + manual 1 件で、rubric は文面で判定できた。manual AC は実セッションで LLM 手順が走るかを見るもので、`/verify` の中では確かめられない (#1478 の AC 7 と同じ形)。Spec の Notes にネットワーク不要の確認手順があり、ユーザー確認の案内にそのまま使えた
+
+#### design
+- Spec 段階で Size を M → L に上げ、`/auto` が pr route (review --full) に組み直した。15 ファイル中 10 件が機械的な変更という見立てどおり、実装は Spec の参照実装と一致した
+- エッジケース表に「継承される git 環境変数 (`GIT_DIR` など)」の軸が無かった (review で 4 体が重複指摘)
+
+#### code
+- 手戻りは bats の `no git on PATH` テスト 1 件のみ (`env PATH=...` 形への修正)。設計からの逸脱なし
+
+#### review
+- `GIT_DIR` 等の環境変数継承の指摘を出し、Deferred Items に回した。FAIL の見逃しは無い
+
+#### merge
+- 競合なし、CI 成功、squash merge。問題なし
+
+#### verify
+- Pre-merge 2 件は既に `[x]` で SKIPPED。Post-merge の manual 1 件は対話セッションが必要なため未確認で、`phase/verify` に残した
+- Step 1 の stale 検出が発火した。`/auto` 親セッションで #1519 マージ後に `Skill(wholework:verify)` を呼んだが、渡された本文の marker は `7e7751af` (マージ前)、ディスクは `90e3f8ce` だった。行数は同じ 997 行で、#1468 のハッシュ併用が効いた実例
+- 補助として遅れた checkout を作りヘルパーを実行しようとしたが、worktree isolation guard が worktree 外の git 操作を拒否したため省いた
+
+### Improvement Proposals
+- `scripts/check-plugin-staleness.sh` が継承した `GIT_DIR` / `GIT_WORK_TREE` 等の git 環境変数の影響を受けないようにし、bats の回帰ケースを足す (review からの持ち越し)
