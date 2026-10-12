@@ -267,6 +267,43 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 - **言語規約**: `modules/phase-banner.md` の日本語は警告テンプレートの code fence 内だけ。`scripts/check-plugin-staleness.sh` は英語のみ。`docs/` の英語版は英語、`docs/ja/` は日本語 (`scripts/check-language-convention.py` の対象外)
 - **worktree 内での呼び出し**: Skill が `${CLAUDE_PLUGIN_ROOT}` を展開した固定パスの単一コマンドとして実行するので、worktree isolation guard に拒否されない。`${VAR:-default}` のようなコマンド名の実行時計算は拒否される (本 Spec 作成中に確認済み) ので、モジュールにそういう形を書かない
 
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps 1-5 を Spec どおりに実装した。順序・内容の変更なし (Spec の Implementation Steps の更新は不要)
+- 例外として、`bats` の `no git on PATH` テストは Spec の記述 (`PATH` に空ディレクトリだけを置いて `"$BASH" "$SCRIPT" "$REPO"` を実行) どおりでは動かなかった。`run` 自体が `mktemp` を PATH から探すため、127 で落ちる。`run --separate-stderr env PATH="$empty" "$BASH" "$SCRIPT" "$WORK"` に変えて、PATH を絞る範囲をスクリプトだけにした
+
+### Design Gaps/Ambiguities
+- Spec の bats 手順は、`run --separate-stderr` と `PATH=... run` を組み合わせると bats-core 内部の外部コマンド (`mktemp`) が PATH から消えることを想定していなかった。PATH を絞るテストは `env PATH=... cmd` の形でコマンド側に渡すのが確実
+- この環境では `CLAUDE_PLUGIN_ROOT` が未設定だった。リポジトリ自体がプラグインのルートなので、スクリプトは worktree 内の相対パスで実行した
+- この環境には `bats` と GNU `parallel` が無かった。`bats` はリポジトリ外の `/tmp/bats-tool-1519` に npm で入れて実行し、全スイートは `xargs -P 4 -n 15` で分割して実行した (136 ファイル、失敗 0)
+- worktree isolation guard は、`for` ループ内の `sed -i` (変数でファイル名を渡す形) と `$(...)` を含む git 付きの複合コマンドを拒否した。ファイル名を直接並べた単一の `sed -i`、コマンドを分けた実行で回避できた
+
+### Rework
+- bats の `no git on PATH` テストを 1 回修正した (上記)。ほかに手戻りなし
+
+### Verification Notes
+- 新規テスト (`tests/check-plugin-staleness.bats`) はスクリプトの出力・終了コードを検証するもので、ファイル内容の文字列一致ではないため、「New Verification-Test Pre-implementation FAIL Check」の対象外 (該当なし)
+- pre-merge の rubric 2 件は、名前付きの採点サブエージェント (`rubric-grader-1519-1` / `rubric-grader-1519-2`) で評価し、どちらも PASS。採点は返却済みで、停止対象は残らなかった
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 警告の実装位置と fetch の要否は Spec で決める旨の Auto-Resolve Log と、Background の事実確認の結果 / https://github.com/saitoco/wholework/issues/1519#issuecomment-6116710481
+- 上記以外の新規コメントなし (`/code` 開始時点。`phase/ready` 付与 (2026-10-12T02:59:41Z) より後のコメントは 0 件)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の設計をそのまま実装した。警告は `modules/phase-banner.md` の Step 4 (LLM 手順) とし、遅れの数え方は読み取り専用・オフラインの `scripts/check-plugin-staleness.sh` に切り出した。`scripts/phase-banner.sh` は変更していない
+- `no git on PATH` のテストだけは、`run` が `mktemp` を必要とするため `env PATH=...` 経由に変えた (Spec の手順からの小さな変更)
+- 全スイートは GNU `parallel` が無い環境のため、`xargs -P 4 -n 15 bats` の分割実行で確認した (136 ファイル、失敗 0)
+
+### Deferred Items
+- Post-merge の manual AC (遅れた checkout を `--plugin-dir` で渡して Skill を実行し、開始時に警告が出ること) は未確認。Spec の Notes にある、bare リポジトリ 1 つとクローン 2 つを使う手順で、マージ後の main を元に確認する
+- 誰も fetch していない checkout は遅れが見えない盲点を受け入れた。後続案 (環境変数などで有効にする opt-in の fetch) はこの Issue では実装していない
+
+### Notes for Next Phase
+- `/review`: 変更ファイルは Spec の記載どおり 15 件 (新規 2、モジュール 1、SKILL.md 8、docs 4)。8 件の SKILL.md は `allowed-tools` への 1 エントリ追加のみで、`skills/verify/SKILL.md` は `skill-body-sha` を `90e3f8ce` に再計算済み (`skill-body-lines` は 997 のまま)
+- `/review`: CI の bats ジョブ (`bats --jobs`) で `tests/check-plugin-staleness.bats` の 17 ケースが通ること。ローカルでは 17 ケースとも PASS を確認済み
+- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは、rubric では確かめられない。manual AC の手順で確認する
