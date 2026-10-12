@@ -172,6 +172,7 @@
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (AC3 の heading 引数の修正、Background への premise マーカー追加、grader をサブエージェントにするか呼び出し元でその場で判定するかを Spec で決める旨の申し送り) / https://github.com/saitoco/wholework/issues/1518#issuecomment-6116421788
 - 参考: cutoff (`phase/issue` の付与、2026-10-12T02:00:48Z) より前の triage の AC 監査コメント (`section_contains` の heading 引数に先頭の `###` を含めると常時 UNCERTAIN になる指摘) は `/issue` で消費済みで、Issue 本文の AC3 に反映されている
+- verify フェーズ (cutoff: `phase/verify` の付与、2026-10-12T02:24:25Z): No new comments since last phase.
 
 ## Code Retrospective
 
@@ -198,3 +199,28 @@
 ### Notes for Next Phase
 - 実行環境に `bats` が無く、既存の bats は実行していない。文字列の残存は grep で確認済み。
 - Pre-merge の AC 3 件は `/code` Step 10 でチェック済み。`/verify` では Post-merge の opportunistic 条件だけが残る。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- triage の AC 監査が AC3 の `section_contains` の heading 引数 (`### ...`) による常時 UNCERTAIN を検出し、`/issue` がコメントを消費して修正した。監査コメント → 次フェーズでの修正という非破壊の流れが想定どおり機能した。
+
+#### design
+- grader をサブエージェントのまま名前と停止を足す案 (案 A) を、既存規則 (Spec を grader に渡さない、敵対的な姿勢) との整合で選んだ判断は妥当。Issue Retrospective の「案を決めるときに AC も見直す」申し送りも Spec で消化されている。
+
+#### code
+- Spec の挿入文面をそのまま適用し、手戻りなし。実行環境に `bats` が無く既存 bats は実行していないが、ドキュメントのみの変更で、文字列の残存は grep で確認済み。
+
+#### review
+- patch route のため `/review` は無し。
+
+#### merge
+- patch route のため PR merge は無し。main への直接コミット (`1e56bb2d`) で問題なし。
+
+#### verify
+- Pre-merge 3 件は `/code` でチェック済みのため既定どおり SKIPPED。Post-merge の opportunistic 条件 1 件は rubric を含む PR の `/review` が必要なため未確認で、`phase/verify` に残した。FAIL / UNCERTAIN は無し。
+
+### Improvement Proposals
+- N/A
