@@ -172,3 +172,29 @@
 
 - saito / MEMBER / first-class / `/issue` の Issue Retrospective (AC3 の heading 引数の修正、Background への premise マーカー追加、grader をサブエージェントにするか呼び出し元でその場で判定するかを Spec で決める旨の申し送り) / https://github.com/saitoco/wholework/issues/1518#issuecomment-6116421788
 - 参考: cutoff (`phase/issue` の付与、2026-10-12T02:00:48Z) より前の triage の AC 監査コメント (`section_contains` の heading 引数に先頭の `###` を含めると常時 UNCERTAIN になる指摘) は `/issue` で消費済みで、Issue 本文の AC3 に反映されている
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-3 の挿入文面をそのまま入れた (Step 1 の翻訳表の 1 文、`Grader sub-agent name and stop` ブロック。Step 2 の Step 8 の 1 文、一覧の 2 行、grader 段落。Step 3 の `docs/tech.md` と `docs/ja/tech.md` の 1 文)。
+
+### Design Gaps/Ambiguities
+- 実行環境に `bats` が無い (`command -v bats` が失敗) ため、既存の bats (`tests/verify-rubric.bats`、`tests/review-rubric-safe.bats`) は実行できなかった。代わりに、各 bats が見る文字列の残存を grep で確認した (`rubric "text"`、`adversarial`、`Mode-independent`、`Spec files are not passed to the grader`、`Rubric Command Semantics`、節内の `always_allow`、`returns UNCERTAIN in safe mode` が無いこと)。この Issue の Pre-merge の AC に bats の AC は無いので、`BATS_DEFERRED_ACS` は空 (CI での確認 (Step 14) は不要)。
+- Behavioral Change Detection は「既存ファイルの変更あり、かつ他の bats が参照」に該当 (`tests/verify-executor.bats` など) したが、bats が無いため全体実行は不可。ドキュメントのみの変更で、スクリプトの分岐は変えていない。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の挿入文面をそのまま適用し、手順の正本は `modules/verify-executor.md` に置いた。`skills/review/SKILL.md` は一覧に grader 2 行と参照段落を足しただけで、`allowed-tools` と `skills/verify/SKILL.md` は変更していない。
+- `docs/tech.md` と `docs/ja/tech.md` は両方に同時に 1 文を足した (片方だけにしない)。
+
+### Deferred Items
+- Post-merge の opportunistic 条件 (`/review` 実行後に `ListAgents` へ grader の teammate が残らないこと) は未確認。実際に rubric を含む PR で `/review` を回したときに確認する。
+
+### Notes for Next Phase
+- 実行環境に `bats` が無く、既存の bats は実行していない。文字列の残存は grep で確認済み。
+- Pre-merge の AC 3 件は `/code` Step 10 でチェック済み。`/verify` では Post-merge の opportunistic 条件だけが残る。
