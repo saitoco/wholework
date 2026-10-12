@@ -292,21 +292,19 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 - 上記以外の新規コメントなし (`/code` 開始時点。`phase/ready` 付与 (2026-10-12T02:59:41Z) より後のコメントは 0 件)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 受入条件 2 件 (rubric) は PASS。判定は手順の文面 (`modules/phase-banner.md` Step 4 / Notes、`docs/guide/troubleshooting.md`) で行い、採点サブエージェントは起動していない
-- 指摘は CONSIDER 1 件のみ (MUST / SHOULD なし)。`scripts/check-plugin-staleness.sh` が `GIT_DIR` などの git 環境変数を消していない。PR の変更は行わず、Step 12 では「見送り」とした (理由: 通常の `--plugin-dir` 起動では起きない、この環境に `bats` が無く回帰テストを検証できない)
-- CI は 17 件中 17 件成功。Base ブランチとの競合はない (merge base が `origin/main` の先頭と一致)
+- Pre-merge AC は 2 件とも `[x]`、review 完了は organic (fallback ではない)、mergeable=clean・CI 成功のため、ゲートを通過して `--squash` でマージした (strategy は `resolve-merge-strategy.sh` で解決)
+- 競合なし。リベースとテスト再実行は不要
 
 ### Deferred Items
-- `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR` / `GIT_INDEX_FILE` / `GIT_NAMESPACE` の無効化 (`unset CDPATH` と同じ箇所) と、`GIT_DIR` を別リポジトリに向けて無出力になる bats 回帰ケースの追加は未対応。必要なら別 Issue にする
+- `GIT_DIR` 等の git 環境変数の無効化と bats 回帰ケースの追加は未対応 (review からの持ち越し)。必要なら別 Issue にする
 - Post-merge の manual AC (遅れた checkout を `--plugin-dir` で渡して Skill を実行し、開始時に警告が出ること) は未確認
 
 ### Notes for Next Phase
-- `/merge`: PR 1520 に MUST はなく、レビュー状態は COMMENTED (REQUEST_CHANGES ではない)。Pre-merge の受入条件は 2 件とも `[x]`
-- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは rubric では確かめられない。manual AC の手順 (bare リポジトリ 1 つ + クローン 2 つ) で確認する
-- `/verify`: 上記 `GIT_DIR` の件を改善提案として拾うかどうかを判断する
+- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは manual AC の手順 (bare リポジトリ 1 つ + クローン 2 つ) で確認する
+- `/verify`: `GIT_DIR` の件を改善提案として拾うかどうかを判断する
 
 ## review retrospective
 
