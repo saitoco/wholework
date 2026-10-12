@@ -106,6 +106,25 @@ claude --plugin-dir /path/to/wholework
 
 詳細と reload トリガーの一覧表は `docs/reports/skill-loader-cache-behavior.md`（Issue #673 の調査結果）を参照。
 
+## Plugin ディレクトリが upstream より遅れている
+
+**症状**: Skill の開始時に、wholework の plugin ディレクトリが upstream (例: `origin/main`) より N コミット遅れているという警告が出る。
+
+**原因**: `claude --plugin-dir <checkout>` で読み込むと、実行される Skill・module・script はその checkout のものになり、何もそれを更新しない。誰も pull しない checkout は古い版のまま動くので、upstream にマージされた修正が手元では効かない。Skill の開始時 (`modules/phase-banner.md`) に、Wholework は checkout の `HEAD` と upstream ブランチを比べ、upstream が進んでいれば警告する。
+
+**修正**: ほかの Claude Code セッションがその checkout を使っていないときに checkout を更新し (実行中のスクリプトがそのセッションの下で変わるため)、更新後の `SKILL.md` の内容を読み込ませるために新しいセッションを開始する (「スキル更新がセッション中に反映されない」を参照):
+
+```bash
+git -C /path/to/wholework pull --ff-only
+```
+
+Wholework が代わりに pull することはない。
+
+**補足**:
+
+- 比較には最後に `git fetch` した時点の upstream ブランチを使い、ネットワークには出ない。そのため、長く fetch していない checkout は最新に見えることがある。警告を正確に保つには、`git -C /path/to/wholework fetch` を時々 (例: 定期ジョブで) 実行する。
+- marketplace からの install (git の checkout ではない)、detached HEAD、upstream の無いブランチ、チェックが実行できない場合は、警告は出ない。意図して固定した checkout で警告を止めるには、`git -C /path/to/wholework branch --unset-upstream` を実行する。
+
 ## さらに助けが必要なとき
 
 - [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues) で issue を開く

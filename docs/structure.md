@@ -141,7 +141,7 @@ Key modules:
 - `modules/visual-diff-adapter.md` — visual diff (3-panel composite) verification adapter
 - `modules/measurement-scope.md` — measurement scope definition
 - `modules/next-action-guide.md` — unified next action guidance for all skills
-- `modules/phase-banner.md` — phase identification banner display for skills
+- `modules/phase-banner.md` — phase identification banner display for skills, followed by a warning when the plugin directory (`${CLAUDE_PLUGIN_ROOT}`) is a git checkout behind its upstream
 - `modules/phase-handoff.md` — phase-to-phase Phase Handoff summary read/write (cross-phase context carryover)
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop); entries retired for zero firing history and no live reference are archived to `docs/reports/orchestration-fallbacks-archive.md` (#1180)
@@ -173,6 +173,7 @@ Key modules:
 
 **Phase banner:**
 - `scripts/phase-banner.sh` — sourceable helper providing `print_start_banner` / `print_end_banner` functions for run-*.sh scripts
+- `scripts/check-plugin-staleness.sh` — read-only, offline helper called by `modules/phase-banner.md` Step 4: prints nothing, or one line `behind=<N> upstream=<ref> root=<path>` when the plugin directory (a git checkout loaded with `--plugin-dir`) is behind its upstream as of the last fetch; always exits 0 (not a git checkout, detached HEAD, no upstream, or any git failure prints nothing); never fetches or pulls
 - `scripts/emit-event.sh` — sourceable helper providing `emit_event()` for structured JSONL event emission to `.tmp/auto-events.jsonl`, plus `restore_auto_session_pointer()` for restoring `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` from pointer files in non-wrapper emitters and `persist_auto_session_pointer()` for writing/deleting the issue-scoped pointer file that in-band `--session-id` hand-off relies on (#1075); used by run-*.sh, claude-watchdog.sh, wait-ci-checks.sh
 - `scripts/emit-skill-event.sh` — single-command wrapper around `scripts/emit-event.sh` for non-wrapper emit sites: `emit-skill-event.sh <issue> <event> [--require-session-id|--unconditional] [--emit-issue <N>] [--session-id <SID>] [key=value ...]` or `emit-skill-event.sh --persist-session <sid-or-empty> <issue>`; internally sources `emit-event.sh` and calls `restore_auto_session_pointer()`/`persist_auto_session_pointer()`, avoiding the `source`-based compound command the worktree isolation guard rejects (#1458); used by `skills/verify/SKILL.md` directly, and by `modules/opportunistic-verify.md` / `modules/retro-proposals.md` (#1461), which extends its reach to the 6 skills (`auto`/`code`/`issue`/`review`/`spec`/`verify`) that read those modules
 - `scripts/append-consumed-comments-section.sh` — appends `## Consumed Comments` to Spec on the phase's own working branch; see [`modules/l0-surfaces.md`](../modules/l0-surfaces.md) § "Bash wrapper fallback" (the SSoT) for the exhaustive list of callers, `--no-push` usage, and secondary-layer coverage per phase

@@ -267,6 +267,54 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 - **言語規約**: `modules/phase-banner.md` の日本語は警告テンプレートの code fence 内だけ。`scripts/check-plugin-staleness.sh` は英語のみ。`docs/` の英語版は英語、`docs/ja/` は日本語 (`scripts/check-language-convention.py` の対象外)
 - **worktree 内での呼び出し**: Skill が `${CLAUDE_PLUGIN_ROOT}` を展開した固定パスの単一コマンドとして実行するので、worktree isolation guard に拒否されない。`${VAR:-default}` のようなコマンド名の実行時計算は拒否される (本 Spec 作成中に確認済み) ので、モジュールにそういう形を書かない
 
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps 1-5 を Spec どおりに実装した。順序・内容の変更なし (Spec の Implementation Steps の更新は不要)
+- 例外として、`bats` の `no git on PATH` テストは Spec の記述 (`PATH` に空ディレクトリだけを置いて `"$BASH" "$SCRIPT" "$REPO"` を実行) どおりでは動かなかった。`run` 自体が `mktemp` を PATH から探すため、127 で落ちる。`run --separate-stderr env PATH="$empty" "$BASH" "$SCRIPT" "$WORK"` に変えて、PATH を絞る範囲をスクリプトだけにした
+
+### Design Gaps/Ambiguities
+- Spec の bats 手順は、`run --separate-stderr` と `PATH=... run` を組み合わせると bats-core 内部の外部コマンド (`mktemp`) が PATH から消えることを想定していなかった。PATH を絞るテストは `env PATH=... cmd` の形でコマンド側に渡すのが確実
+- この環境では `CLAUDE_PLUGIN_ROOT` が未設定だった。リポジトリ自体がプラグインのルートなので、スクリプトは worktree 内の相対パスで実行した
+- この環境には `bats` と GNU `parallel` が無かった。`bats` はリポジトリ外の `/tmp/bats-tool-1519` に npm で入れて実行し、全スイートは `xargs -P 4 -n 15` で分割して実行した (136 ファイル、失敗 0)
+- worktree isolation guard は、`for` ループ内の `sed -i` (変数でファイル名を渡す形) と `$(...)` を含む git 付きの複合コマンドを拒否した。ファイル名を直接並べた単一の `sed -i`、コマンドを分けた実行で回避できた
+
+### Rework
+- bats の `no git on PATH` テストを 1 回修正した (上記)。ほかに手戻りなし
+
+### Verification Notes
+- 新規テスト (`tests/check-plugin-staleness.bats`) はスクリプトの出力・終了コードを検証するもので、ファイル内容の文字列一致ではないため、「New Verification-Test Pre-implementation FAIL Check」の対象外 (該当なし)
+- pre-merge の rubric 2 件は、名前付きの採点サブエージェント (`rubric-grader-1519-1` / `rubric-grader-1519-2`) で評価し、どちらも PASS。採点は返却済みで、停止対象は残らなかった
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 警告の実装位置と fetch の要否は Spec で決める旨の Auto-Resolve Log と、Background の事実確認の結果 / https://github.com/saitoco/wholework/issues/1519#issuecomment-6116710481
+- 上記以外の新規コメントなし (`/code` 開始時点。`phase/ready` 付与 (2026-10-12T02:59:41Z) より後のコメントは 0 件)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 受入条件 2 件 (rubric) は PASS。判定は手順の文面 (`modules/phase-banner.md` Step 4 / Notes、`docs/guide/troubleshooting.md`) で行い、採点サブエージェントは起動していない
+- 指摘は CONSIDER 1 件のみ (MUST / SHOULD なし)。`scripts/check-plugin-staleness.sh` が `GIT_DIR` などの git 環境変数を消していない。PR の変更は行わず、Step 12 では「見送り」とした (理由: 通常の `--plugin-dir` 起動では起きない、この環境に `bats` が無く回帰テストを検証できない)
+- CI は 17 件中 17 件成功。Base ブランチとの競合はない (merge base が `origin/main` の先頭と一致)
+
+### Deferred Items
+- `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR` / `GIT_INDEX_FILE` / `GIT_NAMESPACE` の無効化 (`unset CDPATH` と同じ箇所) と、`GIT_DIR` を別リポジトリに向けて無出力になる bats 回帰ケースの追加は未対応。必要なら別 Issue にする
+- Post-merge の manual AC (遅れた checkout を `--plugin-dir` で渡して Skill を実行し、開始時に警告が出ること) は未確認
+
+### Notes for Next Phase
+- `/merge`: PR 1520 に MUST はなく、レビュー状態は COMMENTED (REQUEST_CHANGES ではない)。Pre-merge の受入条件は 2 件とも `[x]`
+- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは rubric では確かめられない。manual AC の手順 (bare リポジトリ 1 つ + クローン 2 つ) で確認する
+- `/verify`: 上記 `GIT_DIR` の件を改善提案として拾うかどうかを判断する
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+実装は Spec の参照実装と 1 文字単位で一致し、変更ファイルの 15 件も Spec の Changed Files と一致した。唯一の乖離は、Spec のエッジケース表に「git の環境変数を継承するケース」が無かったこと (設計段階の漏れ)。Spec の入力軸は引数・パス・git の状態を網羅していたが、実行環境側 (継承される環境変数) の軸が抜けていた。
+
+### Recurring Issues
+同じ指摘が Parser/Validator Edge Case Pre-check の測定サブエージェントと、review-spec / review-bug x2 の計 4 体から重複して出た (測定結果をレビューサブエージェントに渡す設計のため、重複自体は想定どおり)。同種の指摘は他に無い。
+
+### Acceptance Criteria Verification Difficulty
+UNCERTAIN は無かった。rubric 2 件は文面で判定できた。manual の post-merge AC は、実セッションで LLM 手順が走るかを確かめる必要があり、マージ後の `/verify` に委ねる。
