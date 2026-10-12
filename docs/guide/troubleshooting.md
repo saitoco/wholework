@@ -110,6 +110,25 @@ For unattended runs via `/auto`, ensure the issue is triaged (has a `phase/*` or
 
 For details and reload-trigger matrix, see `docs/reports/skill-loader-cache-behavior.md` (Issue #673 investigation).
 
+## Plugin Directory Is Behind Upstream
+
+**Symptom**: At the start of a Skill, a warning says that the wholework plugin directory is N commits behind its upstream (for example `origin/main`).
+
+**Cause**: With `claude --plugin-dir <checkout>`, the Skills, modules, and scripts that run are the ones in that checkout, and nothing updates it. A checkout that nobody pulls keeps running an old version, so a fix merged upstream does not take effect locally. At the start of a Skill (`modules/phase-banner.md`), Wholework compares the checkout's `HEAD` with its upstream branch and warns when the upstream is ahead.
+
+**Fix**: Update the checkout when no other Claude Code session is using it (running scripts change under such a session), then start a new session so the updated `SKILL.md` content is loaded (see "Skill Updates Not Reflected Mid-Session"):
+
+```bash
+git -C /path/to/wholework pull --ff-only
+```
+
+Wholework never pulls for you.
+
+**Notes**:
+
+- The comparison uses the upstream branch as of the last `git fetch` and makes no network access, so a checkout that has not been fetched for a long time can look up to date. Run `git -C /path/to/wholework fetch` now and then (for example from a scheduled job) to keep the warning accurate.
+- No warning appears for a marketplace install (not a git checkout), a detached HEAD, a branch without an upstream, or when the check cannot run. To silence it for a deliberately pinned checkout, run `git -C /path/to/wholework branch --unset-upstream`.
+
 ## Further Help
 
 - Open an issue at [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues)

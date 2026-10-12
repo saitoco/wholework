@@ -134,7 +134,7 @@ wholework/
 - `modules/visual-diff-adapter.md` — visual diff (3-panel 合成) 検証アダプタ
 - `modules/measurement-scope.md` — 測定スコープの定義
 - `modules/next-action-guide.md` — 全 skill 共通の次アクションガイダンス
-- `modules/phase-banner.md` — skill のフェーズ識別バナー表示
+- `modules/phase-banner.md` — skill のフェーズ識別バナー表示。続けて、plugin ディレクトリ (`${CLAUDE_PLUGIN_ROOT}`) が upstream より遅れた git の checkout であれば警告を出す
 - `modules/phase-handoff.md` — フェーズ間の Phase Handoff サマリー読み書き (フェーズ横断のコンテキスト引き継ぎ)
 - `modules/steering-hint.md` — steering doc が存在しない場合に `/doc init` を推奨する動的ヒント
 - `modules/orchestration-fallbacks.md` — オーケストレーションレベルの fallback パターンリファレンスカタログ (#319 tier 2、#316 recovery sub-agent、#318 learning loop で消費)。発火履歴がなく参照もされていないエントリは `docs/reports/orchestration-fallbacks-archive.md` にアーカイブされる (#1180)
@@ -166,6 +166,7 @@ wholework/
 
 **Phase banner:**
 - `scripts/phase-banner.sh` — run-*.sh スクリプト向けに `print_start_banner` / `print_end_banner` 関数を提供する sourceable なヘルパー
+- `scripts/check-plugin-staleness.sh` — `modules/phase-banner.md` の Step 4 から呼ばれる読み取り専用・オフラインのヘルパー。plugin ディレクトリ (`--plugin-dir` で読み込む git の checkout) が最後の fetch 時点の upstream より遅れていれば `behind=<N> upstream=<ref> root=<path>` の 1 行を出し、そうでなければ何も出さない。終了コードは常に 0 (git の checkout でない・detached HEAD・upstream なし・git の失敗はいずれも無出力)。fetch も pull もしない
 - `scripts/emit-event.sh` — `.tmp/auto-events.jsonl` への構造化 JSONL イベント発行のための `emit_event()` を提供する sourceable なヘルパー。加えて、非 wrapper の emitter でポインタファイルから `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` を復元する `restore_auto_session_pointer()` と、in-band `--session-id` の引き継ぎが依存する issue-scoped ポインタファイルの書き込み/削除を行う `persist_auto_session_pointer()` を提供する (#1075)。run-*.sh、claude-watchdog.sh、wait-ci-checks.sh で使用される
 - `scripts/emit-skill-event.sh` — 非 wrapper emit 箇所向けに `scripts/emit-event.sh` を単一コマンドでラップするスクリプト。`emit-skill-event.sh <issue> <event> [--require-session-id|--unconditional] [--emit-issue <N>] [--session-id <SID>] [key=value ...]` または `emit-skill-event.sh --persist-session <sid-or-empty> <issue>` の形で呼び出す。内部で `emit-event.sh` を source し `restore_auto_session_pointer()`/`persist_auto_session_pointer()` を呼び出すことで、worktree isolation guard が拒否する `source` を伴う複合コマンドを回避する (#1458)。`skills/verify/SKILL.md` が直接使用するほか、`modules/opportunistic-verify.md` / `modules/retro-proposals.md` (#1461) 経由で、これら 2 module を読む 6 skill (`auto`/`code`/`issue`/`review`/`spec`/`verify`) からも呼ばれる
 - `scripts/append-consumed-comments-section.sh` — フェーズ自身の作業ブランチ上で Spec に `## Consumed Comments` を追記する。呼び出し元の網羅的なリスト、`--no-push` の使い方、フェーズごとの二次層カバレッジは [`modules/l0-surfaces.md`](../modules/l0-surfaces.md) § "Bash wrapper fallback" (SSoT) を参照
