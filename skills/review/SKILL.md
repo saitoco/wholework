@@ -265,7 +265,7 @@ If the command produces non-empty stdout, treat it as the resolved preview URL: 
 
 Skip this step if no `{{base_url}}`-containing checks exist.
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified").
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified"). A `rubric` condition's grader, when launched as a sub-agent, is named and stopped as described in "Sub-agent Names and Stop" (Step 10) and in the "Rubric Command Semantics" section of `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`.
 
 Verify each condition:
 
@@ -477,9 +477,13 @@ TaskStop(task_id: "review-bug-diff-$NUMBER")      # right after the diff bug sca
 TaskStop(task_id: "review-bug-security-$NUMBER")  # right after the security scan result is in hand (10.2)
 TaskStop(task_id: "bug-verify-$NUMBER-{n}")       # right after that verification verdict is in hand (10.3)
 TaskStop(task_id: "edge-case-$NUMBER-{n}")        # right after that measurement result is in hand (Edge Case Pre-check)
+TaskStop(task_id: "rubric-grader-$NUMBER")        # right after the Step 8 rubric grader verdict is in hand (Step 8)
+TaskStop(task_id: "rubric-grader-$NUMBER-{n}")    # right after that grader verdict is in hand, when Step 8 launches several graders (Step 8)
 ```
 
 A sub-agent whose result was not obtained is stopped too, not only the ones whose result was used — it is the agent most likely to be left behind. For the review sub-agents that stop is step 2 of "Sub-agent Result Fallback" below.
+
+**The Step 8 rubric grader follows the same rule.** It is not a `Task(...)` of this step: Step 8 reads `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`, which is the SSoT for the grader's name and its stop (its "Rubric Command Semantics" section, "Grader sub-agent name and stop"), and the two `rubric-grader` lines above only list the grader so that every sub-agent name `/review` uses is in one place. A grader whose verdict was not obtained is stopped too, and its condition is UNCERTAIN; the "Sub-agent Result Fallback" below covers only the Step 10 sub-agents.
 
 **The stop is best-effort and never gates anything.** `TaskStop` can fail for reasons outside this step's control: no running task matches the name because the agent already ended, or `/review` is running as a fork and the agent is owned by the main session, which refuses the stop. Ignore any such failure — do not retry, do not wait, and do not let it delay the fallback, the Review posting, or any later Step.
 
