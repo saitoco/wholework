@@ -292,18 +292,29 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (理由と却
 - 上記以外の新規コメントなし (`/code` 開始時点。`phase/ready` 付与 (2026-10-12T02:59:41Z) より後のコメントは 0 件)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の設計をそのまま実装した。警告は `modules/phase-banner.md` の Step 4 (LLM 手順) とし、遅れの数え方は読み取り専用・オフラインの `scripts/check-plugin-staleness.sh` に切り出した。`scripts/phase-banner.sh` は変更していない
-- `no git on PATH` のテストだけは、`run` が `mktemp` を必要とするため `env PATH=...` 経由に変えた (Spec の手順からの小さな変更)
-- 全スイートは GNU `parallel` が無い環境のため、`xargs -P 4 -n 15 bats` の分割実行で確認した (136 ファイル、失敗 0)
+- 受入条件 2 件 (rubric) は PASS。判定は手順の文面 (`modules/phase-banner.md` Step 4 / Notes、`docs/guide/troubleshooting.md`) で行い、採点サブエージェントは起動していない
+- 指摘は CONSIDER 1 件のみ (MUST / SHOULD なし)。`scripts/check-plugin-staleness.sh` が `GIT_DIR` などの git 環境変数を消していない。PR の変更は行わず、Step 12 では「見送り」とした (理由: 通常の `--plugin-dir` 起動では起きない、この環境に `bats` が無く回帰テストを検証できない)
+- CI は 17 件中 17 件成功。Base ブランチとの競合はない (merge base が `origin/main` の先頭と一致)
 
 ### Deferred Items
-- Post-merge の manual AC (遅れた checkout を `--plugin-dir` で渡して Skill を実行し、開始時に警告が出ること) は未確認。Spec の Notes にある、bare リポジトリ 1 つとクローン 2 つを使う手順で、マージ後の main を元に確認する
-- 誰も fetch していない checkout は遅れが見えない盲点を受け入れた。後続案 (環境変数などで有効にする opt-in の fetch) はこの Issue では実装していない
+- `GIT_DIR` / `GIT_WORK_TREE` / `GIT_COMMON_DIR` / `GIT_INDEX_FILE` / `GIT_NAMESPACE` の無効化 (`unset CDPATH` と同じ箇所) と、`GIT_DIR` を別リポジトリに向けて無出力になる bats 回帰ケースの追加は未対応。必要なら別 Issue にする
+- Post-merge の manual AC (遅れた checkout を `--plugin-dir` で渡して Skill を実行し、開始時に警告が出ること) は未確認
 
 ### Notes for Next Phase
-- `/review`: 変更ファイルは Spec の記載どおり 15 件 (新規 2、モジュール 1、SKILL.md 8、docs 4)。8 件の SKILL.md は `allowed-tools` への 1 エントリ追加のみで、`skills/verify/SKILL.md` は `skill-body-sha` を `90e3f8ce` に再計算済み (`skill-body-lines` は 997 のまま)
-- `/review`: CI の bats ジョブ (`bats --jobs`) で `tests/check-plugin-staleness.bats` の 17 ケースが通ること。ローカルでは 17 ケースとも PASS を確認済み
-- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは、rubric では確かめられない。manual AC の手順で確認する
+- `/merge`: PR 1520 に MUST はなく、レビュー状態は COMMENTED (REQUEST_CHANGES ではない)。Pre-merge の受入条件は 2 件とも `[x]`
+- `/verify`: LLM 手順 (Step 4) が実セッションで走るかは rubric では確かめられない。manual AC の手順 (bare リポジトリ 1 つ + クローン 2 つ) で確認する
+- `/verify`: 上記 `GIT_DIR` の件を改善提案として拾うかどうかを判断する
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+実装は Spec の参照実装と 1 文字単位で一致し、変更ファイルの 15 件も Spec の Changed Files と一致した。唯一の乖離は、Spec のエッジケース表に「git の環境変数を継承するケース」が無かったこと (設計段階の漏れ)。Spec の入力軸は引数・パス・git の状態を網羅していたが、実行環境側 (継承される環境変数) の軸が抜けていた。
+
+### Recurring Issues
+同じ指摘が Parser/Validator Edge Case Pre-check の測定サブエージェントと、review-spec / review-bug x2 の計 4 体から重複して出た (測定結果をレビューサブエージェントに渡す設計のため、重複自体は想定どおり)。同種の指摘は他に無い。
+
+### Acceptance Criteria Verification Difficulty
+UNCERTAIN は無かった。rubric 2 件は文面で判定できた。manual の post-merge AC は、実セッションで LLM 手順が走るかを確かめる必要があり、マージ後の `/verify` に委ねる。
