@@ -2,7 +2,7 @@
 model: sonnet
 name: triage
 description: Issue triage. Automates title normalization, Type/Priority/Size/Value/Theme assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
-allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*), Read, Write, Glob, Grep
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*), Read, Write, Glob, Grep
 ---
 
 # Issue Triage
