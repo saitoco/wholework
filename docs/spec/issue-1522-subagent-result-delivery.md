@@ -260,3 +260,35 @@
 
 - saito / MEMBER / first-class / ## Issue Retrospective (範囲の拡大の判断、受入条件の設計、`agents/*.md` の `tools` 変更の要否を `/spec` に委ねる旨) / https://github.com/saitoco/wholework/issues/1522#issuecomment-6144540838
 - 参考: cutoff (`phase/issue` の付与、2026-10-13T11:26:28Z) より前の `/code` の症状の報告コメント (saito / MEMBER / https://github.com/saitoco/wholework/issues/1522#issuecomment-6137454588) は `/issue` で消費済みで、Issue 本文の Background と受入条件 2・3 に反映されている
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 は Spec の文面どおりに適用した (agents 3 ファイル、`modules/verify-executor.md`、`skills/review/SKILL.md` の 9 か所、`docs/tech.md` / `docs/ja/tech.md`)
+
+### Design Gaps/Ambiguities
+- Implementation Step 5 の「`grep -c "subagent-result"` が agents 3 ファイルでも 1 以上」は、Step 1 が指定した agents の文面 (`result file=<path>` と `## Deliver Results` 節) に `subagent-result` の文字列が無いため成り立たない (3 ファイルとも 0)。結果ファイルのパスは呼び出し側 (`skills/review/SKILL.md`) がプロンプトで渡す設計なので、agents の文面は Spec どおりとし、この grep の期待値のほうを誤りとして扱った
+- 実行環境に `bats` が無く、`bats --jobs` による全スイートは実行できなかった (behavioral change 検出では、変更ファイルを参照するテストが 12 本あった)。代わりに、それらのテストが見る文字列 (`rubric "text"`、`Mode-independent`、`Spec files are not passed to the grader`、`Rubric Command Semantics`、`Execution context axis`、`CWD other than the repository root` など) の残存を grep で確認し、`TaskStop` / `rubric-grader` / `name=` を参照するテストが無いことも確認した。CI の bats で最終確認が要る (pending CI confirmation)
+- rubric の受入条件 3 件は、`name` なしの前景のサブエージェント 1 つ (結果は戻り値で返った) に採点させ、3 件とも PASS。採点役は残存する弱点として、(a) `TaskStop` が各 SKILL の `allowed-tools` に無い点 (Spec は意図的に足さない判断で、停止は best-effort)、(b) 他に待ち仕事が無い grader 1 つだけのときはファイルの再確認がほぼ即時になり、teammate が動作中だと UNCERTAIN になりやすい点、を指摘した。どちらも Spec の Uncertainty / 却下案に記載済みの範囲で、今回は文面を変えていない
+
+### Rework
+- Step 3 の前提確認 (`reconcile-phase-state.sh code-pr --check-precondition`) を、Step 4 のラベル遷移 (`gh-label-transition.sh $NUMBER code`) より後に実行してしまった。そのため確認が返した `labels` は `["triaged", "phase/code"]`、`diagnosis` は「phase/ready label が無い」で、これは遷移後の状態である。遷移前の実際の状態は、Step 1 の `gh issue view` で観測した `triaged` + `phase/ready` で、前提は満たしていた。Spec も存在したので auto-resolve は発生していない。再発防止は、前提確認の出力を取ってから遷移を実行する順序を守ること (同じ呼び出しにまとめない)
+- 一時ファイルの作成で、`gh issue view ... > .tmp/issue-body-1522.md` と Bash のリダイレクトを使った (global の規約は Write ツールのみ)。内容は Issue 本文の取得で、Write ツールでは取れないための例外的な使用だったが、規約上は `gh-issue-edit.sh` の入力ファイルの作り方を見直す余地がある
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec どおり「防ぐ (`name` なし) + 回収する (結果ファイル) + 待たない (No verdict)」の 3 点を、`agents/review-*.md`、`modules/verify-executor.md`、`skills/review/SKILL.md`、`docs/tech.md` / `docs/ja/tech.md` に適用した
+- `modules/verify-executor.md` を grader の手順の SSoT とし、`skills/review/SKILL.md` の Step 8 の文は、そこを指すだけにした (呼び出し元 4 スキルで手順が食い違わない)
+- `skills/review/SKILL.md` の行 39 (`前景` を含む行) と Foreground dispatch reminder には触れていない (言語規約チェックと既存の bats のため)
+
+### Deferred Items
+- bats を実行できなかったため、全スイートの確認は PR の CI に委ねる (pending CI confirmation)
+- Post-merge の opportunistic 条件 2 件 (`/review` のサブエージェント指摘の反映、fork の `/code` / `/verify` での grader の扱い) は実機でしか確認できず、`/verify` では UNCERTAIN になりうる
+- `/issue` Step 12a の調査エージェントの名前付き起動は、Spec の範囲外として手を付けていない (別 Issue の候補)
+
+### Notes for Next Phase
+- PR #1524。`/review` は `skills/review/SKILL.md` 自身の変更を見るので、新しい手順 (結果ファイル、名前なし起動) がレビュー中に実際に動く。結果が戻り値に無い場合は、結果ファイル `.tmp/subagent-result-1524-<label>.md` の確認を試すこと
+- agents の文面には `subagent-result` の文字列が無く、パスは呼び出し側が `result file=<path>` で渡す。Spec の Step 5 の grep の期待値と食い違うが、設計どおり
+- 実行環境に `bats` が無いので、CI の結果 (`tests/` 全体) を確認すること
