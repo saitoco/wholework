@@ -148,6 +148,7 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (判断の根拠: /review 側の症状は #1522 に分離。宛先の書き方と "main" の実挙動の確認は Spec に委ねる) / https://github.com/saitoco/wholework/issues/1521#issuecomment-6137388535
+- verify フェーズ (cutoff: `phase/verify` の付与、2026-10-13T03:53:18Z): No new comments since last phase.
 
 ## Code Retrospective
 
@@ -187,3 +188,31 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 ### Notes for Next Phase
 - `/verify` は Post-merge 条件が opportunistic のため、実機観察まで未確定になりうる
 - `/review` 側の同系統の症状は #1522 の対象で、本 PR では変更していない
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge の rubric 2 件は振る舞いで書かれ、宛先の方式を Spec に委ねても文面が変わらなかった。Post-merge は opportunistic で、対話セッションでの Size L/XL の `/issue` を待つ
+- Spec は headless (`claude -p`) で書かれたため、teammate から `"main"` に送ったときの実挙動は確認できず、エラー時の `team-lead` 再試行と既存のファイルフォールバックで安全側に倒す設計にした
+
+#### design
+- 最終応答に成功した宛先を 1 行書かせる指示を足した (範囲外の追加として Spec に記録)。Post-merge の判定に宛先の痕跡が要るため、妥当
+
+#### code
+- 設計からの逸脱・手戻りなし。散文の変更のみで、関連する bats は無い
+
+#### review
+- light review で指摘 0 件。参考指摘 (`main` の一時的失敗でも `team-lead` に送りうる) は、「両方に送らない」規則で影響が限定的として対応不要とした
+
+#### merge
+- 競合なし、CI 成功、squash merge
+
+#### verify
+- Pre-merge 2 件は `[x]` 済みで SKIPPED。Post-merge の opportunistic 1 件は未観察のため `phase/verify` に残した
+- Step 1 の stale 検出が再び発火した (キャッシュ側 `7e7751af`、ディスク側 `90e3f8ce`)。同じ会話セッションで #1519 マージ前に読み込んだ本文が使われ続けている
+- `append-consumed-comments-section.sh 1521 verify --no-push` は変更なしで終わった。既存の `## Consumed Comments` に新しいコメント URL が無い場合は何も書かない設計 (「No new comments」は section が無いときだけ書く) で、想定どおり。verify フェーズの行は手で追記した
+
+### Improvement Proposals
+- N/A
