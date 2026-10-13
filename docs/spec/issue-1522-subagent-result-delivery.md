@@ -275,20 +275,33 @@
 - Step 3 の前提確認 (`reconcile-phase-state.sh code-pr --check-precondition`) を、Step 4 のラベル遷移 (`gh-label-transition.sh $NUMBER code`) より後に実行してしまった。そのため確認が返した `labels` は `["triaged", "phase/code"]`、`diagnosis` は「phase/ready label が無い」で、これは遷移後の状態である。遷移前の実際の状態は、Step 1 の `gh issue view` で観測した `triaged` + `phase/ready` で、前提は満たしていた。Spec も存在したので auto-resolve は発生していない。再発防止は、前提確認の出力を取ってから遷移を実行する順序を守ること (同じ呼び出しにまとめない)
 - 一時ファイルの作成で、`gh issue view ... > .tmp/issue-body-1522.md` と Bash のリダイレクトを使った (global の規約は Write ツールのみ)。内容は Issue 本文の取得で、Write ツールでは取れないための例外的な使用だったが、規約上は `gh-issue-edit.sh` の入力ファイルの作り方を見直す余地がある
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps 1-4 と PR の差分に構造的な乖離は無かった (MUST なし)。`review-spec` の指摘は、Spec の文面どおりに入れた 14.2 の `rm -f` のグロブと、Spec の Changed Files に入っていなかった 10.2 手順 4 の古い括弧書きの 2 点で、前者は Spec 自身の文面に起因する
+
+### Recurring issues
+- zsh でグロブが一致しないと、同じ `rm -f` の他のファイルも消えない問題を `review-spec` と `review-bug` の 2 系統が独立に指摘した (`zsh -c` で再現を確認)。グロブを含む `rm -f` は、他のファイルと同じコマンドに混ぜず別行にする。Spec 作成時のチェック項目の候補
+- Type=Bug の修正に回帰テストが無い点を `review-bug` の 2 系統が指摘した。散文の手順の修正は grep で固定できるが、`bats` が実行環境に無く、この review では追加を見送った。`name=` の再混入を CI で検出するテストは別 Issue の候補
+
+### Acceptance criteria verification difficulty
+- 受入条件 3 件はいずれも PASS で、UNCERTAIN は無かった。rubric は条件の文面が具体的で判定しやすかった
+- この review 自身が新しい手順の最初の実行だったが、レビュー用エージェントの定義は PR 前の版 (`Write` なし) が読み込まれ、結果ファイルは作られなかった (戻り値で結果は届いた)。プラグインの更新前は結果ファイル経路が動かないため、Post-merge の opportunistic 確認はマージ後の実行で行うこと
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec どおり「防ぐ (`name` なし) + 回収する (結果ファイル) + 待たない (No verdict)」の 3 点を、`agents/review-*.md`、`modules/verify-executor.md`、`skills/review/SKILL.md`、`docs/tech.md` / `docs/ja/tech.md` に適用した
-- `modules/verify-executor.md` を grader の手順の SSoT とし、`skills/review/SKILL.md` の Step 8 の文は、そこを指すだけにした (呼び出し元 4 スキルで手順が食い違わない)
-- `skills/review/SKILL.md` の行 39 (`前景` を含む行) と Foreground dispatch reminder には触れていない (言語規約チェックと既存の bats のため)
+- MUST の指摘は無く、`skills/review/SKILL.md` の文面修正 (14.2 のグロブを別行へ、起動前 `rm -f` の注記、10.2 手順 4 の括弧書き、Review 本文テンプレートの書式) だけを PR に追加した (コミット 4d79b85d)
+- 回帰テストの追加は、`bats` を実行して確認できないため見送った
 
 ### Deferred Items
-- bats を実行できなかったため、全スイートの確認は PR の CI に委ねる (pending CI confirmation)
-- Post-merge の opportunistic 条件 2 件 (`/review` のサブエージェント指摘の反映、fork の `/code` / `/verify` での grader の扱い) は実機でしか確認できず、`/verify` では UNCERTAIN になりうる
-- `/issue` Step 12a の調査エージェントの名前付き起動は、Spec の範囲外として手を付けていない (別 Issue の候補)
+- 回帰テスト (`name=` の不在、`result file=` のプロンプト、`tools:` の `Write`、"Never end the turn to wait" を grep で固定する bats) は別 Issue の候補
+- 結果ファイルから回収したサブエージェント (teammate 起動など) を停止するかどうかは未決 (CONSIDER)。fork からは teammate を `TaskStop` できないため、設計判断として残した
+- パス無制限の `Write` を `tools` に足したことの攻撃面 (外部投稿者の PR diff に仕込まれた指示) は、Spec が受け入れるリスクとして記録済み。ハーネスが `tools` のパス指定をサポートしたら絞る
+- Post-merge の opportunistic 条件 2 件は実機でしか確認できない
 
 ### Notes for Next Phase
-- PR #1524。`/review` は `skills/review/SKILL.md` 自身の変更を見るので、新しい手順 (結果ファイル、名前なし起動) がレビュー中に実際に動く。結果が戻り値に無い場合は、結果ファイル `.tmp/subagent-result-1524-<label>.md` の確認を試すこと
-- agents の文面には `subagent-result` の文字列が無く、パスは呼び出し側が `result file=<path>` で渡す。Spec の Step 5 の grep の期待値と食い違うが、設計どおり
-- 実行環境に `bats` が無いので、CI の結果 (`tests/` 全体) を確認すること
+- CI は全 17 チェックが成功しており、修正コミット後の再チェック (`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-allowed-tools.sh`) も成功した。`/merge` の前に、修正コミットでの CI の再実行結果を確認すること
+- このレビューではプラグインが PR 前の版だったため、結果ファイルの経路 (Deliver Results) は実際には使われていない。マージ後の `/review` で初めて実行される
+- グロブを含む `rm -f` は zsh で一致なしだと非ゼロ終了になる。14.2 は別行に分けたので、そこは失敗しても他の削除に影響しない
