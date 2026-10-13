@@ -51,6 +51,11 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-5579805437
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-5653264393
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-5957342845
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1035#issuecomment-5963800507
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-5978124934
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-6073951925
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-6117276326
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-6137898083
 ## Overview
 
 #1028 で導入した `<!-- wholework-event: type=preview-ac-unverified -->` マーカーは「未検証の preview AC が 1 件以上あるときだけ投稿する」設計になっている。このため fix-cycle で `/review` が再実行され preview AC が UNCERTAIN → PASS に変化しても、新しい状態を伝えるコメントが投稿されず、`/verify` は古いマーカーを「最新」として参照し続ける。
