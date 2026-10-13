@@ -260,6 +260,7 @@
 
 - saito / MEMBER / first-class / ## Issue Retrospective (範囲の拡大の判断、受入条件の設計、`agents/*.md` の `tools` 変更の要否を `/spec` に委ねる旨) / https://github.com/saitoco/wholework/issues/1522#issuecomment-6144540838
 - 参考: cutoff (`phase/issue` の付与、2026-10-13T11:26:28Z) より前の `/code` の症状の報告コメント (saito / MEMBER / https://github.com/saitoco/wholework/issues/1522#issuecomment-6137454588) は `/issue` で消費済みで、Issue 本文の Background と受入条件 2・3 に反映されている
+- verify フェーズ (cutoff: `phase/verify` の付与、2026-10-13T12:19:15Z): No new comments since last phase.
 
 ## Code Retrospective
 
@@ -301,3 +302,31 @@
 ### Notes for Next Phase
 - 結果ファイルの経路 (Deliver Results) はマージ後の `/review` で初めて実行される。verify では実行結果の有無を確認すること
 - 実行環境に `bats` が無く、bats は未実行
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/issue` が Issue コメントの追記 (`/code` での採点役の停止) を受けて範囲を `modules/verify-executor.md` の呼び出し元全体に広げ、受入条件 2・3 を加えた。名前付き起動が teammate 化の引き金かどうかを受入条件にせず調査事項として `/spec` に委ねた判断は、条件の文面を実装方針から独立させる点で妥当だった
+- `/spec` が Changed Files 7 件を根拠に Size を M から L に上げ、review が `--full` に切り替わった。`--full` の 2 系統が独立に同じ指摘 (zsh のグロブ) を出しており、L への格上げは結果的に有効だった
+
+#### design
+- Spec の Step 5 の `grep -c "subagent-result"` の期待値が agents 3 ファイルでは成り立たない誤りがあり、`/code` が Spec の実装手順の文面を優先して期待値側を誤りとして扱った。Spec 内の検証手順と実装手順の突き合わせが不足していた
+
+#### code
+- review 後の修正コミットは 1 件 (`4d79b85d`) のみで、手戻りは小さい
+
+#### review
+- MUST 0 件、SHOULD を含む 4 件を解決、4 件をスキップ。スキップのうち回帰テストの欠如 (`name=` の再混入を CI で検出するテスト) は、実行環境に `bats` が無く見送られた
+- review 自身が新しい手順の最初の実行だったが、エージェント定義は PR 前の版が読み込まれ、結果ファイル経路は動かなかった (戻り値で結果は届いた)
+
+#### merge
+- squash、コンフリクトなし、CI 17/17 success
+
+#### verify
+- Pre-merge の 3 件はすべて review で `[x]` 済みのため SKIPPED。Post-merge の opportunistic 2 件は、マージ後の `/review` と fork の `/code`・`/verify` の実行でしか確かめられないため、未確認のまま `phase/verify` に残る
+- この verify もセッションに残った古い版の `skills/verify/SKILL.md` (cached 997 行/7e7751af、on-disk 997 行/90e3f8ce) で動いた
+
+### Improvement Proposals
+- `skills/review/SKILL.md` と `modules/verify-executor.md` のサブエージェント起動に `name=` が再び入ったことを検出する bats テストを追加する (#1522 の review で回帰テストが無いと指摘され、実行環境に `bats` が無いため見送られた)
