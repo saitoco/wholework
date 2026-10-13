@@ -148,3 +148,32 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (判断の根拠: /review 側の症状は #1522 に分離。宛先の書き方と "main" の実挙動の確認は Spec に委ねる) / https://github.com/saitoco/wholework/issues/1521#issuecomment-6137388535
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-4 の文面どおりに 4 ファイルを変更した
+
+### Design Gaps/Ambiguities
+- 既存の 3 エージェントの Primary 文面は末尾が "to the team-lead." と、宛先 `"main"` と矛盾する語を含んでいた。Spec の置換文面 (requester / `team-lead` の再試行) でこの矛盾も解消された
+- bats がこの実行環境に無い。変更は散文の手順のみで、`tests/` に該当する検査は無い (`SendMessage` / `Delivery address` / `Result collection` を grep して 0 件) ため、bats の全体実行は行っていない。代わりに `validate-skill-syntax.py` / `check-allowed-tools.sh` / `check-forbidden-expressions.sh` / `check-bare-bracket-assertions.sh` / `check-language-convention.py` を実行し、すべて成功した
+- 新規テストは追加していないため、pre-implementation FAIL 確認の対象は 0 件
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の設計どおり、宛先は `main` → `team-lead` → ファイルの順序つきにした。`main` を先にしたのは、agent teams 無効の既定環境で今までと同じ呼び出しが最初に成功し、挙動が変わらないため
+- 最終応答に成功した宛先を 1 行で書かせ、markdown 本体の重複は書かせない (Post-merge の opportunistic 判定と切り分けのため)
+- Pre-merge の rubric 条件 2 件は、差分を読んで満たすと判断し Issue 本文でチェック済みにした
+
+### Deferred Items
+- Post-merge の opportunistic 条件 (Size L/XL の Issue で `/issue` を対話セッションから実行し、フォールバックのファイルを使わずに 3 エージェントの結果が届くこと): teammate の実機が必要で、headless の `/code` では再現できない
+
+### Notes for Next Phase
+- `/review` は 4 ファイルの文言が互いに揃っているか (特に `agents/issue-risk.md` の `### 5. Deliver Results` と SKILL.md の 3 つの prompt、Delivery address 段落、Result collection) を見ること
+- `/review` 側の同系統の症状は #1522 の対象で、本 PR では `agents/review-*.md` と `skills/review/SKILL.md` を変更していない
+- この環境には bats が無く、PR では bats スイートを実行していない。CI の結果で確認すること
