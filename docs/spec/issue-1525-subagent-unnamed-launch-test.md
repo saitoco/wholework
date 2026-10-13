@@ -342,6 +342,7 @@ assert_not_flagged() {
 - saito / MEMBER / first-class / ⚠️ Triage AC audit: verify command に問題があります (AC4 の `gh run list` の形が、実装前でも main の最新 run の `success` を読んで PASS しうる点の指摘) / https://github.com/saitoco/wholework/issues/1525#issuecomment-6147904794
 - 参考: cutoff (`phase/issue` の付与、2026-10-13T14:29:35Z) より前の triage の AC 監査コメント (saito / MEMBER / https://github.com/saitoco/wholework/issues/1525#issuecomment-6147862473) は `/issue` で消費済みで、Issue 本文の AC4 (`gh pr checks` から `gh run list` への変更) に反映されている
 
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1525#issuecomment-6149321283
 ## Code Retrospective
 
 ### Deviations from Design
