@@ -289,19 +289,15 @@
 - この review 自身が新しい手順の最初の実行だったが、レビュー用エージェントの定義は PR 前の版 (`Write` なし) が読み込まれ、結果ファイルは作られなかった (戻り値で結果は届いた)。プラグインの更新前は結果ファイル経路が動かないため、Post-merge の opportunistic 確認はマージ後の実行で行うこと
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST の指摘は無く、`skills/review/SKILL.md` の文面修正 (14.2 のグロブを別行へ、起動前 `rm -f` の注記、10.2 手順 4 の括弧書き、Review 本文テンプレートの書式) だけを PR に追加した (コミット 4d79b85d)
-- 回帰テストの追加は、`bats` を実行して確認できないため見送った
+- PR #1524 を `--squash` でマージした (pre-merge AC は全て済み、CI は success、コンフリクトなし)
 
 ### Deferred Items
-- 回帰テスト (`name=` の不在、`result file=` のプロンプト、`tools:` の `Write`、"Never end the turn to wait" を grep で固定する bats) は別 Issue の候補
-- 結果ファイルから回収したサブエージェント (teammate 起動など) を停止するかどうかは未決 (CONSIDER)。fork からは teammate を `TaskStop` できないため、設計判断として残した
-- パス無制限の `Write` を `tools` に足したことの攻撃面 (外部投稿者の PR diff に仕込まれた指示) は、Spec が受け入れるリスクとして記録済み。ハーネスが `tools` のパス指定をサポートしたら絞る
-- Post-merge の opportunistic 条件 2 件は実機でしか確認できない
+- Post-merge の opportunistic 条件 2 件 (`/review` の Review Response Summary への反映、fork の `/code`・`/verify` での grader 判定の回収) は実機でしか確認できない
+- 回帰テストの bats 追加は review から引き継いだ別 Issue の候補
 
 ### Notes for Next Phase
-- CI は全 17 チェックが成功しており、修正コミット後の再チェック (`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-allowed-tools.sh`) も成功した。`/merge` の前に、修正コミットでの CI の再実行結果を確認すること
-- このレビューではプラグインが PR 前の版だったため、結果ファイルの経路 (Deliver Results) は実際には使われていない。マージ後の `/review` で初めて実行される
-- グロブを含む `rm -f` は zsh で一致なしだと非ゼロ終了になる。14.2 は別行に分けたので、そこは失敗しても他の削除に影響しない
+- 結果ファイルの経路 (Deliver Results) はマージ後の `/review` で初めて実行される。verify では実行結果の有無を確認すること
+- 実行環境に `bats` が無く、bats は未実行
