@@ -118,6 +118,11 @@ polling backoff (初回 30s 待機 → 再確認 → 2 回目 60s 待機 → 再
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-5579804382
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-5653263774
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-5957340110
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/839#issuecomment-5962674385
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-5978123923
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-6073950512
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-6117274904
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=8 / https://github.com/saitoco/wholework/issues/839#issuecomment-6137896418
 ## Notes
 
 - **自動解決事項** (消費コメントより転記):
