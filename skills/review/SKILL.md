@@ -265,7 +265,7 @@ If the command produces non-empty stdout, treat it as the resolved preview URL: 
 
 Skip this step if no `{{base_url}}`-containing checks exist.
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified"). A `rubric` condition's grader, when launched as a sub-agent, is named and stopped as described in "Sub-agent Names and Stop" (Step 10) and in the "Rubric Command Semantics" section of `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified"). A `rubric` condition's grader, when launched as a sub-agent, is launched without a name, collected, and stopped as described in "Grader sub-agent name and stop" in the "Rubric Command Semantics" section of `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`, which is the SSoT for every caller.
 
 Verify each condition:
 
@@ -466,34 +466,31 @@ In both cases, do not fix the violation inline in this PR.
 
 ### Sub-agent Names and Stop
 
-Every `Task(...)` launched in Step 10 — the Parser/Validator Edge Case Pre-check measurement sub-agents, 10.0, 10.2, and 10.3 — carries an explicit `name:`, so that each agent can be addressed individually by `TaskStop` (Issue #1478). Without a name the agent has no stable identifier to stop by, and a sub-agent that returned no result can stay in the session long after `/review` has finished. `$NUMBER` is the PR number; `{n}` is the 1-based index of the file (Edge Case Pre-check) or of the issue (10.3).
+Every `Task(...)` launched in Step 10 — the Parser/Validator Edge Case Pre-check measurement sub-agents, 10.0, 10.2, and 10.3 — is launched **without a `name`** (Issue #1522; this replaces the explicit names of Issue #1478). With agent teams enabled in an interactive session, a launch that carries a `name` starts an in-process teammate, which reports through team messages instead of returning a result: its final answer goes to the main session, not to this orchestrator, and when `/review` runs as a fork (a Skill with `context: fork` launched from an interactive session) the orchestrator can neither receive that answer nor stop the teammate. An unnamed launch is an ordinary sub-agent whose result returns to the orchestrator. Never add a `name` to a Step 10 launch, not even to make a later `TaskStop` easier.
 
-As soon as a given sub-agent's result is in hand, immediately stop that agent alone — do not wait for the others, and do not defer the stops to the end of `/review`:
+**Result file.** The harness decides how a launch returns (the result itself, a background acknowledgment, or a teammate start), and the orchestrator cannot control it. Every Step 10 launch therefore also gives the sub-agent its own result file, `.tmp/subagent-result-$NUMBER-<label>.md`, and instructs it to `Write` its complete result there as its last action and to return the same text as its final response (the `agents/review-*.md` files carry a matching "Deliver Results" section). `$NUMBER` is the PR number. The labels are `review-light` (10.0), `review-spec` (10.2), `review-bug-diff` and `review-bug-security` (10.2), `bug-verify-{n}` (10.3, `{n}` the 1-based index of the issue) and `edge-case-{n}` (Edge Case Pre-check, `{n}` the file's rank). Before the first Step 10 launch, run `mkdir -p .tmp` and then `rm -f .tmp/subagent-result-$NUMBER-*.md` as two separate commands, so that a file left by an earlier run is never read as this run's result. With zsh, a glob that matches no file makes `rm -f` exit non-zero with `no matches found`; that is the normal first-run case, so ignore it and do not retry or report it as a failure. A file is the one channel that crosses the fork boundary: a message sent by a sub-agent goes out under the parent session's address, and a reply or notification is delivered to the parent session, not to the fork.
 
-```text
-TaskStop(task_id: "review-light-$NUMBER")         # right after the review-light result is in hand (10.0)
-TaskStop(task_id: "review-spec-$NUMBER")          # right after the review-spec result is in hand (10.2)
-TaskStop(task_id: "review-bug-diff-$NUMBER")      # right after the diff bug scan result is in hand (10.2)
-TaskStop(task_id: "review-bug-security-$NUMBER")  # right after the security scan result is in hand (10.2)
-TaskStop(task_id: "bug-verify-$NUMBER-{n}")       # right after that verification verdict is in hand (10.3)
-TaskStop(task_id: "edge-case-$NUMBER-{n}")        # right after that measurement result is in hand (Edge Case Pre-check)
-TaskStop(task_id: "rubric-grader-$NUMBER")        # right after the Step 8 rubric grader verdict is in hand (Step 8)
-TaskStop(task_id: "rubric-grader-$NUMBER-{n}")    # right after that grader verdict is in hand, when Step 8 launches several graders (Step 8)
-```
+**Collecting a result**, per sub-agent, in this order, stopping at the first source that yields it:
 
-A sub-agent whose result was not obtained is stopped too, not only the ones whose result was used — it is the agent most likely to be left behind. For the review sub-agents that stop is step 2 of "Sub-agent Result Fallback" below.
+1. The launch call's return value carries the result (the normal case) → use it.
+2. The return value carries no result (a background acknowledgment, a teammate start, empty output, or an error) → `Read` its result file and use it if it exists.
+3. Neither yields a result → for `review-light`, `review-spec`, and `review-bug`, apply "Sub-agent Result Fallback" below, which looks at the result file once more before it gives up on the sub-agent. A 10.3 verification sub-agent whose verdict is missing leaves its issue unverified (10.3), and an Edge Case Pre-check measurement sub-agent whose result is missing counts as no findings.
 
-**The Step 8 rubric grader follows the same rule.** It is not a `Task(...)` of this step: Step 8 reads `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`, which is the SSoT for the grader's name and its stop (its "Rubric Command Semantics" section, "Grader sub-agent name and stop"), and the two `rubric-grader` lines above only list the grader so that every sub-agent name `/review` uses is in one place. A grader whose verdict was not obtained is stopped too, and its condition is UNCERTAIN; the "Sub-agent Result Fallback" below covers only the Step 10 sub-agents.
+Never wait for a result: do not end the turn to wait, and do not poll in a loop. A sub-agent that is still running may keep working while the orchestrator does other work.
 
-**The stop is best-effort and never gates anything.** `TaskStop` can fail for reasons outside this step's control: no running task matches the name because the agent already ended, or `/review` is running as a fork and the agent is owned by the main session, which refuses the stop. Ignore any such failure — do not retry, do not wait, and do not let it delay the fallback, the Review posting, or any later Step.
+**Stop.** A sub-agent whose result came back in its return value has ended, so there is nothing to stop. Only a sub-agent whose result was not obtained may still be running: stop it with `TaskStop(task_id: "<agent ID>")`, using the agent ID reported by its launch call, after its result file has been read for the last time (item 4 of "Sub-agent Result Fallback" for the review sub-agents; right after the missing verdict or measurement is given up on for the others). It is the agent most likely to be left in the session after `/review` finishes.
+
+**The Step 8 rubric grader is not a `Task(...)` of this step.** Step 8 reads `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md`, which is the SSoT, for every caller, of the grader's launch (no name), result file, verdict collection, and stop (its "Rubric Command Semantics" section, "Grader sub-agent name and stop"). A grader whose verdict was not obtained is stopped too, and its condition is UNCERTAIN; the "Sub-agent Result Fallback" below covers only the Step 10 sub-agents.
+
+**The stop is best-effort and never gates anything.** `TaskStop` can fail for reasons outside this step's control: no running task matches the ID because the agent already ended, or `/review` is running as a fork and the agent is owned by the main session, which refuses the stop. Ignore any such failure — do not retry, do not wait, and do not let it delay the fallback, the Review posting, or any later Step.
 
 ### Sub-agent Result Fallback
 
-The foreground rule above cannot control how the harness returns a sub-agent: an Agent/Workflow call may come back as a background teammate/task whose result arrives only as a later completion notification. A fork-executed Skill has no re-invocation guarantee (`${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), so that notification never reaches the review and the Review Response Summary is never posted (Issue #1481). Asking the orchestrator to "wait synchronously" is therefore not enough — when a result is not in hand, the orchestrator performs that review itself.
+The foreground rule above cannot control how the harness returns a sub-agent: an Agent/Workflow call may come back as a background teammate/task whose result arrives only as a later completion notification. A fork-executed Skill has no re-invocation guarantee (`${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"), so that notification never reaches the review and the Review Response Summary is never posted (Issue #1481). Asking the orchestrator to "wait synchronously" is therefore not enough. When a result is not in hand, the orchestrator first looks for the sub-agent's result file, and only for a sub-agent that still has no result does it perform that review itself: a substitute review alone throws away the findings the sub-agent had already produced (Issue #1522).
 
 1. **Trigger**: a sub-agent launched in this step (`review-light` in 10.0; `review-spec` / `review-bug` in 10.2; the Workflow pipeline in `skills/review/workflow-guidance.md`) returned no result in the same turn — empty output, an error, or a background teammate/task whose return value carries no review body. Never end the turn to wait for the completion notification, on any execution surface.
-2. **Stop the sub-agent**: for each sub-agent whose result was not obtained, first call `TaskStop(task_id: "<its name>")` (names per "Sub-agent Names and Stop" above) — an agent that returned nothing may still be running, and it is the one most likely to be left in the session after `/review` finishes. This step covers sub-agents launched with `Task(...)`; the Workflow path is a separate launch mechanism and is not covered here. The stop is best-effort: if `TaskStop` fails (no running task matches the name, or `/review` runs as a fork and the main session that owns the agent refuses the stop), ignore the failure and go straight on to item 3 — the stop's outcome never blocks the substitution, the Review body line in item 4, or the Review posting.
-3. **Substitution**: for each sub-agent whose result was not obtained, the orchestrator performs that review itself, reading `.tmp/pr-diff-$NUMBER.txt` and the Spec (plus any `.tmp/base-conflict-context-$NUMBER.md` / `.tmp/edge-case-context-$NUMBER.md`), following the aspects and output format (`**[aspect] path:line**` / `- path:` / `- line:` / severity) in the matching `agents/review-*.md`:
+2. **Collect from the result file** (`Task(...)` sub-agents only; the Workflow pipeline has no result files, so it goes straight to item 3): `Read` the sub-agent's result file (labels per "Sub-agent Names and Stop"). When it exists, it is that sub-agent's result: feed it into the same extraction as a return value (10.0 step 5 / 10.2 step 4) and do not substitute for that sub-agent. This is how a result reaches the orchestrator when the sub-agent was started as a teammate, or when `/review` itself runs as a fork.
+3. **Substitution**: for each sub-agent still without a result, the orchestrator performs that review itself, reading `.tmp/pr-diff-$NUMBER.txt` and the Spec (plus any `.tmp/base-conflict-context-$NUMBER.md` / `.tmp/edge-case-context-$NUMBER.md`), following the aspects and output format (`**[aspect] path:line**` / `- path:` / `- line:` / severity) in the matching `agents/review-*.md`. Do not stop the sub-agent yet: it keeps working while the orchestrator does this, which is what gives its result file time to appear.
 
    | Sub-agent without a result | Orchestrator performs |
    |----------------------------|-----------------------|
@@ -503,7 +500,8 @@ The foreground rule above cannot control how the harness returns a sub-agent: an
    | Workflow pipeline | the `review-spec` and `review-bug` rows above |
 
    Feed the substituted output into the same extraction as a sub-agent's result (10.0 step 5 / 10.2 step 4).
-4. **Record in the Review body**: before "General Comments", add one line per substituted sub-agent, e.g. `- Sub-agent fallback: review-light result not obtained (backgrounded); orchestrator performed aspects 1-4`. This makes it visible from the Review body whether Step 10's result came from the sub-agent's return value or from this fallback.
+4. **Late result, then stop**: after the substitution and before the extraction, `Read` the result file of every substituted `Task(...)` sub-agent once more. If it now exists, extract its findings too and merge them with the substitute's own: when both describe the same problem at the same `path` (the same or an adjacent `line`), keep one finding at the higher severity; keep every other finding from both. Then stop each sub-agent whose result file still does not exist with `TaskStop(task_id: "<agent ID>")`, using the agent ID reported by its launch call. The stop is best-effort: if `TaskStop` fails (no running task matches the ID, or `/review` runs as a fork and the main session that owns the agent refuses the stop), ignore the failure — the stop's outcome never blocks the Review body line in item 5 or the Review posting. This item covers sub-agents launched with `Task(...)`; the Workflow path is a separate launch mechanism and is not covered here.
+5. **Record in the Review body**: before "General Comments", add one line per sub-agent that went through this section. For a result taken from a result file: `- Sub-agent result file: review-bug-diff result read from .tmp/subagent-result-1234-review-bug-diff.md (not in the launch call's return value)`. For a substitution: `- Sub-agent fallback: review-light result not obtained (backgrounded); orchestrator performed aspects 1-4`, followed by `; late result file merged` when item 4 merged one. This makes it visible from the Review body whether Step 10's result came from the sub-agent's return value, from its result file, or from this fallback.
 
 ### Base Branch Conflict Pre-check
 
@@ -544,7 +542,7 @@ Run this section after the Base Branch Conflict Pre-check above, before evaluati
 
 1. If zero files match the firing conditions above, skip the rest of this subsection (do not write a context file).
 2. If more than 2 files match, process only the top 2 by diff hunk size, and record the excluded files in the context file's header (cap rationale: this measurement sub-agent carries out heavier work than the 10.3 verification sub-agent, so it uses a more conservative cap). This cap-triggered case always produces a context file (see step 4) — the excluded-file record must not silently disappear because the top-2 processed files happened to report zero findings.
-3. For each matching file (first-class PRs only — see Trust gating above), launch a `subagent_type="general-purpose"` Task sub-agent in parallel, each with an explicit `name="edge-case-$NUMBER-{n}"` (`{n}` = 1 or 2, the file's rank by diff hunk size; see "Sub-agent Names and Stop"). Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, writing any fixture files only under `.tmp/edge-case-fixtures-$NUMBER/` and deleting that directory before returning, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug, (7) if this file was matched via firing condition (c), additionally repeat the execution in (3) from a CWD other than the repository root — a subdirectory nested inside `.tmp/edge-case-fixtures-$NUMBER/` so it is covered by the same cleanup as the fixtures themselves — using identical arguments and fixtures, and compare the result against the repository-root execution — report any mismatch as a finding in the same format, noting both CWD values used. As soon as each measurement sub-agent has returned (with findings, or without a usable result), stop it with `TaskStop(task_id: "edge-case-$NUMBER-{n}")` (best-effort, see "Sub-agent Names and Stop").
+3. For each matching file (first-class PRs only — see Trust gating above), launch a `subagent_type="general-purpose"` Task sub-agent in parallel, each without a `name` and with its own result file `.tmp/subagent-result-$NUMBER-edge-case-{n}.md` (`{n}` = 1 or 2, the file's rank by diff hunk size; see "Sub-agent Names and Stop"). Pass the target file path, diff hunk, and Spec path in the prompt, and instruct it to: (1) identify the changed function/script, (2) construct fixture inputs covering the 5 axes above, (3) using the sub-agent's own Bash/Write permissions, actually execute the target code from the repository root (the worktree, equivalent to the PR HEAD) — execution is required, not simulation, writing any fixture files only under `.tmp/edge-case-fixtures-$NUMBER/` and deleting that directory before returning, (4) compare the measured behavior against the expected behavior, (5) if it finds a path where "no error occurs and a wrong value or default is silently returned," check whether the Spec documents it as an intentional fail-open, and report it as a finding if undocumented, (6) output findings in the same `**[Edge Case Execution] path:line**` format as review-bug, (7) if this file was matched via firing condition (c), additionally repeat the execution in (3) from a CWD other than the repository root — a subdirectory nested inside `.tmp/edge-case-fixtures-$NUMBER/` so it is covered by the same cleanup as the fixtures themselves — using identical arguments and fixtures, and compare the result against the repository-root execution — report any mismatch as a finding in the same format, noting both CWD values used, (8) write the same findings (or the single line "No findings") to the result file named in the prompt as your last action, and return them as your final response. Collect each measurement sub-agent's result as described in "Sub-agent Names and Stop" (return value, then result file); a measurement whose result cannot be obtained counts as no findings, and its sub-agent is stopped as described there.
 4. Write `.tmp/edge-case-context-$NUMBER.md` when either condition holds: (a) one or more sub-agents report 1+ findings, or (b) the cap in step 2 triggered (so the excluded-file header is preserved even if the processed files report zero findings). Do not write the file when neither condition holds (zero matches, or matches processed with zero findings and no cap triggered). Add this file, and `.tmp/edge-case-fixtures-$NUMBER/` as a defensive backstop in case a sub-agent's own cleanup (step 3) did not run, to the `rm -f`/`rm -rf` cleanup list in 14.2.
 
 **Review depth and rationale**: fires under `--light`, `--full`, and the Workflow path alike (independent of `REVIEW_DEPTH`). Rationale: the originating defect (#1055 / PR #1120) was found under `--light` — limiting this to `--full` only would reopen the detection gap this Issue is closing. Cost is bounded by the firing-condition gating (most PRs that never touch a parser/validator/normalizer see zero matches) and the 2-file cap.
@@ -582,21 +580,20 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    Task(
      subagent_type="review-light",
      description="Lightweight integrated review (all 4 aspects)",
-     name="review-light-$NUMBER",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json, result file=.tmp/subagent-result-$NUMBER-review-light.md[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
 5. **Pass results to Step 10**:
-   - Stop `review-light-$NUMBER` as soon as its result is in hand: `TaskStop(task_id: "review-light-$NUMBER")` (best-effort, see "Sub-agent Names and Stop"; when the result was not obtained, step 2 of "Sub-agent Result Fallback" stops it instead)
-   - If the `review-light` result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs the 4 aspects itself) before extracting
+   - Collect the `review-light` result as described in "Sub-agent Names and Stop" (return value, then `.tmp/subagent-result-$NUMBER-review-light.md`)
+   - If the `review-light` result was still not obtained, apply "Sub-agent Result Fallback" (it reads the result file, then the orchestrator performs the 4 aspects itself if needed) before extracting
    - Extract `path`, `line`, `body`, `severity` from `review-light` output
    - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
    - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
    - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
-   - Write Review body (acceptance criteria table + CI status + Sub-agent fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
+   - Write Review body (acceptance criteria table + CI status + Sub-agent result file / fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
 6. **Proceed to Step 10** (skip 10.1–10.3)
 
@@ -643,29 +640,26 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    Task(
      subagent_type="wholework:review-spec",
      description="Spec review",
-     name="review-spec-$NUMBER",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json, result file=.tmp/subagent-result-$NUMBER-review-spec.md[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (diff bug scan)",
-     name="review-bug-diff-$NUMBER",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json, result file=.tmp/subagent-result-$NUMBER-review-bug-diff.md. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (security scan)",
-     name="review-bug-security-$NUMBER",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json, result file=.tmp/subagent-result-$NUMBER-review-bug-security.md. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>][, edge case context: <contents of .tmp/edge-case-context-$NUMBER.md, if present>]"
    )
    ```
 
 4. **Integrate 2 groups' results and generate line comments JSON and Review body**:
    - Collect outputs from each group
-   - Stop each launched sub-agent as soon as its result is in hand, one call per agent and without waiting for the others: `TaskStop(task_id: "review-spec-$NUMBER")`, `TaskStop(task_id: "review-bug-diff-$NUMBER")`, `TaskStop(task_id: "review-bug-security-$NUMBER")` (best-effort, see "Sub-agent Names and Stop"; a sub-agent whose result was not obtained is stopped by step 2 of "Sub-agent Result Fallback")
-   - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs that review itself) instead of recording the group as unavailable
+   - Collect each launched sub-agent's result as described in "Sub-agent Names and Stop" (return value, then its result file)
+   - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (it reads the result file, then the orchestrator performs that review itself if needed) instead of recording the group as unavailable
    - Extract `path`, `line`, `body`, `severity` from each issue:
      - Detect issue start with `**[aspect name] filename:line-approx**` line
      - Read values from subsequent `- path: ...` / `- line: ...` lines (raw values without backticks)
@@ -675,7 +669,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules. When Step 9's Pre-existing failure exception classified the `Forbidden Expressions check` FAILURE as non-blocking (`PRE_EXISTING`/`FIXED`/`CLEAN`), add the `severity: "CONSIDER"`, `path: null` entry described in that section's Non-blocking outcome handling instead of a MUST entry.
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
-   - Write Review body (acceptance criteria table + CI status + Sub-agent fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
+   - Write Review body (acceptance criteria table + CI status + Sub-agent result file / fallback lines (if any) + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
 5. **Pass integrated results to Step 10.3**:
    - Run 2-stage verification on issues collected from review-bug×2 via verification sub-agents (see 10.3)
@@ -696,7 +690,6 @@ Launch verification sub-agents (Opus) in parallel for each issue collected from 
    Task(
      subagent_type="general-purpose",
      description="Bug issue verification #{n}",
-     name="bug-verify-$NUMBER-{n}",
      prompt="""Verify the following bug issue.
 
 PR title: {PR_TITLE}
@@ -710,12 +703,13 @@ Verification criteria:
 
 Output your conclusion as "PASS (problem confirmed)" or "REJECT (false positive)" and explain in 1-2 sentences.
 Format: VERDICT: PASS|REJECT
-Reason: {explanation}"""
+Reason: {explanation}
+Also write the same VERDICT and Reason lines to .tmp/subagent-result-$NUMBER-bug-verify-{n}.md as your last action."""
    )
    ```
 
 3. **Process verification results**:
-   - Stop each verification sub-agent as soon as its verdict is in hand: `TaskStop(task_id: "bug-verify-$NUMBER-{n}")` (best-effort, see "Sub-agent Names and Stop"). This includes a verification sub-agent whose result was not obtained: the issue passes through unverified, but its sub-agent is still stopped
+   - Collect each verdict as described in "Sub-agent Names and Stop" (return value, then the result file). A verification sub-agent whose verdict was not obtained is stopped as described there, and its issue passes through unverified
    - `VERDICT: PASS` → include issue in Step 10 integrated results
    - `VERDICT: REJECT` → filter out issue and record in rejection log; remove from `.tmp/review-comments-$NUMBER.json`
 
@@ -787,6 +781,7 @@ rm -f .tmp/review-body-$NUMBER.md .tmp/review-comments-$NUMBER.json
 ## Code Review
 
 - Sub-agent fallback: {sub-agent} result not obtained ({reason}); orchestrator performed {aspects}  (only when the Sub-agent Result Fallback was used; one line per substituted sub-agent)
+- Sub-agent result file: {sub-agent} result read from {result file path} ({reason})  (only when a result was taken from a result file instead of the launch call's return value; one line per sub-agent)
 
 ### General Comments (issues where path/line cannot be identified)
 
@@ -1015,6 +1010,7 @@ mkdir -p .tmp
 gh pr comment "$NUMBER" --body-file .tmp/review-summary-$NUMBER.md
 rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md .tmp/edge-case-context-$NUMBER.md
 rm -rf .tmp/edge-case-fixtures-$NUMBER/
+rm -f .tmp/subagent-result-$NUMBER-*.md
 ```
 
 **On failure**: output summary to terminal (fallback).
