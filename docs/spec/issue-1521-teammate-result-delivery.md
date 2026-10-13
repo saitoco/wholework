@@ -148,3 +148,42 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (判断の根拠: /review 側の症状は #1522 に分離。宛先の書き方と "main" の実挙動の確認は Spec に委ねる) / https://github.com/saitoco/wholework/issues/1521#issuecomment-6137388535
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-4 の文面どおりに 4 ファイルを変更した
+
+### Design Gaps/Ambiguities
+- 既存の 3 エージェントの Primary 文面は末尾が "to the team-lead." と、宛先 `"main"` と矛盾する語を含んでいた。Spec の置換文面 (requester / `team-lead` の再試行) でこの矛盾も解消された
+- bats がこの実行環境に無い。変更は散文の手順のみで、`tests/` に該当する検査は無い (`SendMessage` / `Delivery address` / `Result collection` を grep して 0 件) ため、bats の全体実行は行っていない。代わりに `validate-skill-syntax.py` / `check-allowed-tools.sh` / `check-forbidden-expressions.sh` / `check-bare-bracket-assertions.sh` / `check-language-convention.py` を実行し、すべて成功した
+- 新規テストは追加していないため、pre-implementation FAIL 確認の対象は 0 件
+
+### Rework
+- なし
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。4 ファイルの文言は Spec の置換文面どおりで、3 エージェントの Deliver Results と SKILL.md の 3 つの prompt、Delivery address 段落、Result collection は互いに矛盾しなかった
+
+### Recurring issues
+- Nothing to note
+
+### Acceptance criteria verification difficulty
+- Pre-merge の rubric 2 件は差分を読んで PASS と判断できた。Post-merge の opportunistic 条件は teammate の実機が必要で、`/review` では UNCERTAIN ではなく POST-MERGE として扱った
+- 軽量レビューの参考指摘: 「エラーなら 1 回だけ `team-lead` に再試行」は、`main` の一時的な失敗でも `team-lead` に送りうる。「両方に送らない」規則と idle 時のフォールバック読み取りで影響は限定的なため、対応は不要と判断した
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `--light` (Size M 相当) で `review-light` 1 エージェントを実行し、4 観点とも指摘なし。MUST/SHOULD の修正は発生しなかったため Step 12/13 は実質スキップした
+- Pre-merge の rubric 2 件は差分の読み取りで PASS (Issue 本文は `/code` 時点でチェック済み)
+
+### Deferred Items
+- Post-merge の opportunistic 条件 (Size L/XL の Issue で `/issue` を対話セッションから実行し、フォールバックのファイルを使わずに 3 エージェントの結果が届くこと): teammate の実機が必要なため `/verify` 以降で観察する
+
+### Notes for Next Phase
+- CI は全 17 ジョブ SUCCESS (bats を含む)。`/merge` の前提は満たしている
+- `/review` 側の同系統の症状は #1522 の対象で、本 PR では変更していない

@@ -51,8 +51,8 @@ Analyze the collected retrospective information for:
 
 ### 4. Deliver Results
 
-- **Primary**: after generating the Output Format markdown, call `SendMessage({to: "main", message: <full Output Format markdown>, summary: "<5-10 words>"})` to deliver the results to the team-lead.
-- **Fallback**: if `SendMessage` is unavailable or errors, `Write` the same markdown to `.tmp/issue-$NUMBER-precedent.md` and state that path in your final response text.
+- **Primary**: after generating the Output Format markdown, call `SendMessage({to: "main", message: <full Output Format markdown>, summary: "<5-10 words>"})` to deliver the results to the requester (the session that launched you). `"main"` is the main conversation and is documented for background subagents only, so the call can be rejected when you were launched as an in-process teammate (a named agent in an agent team). If it returns an error, retry once with `to: "team-lead"`, the requester's address in an agent team. Stop at the first call that succeeds (do not send the markdown to both addresses), name that address in your final response text, and do not repeat the markdown there.
+- **Fallback**: if `SendMessage` is unavailable, or both addresses return an error, `Write` the same markdown to `.tmp/issue-$NUMBER-precedent.md` and state that path in your final response text.
 
 ## Output Format
 

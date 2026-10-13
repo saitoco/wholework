@@ -572,16 +572,18 @@ Get steering doc paths with Glob. Launch these 3 subagents in a single message t
 
 ```text
 Task(subagent_type="issue-scope", description="Scope investigation", name="scope-$NUMBER",
-  prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_FILES, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-scope.md instead and state the path in your final response.")
+  prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_FILES, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if that call returns an error (for example because you run as an in-process teammate), retry once with SendMessage(to=\"team-lead\"); if SendMessage is unavailable or both calls return an error, Write it to .tmp/issue-$NUMBER-scope.md instead and state the path in your final response; otherwise name the address that worked in your final response.")
 
 Task(subagent_type="issue-risk", description="Risk investigation", name="risk-$NUMBER",
-  prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-risk.md instead and state the path in your final response.")
+  prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if that call returns an error (for example because you run as an in-process teammate), retry once with SendMessage(to=\"team-lead\"); if SendMessage is unavailable or both calls return an error, Write it to .tmp/issue-$NUMBER-risk.md instead and state the path in your final response; otherwise name the address that worked in your final response.")
 
 Task(subagent_type="issue-precedent", description="Precedent investigation", name="precedent-$NUMBER",
-  prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-precedent.md instead and state the path in your final response.")
+  prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if that call returns an error (for example because you run as an in-process teammate), retry once with SendMessage(to=\"team-lead\"); if SendMessage is unavailable or both calls return an error, Write it to .tmp/issue-$NUMBER-precedent.md instead and state the path in your final response; otherwise name the address that worked in your final response.")
 ```
 
-**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically — no team-lead polling required. Wait to receive messages from all 3 agents before proceeding to Step 12b. As soon as a given agent's result arrives, immediately stop that agent alone — rather than waiting for all 3 — so no agent sits idle in a pane longer than necessary:
+**Delivery address**: a named launch starts each agent either as a background subagent or, in an interactive session with agent teams enabled, as an in-process teammate, and the harness decides which one applies. The requester's `SendMessage` address differs between the two: `"main"` (the main conversation, documented for background subagents only) for a background subagent, and `"team-lead"` for a teammate, for which `"main"` can be rejected. Each prompt above therefore names both addresses, `"main"` first, and falls back to a file only when both fail, so the result reaches this session in either case.
+
+**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically, to this session under whichever of the two addresses above the agent used — no polling is required. Wait to receive messages from all 3 agents before proceeding to Step 12b. As soon as a given agent's result arrives, immediately stop that agent alone — rather than waiting for all 3 — so no agent sits idle in a pane longer than necessary:
 
 ```text
 TaskStop(task_id: "scope-$NUMBER")      # right after receiving the scope agent's SendMessage
@@ -589,7 +591,7 @@ TaskStop(task_id: "risk-$NUMBER")       # right after receiving the risk agent's
 TaskStop(task_id: "precedent-$NUMBER")  # right after receiving the precedent agent's SendMessage
 ```
 
-If no message and no fallback file appear from a given agent within 3 `idle_notification` cycles, treat it as silently failed: read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results, applying the same handling as an explicit error if the file is also absent — then still call `TaskStop(task_id: "<agent-name>")` for that agent to release its pane.
+If no message and no fallback file appear from a given agent within 3 `idle_notification` cycles, treat it as silently failed (this also covers a send that the harness accepted but did not route to this session): read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results, applying the same handling as an explicit error if the file is also absent — then still call `TaskStop(task_id: "<agent-name>")` for that agent to release its pane.
 
 On failure: fall back to standard scope assessment (when both `SendMessage` delivery and the `Write` fallback fail for an agent).
 
