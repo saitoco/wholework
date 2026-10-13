@@ -175,15 +175,15 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 - 軽量レビューの参考指摘: 「エラーなら 1 回だけ `team-lead` に再試行」は、`main` の一時的な失敗でも `team-lead` に送りうる。「両方に送らない」規則と idle 時のフォールバック読み取りで影響は限定的なため、対応は不要と判断した
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` (Size M 相当) で `review-light` 1 エージェントを実行し、4 観点とも指摘なし。MUST/SHOULD の修正は発生しなかったため Step 12/13 は実質スキップした
-- Pre-merge の rubric 2 件は差分の読み取りで PASS (Issue 本文は `/code` 時点でチェック済み)
+- Pre-merge AC は全件チェック済み、review の完了シグナルも organic のため、ゲートは通過した
+- コンフリクトなし・CI 成功で、`squash` (設定の既定) により PR #1523 をマージした
 
 ### Deferred Items
-- Post-merge の opportunistic 条件 (Size L/XL の Issue で `/issue` を対話セッションから実行し、フォールバックのファイルを使わずに 3 エージェントの結果が届くこと): teammate の実機が必要なため `/verify` 以降で観察する
+- Post-merge の opportunistic 条件 (teammate として起動した `/issue` Step 12a の結果が、フォールバックのファイルを使わずに届くこと): 実機が必要なため `/verify` 以降で観察する
 
 ### Notes for Next Phase
-- CI は全 17 ジョブ SUCCESS (bats を含む)。`/merge` の前提は満たしている
+- `/verify` は Post-merge 条件が opportunistic のため、実機観察まで未確定になりうる
 - `/review` 側の同系統の症状は #1522 の対象で、本 PR では変更していない
