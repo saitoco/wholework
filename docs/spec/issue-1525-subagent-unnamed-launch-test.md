@@ -370,3 +370,29 @@ assert_not_flagged() {
 ### Notes for Next Phase
 - AC4 を判定するときは、最新 run の `headSha` が実装コミット以降であることを確かめる (`gh run list --workflow=test.yml --branch=main --limit=1 --json headSha,conclusion,status`)。`in_progress` なら PENDING として再実行する
 - macOS (BSD grep) での実行は未確認 (必須ではない)。CI の bats は Ubuntu の 1.10.0
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- triage と `/issue` の AC 監査が、AC4 の `gh pr checks` の不整合 (patch route) と、置き換え後の `gh run list` の形が実装前でも PASS しうる点を事前に拾った。Spec はこれを Notes に引き継ぎ、`/verify` で `headSha` を確かめる手順まで残していた
+- 規約からの逸脱: spec フェーズで比較用の一時ファイル 2 件を Write ツールではなく Bash のリダイレクトで作った (削除済み、実害なし)
+
+#### design
+- 規則を「`=` の直後に引用符」に絞った判断は妥当。緩い `name=` だと `verify-executor.md` の `select(.name==…)` 4 行を誤検出するのを、spec 時点で実測して避けた
+
+#### code
+- Spec の試作をそのまま採用し、手戻りなし。旧名を足したコピーで実ファイルの検査 2 件だけが FAIL することを確認している
+
+#### review
+- patch route のため review なし
+
+#### merge
+- patch route のため merge なし (main へ直接 push)
+
+#### verify
+- AC4 は、実装コミット `98b5633c` を含む run (headSha `b9ca9ff6`) の完了を待ってから PASS と判定した。verify 開始時点の最新 run は `in_progress` で、その 1 つ前 (`31643ad3`、spec のコミット) は既に `success` だった。待たずに最新の完了 run を読んでいたら、実装前の結果で PASS になるところだった
+
+### Improvement Proposals
+- patch route の CI 確認の標準形 (`github_check "gh run list --workflow=test.yml --branch=main --limit=1 ..." "success"`、`skills/issue/SKILL.md` の Acceptance Criteria Writing Guide と `modules/verify-classifier.md`) は、最新 run が実装コミットより前のものでも PASS する。`/verify` の `github_check` で `gh run list` を判定するときに、最新 run の `headSha` が `closes #N` の実装コミットを含むことを確かめる手順を `modules/verify-executor.md` に足す (含まなければ PENDING として扱う)。今回は triage の監査コメントと Spec の Notes を人手で引き継いで回避したが、標準形を使う patch route の Issue 全般で同じことが起きうる
