@@ -468,7 +468,7 @@ In both cases, do not fix the violation inline in this PR.
 
 Every `Task(...)` launched in Step 10 — the Parser/Validator Edge Case Pre-check measurement sub-agents, 10.0, 10.2, and 10.3 — is launched **without a `name`** (Issue #1522; this replaces the explicit names of Issue #1478). With agent teams enabled in an interactive session, a launch that carries a `name` starts an in-process teammate, which reports through team messages instead of returning a result: its final answer goes to the main session, not to this orchestrator, and when `/review` runs as a fork (a Skill with `context: fork` launched from an interactive session) the orchestrator can neither receive that answer nor stop the teammate. An unnamed launch is an ordinary sub-agent whose result returns to the orchestrator. Never add a `name` to a Step 10 launch, not even to make a later `TaskStop` easier.
 
-**Result file.** The harness decides how a launch returns (the result itself, a background acknowledgment, or a teammate start), and the orchestrator cannot control it. Every Step 10 launch therefore also gives the sub-agent its own result file, `.tmp/subagent-result-$NUMBER-<label>.md`, and instructs it to `Write` its complete result there as its last action and to return the same text as its final response (the `agents/review-*.md` files carry a matching "Deliver Results" section). `$NUMBER` is the PR number. The labels are `review-light` (10.0), `review-spec` (10.2), `review-bug-diff` and `review-bug-security` (10.2), `bug-verify-{n}` (10.3, `{n}` the 1-based index of the issue) and `edge-case-{n}` (Edge Case Pre-check, `{n}` the file's rank). Before the first Step 10 launch, run `mkdir -p .tmp` and then `rm -f .tmp/subagent-result-$NUMBER-*.md` as two separate commands, so that a file left by an earlier run is never read as this run's result. A file is the one channel that crosses the fork boundary: a message sent by a sub-agent goes out under the parent session's address, and a reply or notification is delivered to the parent session, not to the fork.
+**Result file.** The harness decides how a launch returns (the result itself, a background acknowledgment, or a teammate start), and the orchestrator cannot control it. Every Step 10 launch therefore also gives the sub-agent its own result file, `.tmp/subagent-result-$NUMBER-<label>.md`, and instructs it to `Write` its complete result there as its last action and to return the same text as its final response (the `agents/review-*.md` files carry a matching "Deliver Results" section). `$NUMBER` is the PR number. The labels are `review-light` (10.0), `review-spec` (10.2), `review-bug-diff` and `review-bug-security` (10.2), `bug-verify-{n}` (10.3, `{n}` the 1-based index of the issue) and `edge-case-{n}` (Edge Case Pre-check, `{n}` the file's rank). Before the first Step 10 launch, run `mkdir -p .tmp` and then `rm -f .tmp/subagent-result-$NUMBER-*.md` as two separate commands, so that a file left by an earlier run is never read as this run's result. With zsh, a glob that matches no file makes `rm -f` exit non-zero with `no matches found`; that is the normal first-run case, so ignore it and do not retry or report it as a failure. A file is the one channel that crosses the fork boundary: a message sent by a sub-agent goes out under the parent session's address, and a reply or notification is delivered to the parent session, not to the fork.
 
 **Collecting a result**, per sub-agent, in this order, stopping at the first source that yields it:
 
@@ -659,7 +659,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 4. **Integrate 2 groups' results and generate line comments JSON and Review body**:
    - Collect outputs from each group
    - Collect each launched sub-agent's result as described in "Sub-agent Names and Stop" (return value, then its result file)
-   - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (the orchestrator performs that review itself) instead of recording the group as unavailable
+   - For a sub-agent whose result was not obtained in this turn, apply "Sub-agent Result Fallback" (it reads the result file, then the orchestrator performs that review itself if needed) instead of recording the group as unavailable
    - Extract `path`, `line`, `body`, `severity` from each issue:
      - Detect issue start with `**[aspect name] filename:line-approx**` line
      - Read values from subsequent `- path: ...` / `- line: ...` lines (raw values without backticks)
@@ -781,7 +781,7 @@ rm -f .tmp/review-body-$NUMBER.md .tmp/review-comments-$NUMBER.json
 ## Code Review
 
 - Sub-agent fallback: {sub-agent} result not obtained ({reason}); orchestrator performed {aspects}  (only when the Sub-agent Result Fallback was used; one line per substituted sub-agent)
-- Sub-agent result file: {sub-agent} result read from its result file ({reason})  (only when a result was taken from a result file instead of the launch call's return value; one line per sub-agent)
+- Sub-agent result file: {sub-agent} result read from {result file path} ({reason})  (only when a result was taken from a result file instead of the launch call's return value; one line per sub-agent)
 
 ### General Comments (issues where path/line cannot be identified)
 
@@ -1008,8 +1008,9 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 ```bash
 mkdir -p .tmp
 gh pr comment "$NUMBER" --body-file .tmp/review-summary-$NUMBER.md
-rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md .tmp/edge-case-context-$NUMBER.md .tmp/subagent-result-$NUMBER-*.md
+rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md .tmp/edge-case-context-$NUMBER.md
 rm -rf .tmp/edge-case-fixtures-$NUMBER/
+rm -f .tmp/subagent-result-$NUMBER-*.md
 ```
 
 **On failure**: output summary to terminal (fallback).
