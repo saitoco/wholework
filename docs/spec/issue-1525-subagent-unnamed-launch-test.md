@@ -341,3 +341,32 @@ assert_not_flagged() {
 - saito / MEMBER / first-class / ## Issue Retrospective (検査対象を 2 ファイルに限った判断、AC4 を `gh pr checks` から `gh run list` の形へ変えた経緯) / https://github.com/saitoco/wholework/issues/1525#issuecomment-6147904217
 - saito / MEMBER / first-class / ⚠️ Triage AC audit: verify command に問題があります (AC4 の `gh run list` の形が、実装前でも main の最新 run の `success` を読んで PASS しうる点の指摘) / https://github.com/saitoco/wholework/issues/1525#issuecomment-6147904794
 - 参考: cutoff (`phase/issue` の付与、2026-10-13T14:29:35Z) より前の triage の AC 監査コメント (saito / MEMBER / https://github.com/saitoco/wholework/issues/1525#issuecomment-6147862473) は `/issue` で消費済みで、Issue 本文の AC4 (`gh pr checks` から `gh run list` への変更) に反映されている
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Notes の「検証済みの試作」をそのまま `tests/subagent-launch-unnamed.bats` として作成した
+
+### Design Gaps/Ambiguities
+- 新規テストの検証は、検出器の単体テスト 12 件が実ファイルのコピーへの追記で動く形のため、実装前状態へ戻して FAIL を見る確認の対象外 (対象ファイルを変更する実装ではない)。代わりに Implementation Step 3 の最小ツリーで旧名を足したコピーを実行し、実ファイルの検査 2 件だけが FAIL して残り 13 件は PASS のままであることを確認した
+- Steering Docs の同期候補 (`docs/structure.md`・`README.md`) は、個別の `tests/*.bats` の列挙が無いことを再確認し、変更しなかった
+- `scripts/check-language-convention.py` の対象は `skills/`・`modules/`・`scripts/` で `tests/` を含まないため、この変更では対象外
+- bats は実行環境に導入済み (1.11.1) なので、AC2 (`command "bats …"`) はローカルで実行して PASS を確認した。bats-absent の除外は発火しない
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の試作を変更せずに採用した (15 件 PASS。通常実行・`--jobs 4`・`LC_ALL=C` のいずれも同じ)
+- AC1〜AC3 は Step 10 で Issue 本文のチェックボックスを `[x]` にした。AC3 (rubric) は、旧名の再混入で実ファイルの検査 2 件が FAIL し、説明文・紛らわしい文字列は検出されないことを実測して判断した
+
+### Deferred Items
+- AC4 (`github_check "gh run list" … "success"`): 実装コミットの push 前は評価できないため未チェックのまま。push 後の CI の結果を `/verify` で判定する
+- Post-merge の opportunistic 条件: `skills/review/SKILL.md` または `modules/verify-executor.md` を変更する将来の Issue まで SKIPPED のまま
+
+### Notes for Next Phase
+- AC4 を判定するときは、最新 run の `headSha` が実装コミット以降であることを確かめる (`gh run list --workflow=test.yml --branch=main --limit=1 --json headSha,conclusion,status`)。`in_progress` なら PENDING として再実行する
+- macOS (BSD grep) での実行は未確認 (必須ではない)。CI の bats は Ubuntu の 1.10.0
