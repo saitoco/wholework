@@ -65,6 +65,11 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5579802825
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5653263009
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5957336604
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/724#issuecomment-5957414747
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-5978122681
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-6073948788
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-6117273110
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/724#issuecomment-6137894397
 ## Notes
 
 - 対象ファイル `skills/issue/spec-test-guidelines.md` は現時点で存在確認済み (domain file, type: domain, skill: issue)
