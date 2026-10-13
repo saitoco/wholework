@@ -162,18 +162,28 @@ Issue 本文が Spec に委ねた 2 点は次のとおり決めた (根拠と却
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。4 ファイルの文言は Spec の置換文面どおりで、3 エージェントの Deliver Results と SKILL.md の 3 つの prompt、Delivery address 段落、Result collection は互いに矛盾しなかった
+
+### Recurring issues
+- Nothing to note
+
+### Acceptance criteria verification difficulty
+- Pre-merge の rubric 2 件は差分を読んで PASS と判断できた。Post-merge の opportunistic 条件は teammate の実機が必要で、`/review` では UNCERTAIN ではなく POST-MERGE として扱った
+- 軽量レビューの参考指摘: 「エラーなら 1 回だけ `team-lead` に再試行」は、`main` の一時的な失敗でも `team-lead` に送りうる。「両方に送らない」規則と idle 時のフォールバック読み取りで影響は限定的なため、対応は不要と判断した
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の設計どおり、宛先は `main` → `team-lead` → ファイルの順序つきにした。`main` を先にしたのは、agent teams 無効の既定環境で今までと同じ呼び出しが最初に成功し、挙動が変わらないため
-- 最終応答に成功した宛先を 1 行で書かせ、markdown 本体の重複は書かせない (Post-merge の opportunistic 判定と切り分けのため)
-- Pre-merge の rubric 条件 2 件は、差分を読んで満たすと判断し Issue 本文でチェック済みにした
+- `--light` (Size M 相当) で `review-light` 1 エージェントを実行し、4 観点とも指摘なし。MUST/SHOULD の修正は発生しなかったため Step 12/13 は実質スキップした
+- Pre-merge の rubric 2 件は差分の読み取りで PASS (Issue 本文は `/code` 時点でチェック済み)
 
 ### Deferred Items
-- Post-merge の opportunistic 条件 (Size L/XL の Issue で `/issue` を対話セッションから実行し、フォールバックのファイルを使わずに 3 エージェントの結果が届くこと): teammate の実機が必要で、headless の `/code` では再現できない
+- Post-merge の opportunistic 条件 (Size L/XL の Issue で `/issue` を対話セッションから実行し、フォールバックのファイルを使わずに 3 エージェントの結果が届くこと): teammate の実機が必要なため `/verify` 以降で観察する
 
 ### Notes for Next Phase
-- `/review` は 4 ファイルの文言が互いに揃っているか (特に `agents/issue-risk.md` の `### 5. Deliver Results` と SKILL.md の 3 つの prompt、Delivery address 段落、Result collection) を見ること
-- `/review` 側の同系統の症状は #1522 の対象で、本 PR では `agents/review-*.md` と `skills/review/SKILL.md` を変更していない
-- この環境には bats が無く、PR では bats スイートを実行していない。CI の結果で確認すること
+- CI は全 17 ジョブ SUCCESS (bats を含む)。`/merge` の前提は満たしている
+- `/review` 側の同系統の症状は #1522 の対象で、本 PR では変更していない
