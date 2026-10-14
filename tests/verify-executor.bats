@@ -6,7 +6,11 @@
 # skills/issue/spec-test-guidelines.md. Confirms these templates use
 # --branch=main (not a literal --commit=<SHA>, which always returns an empty
 # result — see modules/verify-classifier.md § Patch Route CI Verification
-# Note), plus verify-executor.md html_check assertions.
+# Note), plus verify-executor.md html_check assertions and the headSha
+# run/commit correspondence check of the `gh run list` github_check
+# (Issue #1526).
+
+load 'helpers/markdown-section'
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 VERIFY_CLASSIFIER="$PROJECT_ROOT/modules/verify-classifier.md"
@@ -100,4 +104,30 @@ VERIFY_SKILL="$PROJECT_ROOT/skills/verify/SKILL.md"
     grep -q "Run command containment" "$VERIFY_EXECUTOR"
     grep -q "Exact job name match" "$VERIFY_EXECUTOR"
     grep -q "Execution target path containment" "$VERIFY_EXECUTOR"
+}
+
+@test "verify-executor: gh run list section documents the headSha run/commit correspondence check" {
+    section="$(md_section "$VERIFY_EXECUTOR" '### github_check: `gh run list` In-Progress Detection Constraint')"
+    printf '%s' "$section" | grep -qF 'headSha' || false
+    printf '%s' "$section" | grep -qF 'Run/commit correspondence check' || false
+    printf '%s' "$section" | grep -qF 'closes #<ISSUE_NUMBER>([^0-9]|$)' || false
+    printf '%s' "$section" | grep -qF 'compare/<IMPL_SHA>...<RUN_HEAD_SHA>' || false
+    printf '%s' "$section" | grep -qF 'PENDING'
+}
+
+@test "verify-executor: github_check table row points to the run/commit correspondence check" {
+    row="$(grep -F '| `github_check "gh_command" "expected_value"` |' "$VERIFY_EXECUTOR")"
+    [ -n "$row" ]
+    printf '%s' "$row" | grep -qF 'Run/commit correspondence check'
+}
+
+@test "verify-executor: only one heading contains gh run list (section_contains heading match stays unambiguous)" {
+    count="$(grep -cE '^#+ .*gh run list' "$VERIFY_EXECUTOR")"
+    [ "$count" -eq 1 ]
+}
+
+@test "verify-classifier: Patch Route CI Verification Note points to the run/commit correspondence check" {
+    section="$(md_section "$VERIFY_CLASSIFIER" '### Patch Route CI Verification Note')"
+    printf '%s' "$section" | grep -qF 'Run/commit correspondence check' || false
+    printf '%s' "$section" | grep -qF 'headSha'
 }
