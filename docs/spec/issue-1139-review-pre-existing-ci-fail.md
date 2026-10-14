@@ -38,6 +38,11 @@ Step 9 の「Blocking by default」段落が、CI FAILURE の**帰属** (この 
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5579807241
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5653265385
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5957347837
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1139#issuecomment-5964106702
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-5978126117
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-6073953500
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-6117277501
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1139#issuecomment-6137899854
 ## Changed Files
 
 - `skills/review/SKILL.md`: (1) frontmatter `allowed-tools` の `Bash(...)` パターンに `${CLAUDE_PLUGIN_ROOT}/scripts/pre-merge-check.sh:*` を追加 (2) Step 9「Blocking by default」段落の最終文を差し替え (3) Step 9 に `### Pre-existing failure exception (baseline attribution)` サブセクションを新設 (4) Step 12.2 Fix Work に out-of-scope エントリの修正禁止を 1 文追加
