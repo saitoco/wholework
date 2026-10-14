@@ -251,3 +251,30 @@ PENDING の発生条件に「run が実装コミットをまだ含まない」�
 ### Notes for Next Phase
 - `/verify` の AC 2 (rubric) は `modules/verify-executor.md` の Run/commit correspondence check 節 (手順 3 の `behind` / `diverged` → PENDING) を根拠に判定できる。
 - この Issue 自身の push 直後に `/verify` が走ると、新手順の最初の実例になりうる。`git log origin/main --extended-regexp --grep='closes #1526([^0-9]|$)'` で実装コミットを特定できる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- triage の AC 監査が AC 1 の見出し引数 (`"github_check"` が 2 節に一致) を指摘し、`/issue` が `"gh run list"` に絞った。実装は 1 節に確定した状態で進み、見出しの一意性を守るテスト (テスト 20) まで用意された
+
+#### design
+- 適用範囲を patch route・full mode に限り、pr route (squash 後に `diverged` になる) や実装コミットを特定できない経路 (operate route・XL 親など) を対象外として明示した判断は妥当
+- `--grep="closes #N"` が `#152` で `#1525` のコミットにも当たる弱さを、番号の末尾を締めて回避した。同じ弱さが `scripts/reconcile-phase-state.sh` などにも残ることは Spec に記録済み (スコープ外)
+
+#### code
+- 手戻りなし。新規テスト 4 件のうち 3 件は実装前の modules で FAIL することを確認済み
+- AC 2 (rubric) は、採点役を通さずに `/code` のセッションが自分で判定してチェックした。結果自体は文面と照らして妥当だが、rubric の独立判定は経ていない
+
+#### review
+- patch route のため review なし
+
+#### merge
+- patch route のため merge なし (main へ直接 push)
+
+#### verify
+- verify 開始時点で、実装コミットを含む最新 run (`b63d4e79`) は `in_progress` で、1 つ前の run (`4cdb5e41`) は `success` だった。#1526 には `gh run list` 型の AC が無いため、新しい手順は今回は実行されていない。run の完了を待ち、実装コミットを含む run が `success` であることを確認した
+
+### Improvement Proposals
+- N/A
