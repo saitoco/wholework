@@ -224,3 +224,30 @@ PENDING の発生条件に「run が実装コミットをまだ含まない」�
 
 - saito / MEMBER / first-class / ## Issue Retrospective (AC 1 の `section_contains` の見出し引数を `"github_check"` から `"gh run list"` に絞った判断。書き足す節は In-Progress Detection Constraint に確定) / https://github.com/saitoco/wholework/issues/1526#issuecomment-6158078372
 - 参考: cutoff (`phase/issue` の付与、2026-10-14T00:23:32Z) より前の triage の AC 監査コメント (saito / MEMBER / https://github.com/saitoco/wholework/issues/1526#issuecomment-6158026872) は `/issue` で消費済みで、提案 (見出し引数の絞り込み) は Issue 本文の AC 1 に反映済み
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Notes の A〜F の文面をそのまま `modules/verify-executor.md` (4 か所) と `modules/verify-classifier.md` (2 か所) に反映し、`tests/verify-executor.bats` に新規テスト 4 件を追加した。
+
+### Design Gaps/Ambiguities
+- `md_section` がバッククォートを含む見出しを前方一致で拾えるかという Uncertainty は、新規テスト 18 が PASS したことで解消した。
+- Confirmed pre-implementation FAIL for 3 new test(s) (テスト 18、19、21)。テスト 20 は見出しの一意性を守るガードで、実装前から PASS するのは設計どおり (Spec の Notes に記載)。
+- 全スイート (`bats --jobs 4 tests/`、2220 件) は FAIL なし。`validate-skill-syntax.py`、`check-forbidden-expressions.sh`、言語規約チェックも問題なし。
+
+### Rework
+- 手戻りなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Notes の文面 A〜F をそのまま適用した (文面の独自調整なし)。
+- patch route の最終 Implementation Step (テスト追加) を未コミットで Step 11 に持ち越し、`closes #1526` を実装コミットに付けた。
+
+### Deferred Items
+- Post-merge の opportunistic AC (patch route の Issue で `/verify` 開始時に実装コミットの run が未登録または `in_progress` のとき PENDING になる) は、実際の patch route Issue の `/verify` でのみ観測できるため未チェックのまま。
+
+### Notes for Next Phase
+- `/verify` の AC 2 (rubric) は `modules/verify-executor.md` の Run/commit correspondence check 節 (手順 3 の `behind` / `diverged` → PENDING) を根拠に判定できる。
+- この Issue 自身の push 直後に `/verify` が走ると、新手順の最初の実例になりうる。`git log origin/main --extended-regexp --grep='closes #1526([^0-9]|$)'` で実装コミットを特定できる。
