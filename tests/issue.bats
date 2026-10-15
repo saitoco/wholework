@@ -43,3 +43,18 @@ setup() {
     grep -q 'skill-dev-verify-audit.md' "$PROJECT_ROOT/skills/issue/SKILL.md"
     grep -q 'regardless of whether the .triaged. label is present or absent' "$PROJECT_ROOT/skills/issue/SKILL.md"
 }
+
+# Content-assertion tests for the observation event name vocabulary check (added for #1527).
+# The vocabulary table lives only in modules/verify-classifier.md; the /issue procedure must
+# point at it instead of restating its values. Guards against accidental removal or a pasted copy.
+
+@test "issue skill Step 4 documents observation event name vocabulary check" {
+    grep -qi 'event name vocabulary check' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    grep -q 'Tag Extraction Rule' "$PROJECT_ROOT/skills/issue/SKILL.md"
+}
+
+@test "issue skill does not restate the event vocabulary table held by verify-classifier" {
+    grep -q 'pr-review-light' "$PROJECT_ROOT/modules/verify-classifier.md"
+    run grep -q 'pr-review-light' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    [ "$status" -eq 1 ]
+}

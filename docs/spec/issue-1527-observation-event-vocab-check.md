@@ -137,3 +137,41 @@
 
 - saito / MEMBER / first-class / ⚠️ Triage AC audit: AC3 の verify command が実装前から常時 PASS になる点の指摘と、rubric 文言の絞り込み案 (判断は /spec に委任) / https://github.com/saitoco/wholework/issues/1527#issuecomment-6194869943
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズの実施記録 (曖昧点 0 件、AC3 に補助確認を追加した経緯) / https://github.com/saitoco/wholework/issues/1527#issuecomment-6194870393
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec「挿入文案ドラフト」の 3 段落 (module / issue SKILL.md / spec SKILL.md) と bats 4 件を文言どおりに挿入した
+
+### Design Gaps/Ambiguities
+- 新規テストの肯定アサートが実装前 FAIL になることを確認した (`git show HEAD:<path>` で実装前内容を参照: `event name vocabulary check` は両 SKILL.md で 0 件)。Confirmed pre-implementation FAIL for 2 new test(s) (肯定アサートを持つ 2 件)。残り 2 件 (表の非複製) は不変条件のガードで、実装前から PASS するのは設計どおり
+- `CLAUDE_PLUGIN_ROOT` が未設定の実行環境だったため、`${CLAUDE_PLUGIN_ROOT}/scripts/...` の呼び出しは worktree 内のリポジトリ相対パスで実行した (この repo 自体がプラグイン本体)
+- worktree 分離ガードは `git ... | cmd` のようなパイプや `&&` 連結を含む複合コマンドを拒否した。単一コマンドに分けて実行すれば通る
+
+### Rework
+- なし
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note。差分は Spec の「挿入文案ドラフト」と一致し、節名の参照 (`Event Values and Syntax` / `Tag Extraction Rule`) も実在する見出しに解決した
+
+### Recurring issues
+- Nothing to note。MUST / SHOULD の指摘は 0 件。CONSIDER 1 件 (非複製テストが `pr-review-light` 1 語のみを検査する) は Spec Notes に記録済みの設計上の限界で、対応は見送った
+
+### Acceptance criteria verification difficulty
+- rubric 3 件と `file_not_contains` 2 件は、差分と対象ファイルの直接確認で判定できた (UNCERTAIN は 0 件)。AC3 の `file_not_contains` は実装前から PASS する性質だが、rubric 側が「表の複製が無いこと」を実質的に見ているため判定に支障はなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 軽量レビュー (`--light`、Size M) で review-light が 4 観点を実施し、MUST 0 件・CONSIDER 1 件の結果を `COMMENTED` で投稿した
+- rubric AC は grader サブエージェントを起動せず、差分と対象ファイルを直接読んで判定した
+
+### Deferred Items
+- 非複製テストの検査語を `pr-review-full` / `watchdog-kill` にも広げる案 (CONSIDER)。現状は両 SKILL.md で 0 件のため対応不要と判断した
+
+### Notes for Next Phase
+- CI は 17 件すべて SUCCESS。Post-merge の AC は無いため、`/merge 1529` 後の `/verify` は確認対象が無い
+- 既存ドリフト (`fix-cycle` 行の「Not yet implemented」記述が古い) は本 Issue の範囲外のまま

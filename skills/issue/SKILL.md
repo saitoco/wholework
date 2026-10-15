@@ -207,6 +207,10 @@ Always read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration-fi
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|observation|manual -->` tags to each post-merge condition.
 
+**Event name vocabulary check (before assigning `observation`):**
+
+Before keeping `verify-type: observation` on a condition, check its `event=<name>` against the event vocabulary table in `modules/verify-classifier.md` § observation Type: Event Values and Syntax. Read that table when the check runs and do not restate its values here. Read `event=` only from inside the `verify-type: observation` comment, per that module's § Tag Extraction Rule, not from the condition prose or from a `verify:` comment. When `event=` is omitted or its value is not in the table, no skill ever fires that event and the condition could never be verified. Output a warning (for example `Warning: observation condition uses event '<name>', which is not in the vocabulary of modules/verify-classifier.md`) and fix the tag now instead of leaving it to the module's Unknown event fallback: correct the name when it is a misspelling of a vocabulary entry; otherwise drop `observation` together with its `event=` and `session=` attributes and re-classify the condition with that module's criteria minus the `observation` row (`opportunistic` when the text matches "verify X when `/skill-name` is run", else `manual`). The replacement follows from the criteria, so no clarification question is needed. Run this check for every `observation` condition in the body, including ones that were already present when refining an existing Issue.
+
 **Firing likelihood check (before assigning `observation`):**
 
 Before tagging a condition `verify-type: observation`, apply `modules/verify-classifier.md` § observation Type: Firing Likelihood Check — confirm the condition text states which `event=<name>` firing supplies evidence and what that evidence is. If it cannot, use one of that section's alternatives (resolve now, fall back to `auto`, or drop the condition) instead of assigning `observation`.
