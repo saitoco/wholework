@@ -137,3 +137,30 @@
 
 - saito / MEMBER / first-class / ⚠️ Triage AC audit: AC3 の verify command が実装前から常時 PASS になる点の指摘と、rubric 文言の絞り込み案 (判断は /spec に委任) / https://github.com/saitoco/wholework/issues/1527#issuecomment-6194869943
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズの実施記録 (曖昧点 0 件、AC3 に補助確認を追加した経緯) / https://github.com/saitoco/wholework/issues/1527#issuecomment-6194870393
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec「挿入文案ドラフト」の 3 段落 (module / issue SKILL.md / spec SKILL.md) と bats 4 件を文言どおりに挿入した
+
+### Design Gaps/Ambiguities
+- 新規テストの肯定アサートが実装前 FAIL になることを確認した (`git show HEAD:<path>` で実装前内容を参照: `event name vocabulary check` は両 SKILL.md で 0 件)。Confirmed pre-implementation FAIL for 2 new test(s) (肯定アサートを持つ 2 件)。残り 2 件 (表の非複製) は不変条件のガードで、実装前から PASS するのは設計どおり
+- `CLAUDE_PLUGIN_ROOT` が未設定の実行環境だったため、`${CLAUDE_PLUGIN_ROOT}/scripts/...` の呼び出しは worktree 内のリポジトリ相対パスで実行した (この repo 自体がプラグイン本体)
+- worktree 分離ガードは `git ... | cmd` のようなパイプや `&&` 連結を含む複合コマンドを拒否した。単一コマンドに分けて実行すれば通る
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 語彙の値を SKILL.md に一切書かない設計を維持した。`pr-review-light` は `skills/issue/SKILL.md`・`skills/spec/SKILL.md` に 0 件、`modules/verify-classifier.md` に 1 件
+- 新規スクリプトは作らず、LLM が実行する散文手順 + content-assertion テストの構成にした (Spec Notes の比較どおり)
+
+### Deferred Items
+- なし。Pre-merge の AC 3 件 (rubric 3 + `file_not_contains` 2) は /code Step 10 で確認し、Issue 本文でチェック済み
+
+### Notes for Next Phase
+- `/review` は rubric AC の判定時に、両 SKILL.md の手順が module の表を参照するだけで値を再掲していないことを確認してほしい
+- 既存ドリフト (`fix-cycle` 行の「Not yet implemented」記述が古い) は本 Issue の範囲外のまま。`/verify` の retrospective か `/audit drift` で拾う想定
