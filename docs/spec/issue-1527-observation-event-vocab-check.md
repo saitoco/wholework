@@ -163,15 +163,14 @@
 - rubric 3 件と `file_not_contains` 2 件は、差分と対象ファイルの直接確認で判定できた (UNCERTAIN は 0 件)。AC3 の `file_not_contains` は実装前から PASS する性質だが、rubric 側が「表の複製が無いこと」を実質的に見ているため判定に支障はなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 軽量レビュー (`--light`、Size M) で review-light が 4 観点を実施し、MUST 0 件・CONSIDER 1 件の結果を `COMMENTED` で投稿した
-- rubric AC は grader サブエージェントを起動せず、差分と対象ファイルを直接読んで判定した
+- PR #1529 を `merge-strategy` 解決結果の `--squash` でマージし、ブランチを削除した
+- pre-merge AC 3 件はすべてチェック済み、review 完了はフォールバック由来ではないことを確認してゲートを通過した
 
 ### Deferred Items
-- 非複製テストの検査語を `pr-review-full` / `watchdog-kill` にも広げる案 (CONSIDER)。現状は両 SKILL.md で 0 件のため対応不要と判断した
+- None
 
 ### Notes for Next Phase
-- CI は 17 件すべて SUCCESS。Post-merge の AC は無いため、`/merge 1529` 後の `/verify` は確認対象が無い
-- 既存ドリフト (`fix-cycle` 行の「Not yet implemented」記述が古い) は本 Issue の範囲外のまま
+- Post-merge の AC は無いため、`/verify` の確認対象は無い
