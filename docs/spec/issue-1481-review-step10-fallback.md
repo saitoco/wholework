@@ -89,6 +89,8 @@ fork 実行 (`Skill launched as forked execution`) の `/review` が、Step 10 �
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1481#issuecomment-6073819253
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1481#issuecomment-6073864335
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1481#issuecomment-6137794457
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1481#issuecomment-6137803766
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1481#issuecomment-6195834494
 ## Code Retrospective
 
 ### Deviations from Design
