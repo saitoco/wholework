@@ -118,3 +118,19 @@ listing_side_subcheck_section() {
     grep -q 'Not subject to the Discriminating-power filter' <<<"$section"
     grep -q 'chosen by document role' <<<"$section"
 }
+
+# Content-assertion tests for the observation event name vocabulary check in Step 10's
+# verify-type tag check (added for #1527). The vocabulary table lives only in
+# modules/verify-classifier.md; the /spec procedure must point at it instead of restating it.
+
+@test "spec skill verify-type tag check documents observation event name vocabulary check" {
+    grep -qi 'event name vocabulary check' "$SKILL_FILE"
+    grep -q 'Event Values and Syntax' "$SKILL_FILE"
+    grep -q 'Tag Extraction Rule' "$SKILL_FILE"
+}
+
+@test "spec skill does not restate the event vocabulary table held by verify-classifier" {
+    grep -q 'pr-review-light' "$PROJECT_ROOT/modules/verify-classifier.md"
+    run grep -q 'pr-review-light' "$SKILL_FILE"
+    [ "$status" -eq 1 ]
+}

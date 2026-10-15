@@ -50,6 +50,8 @@ Then treat the condition as `verify-type: opportunistic` (backward-compatible).
 
 **Syntax note**: The `event=` parameter is a required attribute of `verify-type: observation`. Omitting `event=` is treated as an unknown event and triggers the fallback above.
 
+**Authoring-time vocabulary check**: the fallback above is a last resort, not a way to write conditions. A condition whose `event=` is outside the table above, or omitted, is never fired by any skill, so it never resolves: `/verify` Step 8c reports an event that has not fired as SKIPPED ("waiting for event") and cannot tell it apart from an event that no skill fires. `/issue` (Step 4) and `/spec` (Step 10, verify-type tag check) therefore check the `event=` value of every `observation` condition they write or copy against this table, output a warning when it is not listed, and replace the tag in the same pass: a misspelled name is corrected; otherwise `observation` is dropped and the condition is re-classified with the criteria above minus the `observation` row (`opportunistic` when the text matches "verify X when `/skill-name` is run", else `manual`). It is a warning with a fix-up, not a hard error, because the replacement follows from the criteria and agrees with the fallback's own `opportunistic` treatment of an unknown event. These checks read this table when they run and do not restate its values, so adding a row here is the only edit needed for them to accept a new event name.
+
 **`config=<key>` for setting-dependent observation conditions**: when the observation condition's
 text depends on a specific `.wholework.yml` setting (e.g., "observe X under `always-pr: true`"),
 append a `config=<key>` attribute to the tag:
