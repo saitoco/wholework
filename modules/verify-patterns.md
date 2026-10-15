@@ -1224,6 +1224,25 @@ See `modules/verify-classifier.md` § "Patch Route CI Verification Note" for the
 
 **Check before finalizing an AC:** scan the verify command text for `$(`, backticks, `xargs`, `parallel`, `<<`, `&&` joining git commands, a loop (`for`/`while`), `sh -c`/`/bin/sh`, and `%(` in a git `--format`. If any is present, rewrite with the alternatives above.
 
+### 35. Removal Acceptance Conditions — Check the Repository State, Not the Working Tree
+
+When an acceptance condition verifies that a directory or file has been **removed** (deleted from the repository), write it so that it reads the repository state — what git tracks at a ref — and avoid `command "test ! -d <dir>"` / `command "test ! -f <file>"`, which read the state of whichever working tree happens to run them.
+
+**Why a working-tree check is unreliable**: `git rm` removes the tracked files, but it leaves behind anything git does not track. A directory that held gitignored files (logs, caches, `__pycache__`, build output) still exists on disk in a working tree where those files were generated, so `test ! -d` FAILs there even though the removal is complete. In a clean checkout (CI, the `/verify` worktree) none of those files exist and the same command PASSes. The result therefore depends on where the command is run, not on whether the removal happened — a false FAIL in the developer's working tree that needs a manual cleanup of the leftover files before `/verify`, and, in the other direction, a PASS that says nothing about the working tree you are sitting in. Observed downstream: a directory-removal Issue whose `test ! -d` AC FAILed in the developer's working tree (gitignored leftovers) while `/review` judged it by listing the tree with `git ls-tree` and `/verify` PASSed in its worktree; the "FAILs in the working tree" warning was then carried through the `/code` and `/merge` Phase Handoffs.
+
+**Recommended — read the tree at a ref with literal-argument git commands** (accepted by the worktree isolation guard, §34):
+
+| Target | Command | Meaning |
+|--------|----------------|---------|
+| File or directory | `command "! git cat-file -e HEAD:<path>"` | `<path>` is not an entry of the tree at `HEAD` (the exit status of `git cat-file -e` is non-zero when the object is absent) |
+| Directory contents (listing) | `git ls-tree -r --name-only HEAD -- <dir>` | prints every tracked file under `<dir>`; empty output means nothing tracked remains |
+
+The `!` prefix has not been observed against the guard in §34; if a project's guard refuses it, split the check or fall back to a `rubric` that states the repository-state requirement. For a PR that is not yet merged, replace `HEAD` with `origin/<PR_BRANCH>` — the same repository-state reading that `file_not_exists` uses when `PR_BRANCH` is set (`modules/verify-executor.md`). Pair the removal check with a control that confirms the check itself is not vacuous (§26), e.g. a sibling path that must still exist.
+
+**Note on built-in types**: `file_not_exists` reads `git show origin/<PR_BRANCH>:<path>` when `PR_BRANCH` is set, so it already reads the repository state in that case; `dir_not_exists` always runs `test ! -d` and therefore always reads the working tree. For directory removal, prefer the `git cat-file -e` form above over `dir_not_exists`.
+
+**When `test ! -d` / `test ! -f` is still the right tool**: the rule is specific to removal. When the AC is *about* the working tree — for example, a build step must not leave an artifact behind, or a generated file must be absent after a cleanup script runs — the working-tree state is the thing being verified, so keep the working-tree check.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
