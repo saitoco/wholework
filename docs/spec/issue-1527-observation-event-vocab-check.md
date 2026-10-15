@@ -151,16 +151,27 @@
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note。差分は Spec の「挿入文案ドラフト」と一致し、節名の参照 (`Event Values and Syntax` / `Tag Extraction Rule`) も実在する見出しに解決した
+
+### Recurring issues
+- Nothing to note。MUST / SHOULD の指摘は 0 件。CONSIDER 1 件 (非複製テストが `pr-review-light` 1 語のみを検査する) は Spec Notes に記録済みの設計上の限界で、対応は見送った
+
+### Acceptance criteria verification difficulty
+- rubric 3 件と `file_not_contains` 2 件は、差分と対象ファイルの直接確認で判定できた (UNCERTAIN は 0 件)。AC3 の `file_not_contains` は実装前から PASS する性質だが、rubric 側が「表の複製が無いこと」を実質的に見ているため判定に支障はなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 語彙の値を SKILL.md に一切書かない設計を維持した。`pr-review-light` は `skills/issue/SKILL.md`・`skills/spec/SKILL.md` に 0 件、`modules/verify-classifier.md` に 1 件
-- 新規スクリプトは作らず、LLM が実行する散文手順 + content-assertion テストの構成にした (Spec Notes の比較どおり)
+- 軽量レビュー (`--light`、Size M) で review-light が 4 観点を実施し、MUST 0 件・CONSIDER 1 件の結果を `COMMENTED` で投稿した
+- rubric AC は grader サブエージェントを起動せず、差分と対象ファイルを直接読んで判定した
 
 ### Deferred Items
-- なし。Pre-merge の AC 3 件 (rubric 3 + `file_not_contains` 2) は /code Step 10 で確認し、Issue 本文でチェック済み
+- 非複製テストの検査語を `pr-review-full` / `watchdog-kill` にも広げる案 (CONSIDER)。現状は両 SKILL.md で 0 件のため対応不要と判断した
 
 ### Notes for Next Phase
-- `/review` は rubric AC の判定時に、両 SKILL.md の手順が module の表を参照するだけで値を再掲していないことを確認してほしい
-- 既存ドリフト (`fix-cycle` 行の「Not yet implemented」記述が古い) は本 Issue の範囲外のまま。`/verify` の retrospective か `/audit drift` で拾う想定
+- CI は 17 件すべて SUCCESS。Post-merge の AC は無いため、`/merge 1529` 後の `/verify` は確認対象が無い
+- 既存ドリフト (`fix-cycle` 行の「Not yet implemented」記述が古い) は本 Issue の範囲外のまま
