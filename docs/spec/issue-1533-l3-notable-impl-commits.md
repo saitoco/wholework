@@ -258,6 +258,38 @@
   }
   ```
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。挿入文案ドラフトとテストの雛形をそのまま採用した
+
+### Design Gaps/Ambiguities
+- なし。Spec の Notes に edge case と fixture の期待値が揃っており、実装中に追加の曖昧点は出なかった
+
+### Rework
+- なし
+
+### Verification Record
+- Confirmed pre-implementation FAIL for 4 new test(s): 実装前の `skills/auto/SKILL.md` (`git show HEAD:...`) の Notable judgment 区間に `rev-list --count` が 0 件で、抽出 awk が block を返さない (ヘルパー経由の 3 テストは `|| false` で FAIL、文言テストは `rev-list --count` の検査で FAIL)
+- 2 セッションの再現: `c073306e^` 起点 (対象 #1527・#1528) と `3f1c0ef5^` 起点 (対象 #1531・#1530) のどちらも 2 件を返し、閾値 3 を下回る
+- `git diff -- skills/auto/SKILL.md` の削除行は置き換えた箇条書き 1 行だけ
+- `bats tests/auto.bats` と全スイート (`bats --jobs 4 tests/`、2247 件) が PASS。`validate-skill-syntax.py`・`check-allowed-tools.sh`・`check-language-convention.py`・`check-forbidden-expressions.sh` はエラーなし。`check-bare-bracket-assertions.sh` は既存の警告のみで追加行に該当なし
+- Pre-merge の 2 条件は `section_contains` (`closes #` が 3 件ヒット) と実装の文言確認で PASS として Issue のチェックを更新した
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の挿入文案ドラフトをそのまま `skills/auto/SKILL.md` の batch route 箇条書きへ置き換え、数え方は `git rev-list --count` の 1 コマンド (2 パターンの `--grep` の OR) にした
+- 空入力と git 失敗は 0 に倒す fail-safe を本文とテストの両方に入れた (空の選択肢 `closes #()` が散文の言及に一致するため)
+
+### Deferred Items
+- Post-merge の observation 条件 (recovery・FAIL・kill が 0 件の 2 件 batch で not notable になること) は、変更反映後の会話セッションで該当する batch が走るまで SKIPPED のまま
+
+### Notes for Next Phase
+- `/verify` は Pre-merge 2 条件が既に `[x]` であることを前提に、Post-merge の observation 条件だけを扱う
+- Self-hosting のため、変更は反映後に始まった会話セッションで読み込まれてはじめて有効になる
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズ (/issue) の自動解決ログ。実装コミットの特定方法を /spec の責務としたこと、閾値 3 の維持、XL route を対象外としたこと、AC1 への section_contains の併記、Post-merge の observation 条件への PASS の証拠と SKIPPED の条件の明記、Background への premise マーカーの付与 / https://github.com/saitoco/wholework/issues/1533#issuecomment-6209250218
