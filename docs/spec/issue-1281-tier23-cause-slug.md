@@ -27,6 +27,11 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-5653267994
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-5957358579
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-5978130093
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1281#issuecomment-5981997108
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-6073958189
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-6117282146
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-6137905252
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1281#issuecomment-6196299182
 ## Overview
 
 `docs/reports/orchestration-recoveries.md` への 3 つの記録経路のうち、Tier 2 (`scripts/apply-fallback.sh`) と Tier 3 (`scripts/spawn-recovery-subagent.sh`) が `### Diagnosis` ブロックに `- cause: <slug>` 行を書いていない。`scripts/collect-recovery-candidates.sh` はこの行を読んで group-key を `<symptom-short>/<cause-slug>` に切り替えるため、行がないエントリは近因が異なっても素の `<symptom-short>` に束ねられる。
