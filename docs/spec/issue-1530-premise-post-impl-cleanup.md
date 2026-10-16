@@ -194,3 +194,38 @@ Issue 本文 Background の主張をコードと照合し、すべて一致し�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps からの逸脱はない。任意とされた `docs/workflow.md` / `docs/ja/workflow.md` の括弧書きと `docs/product.md` / `docs/ja/product.md` の `Premise marker` 行の一文は、3 か所の説明と矛盾しない短い追記として含めた
+
+### Design Gaps/Ambiguities
+- Spec の Step 3 は Step 1 の説明に「取得そのものが失敗したときはエラーで止まる」を求めていたが、パイプ (`gh ... | filter`) では `gh` の失敗がフィルタの空入力として届く。フィルタは空入力で警告 + 空出力にするため、SKILL.md 側の「空の結果を『マーカーなし』と報告しない」という指示と組み合わせて機能する。両者が揃って初めて silent false negative を防げる点を Step 1 の記述に残した
+- `check-premise-expiry.sh` の冒頭 SSoT 文は、括弧書きが 2 つ連続する形になった (「... lifecycle ... (see "Lifecycle" below) (referenced by ...」)。意味は通るが読みやすさは落ちる。ヘッダ全体の再構成は Spec の範囲外なので留めた
+
+### Rework
+- 検出力テストで使う評価器の呼び出しを、worktree isolation guard の制約 (`$(...)` や複合コマンドの拒否) に合わせて単純なコマンドに分ける作業が複数回発生した。bats 本体はガードの対象外だが、スモークテストの手順で分割が必要だった
+
+### Test Notes
+- Confirmed pre-implementation FAIL for 2 new test(s): 配線テスト (audit premise 節の `--json number,title,body,labels` / `filter-premise-targets.sh`、`allowed-tools` の追記) は SKILL.md 更新前の実行で FAIL した。検出力テストは、対照テスト (フィルタを `cat` に置換) で #201 / #202 の両方が EXPIRED になることを示し、入力に失効済みの前提が実際に含まれていることを確認した
+- フルスイート `bats --jobs 4 tests/` (2243 件) は FAIL なし
+- rubric AC 4 件は独立した grader サブエージェント (敵対的な指示、Spec 非公開) で判定し、すべて PASS。AC 5 (`github_check "gh pr checks"`) は PR 作成前のため Step 10 の対象外とし、未チェックのまま `/review` に委ねる
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 方針 1 (`/audit premise` の側で絞る) を新規スクリプト `scripts/filter-premise-targets.sh` で実装した。評価器 (`check-premise-expiry.sh`) を純粋関数のまま保ち、除外した Issue が Layer 1 / Layer 2 のどちらにも届かないことを構造的に保証するため
+- フィルタは fail-open (空・解析不能・`jq` なしは警告付きで素通し、常に exit 0)。対象を誤って減らすと失効した前提を見逃す silent false negative を再生産するため
+- ラベルは `phase/verify` / `phase/done` の完全一致のみ除外し、実在する `retro/verify` などの類似名は除外しない
+
+### Deferred Items
+- AC 5 (CI の `Run bats tests`) は PR 作成後でないと評価できないため、未チェックで `/review` に残した
+- `/verify` の FAIL で reopen された Issue は fix cycle の間再び評価対象になる (Spec の既知の制限)。追加の除外条件は設けていない
+- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (Spec の Uncertainties)
+
+### Notes for Next Phase
+- PR は #1532。変更は `scripts/filter-premise-targets.sh`、`tests/filter-premise-targets.bats`、`skills/audit/SKILL.md`、`skills/issue/SKILL.md`、`scripts/check-premise-expiry.sh`、`docs/` (en / ja)
+- 3 か所 (audit の Design Rationale、issue の節、評価器のヘッダ) の記述が矛盾しないことをレビューで見てほしい。grader は一致を確認済み
+- 既存の `jq` 依存と bash 3.2 互換 (`mapfile` / `${VAR,,}` 不使用) は CI の macOS ジョブでも確認される
