@@ -165,6 +165,11 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5653267029
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5957354111
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-5978128531
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1227#issuecomment-5980904825
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-6073956529
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-6117280300
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-6137903341
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1227#issuecomment-6196294620
 ## issue retrospective
 
 **Non-interactive mode**: `--non-interactive` で実行。ambiguity 検出では Issue レベルで判断が必要な新規の曖昧ポイントは見つからず (Background の事実主張はすべてコードベースと一致確認済み、AC1/AC2 の実装先ファイル選択は `/issue` (What) と `/spec` (How) の責務境界に従い `/spec` に委譲するのが適切と判断)、以下 2 件は監査コメント/機械チェックに基づく一意に解決可能な修正として自動適用した。
