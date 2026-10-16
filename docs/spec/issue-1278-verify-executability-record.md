@@ -196,6 +196,11 @@ spec phase (2026-08-08): cutoff = 2026-08-08T13:24:18Z (直近の `phase/*` ラ�
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-5653267717
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-5957357293
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-5978129624
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1278#issuecomment-5981996680
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-6073957872
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-6117281735
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-6137904934
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1278#issuecomment-6196298247
 ## issue retrospective
 
 **トリアージ**: Type=Feature、Size=L (verify/audit/l0-surfaces の複数スキル/モジュールにまたがる変更のため複雑度 +1)、Value=5 (Impact=6: #1270/#1274/#1275/#1276 から言及 + 複数スキル共有フラグ、Alignment=4: product.md Vision「governance-and-verification harness」「Autonomy-tiered governance」との高い整合性)。重複候補なし (#1072・#1273 は関連するが別スコープの問題を扱っており重複ではないと判断)。
