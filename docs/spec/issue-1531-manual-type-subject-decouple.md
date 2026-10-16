@@ -135,6 +135,36 @@
   }
   ```
 
+## Code Retrospective
+
+### Deviations from Design
+- なし。「挿入文案ドラフト」の文言をそのまま使い、テストの固定文字列 4 件も変更していない。Step 7 の `Claude Executable?` 列も Spec 記載どおりに置き換えた。
+
+### Design Gaps/Ambiguities
+- Spec は `skill-body-lines` の想定増分を約 3 行としていたが、実測は 997 → 1000 行 (+3) で想定どおり。
+- Spec の Implementation Steps 5 は `git show HEAD:skills/verify/SKILL.md` で実装前 FAIL を確認する手順だが、worktree isolation guard が `git show` を含む複合コマンドを拒否するため、`git show` を単独コマンドで `.tmp/` に書き出してから `grep -c -F` で数える 2 段に分けた (4 文字列とも実装前は 0 件)。
+- rubric AC 5 件は独立の採点者を起動せず、差分との照合で直接評価した (patch route では `/review` が走らないため、`/verify` が実装後に改めて評価する)。
+
+### Rework
+- なし。
+
+Confirmed pre-implementation FAIL for 2 new test(s) (固定文字列 4 件が実装前の `skills/verify/SKILL.md` に 0 件)。`bats tests/verify.bats` 32 件 PASS、`bats --jobs 4 tests/` の全スイートも失敗 0 件。`git diff -- modules/verify-classifier.md` の削除行は 0 件 (追加は新規 1 節のみ)。
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズ (/issue) の自動解決ログ。語彙追加 (`reason=evidence-not-yet-available`) のスコープ外化、Post-merge の `opportunistic` 化、受入条件を rubric 5 件に整理した理由 / https://github.com/saitoco/wholework/issues/1531#issuecomment-6205214582
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `modules/verify-classifier.md` への追記は、Classification Criteria の表に触れない新規 `###` 節にした (受入条件 5 が表の定義行の差分での変更を禁じるため)。削除行 0 件を `git diff` で確認済み。
+- `skills/verify/SKILL.md` Step 8b の判定は「証拠は今存在するか」を先に問う形にし、`reason` 語彙は触れず、証拠待ちは `reason=other` + `detail` で記録する旨を 1 段落で明記した。
+
+### Deferred Items
+- Post-merge の `opportunistic` 条件 (人を主語にした Post-merge 条件を持つ Issue で `/verify` が `executable=true` を記録する) は、本変更の反映後に始まった会話セッションでのみ検証できる。
+- `reason` 語彙への `evidence-not-yet-available` 追加と除外理由の集計粒度は、Issue 本文のスコープ外のまま別 Issue 扱い。
+
+### Notes for Next Phase
+- patch route のため `/review` は走らない。Pre-merge の rubric 5 件は `/code` で差分との照合により評価済みで、チェック済み。`/verify` は Post-merge の `opportunistic` 条件を扱う。
+- `skills/verify/SKILL.md` の `skill-body-lines: 1000` / `skill-body-sha: db37b840` は本変更の最終値。他の Issue が並行して SKILL.md を変更した場合は再計算が必要。
