@@ -194,3 +194,47 @@ Issue 本文 Background の主張をコードと照合し、すべて一致し�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps からの逸脱はない。任意とされた `docs/workflow.md` / `docs/ja/workflow.md` の括弧書きと `docs/product.md` / `docs/ja/product.md` の `Premise marker` 行の一文は、3 か所の説明と矛盾しない短い追記として含めた
+
+### Design Gaps/Ambiguities
+- Spec の Step 3 は Step 1 の説明に「取得そのものが失敗したときはエラーで止まる」を求めていたが、パイプ (`gh ... | filter`) では `gh` の失敗がフィルタの空入力として届く。フィルタは空入力で警告 + 空出力にするため、SKILL.md 側の「空の結果を『マーカーなし』と報告しない」という指示と組み合わせて機能する。両者が揃って初めて silent false negative を防げる点を Step 1 の記述に残した
+- `check-premise-expiry.sh` の冒頭 SSoT 文は、括弧書きが 2 つ連続する形になった (「... lifecycle ... (see "Lifecycle" below) (referenced by ...」)。意味は通るが読みやすさは落ちる。ヘッダ全体の再構成は Spec の範囲外なので留めた
+
+### Rework
+- 検出力テストで使う評価器の呼び出しを、worktree isolation guard の制約 (`$(...)` や複合コマンドの拒否) に合わせて単純なコマンドに分ける作業が複数回発生した。bats 本体はガードの対象外だが、スモークテストの手順で分割が必要だった
+
+### Test Notes
+- Confirmed pre-implementation FAIL for 2 new test(s): 配線テスト (audit premise 節の `--json number,title,body,labels` / `filter-premise-targets.sh`、`allowed-tools` の追記) は SKILL.md 更新前の実行で FAIL した。検出力テストは、対照テスト (フィルタを `cat` に置換) で #201 / #202 の両方が EXPIRED になることを示し、入力に失効済みの前提が実際に含まれていることを確認した
+- フルスイート `bats --jobs 4 tests/` (2243 件) は FAIL なし
+- rubric AC 4 件は独立した grader サブエージェント (敵対的な指示、Spec 非公開) で判定し、すべて PASS。AC 5 (`github_check "gh pr checks"`) は PR 作成前のため Step 10 の対象外とし、未チェックのまま `/review` に委ねる
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps と PR の差分に構造的な乖離はなかった。除外条件・fail-open の分岐表・テスト範囲・SKILL.md / docs の更新が Spec どおりに入っている
+
+### Recurring issues
+- 指摘事項なし (MUST / SHOULD / CONSIDER いずれも 0 件)。`review-light` のサブエージェントが結果を返さずバックグラウンド化したため、orchestrator が 4 観点を自前で実施した (Sub-agent Result Fallback)。軽量レビューの実行形態に起因する事象で、PR の内容とは無関係
+
+### Acceptance criteria verification difficulty
+- AC 5 件すべて PASS。rubric 4 件は差分の内容で判定でき、`github_check "gh pr checks" "Run bats tests"` は PR 作成後の CI 結果で確定した (UNCERTAIN なし)
+- `gh pr view --json authorAssociation` は存在しないフィールドで失敗する。投稿者の trust 判定は `gh api repos/{owner}/{repo}/pulls/<N> --jq .author_association` で行う必要があった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `review-light` は結果を返さなかったため、orchestrator が 4 観点を自前で実施し、指摘 0 件で COMMENT として投稿した
+- Parser/Validator のエッジケース事前確認は、対象が `filter-premise-targets.sh` の 1 ファイルのみだったため、サブエージェントを使わず orchestrator がリポジトリルート以外の CWD から直接実行した (メタ文字・入れ子配列ラベルで期待どおりの挙動)
+
+### Deferred Items
+- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (code フェーズから引き継ぎ。Spec の Uncertainties)
+- `/verify` の FAIL で reopen された Issue は fix cycle の間再び評価対象になる (Spec の既知の制限)
+
+### Notes for Next Phase
+- AC 5 件はすべて `[x]`。Post-merge の条件はなし
+- CI は 17 チェックすべて成功、base ブランチとの競合なし。`/merge 1532` に進める

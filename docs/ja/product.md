@@ -179,7 +179,7 @@ Anthropic の Managed Agents + Outcomes は、隣接する outcome-rubric ルー
 | Phase Handoff | `modules/phase-handoff.md` に実装された、構造化されたフェーズ横断のサマリーメカニズム。各フェーズは終了前に Handoff を書き込み、次のフェーズはエントリ時にそれを読む。次のステップの作業コンテキスト (受入条件の結果、スコープに関するメモ、残存リスクなど) を運び、実行履歴を記録する Retrospective とは区別される。主に code → review → merge → verify の経路で使用される | /code, /merge, /review, /verify | Phase Handoff |
 | Phase label (フェーズラベル) | Issue の現在のワークフロー段階を示す `phase/*` GitHub ラベル (例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`) | Development workflow | フェーズラベル |
 | PR route (PR 経路) | M/L サイズの Issue 向けのワークフロー経路。マージ前にコードレビュー用の Pull Request を作成する | Development workflow | PR 経路 |
-| Premise marker (前提マーカー) | Issue 本文の記述がコードベースの現在の状態に依存していることを宣言する HTML コメントマーカー (`<!-- premise: ... -->`)。`/audit premise` が現在のコードベースと照合して再評価し、失効を検出する | /issue, /audit | 前提マーカー |
+| Premise marker (前提マーカー) | Issue 本文の記述がコードベースの現在の状態に依存していることを宣言する HTML コメントマーカー (`<!-- premise: ... -->`)。`/audit premise` が現在のコードベースと照合して再評価し、失効を検出する。Issue の実装が完了 (`phase/verify`) すると評価されなくなる | /issue, /audit | 前提マーカー |
 | Project Documents | プロジェクトのワークフローと運用手順のドキュメント。`docs/` 配下に保存される | /doc Skill | Project Documents |
 | Reconcile / reconciliation (リコンサイル) | `scripts/reconcile-phase-state.sh` によって実装される Observe-Diagnose-Act パターン。ライブの GitHub/git 状態を `modules/phase-state.md` で定義されたフェーズごとの期待される前提条件/成功シグネチャ (Orchestration recovery の Tier 1) と比較する。完了した実行の構造化ファクトと保留中のマージ後受入条件を照合する run-fact AC reconciliation (`modules/run-fact-matching.md`) とは別のメカニズムであり区別される | /auto, orchestration, /verify | リコンサイル |
 | Retrospective (レトロスペクティブ) | 各 Skill 実行後に Spec に追記されるセクションで、そのフェーズの観察・決定・不確実性の解消を記録する。ワークフローフェーズをまたいで実行履歴を蓄積する | Development workflow | レトロスペクティブ |
