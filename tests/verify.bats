@@ -150,6 +150,32 @@ step1_section() {
     step5_section | grep -q -F "Conditions still at \`- [ ]\` are processed as usual"
 }
 
+# Content-assertion tests for the checkbox-first precedence between the pre-merge-preview AC skip
+# rule and the already-checked AC skip rule in Step 5 (added for #1534). An already-checked fallback
+# target must be recorded SKIPPED (not UNCERTAIN) for manual and auto preview-tier ACs alike; the
+# fallback applies only to an AC still unchecked. Plain assignment so a renamed heading fails the test.
+
+@test "Step 5 pre-merge-preview AC skip rule: fallback branches apply only to an unchecked AC, for both marker and Summary-absent origins (Issue #1534)" {
+    section="$(step5_section)"
+    printf '%s\n' "$section" | grep -q -F "This AC is still \`- [ ]\` and its index is in the script's output list"
+    printf '%s\n' "$section" | grep -q -F "or this AC is still \`- [ ]\` and the script's output is empty and \`REVIEW_SUMMARY_FOUND=false\`"
+}
+
+@test "Step 5 pre-merge-preview AC skip rule: an already-checked fallback target is recorded SKIPPED for manual and auto ACs alike (Issue #1534)" {
+    section="$(step5_section)"
+    printf '%s\n' "$section" | grep -q -F "This AC is already \`- [x]\` and its index is in the script's output list"
+    printf '%s\n' "$section" | grep -q -F "or this AC is already \`- [x]\` and the script's output is empty and \`REVIEW_SUMMARY_FOUND=false\`"
+    printf '%s\n' "$section" | grep -q -F "fallback not applied"
+    printf '%s\n' "$section" | grep -q -F "is not executed against \`PRODUCTION_URL\` either"
+}
+
+@test "Step 5 already-checked AC skip rule: checkbox state is evaluated first and the old convergence wording is gone (Issue #1534)" {
+    section="$(step5_section)"
+    printf '%s\n' "$section" | grep -q -F "the checkbox state is evaluated first"
+    printf '%s\n' "$section" | grep -q -F "is not re-executed against \`PRODUCTION_URL\` either"
+    if printf '%s\n' "$section" | grep -q -F "they converge on the same SKIPPED outcome"; then false; fi
+}
+
 @test "Step 8a already-checked AC skip rule: checked post-merge+hint AC is excluded and recorded SKIPPED" {
     step8a_section | grep -q -F "already checked; skipped by default"
 }
