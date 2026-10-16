@@ -262,6 +262,7 @@ wholework/
 - `scripts/check-skill-change-observation-ac.sh` — Issue 本文が `skills/*/SKILL.md` を参照しているにもかかわらず `session=next` を欠くマージ後 `verify-type: observation` AC を検出する。`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-ac-checkbox-format.sh` — Issue 本文の `### Pre-merge` / `### Post-merge` セクション内の非チェックボックス形式の条件行を検出する。`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-premise-expiry.sh` — Issue 本文の `<!-- premise: ... -->` マーカー (`grep_count`/`file_exists`/`file_not_exists`) を現在の作業ツリーに対して再評価する。失効時は exit 2 + stdout に `EXPIRED:` 行。それ以外は exit 0 (fail-open な `UNEVALUABLE:` 行は stderr に出力され exit code には影響しない)。`/audit premise` Step 2 Layer 1 から呼び出される
+- `scripts/filter-premise-targets.sh` — `/audit premise` 用に、標準入力の `gh issue list --json number,title,body,labels` 配列から `phase/verify` / `phase/done` の Issue (実装が完了済みで前提は意図的に崩れている) を除き、`EXCLUDED: #N (label)` を標準エラーに出力する。fail-open (空または解析不能な入力は警告付きで素通しし、常に exit 0)。`/audit premise` Step 1 から呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* の docs/* に対する翻訳同期状態をチェック
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms から非推奨用語を検出
 - `scripts/check-config-schema.sh` — `.wholework.yml` の未知/typo したトップレベルキーを `modules/detect-config-markers.md` の Marker Definition Table と突き合わせて検出する。`check-config-schema` CI ジョブから実行される

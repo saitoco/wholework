@@ -7,7 +7,8 @@
 # Run with the repository root as CWD. <issue-body-md-path> is a Markdown file containing
 # zero or more Issue-body prose lines with <!-- premise: <expr> --> markers.
 #
-# SSoT for the supported premise expression syntax and its limits (referenced by
+# SSoT for the supported premise expression syntax and its limits, and for the marker's
+# lifecycle after implementation (see "Lifecycle" below) (referenced by
 # skills/audit/SKILL.md and skills/issue/SKILL.md rather than a modules/*.md file — see
 # the Spec's "Notes" section for why: the two consumers sit on the modules/ extraction
 # boundary, and get-config-value.sh's own header/SSoT pattern is the established precedent
@@ -93,6 +94,23 @@
 #     scripts/check-ac-checkbox-format.sh) key off that same line shape for `verify:` /
 #     `verify-type:` attributes; this script does not enforce placement, it simply is never
 #     invoked against checkbox lines in the intended workflow.
+#
+# Lifecycle: when a marker stops being evaluated
+#
+#   This script is a pure evaluator: it evaluates every marker in the body it is given and
+#   knows nothing about the Issue that body belongs to. A premise describes the codebase
+#   state before the Issue's implementation, so implementing the Issue is expected to break
+#   it (e.g. a `grep_count ... -eq 10` premise reads 16 once the fix is merged). For an
+#   Issue whose implementation has landed, EXPIRED is by design and carries no signal.
+#
+#   Choosing which Issues to evaluate is the caller's job. `/audit premise` Step 1 drops
+#   Issues labeled `phase/verify` or `phase/done` with scripts/filter-premise-targets.sh
+#   before they reach this script, and CLOSED Issues are never fetched. The marker is
+#   neither rewritten nor stripped: it stays in the Issue body and is simply no longer
+#   evaluated. (Having `/verify` rewrite it at the `phase/done` transition was rejected; the
+#   reasoning is in the premise Design Rationale of skills/audit/SKILL.md.) A premise that
+#   should stay monitored after the implementation belongs in a follow-up Issue, not in
+#   the implemented Issue's marker; skills/issue/SKILL.md tells authors so.
 #
 # bash 3.2+ compatible: no mapfile, no ${VAR,,}; arrays are built with IFS + read -r -a only.
 

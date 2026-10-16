@@ -304,6 +304,8 @@ If the statement cannot be reduced to one of the 3 expression types (e.g., a qua
 
 Place the marker in a prose section (`## Background`, `## Purpose`, etc.), never on an Acceptance Criteria checkbox line — the existing AC parsers key off the checkbox line shape for `verify:` / `verify-type:` attributes, and co-locating a different marker type there risks future attribute-extraction conflicts.
 
+**After the implementation lands:** a premise describes the state of the codebase before the Issue's implementation, so implementing the Issue breaks it on purpose (a `grep_count ... -eq 10` premise reads 16 once the fix is merged). An EXPIRED result at that point is by design, not a signal. Accordingly, `/audit premise` stops evaluating the marker once the Issue reaches `phase/verify` (implementation merged, awaiting `/verify`) or `phase/done`, and a CLOSED Issue is never evaluated in the first place. The marker stays in the Issue body as written: nothing strips or rewrites it, and `/verify` does not edit it. A statement that should stay monitored after this Issue is implemented (for example a premise about an Out of Scope area this Issue deliberately leaves unchanged) must not rely on this Issue's marker; write it in a follow-up Issue, where it is treated as a live premise.
+
 ### Step 5: Clarification Questions
 
 If ambiguity points were found, process them as follows.
