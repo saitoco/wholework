@@ -212,20 +212,29 @@ No new comments since last phase.
 - フルスイート `bats --jobs 4 tests/` (2243 件) は FAIL なし
 - rubric AC 4 件は独立した grader サブエージェント (敵対的な指示、Spec 非公開) で判定し、すべて PASS。AC 5 (`github_check "gh pr checks"`) は PR 作成前のため Step 10 の対象外とし、未チェックのまま `/review` に委ねる
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の Implementation Steps と PR の差分に構造的な乖離はなかった。除外条件・fail-open の分岐表・テスト範囲・SKILL.md / docs の更新が Spec どおりに入っている
+
+### Recurring issues
+- 指摘事項なし (MUST / SHOULD / CONSIDER いずれも 0 件)。`review-light` のサブエージェントが結果を返さずバックグラウンド化したため、orchestrator が 4 観点を自前で実施した (Sub-agent Result Fallback)。軽量レビューの実行形態に起因する事象で、PR の内容とは無関係
+
+### Acceptance criteria verification difficulty
+- AC 5 件すべて PASS。rubric 4 件は差分の内容で判定でき、`github_check "gh pr checks" "Run bats tests"` は PR 作成後の CI 結果で確定した (UNCERTAIN なし)
+- `gh pr view --json authorAssociation` は存在しないフィールドで失敗する。投稿者の trust 判定は `gh api repos/{owner}/{repo}/pulls/<N> --jq .author_association` で行う必要があった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 方針 1 (`/audit premise` の側で絞る) を新規スクリプト `scripts/filter-premise-targets.sh` で実装した。評価器 (`check-premise-expiry.sh`) を純粋関数のまま保ち、除外した Issue が Layer 1 / Layer 2 のどちらにも届かないことを構造的に保証するため
-- フィルタは fail-open (空・解析不能・`jq` なしは警告付きで素通し、常に exit 0)。対象を誤って減らすと失効した前提を見逃す silent false negative を再生産するため
-- ラベルは `phase/verify` / `phase/done` の完全一致のみ除外し、実在する `retro/verify` などの類似名は除外しない
+- `review-light` は結果を返さなかったため、orchestrator が 4 観点を自前で実施し、指摘 0 件で COMMENT として投稿した
+- Parser/Validator のエッジケース事前確認は、対象が `filter-premise-targets.sh` の 1 ファイルのみだったため、サブエージェントを使わず orchestrator がリポジトリルート以外の CWD から直接実行した (メタ文字・入れ子配列ラベルで期待どおりの挙動)
 
 ### Deferred Items
-- AC 5 (CI の `Run bats tests`) は PR 作成後でないと評価できないため、未チェックで `/review` に残した
-- `/verify` の FAIL で reopen された Issue は fix cycle の間再び評価対象になる (Spec の既知の制限)。追加の除外条件は設けていない
-- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (Spec の Uncertainties)
+- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (code フェーズから引き継ぎ。Spec の Uncertainties)
+- `/verify` の FAIL で reopen された Issue は fix cycle の間再び評価対象になる (Spec の既知の制限)
 
 ### Notes for Next Phase
-- PR は #1532。変更は `scripts/filter-premise-targets.sh`、`tests/filter-premise-targets.bats`、`skills/audit/SKILL.md`、`skills/issue/SKILL.md`、`scripts/check-premise-expiry.sh`、`docs/` (en / ja)
-- 3 か所 (audit の Design Rationale、issue の節、評価器のヘッダ) の記述が矛盾しないことをレビューで見てほしい。grader は一致を確認済み
-- 既存の `jq` 依存と bash 3.2 互換 (`mapfile` / `${VAR,,}` 不使用) は CI の macOS ジョブでも確認される
+- AC 5 件はすべて `[x]`。Post-merge の条件はなし
+- CI は 17 チェックすべて成功、base ブランチとの競合なし。`/merge 1532` に進める
