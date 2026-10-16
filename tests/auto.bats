@@ -364,6 +364,195 @@ batch_session_repo() {
     [ "$unguarded" -ge 1 ]
 }
 
+# Tests for the batch route Verify FAIL condition in the Notable judgment sub-step (Issue #1535).
+# The condition must count only Issues on which /verify actually failed (a type=verify-fail marker posted
+# during the session) or left an auto condition unresolved, not every Issue waiting in phase/verify.
+
+# Extract the Verify FAIL check command embedded in the Notable judgment sub-step: the fenced bash block
+# that contains "gh issue view". The first bash block of the sub-step is the jq aggregation, so the block
+# is selected by content, not by position. Exits 1 when the sub-step or the block is missing.
+notable_judgment_verify_fail_command() {
+    local section
+    section="$(notable_judgment_section "$1")" || return
+    printf '%s\n' "$section" | awk '
+        /```bash/ { inblk = 1; blk = ""; next }
+        inblk && /```/ { inblk = 0; if (blk ~ /gh issue view/) { printf "%s", blk; found = 1; exit } next }
+        inblk { blk = blk $0 "\n" }
+        END { if (!found) exit 1 }
+    '
+}
+
+# Install a mock gh that serves $VF_DIR/issue-<N>.json for "gh issue view <N> ..." and logs every requested
+# number to $VF_DIR/calls.log. A number without a fixture file makes the mock fail, like an unreadable Issue.
+verify_fail_mock_gh() {
+    local dir="$1"
+    mkdir -p "$dir/bin"
+    cat > "$dir/bin/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+    echo "$3" >> "$VF_DIR/calls.log"
+    [ -f "$VF_DIR/issue-$3.json" ] || exit 1
+    cat "$VF_DIR/issue-$3.json"
+    exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$dir/bin/gh"
+}
+
+# Write one "gh issue view --json labels,body,comments" fixture: verify_fail_fixture DIR NUMBER LABELS_JSON BODY COMMENTS_JSON.
+verify_fail_fixture() {
+    jq -n --argjson labels "$3" --arg body "$4" --argjson comments "$5" \
+        '{labels: $labels, body: $body, comments: $comments}' > "$1/issue-$2.json"
+}
+
+# One Issue comment whose first line is the /verify FAIL marker: verify_fail_marker_comment CREATED_AT [EXTRA_ATTRS].
+verify_fail_marker_comment() {
+    jq -n --arg t "$1" --arg extra "${2:-}" \
+        '{createdAt: $t, body: ("<!-- wholework-event: type=verify-fail phase=verify issue=1 iteration=1" + $extra + " -->\n## /verify FAIL\n")}'
+}
+
+@test "Notable judgment batch route Verify FAIL requires a session marker or an unresolved auto condition (Issue #1535)" {
+    # Plain assignment (not run) so a missing sub-step fails the test (Issue #1517)
+    section="$(notable_judgment_section "$SKILL_FILE")"
+    [[ "$section" == *'type=verify-fail'* ]] || false
+    [[ "$section" == *'session_start'* ]] || false
+    [[ "$section" == *'BATCH_LIST'* ]] || false
+    [[ "$section" == *'Step 11 (b)'* ]] || false
+    [[ "$section" == *'MAX_ITERATIONS_REACHED'* ]] || false
+    [[ "$section" == *'`observation`, `opportunistic`, or `manual`'* ]] || false
+    # The bare label check that counted every Issue waiting in phase/verify must be gone
+    [[ "$section" != *'unchecked `- [ ]` at batch end'* ]] || false
+}
+
+@test "Notable judgment Verify FAIL check counts a session marker or an unresolved auto condition and skips waiting Issues (Issue #1535)" {
+    local dir="$BATS_TEST_TMPDIR/vf"
+    mkdir -p "$dir"
+    verify_fail_mock_gh "$dir"
+    local cmd
+    cmd="$(notable_judgment_verify_fail_command "$SKILL_FILE")" || false
+
+    local L_VERIFY='[{"name":"phase/verify"}]' L_DONE='[{"name":"phase/done"}]' L_CODE='[{"name":"phase/code"}]' NOC='[]'
+    local OBS='- [ ] waits for the next run <!-- verify-type: observation event=auto-run session=next -->'
+    local MARK_AFTER MARK_BEFORE QUOTE_INLINE QUOTE_FENCE QUOTE_LATER
+    MARK_AFTER="$(verify_fail_marker_comment 2026-01-02T01:00:00Z)"
+    MARK_BEFORE="$(verify_fail_marker_comment 2025-12-31T23:59:59Z)"
+    QUOTE_INLINE="$(jq -n '{createdAt: "2026-01-02T02:00:00Z", body: "Design notes: the `<!-- wholework-event: type=verify-fail phase=verify issue=1 -->` marker is posted on FAIL."}')"
+    QUOTE_FENCE="$(jq -n '{createdAt: "2026-01-02T02:00:01Z", body: "Quoted sample:\n\n```\n<!-- wholework-event: type=verify-fail phase=verify issue=1 iteration=1 -->\n```\n"}')"
+    QUOTE_LATER="$(jq -n '{createdAt: "2026-01-02T02:00:02Z", body: "## Design Complete\n<!-- wholework-event: type=verify-fail phase=verify issue=1 iteration=1 -->\n"}')"
+
+    # 11: a real FAIL: reopened (no phase label), marker posted after the session start
+    verify_fail_fixture "$dir" 11 "$NOC" $'### Post-merge\n\n'"$OBS"$'\n' "[$MARK_AFTER]"
+    # 12: waiting for an observation condition that has no verify command
+    verify_fail_fixture "$dir" 12 "$L_VERIFY" $'### Post-merge\n\n'"$OBS"$'\n' "$NOC"
+    # 13: waiting for an observation condition that also carries a verify command (rubric form)
+    verify_fail_fixture "$dir" 13 "$L_VERIFY" $'### Post-merge\n\n- [ ] waits <!-- verify-type: observation event=auto-run --> <!-- verify: rubric "x" -->\n' "$NOC"
+    # 14: an auto condition left unchecked (UNCERTAIN) next to a manual one
+    verify_fail_fixture "$dir" 14 "$L_VERIFY" $'### Post-merge\n\n- [ ] <!-- verify: file_contains "a.md" "b" --> an auto condition\n- [ ] a manual one <!-- verify-type: manual -->\n' "$NOC"
+    # 15: a marker from before the session start, Issue done and fully checked
+    verify_fail_fixture "$dir" 15 "$L_DONE" $'### Post-merge\n\n- [x] <!-- verify: file_exists "a" --> done\n' "[$MARK_BEFORE]"
+    # 16: the marker is only quoted (inline code, code fence, not the first line), never posted
+    verify_fail_fixture "$dir" 16 "$L_DONE" $'### Post-merge\n\n- [x] ok\n' "[$QUOTE_INLINE,$QUOTE_FENCE,$QUOTE_LATER]"
+    # 17: a sample checkbox with a verify command inside a code fence
+    verify_fail_fixture "$dir" 17 "$L_VERIFY" $'### Post-merge\n\n- [ ] a manual one <!-- verify-type: manual -->\n\n```markdown\n- [ ] <!-- verify: file_exists "a" --> sample line\n```\n' "$NOC"
+    # 18: an unchecked auto condition, but the Issue never reached phase/verify
+    verify_fail_fixture "$dir" 18 "$L_CODE" $'### Post-merge\n\n- [ ] <!-- verify: file_exists "a" --> never verified\n' "$NOC"
+
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="11|12|13|14|15|16|17|18" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = $'#11 verify-fail-markers=1 unchecked-auto-conditions=0\n#14 verify-fail-markers=0 unchecked-auto-conditions=1' ]
+    # Every target Issue was read
+    [ "$(tr '\n' ' ' < "$dir/calls.log")" = "11 12 13 14 15 16 17 18 " ]
+
+    # Control: the bare label check this condition replaces (phase/verify with any unchecked checkbox) would have
+    # counted the two Issues that only wait for an observation condition.
+    jq -e '(.labels | map(.name) | index("phase/verify")) != null and (.body | test("- \\[ \\]"))' "$dir/issue-12.json"
+    jq -e '(.labels | map(.name) | index("phase/verify")) != null and (.body | test("- \\[ \\]"))' "$dir/issue-13.json"
+}
+
+@test "Notable judgment Verify FAIL check handles CRLF, multibyte text, null bodies, boundary timestamps and tag look-alikes (Issue #1535)" {
+    local dir="$BATS_TEST_TMPDIR/vf"
+    mkdir -p "$dir"
+    verify_fail_mock_gh "$dir"
+    local cmd
+    cmd="$(notable_judgment_verify_fail_command "$SKILL_FILE")" || false
+
+    local L_VERIFY='[{"name":"phase/verify"}]' L_NONE='[]' NOC='[]'
+    local OBS='- [ ] waits for the next run <!-- verify-type: observation event=auto-run session=next -->'
+
+    # 21: CRLF line endings and Japanese text
+    verify_fail_fixture "$dir" 21 "$L_VERIFY" $'### Post-merge\r\n\r\n- [ ] <!-- verify: file_exists "x" --> 日本語の条件\r\n' "$NOC"
+    # 22: null body
+    jq -n --argjson labels "$L_VERIFY" '{labels: $labels, body: null, comments: []}' > "$dir/issue-22.json"
+    # 23: an indented checkbox is not an acceptance condition line
+    verify_fail_fixture "$dir" 23 "$L_VERIFY" $'### Post-merge\n\n- [ ] parent <!-- verify-type: manual -->\n  - [ ] <!-- verify: file_exists "a" --> nested sub-bullet\n' "$NOC"
+    # 24: a marker created exactly at the session start second
+    verify_fail_fixture "$dir" 24 "$L_NONE" $'### Post-merge\n\n'"$OBS"$'\n' "[$(verify_fail_marker_comment 2026-01-02T00:00:00Z)]"
+    # 25: a marker with the optional deferral attributes still counts
+    verify_fail_fixture "$dir" 25 "$L_NONE" $'### Post-merge\n\n'"$OBS"$'\n' "[$(verify_fail_marker_comment 2026-01-02T05:00:00Z ' deferral=true reason="pending authorization"')]"
+    # 26: an explicit verify-type: auto tag is still an auto condition
+    verify_fail_fixture "$dir" 26 "$L_VERIFY" $'### Post-merge\n\n- [ ] <!-- verify: grep "a" "b" --> text <!-- verify-type: auto -->\n' "$NOC"
+    # 27: the words "verify-type: manual" appear inside the command text, not as a tag
+    verify_fail_fixture "$dir" 27 "$L_VERIFY" $'### Post-merge\n\n- [ ] <!-- verify: file_contains "a.md" "verify-type: manual" --> excludes the verify-type: manual tally\n' "$NOC"
+    # 28: an unresolved auto condition in Pre-merge (patch route: /verify is the first verifier)
+    verify_fail_fixture "$dir" 28 "$L_VERIFY" $'### Pre-merge\n\n- [ ] <!-- verify: file_exists "y" --> pre cond\n\n### Post-merge\n\n- [x] <!-- verify: file_exists "z" --> done\n' "$NOC"
+    # 29: two markers (two iterations) plus an unresolved auto condition
+    verify_fail_fixture "$dir" 29 "$L_VERIFY" $'### Post-merge\n\n- [ ] <!-- verify: file_exists "a" --> still open\n' "[$(verify_fail_marker_comment 2026-01-02T03:00:00Z),$(verify_fail_marker_comment 2026-01-02T04:00:00Z)]"
+    # 30: a waiting tag with no closing delimiter is not a tag (Tag Extraction Rule), so the line stays an auto condition
+    verify_fail_fixture "$dir" 30 "$L_VERIFY" $'### Post-merge\n\n- [ ] <!-- verify: file_exists "a" --> text <!-- verify-type: manual\n' "$NOC"
+
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="21|22|23|24|25|26|27|28|29|30" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = $'#21 verify-fail-markers=0 unchecked-auto-conditions=1\n#24 verify-fail-markers=1 unchecked-auto-conditions=0\n#25 verify-fail-markers=1 unchecked-auto-conditions=0\n#26 verify-fail-markers=0 unchecked-auto-conditions=1\n#27 verify-fail-markers=0 unchecked-auto-conditions=1\n#28 verify-fail-markers=0 unchecked-auto-conditions=1\n#29 verify-fail-markers=2 unchecked-auto-conditions=1\n#30 verify-fail-markers=0 unchecked-auto-conditions=1' ]
+}
+
+@test "Notable judgment Verify FAIL check skips unreadable Issues and non-numeric entries without running them (Issue #1535)" {
+    local dir="$BATS_TEST_TMPDIR/vf"
+    mkdir -p "$dir"
+    verify_fail_mock_gh "$dir"
+    local cmd
+    cmd="$(notable_judgment_verify_fail_command "$SKILL_FILE")" || false
+
+    verify_fail_fixture "$dir" 31 '[{"name":"phase/verify"}]' $'### Post-merge\n\n- [ ] <!-- verify: file_exists "a" --> open\n' '[]'
+    # 32 has no fixture: the mock gh fails for it, like an unreadable Issue
+
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE='31|32|3x|abc|1;2|$(id)||' bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'#31 verify-fail-markers=0 unchecked-auto-conditions=1'* ]] || false
+    [[ "$output" == *'Warning: could not read #32, skipped'* ]] || false
+    [[ "$output" != *'#32 verify-fail'* ]] || false
+    # Only all-digit entries reached gh
+    [ "$(tr '\n' ' ' < "$dir/calls.log")" = "31 32 " ]
+}
+
+@test "Notable judgment Verify FAIL check disables only the marker branch without a session start and prints nothing for an empty target list (Issue #1535)" {
+    local dir="$BATS_TEST_TMPDIR/vf"
+    mkdir -p "$dir"
+    verify_fail_mock_gh "$dir"
+    local cmd
+    cmd="$(notable_judgment_verify_fail_command "$SKILL_FILE")" || false
+
+    verify_fail_fixture "$dir" 41 '[]' $'### Post-merge\n\n- [ ] waits <!-- verify-type: observation event=auto-run session=next -->\n' "[$(verify_fail_marker_comment 2026-01-02T01:00:00Z)]"
+    verify_fail_fixture "$dir" 42 '[{"name":"phase/verify"}]' $'### Post-merge\n\n- [ ] <!-- verify: file_exists "a" --> open\n' "[$(verify_fail_marker_comment 2026-01-02T01:00:00Z)]"
+
+    # With a session start, both Issues count
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="41|42" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = $'#41 verify-fail-markers=1 unchecked-auto-conditions=0\n#42 verify-fail-markers=1 unchecked-auto-conditions=1' ]
+
+    # Without one, the marker branch is off (41 drops out) but the unresolved-auto-condition branch still applies (42 stays)
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="" BATCH_ISSUES_RE="41|42" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = '#42 verify-fail-markers=0 unchecked-auto-conditions=1' ]
+
+    # An empty target list prints nothing and does not call gh
+    rm -f "$dir/calls.log"
+    run env PATH="$dir/bin:$PATH" VF_DIR="$dir" session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ ! -e "$dir/calls.log" ]
+}
+
 # Tests for Skill Self-Update Propagation check comparing against origin (Issue #1206)
 # Uses a real git fixture (bare origin + working repo), same pattern as tests/pre-merge-check.bats.
 

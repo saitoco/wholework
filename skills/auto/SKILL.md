@@ -825,7 +825,37 @@ If `collect-run-facts.sh`, `scan-pending-ac.sh`, or `apply-run-fact-match.sh` fa
      ```
    - **batch route** (`ROUTE="batch"`) — notable if ANY of:
      - Tier 2/3 recovery fired (`TIER3_RECOVERY_PHASE` is set, OR `recovery_tier2_3 > 0`)
-     - Verify FAIL (any Issue label `phase/verify` with unchecked `- [ ]` at batch end)
+     - Verify FAIL: at least one Issue in `BATCH_LIST` (the same target Issues as the implementation commit count below) on which `/verify` actually failed or left an auto condition unresolved. A bare `phase/verify` label check is not used: that label also marks an Issue that is only waiting for an `observation`, `opportunistic`, or `manual` condition to fire or be confirmed (`/verify` Step 11 (a)); a `session=next` observation condition in particular keeps an Issue there until a later session fires it, so the bare check made batches notable even when nothing failed (Issue #1535). A real FAIL goes through `/verify` Step 11 (b), which posts a `type=verify-fail` marker comment, removes the `phase/*` labels, and reopens a closed Issue; only the final FAIL at `MAX_ITERATIONS_REACHED` keeps `phase/verify`, and it posts the marker as well. An Issue counts when either branch below holds at batch end:
+       - Marker: it received a `type=verify-fail` marker during this session, that is, a comment whose first line starts with `<!-- wholework-event: type=verify-fail` and whose `createdAt` is at or after `session_start`. A comment that only quotes the marker further down its body does not count.
+       - Unresolved auto condition: it still has the `phase/verify` label and at least one unchecked auto condition, that is, a `- [ ]` line outside code fences (see `modules/l0-surfaces.md` § AC Enumeration Convention) that carries a `<!-- verify:` command and none of the `verify-type: manual`, `verify-type: observation`, or `verify-type: opportunistic` tags (read only from inside their own HTML comment, through its closing `-->`, per `modules/verify-classifier.md` § Tag Extraction Rule). `/verify` leaves such a condition unchecked when it ends UNCERTAIN or PENDING (Step 11 (c), (d)), and posts no marker then. Skip this branch when `/verify` did not run for the batch (`AUTO_STOP_AT` is `merge`, or ARGUMENTS contains `--non-interactive`): the Issues then wait in `phase/verify` with every condition unchecked by design.
+       - Not counted: an Issue whose only unchecked conditions are `observation`, `opportunistic`, or `manual` ones, and an Issue whose `type=verify-fail` marker was posted before `session_start`.
+       - Evaluate both branches with this command, after substituting the literal values (each Bash call is a fresh shell): `session_start` is the value recorded in `.tmp/auto-session-${AUTO_SESSION_ID}.json` and `BATCH_ISSUES_RE` is the Issue numbers of `BATCH_LIST` joined with `|` (digits and `|` only, no spaces, no trailing `|`), the same two values the implementation commit count below uses. It prints one line per counted Issue:
+         ```bash
+         printf '%s\n' "$BATCH_ISSUES_RE" | tr '|' '\n' | while IFS= read -r issue; do
+           case "$issue" in ''|*[^0-9]*) continue ;; esac
+           json=$(gh issue view "$issue" --json labels,body,comments 2>/dev/null < /dev/null) || { echo "Warning: could not read #$issue, skipped" >&2; continue; }
+           marker=0
+           if [ -n "$session_start" ]; then
+             marker=$(printf '%s' "$json" | jq --arg since "$session_start" '[.comments[] | select(.createdAt >= $since) | select(.body | test("^\\s*<!-- wholework-event: type=verify-fail "))] | length' 2>/dev/null) || marker=0
+           fi
+           unresolved=$(printf '%s' "$json" | jq -r 'if (.labels | map(.name) | index("phase/verify")) then (.body // "") else empty end' 2>/dev/null | awk '
+             BEGIN { fence = sprintf("%c%c%c", 96, 96, 96) }
+             { line = $0; sub(/^[ \t]+/, "", line) }
+             substr(line, 1, 3) == fence { in_fence = 1 - in_fence; next }
+             in_fence { next }
+             /^- \[ \]/ {
+               has_cmd = ($0 ~ /<!--[ \t]*verify:/)
+               waiting = ($0 ~ /<!--[ \t]*verify-type:[ \t]*(manual|observation|opportunistic)([^-]|-[^-]|--[^>])*-->/)
+               if (has_cmd && waiting == 0) cnt++
+             }
+             END { print cnt + 0 }
+           ') || unresolved=0
+           if [ "$marker" -gt 0 ] || [ "$unresolved" -gt 0 ]; then
+             echo "#$issue verify-fail-markers=$marker unchecked-auto-conditions=$unresolved"
+           fi
+         done
+         ```
+         Any output line means this condition is met. Every failure leaves it unmet: an Issue that `gh` cannot read is skipped with a warning on stderr, an entry that is not all digits is ignored, an empty `session_start` disables the marker branch only, and an empty `BATCH_ISSUES_RE` prints nothing. The other notable conditions still apply.
      - Implementation commit count for this session >= 3. Count only the implementation commits of this batch's target Issues, not every commit made since `session_start`:
        - Target Issues: each Issue number N in `BATCH_LIST` (in Count mode, the Issues selected for this run; in Until mode, the union `ALL_TARGETS`), the same set the Batch Completion Report iterates over.
        - Counted: a commit whose message contains `closes #N` (the patch route implementation commit; `/code` Step 11 puts `(closes #N)` in its subject), and the merge commit of the Issue's PR (pr route; under the default squash strategy its subject is the PR title `Issue #N: ... (#PR)`, so the message has a line starting with `Issue #N:`). A commit matching both is counted once.

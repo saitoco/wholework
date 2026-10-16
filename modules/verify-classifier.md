@@ -244,7 +244,7 @@ extracts `verify-type` this way and is the pattern all other consumers should ma
 | `scripts/collect-verify-retention-stats.sh` | `verify-type` tag (reference implementation) |
 | `scripts/rank-verify-backlog.sh` | `verify:` command presence |
 | `scripts/apply-verify-retire.sh` | `verify-type: observation` / `opportunistic` (Level 3 auto-retire target selection; full-span match, unterminated tags treated as absent) |
-| `skills/auto/SKILL.md` | `verify-type: manual` / `observation` / `opportunistic` + `ac-tier: preview` exclusion (Pending manual confirmation aggregation) |
+| `skills/auto/SKILL.md` | `verify-type: manual` / `observation` / `opportunistic` + `ac-tier: preview` exclusion (Pending manual confirmation aggregation); the same three tags (through the closing delimiter) plus `verify:` command presence (L3 notable judgment's unresolved auto condition check) |
 | `skills/verify/SKILL.md` | `verify-type: manual` / `observation` + `event=` attribute (Step 8/8b/8c classification, Step 12 residual check) |
 | `skills/audit/SKILL.md` (Waiting Count definitions) | `verify-type: manual` / `observation` / `opportunistic` |
 
