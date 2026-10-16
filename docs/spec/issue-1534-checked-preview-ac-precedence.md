@@ -149,3 +149,30 @@ cutoff: 2026-10-16T06:49:35Z (最新の `phase/issue` ラベル付与時刻)
 - **allowed-tools**: SKILL.md 本文に新しい `scripts/` 参照やツールを追加しないため、frontmatter の `allowed-tools` は変更不要。新規 script もない
 - **その他の判定 (すべて非該当)**: UI Design (UI を含まない)。audit / investigation 型 (複数項目の網羅的分類ではなく、既存 prose の優先順位の明文化)。Tag/enum の意味拡張 consumer sweep (既存の値の意味拡張ではなく、同一 skill 内の 2 規則の優先順位の明文化。念のため上記のとおり consumer は確認した)。fail-safe critical script (スクリプト変更なし)。Costly/irreversible step、外部サービスへのログイン、Smoke Test (いずれも該当する Step なし)。`.claude/` 配下のファイル変更 (なし)
 - **制約**: SKILL.md 本文に半角 `!` を入れない (`validate-skill-syntax.py` が検出)。追加する文言は英語 (Language Convention check)。非推奨用語を使わない (`docs/tech.md` § Forbidden Expressions)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりに実施した (SKILL.md 文言・テスト 3 件とも Spec の記載と同一)
+
+### Design Gaps/Ambiguities
+- Step 4 (SHOULD) の docs 同期は全 3 箇所 (`docs/guide/customization.md` 2 箇所、`docs/tech.md` 1 箇所) と日本語ミラー 3 箇所を採用し、各 1 文を追記した。fallback の説明が「チェック状態の例外なし」に読めるため、不採用の理由はなかった
+- Pre-merge AC の rubric 3 件は、編集後の SKILL.md を読み通して条件充足を自己確認した (verify-executor の rubric 評価ではなく inspection)。`file_not_contains` は `grep -c -F` で 0 件を確認した
+
+### Rework
+- なし。New Verification-Test Pre-implementation FAIL Check: Confirmed pre-implementation FAIL for 3 new test(s). 実装前の SKILL.md を `git checkout HEAD --` で復元して実行し、3 件とも FAIL、その後に編集後ファイルを復元した
+- マーカー再計算 (`skill-body-lines` 1000→1003、`skill-body-sha` `db37b840`→`a72a919c`) は本文編集の最後に実施し、`check-skill-body-hash.sh` と `tests/verify.bats` の同期テストで PASS を確認した。`bats --jobs 4 tests/` は 2250 件すべて PASS
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- チェックボックス状態を fallback 判定より先に評価する優先順位を SKILL.md に明文化した (`- [x]` なら fallback 対象でも SKIPPED)
+- auto の preview 層 AC も manual と統一して SKIPPED とし、`PRODUCTION_URL` での再検証は行わない (Spec の設計判断どおり)
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 変更は prose 明文化のみ (スクリプト変更なし)。`skill-body-lines` / `skill-body-sha` マーカーを再計算済み
+- Pre-merge AC 4 件は /code Step 10 でチェック済み。Post-merge 条件はなし
