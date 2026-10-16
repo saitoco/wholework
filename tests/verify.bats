@@ -186,6 +186,20 @@ step1_section() {
     step8b_section | grep -q -F "independent of whether \`AskUserQuestion\` is invoked"
 }
 
+# Content-assertion tests for the evidence-first executability judgment in Step 8b (added for #1531).
+# The judgment must ask where the evidence lives before reading the condition's subject, and the
+# Executable examples must show a person-subject condition whose evidence is already in a log or file.
+
+@test "Step 8b: executability judgment asks whether the evidence exists now before reading the subject (Issue #1531)" {
+    step8b_section | grep -q -F "does the evidence that satisfies this condition exist now?"
+    step8b_section | grep -q -F "regardless of who the condition names as the subject"
+}
+
+@test "Step 8b: executable examples include a person-subject condition whose evidence is in a log or file (Issue #1531)" {
+    step8b_section | grep -q -F "names a person as the actor"
+    step8b_section | grep -q -F "already in a log, a generated file, or a configuration value"
+}
+
 @test "Step 9: embeds executability markers via verify-executability-marker.sh, no new comment" {
     step9_section | grep -q -F "verify-executability-marker.sh"
     step9_section | grep -q -F "Do not post these markers as a separate comment"

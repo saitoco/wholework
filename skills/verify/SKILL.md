@@ -8,8 +8,8 @@ allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, g
 
 # Acceptance Test
 
-<!-- skill-body-lines: 997 -->
-<!-- skill-body-sha: 90e3f8ce -->
+<!-- skill-body-lines: 1000 -->
+<!-- skill-body-sha: db37b840 -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
@@ -357,7 +357,7 @@ Output the following overview to terminal:
 **Column guidance:**
 - **N**: total count of post-merge ACs
 - **Type**: `auto-verify (hint)` if `<!-- verify: ... -->` is present; `observation (<event-name>)` if `<!-- verify-type: observation event=* -->` is present; `manual` if `<!-- verify-type: manual -->` or no hint
-- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—". For observation conditions, branch on fired status: not yet fired → "— (waiting for event)"; already fired → "Yes — evaluate now (event fired)" (evaluated in Step 8c).
+- **Claude Executable?**: for manual conditions only — quick preview judgment using the Step 8b rubric (where the evidence lives comes first; who the condition text names as the actor does not decide). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—". For observation conditions, branch on fired status: not yet fired → "— (waiting for event)"; already fired → "Yes — evaluate now (event fired)" (evaluated in Step 8c).
 
 ### Step 8: Post-merge Processing
 
@@ -375,10 +375,13 @@ For each unchecked post-merge condition marked `<!-- verify-type: manual -->` (o
 
 **1. Claude Executability Judgment (rubric-based)**
 
-Evaluate whether Claude can directly execute the verification based on the condition text:
+Evaluate whether Claude can directly execute the verification. Ask first: **does the evidence that satisfies this condition exist now?** The evidence exists now when it is already in a place Claude can read (an operational log, a generated file, a configuration value) or Claude can obtain it now with a read-only command (a dry-run, a `grep`, an inspection script). Judge by where the evidence lives, not by who the condition text names as the actor: if the evidence exists now, judge `executable=true` regardless of who the condition names as the subject. Use the examples below to calibrate:
 
 - **Executable examples**: `curl` URL reachability check, `gh` command result judgment, file/directory existence check (`test -f`, `test -d`), `git log`/`git status` result inspection, process listing (`ps`, `pgrep`), observation whose default behavior is statically determined from source code (e.g., `grep` for hardcoded default path, constant, or variable assignment — confirms expected behavior without waiting for future execution)
+  - a condition that names a person as the actor (e.g., "`<person>` runs `<cmd> --dry-run` on `<operations host>` and checks the counts") when the evidence is already in a log, a generated file, or a configuration value Claude can read
 - **Non-executable examples**: browser visual inspection, user action observation in production environment, UI/UX evaluation, external service dashboard confirmation
+
+When the evidence does not exist now, the cause decides how to record it. Evidence that is still to be produced (for example, the next scheduled run has not happened and the file is not written yet) makes `executable=false` the correct judgment for this run: record `reason=other` with a `detail` naming what is awaited, so it can be told apart from a misjudgment, and re-running `/verify` after the evidence appears flips it to `executable=true`. A condition that needs a human's judgment itself (visual confirmation, UX evaluation, an operation on an external service) takes the matching `reason`. Do not record a condition whose evidence already exists as non-executable only because its text names a person; re-running `/verify` does not resolve that.
 
 **1b. Record the judgment (both branches)**
 

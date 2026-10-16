@@ -166,6 +166,14 @@ Once an observation condition passes the Firing Likelihood Check above, the foll
 
 All four patterns remain best-effort: if no evidence surfaces via any of them, do not force a PASS verdict — keep the existing conservative judgment policy (UNCERTAIN or SKIPPED, per `/verify` Step 8c) rather than resolving on partial or absent evidence.
 
+### manual Type: Subject Wording Does Not Decide the Type
+
+The `manual` row in the table above is a residual class: it is for conditions whose check genuinely needs a human's judgment at verification time (visual confirmation, UX evaluation, an operation on an external service). Apply the notes below before assigning it. They add to the table and do not change its criteria or the priority order.
+
+1. **The actor named in the text does not decide the type.** A condition written with a person as the subject (for example, "`<person>` runs `<cmd> --dry-run` on `<operations host>` and checks the counts") is not `manual` for that reason alone. Ask whether checking that the condition holds needs a human's judgment, not who the text says performs the action. The same reading applies when `/verify` judges executability (`skills/verify/SKILL.md` Step 8b): decide by where the evidence lives (an operational log, a generated file, a configuration value, an external service screen), not by the subject of the sentence.
+2. **Move conditions that can be settled by reading toward `auto`.** When the evidence is an operational log, a generated file, or a configuration value that can be read, write the condition as `verify-type: auto` with a `command`, `file_contains`, or `rubric` verify command. `auto` requires an attached verify command (see "Constraint: Required Rule When Using auto Type" below); `modules/verify-patterns.md` § 11 lists replacement candidates.
+3. **Split "a person runs it once" from "check the result".** When a person only needs to run something once so that the evidence gets produced, write two conditions: an acceptance condition for the execution, and a separate acceptance condition for the check. The check reads the evidence the run leaves (a log line, a generated file) and is written as `auto`; only the execution stays with the person.
+
 ### Tag Assignment Example
 
 ```markdown
