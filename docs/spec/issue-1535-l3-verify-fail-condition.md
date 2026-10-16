@@ -366,3 +366,37 @@ observation / opportunistic / manual 条件を待つだけで `phase/verify` に
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズ (/issue) の自動解決ログ。未チェックの auto 条件を数えるコマンドと「この session 中」の取得方法を /spec の責務としたこと、AC1 への section_contains の併記、Post-merge の observation 条件の検証結果 (event=auto-run は語彙表にあり session=next も付与済み)、Background の事実確認 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6214480354
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。`skills/auto/SKILL.md` の置き換えと `tests/auto.bats` の追加は、Spec の挿入文案ドラフトとテストドラフトをそのまま適用した (文言の調整なし)
+- Implementation Steps 3 (`modules/verify-classifier.md` の Consumers 表): 採用。`skills/auto/SKILL.md` の行に「同じ 3 つのタグ (閉じタグまで) と `verify:` command の有無 (L3 notable 判定の未解決 auto 条件の判定)」を 1 句足した。理由: 新しい判定コマンドが 3 つのタグと `verify:` の有無を実際に読むため、表の記述と食い違う
+
+### Design Gaps/Ambiguities
+- なし。Spec のドラフトは `.tmp/` のコピーで検証済みと記載されており、実装時に追加の調整は不要だった
+- bats は実行環境にインストール済みだったため、bats-absent AC 除外は適用していない (Pre-merge に bats を実行する AC もない)
+
+### Rework
+- なし
+
+### Verification Record
+- Confirmed pre-implementation FAIL for 5 new test(s): 実装前の `skills/auto/SKILL.md` を `.tmp/` に書き出し、`SKILL_FILE` を差し替えた一時コピーのテストで #33〜#37 の 5 件がすべて FAIL。実行後に一時コピーは削除した
+- `bats tests/auto.bats`: 38 件 PASS。全スイート `bats --jobs 4 tests/`: 2255 件で `not ok` なし
+- `validate-skill-syntax.py skills/`: 0 エラー・0 警告。`check-allowed-tools.sh`・`check-language-convention.py`・`check-forbidden-expressions.sh`: 問題なし。`check-bare-bracket-assertions.sh` の警告 1008 件は main と同数 (既存分で、追加分は含まない)
+- 置き換えの削除行は対象の 1 行のみ。AC1 の `section_contains` 相当 (`type=verify-fail` の件数) は 4
+- Pre-merge の 2 条件 (AC1・AC2) は検証済みとして Issue 本文でチェックを入れた。Post-merge の observation 条件は `session=next` のため未チェックのまま `/verify` に渡す
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の挿入文案ドラフトと bats ドラフトを文言変更なしで適用した (固定文字列を検査するテストとの整合を保つため)
+- `modules/verify-classifier.md` の Consumers 表を 1 句更新した (新しい判定コマンドがタグと `verify:` の有無を読むため)
+
+### Deferred Items
+- Post-merge の observation 条件 (recovery・FAIL・kill が 0 件の 2 件 batch で `L3 session events committed (not notable — session.md skipped).` が出力される) は、変更反映後の会話セッションで該当 batch が走るまで未確認
+
+### Notes for Next Phase
+- Pre-merge の 2 条件はチェック済み。Post-merge は `event=auto-run session=next` の observation 条件で、該当 batch が実行されるまで SKIPPED のままとする設計
+- 新しい判定コマンドは SKILL.md Step 5 の `gh issue view` を含む 2 番目の bash ブロック。テストは内容でブロックを選ぶので、ブロックの順序を変えない
