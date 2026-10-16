@@ -225,16 +225,14 @@ No new comments since last phase.
 - `gh pr view --json authorAssociation` は存在しないフィールドで失敗する。投稿者の trust 判定は `gh api repos/{owner}/{repo}/pulls/<N> --jq .author_association` で行う必要があった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `review-light` は結果を返さなかったため、orchestrator が 4 観点を自前で実施し、指摘 0 件で COMMENT として投稿した
-- Parser/Validator のエッジケース事前確認は、対象が `filter-premise-targets.sh` の 1 ファイルのみだったため、サブエージェントを使わず orchestrator がリポジトリルート以外の CWD から直接実行した (メタ文字・入れ子配列ラベルで期待どおりの挙動)
+- PR #1532 を squash でマージした (pre-merge AC は全件チェック済み、CI 成功、競合なし)
 
 ### Deferred Items
-- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (code フェーズから引き継ぎ。Spec の Uncertainties)
+- マージ後の最初の `/audit premise --dry-run` で、`gh issue list ... | filter` のパイプが audit の permission で通るかを確認する (Spec の Uncertainties)
 - `/verify` の FAIL で reopen された Issue は fix cycle の間再び評価対象になる (Spec の既知の制限)
 
 ### Notes for Next Phase
-- AC 5 件はすべて `[x]`。Post-merge の条件はなし
-- CI は 17 チェックすべて成功、base ブランチとの競合なし。`/merge 1532` に進める
+- Post-merge の検証条件はなし。Issue の auto-close と `phase/verify` ラベルを確認すること
