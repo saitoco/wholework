@@ -240,6 +240,130 @@ EOF
     [ "$output" = '{"recovery_tier2_3":2,"watchdog_kill":2,"concurrent_commit":1,"commit_event":0}' ]
 }
 
+# Tests for the batch route implementation-commit count in the Notable judgment sub-step (Issue #1533).
+# The count must cover only the implementation commits of the batch target Issues, not every commit of the session.
+
+# Extract the commit-count command embedded in the Notable judgment sub-step: the fenced bash block
+# that contains "rev-list --count". The first bash block of the sub-step is the jq aggregation, so the
+# block is selected by content, not by position. Exits 1 when the sub-step or the block is missing.
+notable_judgment_commit_count_command() {
+    local section
+    section="$(notable_judgment_section "$1")" || return
+    printf '%s\n' "$section" | awk '
+        /```bash/ { inblk = 1; blk = ""; next }
+        inblk && /```/ { inblk = 0; if (blk ~ /rev-list --count/) { printf "%s", blk; found = 1; exit } next }
+        inblk { blk = blk $0 "\n" }
+        END { if (!found) exit 1 }
+    '
+}
+
+# Create one empty commit with a fixed committer date: batch_session_commit REPO DATE SUBJECT [BODY].
+batch_session_commit() {
+    local repo="$1" date="$2" subject="$3" body="${4:-}"
+    if [ -n "$body" ]; then
+        GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
+            git -C "$repo" commit -q --allow-empty -m "$subject" -m "$body"
+    else
+        GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
+            git -C "$repo" commit -q --allow-empty -m "$subject"
+    fi
+}
+
+# Build a repo whose history mimics one /auto batch session with target Issues #1 and #2.
+# Commits are created oldest first with increasing dates: `git rev-list --since` stops walking at the
+# first commit older than the cutoff, so the out-of-window commit has to be the oldest one.
+batch_session_repo() {
+    local repo="$1"
+    git init -q "$repo"
+    git -C "$repo" config user.email "test@example.com"
+    git -C "$repo" config user.name "Test"
+    git -C "$repo" config commit.gpgsign false
+    batch_session_commit "$repo" "2026-01-01T00:00:00Z" "chore: old work before the session (closes #1)"
+    batch_session_commit "$repo" "2026-01-02T00:00:01Z" "Add design for issue #1"
+    batch_session_commit "$repo" "2026-01-02T00:00:02Z" "chore: do the thing (closes #1)"
+    batch_session_commit "$repo" "2026-01-02T00:00:03Z" "Add code retrospective for issue #1"
+    batch_session_commit "$repo" "2026-01-02T00:00:04Z" "Issue #2: Do other thing (#77)" "* feat: x (#2)"
+    batch_session_commit "$repo" "2026-01-02T00:00:05Z" "Add merge phase handoff for issue #2"
+    batch_session_commit "$repo" "2026-01-02T00:00:06Z" "Add consumed comments fallback for issue #200 (verify phase)"
+    batch_session_commit "$repo" "2026-01-02T00:00:07Z" "fix: unrelated prefix traps (closes #10)" "closes #20 and closes #123"
+    batch_session_commit "$repo" "2026-01-02T00:00:08Z" "docs: explain closes #N magic" "Explains the closes keyword."
+    batch_session_commit "$repo" "2026-01-02T00:00:09Z" "Merge pull request #78 from o/branch" "Issue #1: Do thing via merge commit"
+    batch_session_commit "$repo" "2026-01-02T00:00:10Z" "feat: uppercase keyword in body" "Closes #2"
+    batch_session_commit "$repo" "2026-01-02T00:00:11Z" "Issue #1: both patterns at once (closes #1)"
+}
+
+@test "Notable judgment batch route counts only implementation commits of the target Issues (Issue #1533)" {
+    # Plain assignment (not run) so a missing sub-step fails the test (Issue #1517)
+    section="$(notable_judgment_section "$SKILL_FILE")"
+    [[ "$section" == *'closes #N'* ]] || false
+    [[ "$section" == *'BATCH_LIST'* ]] || false
+    [[ "$section" == *'rev-list --count'* ]] || false
+    [[ "$section" == *'Add consumed comments fallback for issue'* ]] || false
+    [[ "$section" == *'Add code retrospective for issue'* ]] || false
+    [[ "$section" == *'Add merge phase handoff for issue'* ]] || false
+    # The fallback that counted every commit since the session start must be gone
+    [[ "$section" != *'git log --oneline --since="$session_start"'* ]] || false
+}
+
+@test "Notable judgment commit count counts implementation commits of the target Issues and excludes the rest (Issue #1533)" {
+    local repo="$BATS_TEST_TMPDIR/batch-session"
+    batch_session_repo "$repo"
+    local cmd
+    cmd="$(notable_judgment_commit_count_command "$SKILL_FILE")" || false
+
+    cd "$repo"
+    run env session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="1|2" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    # Counted: patch implementation (closes #1), squash merge (Issue #2:), merge-commit body line (Issue #1:),
+    # uppercase "Closes #2" in a body, and a commit matching both patterns (counted once) = 5.
+    # Excluded: the out-of-window commit, Spec phase records, a Consumed Comments fallback, prefix traps
+    # (closes #10 / #20 / #123) and a prose mention of "closes #N".
+    [ "$output" = "5" ]
+
+    # Control: the old whole-session count over the same history is larger, so the fixture does hold
+    # mechanical commits that the new count has to exclude.
+    local whole
+    whole="$(git rev-list --count HEAD --since="2026-01-02T00:00:00Z")"
+    [ "$whole" -gt "$output" ]
+}
+
+@test "Notable judgment commit count scopes to the given target Issues only (Issue #1533)" {
+    local repo="$BATS_TEST_TMPDIR/batch-session"
+    batch_session_repo "$repo"
+    local cmd
+    cmd="$(notable_judgment_commit_count_command "$SKILL_FILE")" || false
+
+    cd "$repo"
+    # Issue #2 only: the squash merge and the uppercase "Closes #2"; "closes #20" must not match #2.
+    run env session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="2" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = "2" ]
+    # Issue #1 only: the patch implementation, the merge-commit body line and the both-patterns commit.
+    run env session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="1" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = "3" ]
+}
+
+@test "Notable judgment commit count returns 0 for an empty target list or an empty session start (Issue #1533)" {
+    local repo="$BATS_TEST_TMPDIR/batch-session"
+    batch_session_repo "$repo"
+    local cmd
+    cmd="$(notable_judgment_commit_count_command "$SKILL_FILE")" || false
+
+    cd "$repo"
+    run env session_start="2026-01-02T00:00:00Z" BATCH_ISSUES_RE="" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = "0" ]
+    run env session_start="" BATCH_ISSUES_RE="1|2" bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = "0" ]
+
+    # Control: without the guard, the empty alternation would count the commit that only mentions "closes #N" in prose.
+    local unguarded
+    unguarded="$(git rev-list --count HEAD --since="2026-01-02T00:00:00Z" -E -i --grep='closes #()([^0-9]|$)')"
+    [ "$unguarded" -ge 1 ]
+}
+
 # Tests for Skill Self-Update Propagation check comparing against origin (Issue #1206)
 # Uses a real git fixture (bare origin + working repo), same pattern as tests/pre-merge-check.bats.
 

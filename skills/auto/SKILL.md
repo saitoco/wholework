@@ -826,7 +826,21 @@ If `collect-run-facts.sh`, `scan-pending-ac.sh`, or `apply-run-fact-match.sh` fa
    - **batch route** (`ROUTE="batch"`) — notable if ANY of:
      - Tier 2/3 recovery fired (`TIER3_RECOVERY_PHASE` is set, OR `recovery_tier2_3 > 0`)
      - Verify FAIL (any Issue label `phase/verify` with unchecked `- [ ]` at batch end)
-     - Commit count for this session >= 3 (`commit_event > 0`; the events log does not currently emit `commit` events, so this stays at `0` — use `git log --oneline --since="$session_start"` line count as the fallback)
+     - Implementation commit count for this session >= 3. Count only the implementation commits of this batch's target Issues, not every commit made since `session_start`:
+       - Target Issues: each Issue number N in `BATCH_LIST` (in Count mode, the Issues selected for this run; in Until mode, the union `ALL_TARGETS`), the same set the Batch Completion Report iterates over.
+       - Counted: a commit whose message contains `closes #N` (the patch route implementation commit; `/code` Step 11 puts `(closes #N)` in its subject), and the merge commit of the Issue's PR (pr route; under the default squash strategy its subject is the PR title `Issue #N: ... (#PR)`, so the message has a line starting with `Issue #N:`). A commit matching both is counted once.
+       - Not counted: the Consumed Comments fallback commits (`Add consumed comments fallback for issue #M (verify phase)`, one per `/verify` run, observation-dispatched runs included) and the Spec phase-record commits (`Add design for issue #N`, `Add code retrospective for issue #N`, `Add merge phase handoff for issue #N`, and similar). Their number follows how many `/verify` runs and phases were executed, not how much the batch implemented, so counting them made this condition true for every batch (Issue #1533).
+       - `commit_event` from the summary above is not used here: the events log does not currently emit `commit` events, so it stays at `0`. Count with git instead, after substituting the literal values (each Bash call is a fresh shell): `session_start` is the value recorded in `.tmp/auto-session-${AUTO_SESSION_ID}.json`, and `BATCH_ISSUES_RE` is the Issue numbers of `BATCH_LIST` joined with `|` (for example `1530|1531`; digits and `|` only, no spaces, no trailing `|`):
+         ```bash
+         if [ -n "$session_start" ] && [ -n "$BATCH_ISSUES_RE" ]; then
+           git rev-list --count HEAD --since="$session_start" -E -i \
+             --grep="closes #(${BATCH_ISSUES_RE})([^0-9]|$)" \
+             --grep="^Issue #(${BATCH_ISSUES_RE}):" 2>/dev/null || echo 0
+         else
+           echo 0
+         fi
+         ```
+         If either value is unavailable or `git` fails, the result is `0` and this condition is not met. Never run the command with an empty `BATCH_ISSUES_RE`: the empty pattern `closes #()` matches any commit that merely mentions `closes #` in prose. The other notable conditions still apply.
      - Watchdog kill detected (`watchdog_kill > 0`)
    - **XL route** (`ROUTE="sub_issue"`) — notable if ANY of:
      - Parallel race detected (`concurrent_commit > 0`)
