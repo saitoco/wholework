@@ -250,3 +250,31 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 - **その他の判定 (すべて非該当)**: UI Design (UI を含まない)。audit / investigation 型 (複数項目の分類ではなく、1 つの欠陥の修正)。Tag/enum の意味拡張 (consumer sweep)。高コストまたは不可逆な手順 (spec-approval-needed)。外部サービスへのログイン (external-auth-required)。Smoke Test (MCP や外部サービスの呼び出しなし)。
 - **範囲外 (記録のみ)**: (1) `BASE_BRANCH` が本体ではなく別のワークツリーでチェックアウトされている場合は、最初の経路と同様に未対応のまま (従来どおり `exit 1`)。(2) `modules/worktree-lifecycle.md` の Exit: merge-to-main の説明にある `git pull --rebase` の再試行という記述は、#961 で ref-fetch に置き換わった実装より古い。今回の変更で悪化しないため触れない。
 - **Route**: 変更ファイルは 3 件で、Axis 1 は M (3〜5 件)。Axis 2 は、スクリプトの分岐追加 (+1) と、原因が明確なバグ修正 (-1) が相殺して調整なし。トリアージ時の Size S から **M に更新**し (Project の Size フィールド。read-back で M を確認)、pr route とする。同じ構成 (スクリプト + モジュール + テスト) の #1076 も M だった。pr route では `/review` の Step 8 が AC6 (新規テストの検出力) を判定する。`always-pr` は未設定。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1〜4 のとおりに実装した (テスト先行 → スクリプト → モジュール → 検証)。Spec に載せたコードはそのまま追加して動作した
+
+### Design Gaps/Ambiguities
+- Confirmed pre-implementation FAIL for 2 new test(s). 修正前のスクリプトに対して、テスト A (成功) とテスト B (中断) が FAIL し、テスト C (モック) は PASS することを確認した。実装後は 24 件すべて PASS
+- Step 10 の AC 確認: 機械的に判定できる AC3 (`bats tests/worktree-merge-push.bats`) と AC5 (`file_not_contains`) だけを `[x]` にした。rubric の AC1・AC2・AC4・AC6 は grader を走らせていないので `[ ]` のまま残し、`/review` の Step 8 に委ねる (AC6 は Spec の Route 欄のとおり `/review` が判定する)
+- `docs/structure.md` と `docs/ja/structure.md` の `worktree-merge-push.sh` の説明は、再試行内の ref の更新手段に触れていないため変更不要と再確認した
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- push 再試行の ref-fetch 拒否時は `git reset --keep "$FROM_BRANCH" --` でその場更新する分岐を追加した。`merge --ff-only` は再試行ではローカルの BASE_BRANCH が祖先でないため使えず、`reset --hard` は未コミット変更を捨てるため避けた (Spec Notes のとおり)
+- 分岐の先の失敗はすべて fail-closed (`exit 1`、push はしない)。別ブランチがチェックアウトされているときは従来どおり `exit 1` で、共有ディレクトリには触れない
+
+### Deferred Items
+- rubric の AC1・AC2・AC4・AC6 は grader 未実行のため未チェック。`/review` の Step 8 で判定する (AC6 は新規テストの検出力)
+- Post-merge の opportunistic AC (並行 push 下で `/verify` の Worktree Exit が手の復旧なしに終わる) は、実運用での観測待ち
+
+### Notes for Next Phase
+- 新規の実 git テスト A・B は修正前のスクリプトで FAIL することを確認済み。テスト C は安全側のガードで、修正前後とも PASS するのが正しい
+- `BASE_BRANCH` が本体ではなく別のワークツリーでチェックアウトされている場合は、最初の経路と同様に未対応のまま (範囲外。Spec Notes に記録)
