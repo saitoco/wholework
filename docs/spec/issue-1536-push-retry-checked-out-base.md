@@ -264,17 +264,28 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note。スクリプト・テスト 3 件・モジュールの 3 点が Spec の Implementation Steps どおりで、乖離はなかった
+
+### Recurring issues
+- Nothing to note。指摘は CONSIDER 1 件のみ (`orchestration-fallbacks.md` の同一段落内で、前半の「checkout に触れずに」が無条件に読める点)。文言の限定で解消した。追記型で段落を拡張するたびに、同じ段落の既存文との整合を見直す必要がある
+
+### Acceptance criteria verification difficulty
+- rubric 4 件 (AC1・AC2・AC4・AC6) は、grader の sub-agent を起動せず、差分と実行結果を根拠に reviewer が直接判定した。UNCERTAIN は 0 件
+- AC6 (検出力) は rubric 文言だけでは判定しにくく、修正前のスクリプトに差し替えて新規テストを実際に実行して FAIL を確認する方が確実だった。`/spec` が検出力の AC を追加する場合、「修正前に FAIL することを実行で確認する」手順を Spec の Implementation Steps に明記すると、判定の再現性が上がる
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- push 再試行の ref-fetch 拒否時は `git reset --keep "$FROM_BRANCH" --` でその場更新する分岐を追加した。`merge --ff-only` は再試行ではローカルの BASE_BRANCH が祖先でないため使えず、`reset --hard` は未コミット変更を捨てるため避けた (Spec Notes のとおり)
-- 分岐の先の失敗はすべて fail-closed (`exit 1`、push はしない)。別ブランチがチェックアウトされているときは従来どおり `exit 1` で、共有ディレクトリには触れない
+- AC6 は、スクリプトを `origin/main` の版に一時的に戻して新規テストを実行し (実 git のテスト 2 件が FAIL、他ブランチ用のモックは PASS)、そのあと `HEAD` の版に戻して判定した
+- レビュー指摘 (CONSIDER 1 件) は、同一段落の整合のための 1 行修正なので Step 12 で反映した (コミット b57561a3)
 
 ### Deferred Items
-- rubric の AC1・AC2・AC4・AC6 は grader 未実行のため未チェック。`/review` の Step 8 で判定する (AC6 は新規テストの検出力)
 - Post-merge の opportunistic AC (並行 push 下で `/verify` の Worktree Exit が手の復旧なしに終わる) は、実運用での観測待ち
+- `BASE_BRANCH` が別のワークツリーでチェックアウトされている場合は未対応のまま (Spec Notes の範囲外の記録どおり)
 
 ### Notes for Next Phase
-- 新規の実 git テスト A・B は修正前のスクリプトで FAIL することを確認済み。テスト C は安全側のガードで、修正前後とも PASS するのが正しい
-- `BASE_BRANCH` が本体ではなく別のワークツリーでチェックアウトされている場合は、最初の経路と同様に未対応のまま (範囲外。Spec Notes に記録)
+- Pre-merge の AC は 6 件すべて `[x]`。CI は 17 件すべて成功。MUST 指摘はなく、`/merge 1537` に進める
