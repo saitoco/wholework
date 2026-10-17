@@ -249,4 +249,4 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 - **allowed-tools**: 新規の `scripts/*.sh` はなく、`modules/orchestration-fallbacks.md` に追加する文面にも新しい `scripts/*.sh` の参照を入れない。`worktree-merge-push.sh` は spec / code / merge / review / verify の SKILL.md の `allowed-tools` に既にあるため、frontmatter の変更は不要。
 - **その他の判定 (すべて非該当)**: UI Design (UI を含まない)。audit / investigation 型 (複数項目の分類ではなく、1 つの欠陥の修正)。Tag/enum の意味拡張 (consumer sweep)。高コストまたは不可逆な手順 (spec-approval-needed)。外部サービスへのログイン (external-auth-required)。Smoke Test (MCP や外部サービスの呼び出しなし)。
 - **範囲外 (記録のみ)**: (1) `BASE_BRANCH` が本体ではなく別のワークツリーでチェックアウトされている場合は、最初の経路と同様に未対応のまま (従来どおり `exit 1`)。(2) `modules/worktree-lifecycle.md` の Exit: merge-to-main の説明にある `git pull --rebase` の再試行という記述は、#961 で ref-fetch に置き換わった実装より古い。今回の変更で悪化しないため触れない。
-- **Route**: 変更ファイルは 3 件 (Size S のまま。patch route)。`always-pr` は未設定。
+- **Route**: 変更ファイルは 3 件で、Axis 1 は M (3〜5 件)。Axis 2 は、スクリプトの分岐追加 (+1) と、原因が明確なバグ修正 (-1) が相殺して調整なし。トリアージ時の Size S から **M に更新**し (Project の Size フィールド。read-back で M を確認)、pr route とする。同じ構成 (スクリプト + モジュール + テスト) の #1076 も M だった。pr route では `/review` の Step 8 が AC6 (新規テストの検出力) を判定する。`always-pr` は未設定。
