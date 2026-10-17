@@ -250,3 +250,42 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 - **その他の判定 (すべて非該当)**: UI Design (UI を含まない)。audit / investigation 型 (複数項目の分類ではなく、1 つの欠陥の修正)。Tag/enum の意味拡張 (consumer sweep)。高コストまたは不可逆な手順 (spec-approval-needed)。外部サービスへのログイン (external-auth-required)。Smoke Test (MCP や外部サービスの呼び出しなし)。
 - **範囲外 (記録のみ)**: (1) `BASE_BRANCH` が本体ではなく別のワークツリーでチェックアウトされている場合は、最初の経路と同様に未対応のまま (従来どおり `exit 1`)。(2) `modules/worktree-lifecycle.md` の Exit: merge-to-main の説明にある `git pull --rebase` の再試行という記述は、#961 で ref-fetch に置き換わった実装より古い。今回の変更で悪化しないため触れない。
 - **Route**: 変更ファイルは 3 件で、Axis 1 は M (3〜5 件)。Axis 2 は、スクリプトの分岐追加 (+1) と、原因が明確なバグ修正 (-1) が相殺して調整なし。トリアージ時の Size S から **M に更新**し (Project の Size フィールド。read-back で M を確認)、pr route とする。同じ構成 (スクリプト + モジュール + テスト) の #1076 も M だった。pr route では `/review` の Step 8 が AC6 (新規テストの検出力) を判定する。`always-pr` は未設定。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1〜4 のとおりに実装した (テスト先行 → スクリプト → モジュール → 検証)。Spec に載せたコードはそのまま追加して動作した
+
+### Design Gaps/Ambiguities
+- Confirmed pre-implementation FAIL for 2 new test(s). 修正前のスクリプトに対して、テスト A (成功) とテスト B (中断) が FAIL し、テスト C (モック) は PASS することを確認した。実装後は 24 件すべて PASS
+- Step 10 の AC 確認: 機械的に判定できる AC3 (`bats tests/worktree-merge-push.bats`) と AC5 (`file_not_contains`) だけを `[x]` にした。rubric の AC1・AC2・AC4・AC6 は grader を走らせていないので `[ ]` のまま残し、`/review` の Step 8 に委ねる (AC6 は Spec の Route 欄のとおり `/review` が判定する)
+- `docs/structure.md` と `docs/ja/structure.md` の `worktree-merge-push.sh` の説明は、再試行内の ref の更新手段に触れていないため変更不要と再確認した
+
+### Rework
+- なし
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note。スクリプト・テスト 3 件・モジュールの 3 点が Spec の Implementation Steps どおりで、乖離はなかった
+
+### Recurring issues
+- Nothing to note。指摘は CONSIDER 1 件のみ (`orchestration-fallbacks.md` の同一段落内で、前半の「checkout に触れずに」が無条件に読める点)。文言の限定で解消した。追記型で段落を拡張するたびに、同じ段落の既存文との整合を見直す必要がある
+
+### Acceptance criteria verification difficulty
+- rubric 4 件 (AC1・AC2・AC4・AC6) は、grader の sub-agent を起動せず、差分と実行結果を根拠に reviewer が直接判定した。UNCERTAIN は 0 件
+- AC6 (検出力) は rubric 文言だけでは判定しにくく、修正前のスクリプトに差し替えて新規テストを実際に実行して FAIL を確認する方が確実だった。`/spec` が検出力の AC を追加する場合、「修正前に FAIL することを実行で確認する」手順を Spec の Implementation Steps に明記すると、判定の再現性が上がる
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- AC6 は、スクリプトを `origin/main` の版に一時的に戻して新規テストを実行し (実 git のテスト 2 件が FAIL、他ブランチ用のモックは PASS)、そのあと `HEAD` の版に戻して判定した
+- レビュー指摘 (CONSIDER 1 件) は、同一段落の整合のための 1 行修正なので Step 12 で反映した (コミット b57561a3)
+
+### Deferred Items
+- Post-merge の opportunistic AC (並行 push 下で `/verify` の Worktree Exit が手の復旧なしに終わる) は、実運用での観測待ち
+- `BASE_BRANCH` が別のワークツリーでチェックアウトされている場合は未対応のまま (Spec Notes の範囲外の記録どおり)
+
+### Notes for Next Phase
+- Pre-merge の AC は 6 件すべて `[x]`。CI は 17 件すべて成功。MUST 指摘はなく、`/merge 1537` に進める
