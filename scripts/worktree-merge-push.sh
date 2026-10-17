@@ -175,8 +175,23 @@ while true; do
     # freshly-fetched origin/$BASE_BRANCH, so overwriting the stale local ref here is
     # the correct outcome, not an unsafe force-push.
     if ! git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"; then
-      echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
-      exit 1
+      # git refuses a ref-fetch into a checked-out branch even with the force refspec.
+      # When BASE_BRANCH is checked out here, move it onto the rebased FROM_BRANCH in
+      # place. `git merge --ff-only` (used by the primary path) cannot work: after the
+      # rebase above, local BASE_BRANCH (the pre-rebase tip of FROM_BRANCH) is no longer
+      # an ancestor of FROM_BRANCH. `git reset --keep` keeps uncommitted changes and
+      # aborts without touching anything when they conflict with the update.
+      current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+      if [[ "$current_branch" == "$BASE_BRANCH" ]]; then
+        echo "ref-fetch retry rejected because ${BASE_BRANCH} is checked out here; resetting it onto ${FROM_BRANCH} in place (git reset --keep)..." >&2
+        if ! git reset --keep "$FROM_BRANCH" --; then
+          echo "Error: git reset --keep of ${BASE_BRANCH} onto ${FROM_BRANCH} failed (uncommitted changes in this checkout may conflict). Resolve manually." >&2
+          exit 1
+        fi
+      else
+        echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
+        exit 1
+      fi
     fi
   else
     if ! git rebase "origin/${BASE_BRANCH}"; then

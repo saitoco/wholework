@@ -523,6 +523,140 @@ MOCK
     [[ "$output" == *"retry 1/3"* ]]
 }
 
+# Real-git fixture for a push race while BASE_BRANCH (main) is checked out in the shared dir:
+# origin + shared clone on main + worktree branch "test-branch" with one commit + another
+# session that already pushed a commit touching $1 to origin/main. Leaves cwd in $SHARED.
+setup_checked_out_base_race() {
+    local other_file="$1"
+    rm -f "$MOCK_DIR/git"
+    REAL_ORIGIN="$BATS_TEST_TMPDIR/origin.git"
+    SHARED="$BATS_TEST_TMPDIR/test-repo"
+    WT="$BATS_TEST_TMPDIR/wt-feature"
+    OTHER="$BATS_TEST_TMPDIR/other-session"
+
+    git init --bare -q "$REAL_ORIGIN"
+    git clone -q "$REAL_ORIGIN" "$SHARED"
+    cd "$SHARED"
+    git config user.email test@test.com
+    git config user.name test
+    # Force the branch name regardless of the runner's init.defaultBranch config.
+    git checkout -q -B main
+    echo base > base.txt
+    echo notes > notes.txt
+    git add base.txt notes.txt
+    git commit -q -m "base"
+    git push -q origin main
+
+    git worktree add -q -b test-branch "$WT" main
+    cd "$WT"
+    echo feature > feature.txt
+    git add feature.txt
+    git commit -q -m "feature work"
+
+    git clone -q "$REAL_ORIGIN" "$OTHER"
+    cd "$OTHER"
+    git config user.email test@test.com
+    git config user.name test
+    git checkout -q main
+    echo other >> "$other_file"
+    git add "$other_file"
+    git commit -q -m "other session work"
+    git push -q origin main
+
+    cd "$SHARED"
+}
+
+@test "push race with --from while base is checked out in the shared dir: retry resets base in place and keeps uncommitted edits" {
+    setup_checked_out_base_race other.txt
+    echo "local edit" >> notes.txt
+
+    run bash "$SCRIPT" --from test-branch
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"retry 1/3"* ]] || false
+    [[ "$output" == *"resetting it onto test-branch in place"* ]] || false
+
+    # Base moved onto the rebased branch and was pushed; index and worktree follow HEAD.
+    [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]
+    [ "$(git rev-parse main)" = "$(git rev-parse test-branch)" ]
+    [ "$(git -C "$REAL_ORIGIN" rev-parse main)" = "$(git rev-parse test-branch)" ]
+    run git -C "$REAL_ORIGIN" log --format=%s main
+    [[ "$output" == *"feature work"* ]] || false
+    [[ "$output" == *"other session work"* ]] || false
+    [ -f other.txt ]
+
+    # The unrelated uncommitted edit survived and nothing else is pending.
+    grep -q "local edit" notes.txt
+    run git status --porcelain
+    [ "$output" = " M notes.txt" ]
+
+    # The caller's cleanup (worktree-lifecycle Exit step 4) still succeeds: base == branch tip.
+    git worktree remove "$WT"
+    git branch -d test-branch
+}
+
+@test "push race with --from while base is checked out: aborts and leaves local state intact when uncommitted edits conflict with the reset" {
+    setup_checked_out_base_race notes.txt
+    echo "local edit" >> notes.txt
+    pre_from=$(git rev-parse test-branch)
+    pre_origin=$(git -C "$REAL_ORIGIN" rev-parse main)
+
+    run bash "$SCRIPT" --from test-branch
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"git reset --keep of main onto test-branch failed"* ]] || false
+    grep -q "local edit" notes.txt
+    [ "$(git rev-parse main)" = "$pre_from" ]
+    [ "$(git -C "$REAL_ORIGIN" rev-parse main)" = "$pre_origin" ]
+    [ ! -d "$SHARED/.tmp/claude-auto-patch-lock" ]
+}
+
+@test "push race with --from: retry ref-fetch rejected while the shared dir is on another branch does not reset and aborts" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "some-other-session-branch"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/fetch_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    # 1st: primary ref-fetch rejected; 2nd: succeeds after the ancestry check; 3rd+: retry-scoped ref-fetch rejected
+    [ "\$count" -eq 1 ] && exit 1
+    [ "\$count" -ge 3 ] && exit 1
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ref-fetch retry after push-rebase failed"* ]] || false
+    if grep -qE "^reset" "$GIT_LOG"; then false; fi
+    push_count=$(grep -c "push origin main" "$GIT_LOG")
+    [ "$push_count" -eq 1 ]
+}
+
 @test "push race with --from: retry loop aborts when no worktree is found for rebase" {
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
