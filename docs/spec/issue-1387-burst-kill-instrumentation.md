@@ -28,6 +28,11 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5957364980
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-5978132770
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6073961521
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1387#issuecomment-6073992321
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6117285410
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6137908625
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6196308017
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1387#issuecomment-6236812645
 ## Changed Files
 
 - `scripts/run-auto-sub.sh`: `run_phase_with_recovery()` 内の `emit_event "phase_start" "phase=${phase}"` (現状 653 行目付近) に `spawn_detach=<0|1>` フィールドを追加。bash 3.2+ 互換 (既存の `[[ -n ... ]]` 判定と同じ書き方)
