@@ -277,15 +277,14 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 - AC6 (検出力) は rubric 文言だけでは判定しにくく、修正前のスクリプトに差し替えて新規テストを実際に実行して FAIL を確認する方が確実だった。`/spec` が検出力の AC を追加する場合、「修正前に FAIL することを実行で確認する」手順を Spec の Implementation Steps に明記すると、判定の再現性が上がる
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- AC6 は、スクリプトを `origin/main` の版に一時的に戻して新規テストを実行し (実 git のテスト 2 件が FAIL、他ブランチ用のモックは PASS)、そのあと `HEAD` の版に戻して判定した
-- レビュー指摘 (CONSIDER 1 件) は、同一段落の整合のための 1 行修正なので Step 12 で反映した (コミット b57561a3)
+- マージ戦略は `.wholework.yml` の設定どおり `--squash` (ワークツリー作成直後、ベースブランチの設定を読んだ)
+- Pre-merge AC ゲートは未チェック 0 件、review の完了は fallback 由来ではなく、mergeable=clean (CI 成功) で通過した
 
 ### Deferred Items
 - Post-merge の opportunistic AC (並行 push 下で `/verify` の Worktree Exit が手の復旧なしに終わる) は、実運用での観測待ち
-- `BASE_BRANCH` が別のワークツリーでチェックアウトされている場合は未対応のまま (Spec Notes の範囲外の記録どおり)
 
 ### Notes for Next Phase
-- Pre-merge の AC は 6 件すべて `[x]`。CI は 17 件すべて成功。MUST 指摘はなく、`/merge 1537` に進める
+- PR #1537 は squash マージ済みで、リモートブランチは削除済み。`/verify 1536` で post-merge 条件を確認する
