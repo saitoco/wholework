@@ -288,3 +288,29 @@ push 再試行の経路 (160〜180 行目) の ref 更新が `git fetch . "+${FR
 
 ### Notes for Next Phase
 - PR #1537 は squash マージ済みで、リモートブランチは削除済み。`/verify 1536` で post-merge 条件を確認する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/triage` は Size S と判定したが、変更ファイルが 3 件 (スクリプト・テスト・モジュール) あり、`/spec` が Axis 1 に従って M に更新した。結果として route は patch から pr に切り替わった。Size 判定表では 3〜5 件が M なので、triage 時点で Changed Files の件数 (AC が 3 つのファイルを名指ししていた) を数えていれば M と判定できた。/issue の AC 差し替え (常に PASS する `grep "push"` を rubric + `file_not_contains` に置換) は有効だった
+
+#### design
+- `git reset --keep` を選定し、代替案 (`update-ref` / `reset --hard` / 本体での rebase / 2 段の reset) を退けた根拠を、原型テストの実測とともに Notes に残した。実装での乖離はなかった
+
+#### code
+- テスト先行で修正前に新規テスト 2 件が FAIL することを確認してから実装した。手戻りはなかった (fixup/amend のコミットなし)
+
+#### review
+- 指摘は CONSIDER 1 件のみで、文言の限定で解消した。rubric 4 件は reviewer が直接判定し、UNCERTAIN は 0 件
+
+#### merge
+- squash マージで、コンフリクトや CI 失敗はなかった
+
+#### verify
+- Pre-merge 6 件はすべて `/review` 時点で `[x]` 済みのため SKIPPED。Post-merge は opportunistic 1 件のみで、実運用の並行 push の競合を待つ
+
+### Improvement Proposals
+- N/A
+
