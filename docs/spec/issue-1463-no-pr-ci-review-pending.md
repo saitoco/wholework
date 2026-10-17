@@ -251,6 +251,11 @@ PR トリガの CI workflow を持たないリポジトリ (例: `saito/ops`。`
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5957369070
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-5978133986
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6073963333
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1463#issuecomment-6078184931
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6117285974
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6137909278
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6196309530
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1463#issuecomment-6236813886
 ## issue retrospective
 
 (Issue コメント https://github.com/saitoco/wholework/issues/1463#issuecomment-5650843672 から転記)
