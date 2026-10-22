@@ -311,21 +311,17 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 
 ## Phase Handoff
 
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI 失敗 (MUST) の原因を、`gh` モックの `git commit-tree` に identity が無いことと特定し、モック側で `GIT_AUTHOR_*` / `GIT_COMMITTER_*` を渡して直した。identity なしの環境で全 bats 2271 件が PASS することをローカルで確認した
-- 追跡 ref の欠落は `git fetch origin <base>` を一度試し、それでも解決できなければ `fail_record` (exit 2) に倒した。squash 本文が空のまま成功を名乗るより安全なため
-- `resolve-merge-strategy.sh` はリポジトリルートで実行する。`.wholework.yml` を CWD 基準で読むため
-- `[remote rejected]` を一律にポリシー拒否とみなす点 (一時的な競合でも記録用 PR になる) などの CONSIDER は、スコープ外としてこの PR では直さなかった
+- pre-merge AC は全てチェック済み (未チェック 0)、CI は success、review は approved だったため、`--squash` (`resolve-merge-strategy.sh --flag` の結果) でそのままマージした
+- review の Notes にあった AC 7 (`Run bats tests`) は、マージ前に CI が success になっていることを確認済み
+- コンフリクトは無く、Consumed Comments は `append-consumed-comments-section.sh` のフォールバックで記録した
 
 ### Deferred Items
-- `push-to-base.sh` の `[remote rejected]` を括弧内の理由で分類し、一時的な競合を exit 1 に回す案 (CONSIDER)
-- `--base @` / `@{-1}` の受理、同名タグでの push 失敗 (CONSIDER)
-- `docs/guide/customization.md` の `patch-lock-timeout` の説明に記録用 PR 経路を足す案 (CONSIDER)
 - 実リポジトリ (saitoco/keio など `main` が PR 必須) での `/auto N` 通し確認は、Post-merge の manual AC のまま
+- review から引き継いだ CONSIDER (`[remote rejected]` の理由分類、`--base @` の受理、`customization.md` の説明追記) は未対応
 
 ### Notes for Next Phase
-- AC 7 (`github_check "gh pr checks" "Run bats tests"`) は未チェック。修正 push (`3020834c`) 後の CI が `/review` の時点で pending だったので、`/merge` で `Run bats tests` が PASS したことを確認してからマージする
-- pr route の `/merge` は squash でマージするため、`skills/*/SKILL.md` を触っていないこの修正では `skill-body-sha` の再計算は不要だった
-- 記録用 PR を作るたびに、そのリポジトリの `pull_request` トリガーの CI が走る (直接 push できるリポジトリでは発生しない)
+- verify では Post-merge の manual AC 1 件が残る。`main` が PR 必須のリポジトリでの実機確認が必要
+- 記録用 PR は、そのリポジトリの `pull_request` トリガーの CI を走らせる点に注意
