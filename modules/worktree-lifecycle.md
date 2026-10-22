@@ -76,7 +76,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh [--base "$BASE_BRANCH"]
    ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh --from "$WORKTREE_BRANCH" [--base "$BASE_BRANCH"]
    ```
 
-   The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure, and worktree-branch rebase fallback when base has advanced while the worktree was running — see `modules/orchestration-fallbacks.md#ff-only-merge-fallback`), conflict marker check, `git push origin <base>`, and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
+   The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure, and worktree-branch rebase fallback when base has advanced while the worktree was running — see `modules/orchestration-fallbacks.md#ff-only-merge-fallback`), conflict marker check, the push to `origin/<base>` (delegated to `scripts/push-to-base.sh`), and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
+
+#### Direct push rejected by the remote: phase-record PR
+
+Some repositories refuse every direct push to the base branch (a ruleset such as "Changes must be made through a pull request", branch protection, or a pre-receive hook), so the phase records (Spec, Consumed Comments, retrospectives, Phase Handoff) cannot reach `main` the usual way.
+
+- **How it is detected (no configuration key)**: `scripts/push-to-base.sh` always tries the direct push first and tells the failures apart by the ref status token git prints. `[remote rejected]` is a server-side refusal (branch protection, ruleset, pre-receive hook) and takes the record-PR path. `[rejected]` (non-fast-forward / fetch first) and every other failure (network, authentication, unclassifiable output) stay on the existing retry loop and never create a PR. Repositories that accept direct pushes behave exactly as before: no PR and no extra branch.
+- **Landing path**: push a record branch `wholework-record/<base>-<UTC timestamp>-<pid>`, open a PR against `<base>`, and merge it right away with the repository's `merge-strategy` (`scripts/resolve-merge-strategy.sh`). Success is judged from the PR state (`MERGED`), not from the exit code of `gh pr merge`.
+- **Invariant on exit**: when the record PR merged, `worktree-merge-push.sh` realigns the local `<base>` and the `--from` branch to `origin/<base>`, so the cleanup `git branch -d` keeps working even after a squash or rebase merge. When the commits could not be landed (record branch push failed, PR creation failed, merge blocked by required approvals / checks / a merge queue), the local `<base>` is reset to `origin/<base>`, the script exits non-zero, and its stderr names where the record is kept (the `--from` branch, the `wholework-record/*` branch, the PR URL). The caller then follows "On script failure" above.
+- **Out of scope**: rulesets that require approvals or status checks on the record PR itself cannot be satisfied unattended; the script reports the PR URL and stops (see `modules/orchestration-fallbacks.md#push-rejected-record-pr`).
 
 4. **Cleanup**: run these as two separate plain commands, substituting the recorded values literally:
    ```bash
@@ -325,13 +334,17 @@ no Spec write and therefore no worktree requirement.
 | Phase | Working branch | Base propagation path |
 |-------|-----------------|------------------------|
 | `/spec` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
-| `/spec`, worktree skipped (`ENTERED_WORKTREE=false`) | base branch, in the main repository | Should be `worktree-merge-push.sh` (lock+push only, no `--from`), matching the `/code` patch-route row below — see Known gap |
+| `/spec`, worktree skipped (`ENTERED_WORKTREE=false`) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/code` patch / operate route | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 | `/code` patch route, worktree skipped (`ENTERED_WORKTREE=false`; XS interactive direct-launch only — see `skills/code/SKILL.md` Step 2) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/verify`, worktree skipped (`ENTERED_WORKTREE=false`) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/review` | worktree branch (= PR branch) | script's own push (no `--no-push`) → PR merge (`/merge`) |
-| `/merge` | worktree branch, fast-forwarded to `origin/main` after the merge | Step 4 substep 4's `git push origin HEAD:main` |
+| `/merge` | worktree branch, fast-forwarded to `origin/main` after the merge | Step 4 substep 5's `push-to-base.sh --ref HEAD --base main` |
+| `/auto` parent session (Step 4b / 4a / L3 retrospective commits) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from`) |
+
+Every base-branch write in this table goes through `scripts/push-to-base.sh` (directly, or via `worktree-merge-push.sh`), so the phase-record PR fallback (see "Direct push rejected by the remote: phase-record PR" above) applies to all rows.
 
 Phases that pass `--no-push` to `append-consumed-comments-section.sh` rely on this table's
 propagation path — not a push issued by the script itself — to carry the commit to base;
@@ -339,13 +352,6 @@ phases that omit `--no-push` push immediately for reasons specific to their own 
 shape. For the exhaustive per-phase enumeration of which phases pass `--no-push`, why, and how
 each phase's commit reaches the remote, see [`modules/l0-surfaces.md`](l0-surfaces.md) §
 "Bash wrapper fallback" (the SSoT for `append-consumed-comments-section.sh` callers).
-
-**Known gaps (not yet migrated):**
-- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare
-  `git push origin main` rather than routing through `worktree-merge-push.sh` (lock+push only),
-  so this table's `/spec`, worktree-skipped row describes the intended propagation path, not the
-  current implementation. Pre-existing (not introduced by #1058) and out of its scope; tracked as
-  a deferred item.
 
 ### `source`-based shell function calls are blocked by the worktree isolation guard
 

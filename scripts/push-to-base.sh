@@ -107,6 +107,7 @@ if ! printf '%s\n' "$push_out" | grep -qF '[remote rejected]'; then
 fi
 
 # --- Step 2: phase-record PR ---------------------------------------------------------
+# See modules/orchestration-fallbacks.md#push-rejected-record-pr
 TMP_BODY=""
 TMP_SQUASH=""
 cleanup_tmp() {

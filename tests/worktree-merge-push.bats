@@ -898,7 +898,7 @@ MOCK
 
     run bash "$SCRIPT" --from test-branch
     [ "$status" -eq 0 ]
-    [[ "$output" == *"landed via phase-record PR"* ]]
+    [[ "$output" == *"landed via phase-record PR"* ]] || false
 
     git --git-dir "$REAL_ORIGIN" cat-file -e main:feature.txt
     [ "$(git rev-parse main)" = "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" ]
@@ -915,7 +915,7 @@ MOCK
 
     run bash "$SCRIPT" --from test-branch
     [ "$status" -ne 0 ]
-    [[ "$output" == *"https://github.com/o/r/pull/1"* ]]
+    [[ "$output" == *"https://github.com/o/r/pull/1"* ]] || false
 
     [ "$(git rev-parse main)" = "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" ]
     # The feature commit is still reachable from the worktree branch.

@@ -100,7 +100,7 @@ _commit_file() {
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT'"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"push-to-base: result=direct"* ]]
+    [[ "$output" == *"push-to-base: result=direct"* ]] || false
     [ ! -s "$GH_LOG" ]
     git --git-dir "$ORIGIN" cat-file -e main:feature.txt
 }
@@ -122,7 +122,7 @@ _commit_file() {
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT'"
     [ "$status" -eq 1 ]
-    [[ "$output" != *"result="* ]]
+    [[ "$output" != *"result="* ]] || false
     [ ! -s "$GH_LOG" ]
     [ -z "$(git -C "$CLONE" branch --list 'wholework-record/*')" ]
     [ "$(git --git-dir "$ORIGIN" for-each-ref --format='%(refname)' refs/heads)" = "refs/heads/main" ]
@@ -134,7 +134,7 @@ _commit_file() {
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT'"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"push-to-base: result=record-pr url=https://github.com/o/r/pull/1"* ]]
+    [[ "$output" == *"push-to-base: result=record-pr url=https://github.com/o/r/pull/1"* ]] || false
     git --git-dir "$ORIGIN" cat-file -e main:feature.txt
     # The record branch is gone locally and on the remote.
     [ -z "$(git -C "$CLONE" branch --list 'wholework-record/*')" ]
@@ -152,8 +152,8 @@ _commit_file() {
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT'"
     [ "$status" -eq 2 ]
-    [[ "$output" == *"https://github.com/o/r/pull/1"* ]]
-    [[ "$output" != *"result=record-pr"* ]]
+    [[ "$output" == *"https://github.com/o/r/pull/1"* ]] || false
+    [[ "$output" != *"result=record-pr"* ]] || false
     [ "$(git --git-dir "$ORIGIN" rev-parse main)" = "$before" ]
     [ -n "$(git -C "$CLONE" branch --list 'wholework-record/*')" ]
 }
@@ -167,14 +167,14 @@ _commit_file() {
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT' --ref HEAD --base main"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"push-to-base: result=direct"* ]]
+    [[ "$output" == *"push-to-base: result=direct"* ]] || false
     [ "$(git --git-dir "$ORIGIN" rev-parse main)" = "$(git -C "$CLONE" rev-parse feat)" ]
 }
 
 @test "missing option value or invalid ref exits 2" {
     run bash -c "cd '$CLONE' && bash '$SCRIPT' --ref"
     [ "$status" -eq 2 ]
-    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"Usage:"* ]] || false
 
     run bash -c "cd '$CLONE' && bash '$SCRIPT' --base"
     [ "$status" -eq 2 ]

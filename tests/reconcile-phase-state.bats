@@ -229,8 +229,8 @@ MOCK_EOF
     [ ! -e "$CHECKOUT/docs/spec/issue-99-x.md" ]
     run bash -c "cd '$CHECKOUT' && bash '$SCRIPT' spec 99 --check-completion --strict"
     [ "$status" -eq 0 ]
-    [[ "$output" == *'"matches_expected":true'* ]]
-    [[ "$output" == *"origin/main"* ]]
+    [[ "$output" == *'"matches_expected":true'* ]] || false
+    [[ "$output" == *"origin/main"* ]] || false
 }
 
 @test "spec completion: spec neither in local working tree nor on origin/main -> mismatch" {
@@ -247,7 +247,7 @@ MOCK_EOF
 
     run bash -c "cd '$CHECKOUT' && bash '$SCRIPT' spec 99 --check-completion --strict"
     [ "$status" -eq 1 ]
-    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"matches_expected":false'* ]] || false
 }
 
 @test "spec completion: phase/code label counts as ready-or-later -> matches_expected true" {
