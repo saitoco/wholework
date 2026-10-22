@@ -243,3 +243,28 @@ AC2 の `section_contains "modules/orchestration-fallbacks.md" "auto-retry-on-fa
 
 ### Improvement Proposals
 - patch route の `/code` で `bats` が実行環境に無いとき、`bats tests/` 型の command AC を CI 結果 (`gh run list` / `gh run watch` の該当 run) で代替確認する手順を `/code` に定める。現状は AC を未チェックのまま `/verify` に渡すか、awk と grep の部分確認で済ませており、同じ記述が直近 20 件の Spec (#1410, #1413, #1429, #1447, #1449, #1454, #1461, #1462, #1477, #1480 など) にある。同じバッチでも #1482 / #1480 / #1479 / #1477 / #1475 で発生した
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 記録規約を `--write-manual-recovery --diagnosis` 経路に結び付け、`skills/auto/SKILL.md` と `run-auto-sub.sh` を変更対象外とした。そのため、親セッションが `/auto` Step 4a の書式で書く Tier 3 回復のエントリと、`spawn-recovery-subagent.sh` が書く Tier 3 のエントリが規約の外に残った
+
+#### design
+- 判定は「記録が無ければ `unknown`、`yes` だけを解除根拠とする」保守的な既定で、記録漏れが誤った解除につながらない点は妥当だった
+
+#### code
+- ドキュメントのみの変更で、手戻りはなかった
+
+#### review
+- 記録経路のカバレッジ (どの書き手が規約を参照するか) は rubric の対象外で、検出されなかった
+
+#### merge
+- 特記事項なし
+
+#### verify
+- 2026-10-22 の `/auto 1538` で merge phase の silent no-op が実際に発生した (未チェックの pre-merge AC 7 による gate 停止、Tier 3 で回復)。記録されたエントリに `- avoidable:` 行が無く、observation 条件は FAIL。Spec が `/auto` 側の変更を範囲外としていたため、documented deferral として auto-retry はスキップした
+
+### Improvement Proposals
+- `/auto` Step 4a のエントリ書式 (`skills/auto/SKILL.md`) と Tier 3 の記録経路 (`scripts/spawn-recovery-subagent.sh` の `write_recovery_entry()`、`agents/orchestration-recovery.md` の出力) で、phase が merge のときに `### Diagnosis` へ `- avoidable: <yes|no|unknown> — <reason>` 行を書くようにする。現状は `--write-manual-recovery --diagnosis` 経路しか規約を参照しておらず、Tier 3 回復の merge インシデントは常に `unknown` 扱いになる
