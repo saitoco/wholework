@@ -178,6 +178,78 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":false'* ]]
 }
 
+# Fixture: bare origin plus two clones. The "author" clone commits and pushes a Spec; the
+# "checkout" clone (CWD of the script) only fetches, so the Spec is on origin/main but not in
+# its working tree. When $1 is "no-spec", the Spec is never committed.
+_setup_origin_main_spec_fixture() {
+    local with_spec="$1"
+    local origin="$BATS_TEST_TMPDIR/origin.git"
+    local author="$BATS_TEST_TMPDIR/author"
+    CHECKOUT="$BATS_TEST_TMPDIR/checkout"
+
+    git init --bare -q "$origin"
+    git clone -q "$origin" "$author" 2>/dev/null
+    (
+        cd "$author"
+        git config user.email test@test.com
+        git config user.name test
+        git checkout -q -B main
+        echo base > base.txt
+        git add base.txt
+        git commit -q -m "base"
+        git push -q origin main
+    )
+    git clone -q "$origin" "$CHECKOUT" 2>/dev/null
+    if [[ "$with_spec" == "with-spec" ]]; then
+        (
+            cd "$author"
+            mkdir -p docs/spec
+            echo spec > docs/spec/issue-99-x.md
+            git add docs/spec/issue-99-x.md
+            git commit -q -m "spec"
+            git push -q origin main
+        )
+        # The checkout only fetches: the Spec reaches origin/main but not the working tree.
+        git -C "$CHECKOUT" fetch -q origin main
+    fi
+}
+
+@test "spec completion: spec only on origin/main (not in local working tree) + phase/ready -> matches_expected true" {
+    _setup_origin_main_spec_fixture with-spec
+    export MOCK_SPEC_PATH="docs/spec"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    [ ! -e "$CHECKOUT/docs/spec/issue-99-x.md" ]
+    run bash -c "cd '$CHECKOUT' && bash '$SCRIPT' spec 99 --check-completion --strict"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *"origin/main"* ]]
+}
+
+@test "spec completion: spec neither in local working tree nor on origin/main -> mismatch" {
+    _setup_origin_main_spec_fixture no-spec
+    export MOCK_SPEC_PATH="docs/spec"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash -c "cd '$CHECKOUT' && bash '$SCRIPT' spec 99 --check-completion --strict"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
 @test "spec completion: phase/code label counts as ready-or-later -> matches_expected true" {
     SPEC_DIR="$BATS_TEST_TMPDIR/docs/spec3"
     mkdir -p "$SPEC_DIR"

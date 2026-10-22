@@ -185,6 +185,17 @@ _completion_spec() {
   local spec_file
   spec_file=$(ls "${spec_path}/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1)
 
+  # A Spec landed on origin/main (e.g. through a phase-record PR) is not in this working tree
+  # until the checkout is updated. Look at the remote-tracking tree; no fetch here (the push
+  # and record-PR paths update the tracking ref). A missing ref, an absolute spec_path, or a
+  # git failure leaves spec_file empty (existing mismatch behavior).
+  local spec_source="local working tree"
+  if [[ -z "$spec_file" && "$spec_path" != /* ]]; then
+    spec_file=$(git ls-tree -r --name-only refs/remotes/origin/main -- "$spec_path" 2>/dev/null \
+      | grep -E "/issue-${ISSUE_NUMBER}-[^/]*\.md$" | head -1 || true)
+    [[ -n "$spec_file" ]] && spec_source="origin/main"
+  fi
+
   local labels
   labels=$(gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' 2>/dev/null) || \
     _handle_error "gh issue view failed for #$ISSUE_NUMBER"
@@ -202,7 +213,11 @@ _completion_spec() {
   fi
 
   if echo "$labels" | grep -qE '^phase/(ready|code|review|merge|verify|done)$'; then
-    _emit_result "true" "spec file found and phase label is ready-or-later for issue #${ISSUE_NUMBER}" "$actual_json"
+    if [[ "$spec_source" == "origin/main" ]]; then
+      _emit_result "true" "spec file found on origin/main (not in the local working tree) and phase label is ready-or-later for issue #${ISSUE_NUMBER}" "$actual_json"
+    else
+      _emit_result "true" "spec file found and phase label is ready-or-later for issue #${ISSUE_NUMBER}" "$actual_json"
+    fi
   else
     _handle_mismatch "spec file found but no ready-or-later phase label for issue #${ISSUE_NUMBER}" \
       "$(_append_hints_to_actual "$actual_json")"

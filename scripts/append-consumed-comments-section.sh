@@ -235,6 +235,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>" 2>/dev/null; then
       # watchdog covering it. Let diagnostics (lock-wait / rebase-failure messages) reach the
       # caller's log instead of suppressing them a second time on top of this script's own
       # best-effort warning.
+      # When the remote rejects a direct push to the base branch (branch protection / ruleset),
+      # worktree-merge-push.sh lands the commit through a phase-record PR (push-to-base.sh);
+      # if that fails too, the record stays on the wholework-record/* branch and its PR.
       _current_branch="$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
       WHOLEWORK_PATCH_LOCK_TIMEOUT="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-30}" \
         "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" \
