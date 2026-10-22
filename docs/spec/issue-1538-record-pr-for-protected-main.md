@@ -225,6 +225,8 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 
 - saito / MEMBER / first-class / Issue retrospective: 方針 A/B/C と判定方法の選択は /spec に委ね、対象範囲を 7 箇所に確定、Size L の根拠 / https://github.com/saitoco/wholework/issues/1538#issuecomment-6341640802
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=1538 decision=blo / https://github.com/saitoco/wholework/issues/1538#issuecomment-6343567396
+- saito / MEMBER / first-class / AC 7 (Run bats tests) re-verified by merge recovery: PR #1539 CI is 17/17 passed / https://github.com/saitoco/wholework/issues/1538#issuecomment-6343606443
 ## issue retrospective
 
 ### 曖昧点の自動解決 (非対話モード)
