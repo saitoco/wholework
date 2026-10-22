@@ -293,3 +293,7 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズ (/issue) の自動解決ログ。実装コミットの特定方法を /spec の責務としたこと、閾値 3 の維持、XL route を対象外としたこと、AC1 への section_contains の併記、Post-merge の observation 条件への PASS の証拠と SKIPPED の条件の明記、Background への premise マーカーの付与 / https://github.com/saitoco/wholework/issues/1533#issuecomment-6209250218
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1533#issuecomment-6209823552
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1533#issuecomment-6210333553
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1533#issuecomment-6236818065
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1533#issuecomment-6343838313
