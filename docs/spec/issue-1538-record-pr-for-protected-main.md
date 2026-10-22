@@ -293,24 +293,37 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 - Step 10: Pre-merge の rubric AC 6 件はグレーダーを起動せず (`/review` が PR 上で評価する)、チェックを付けていない。`github_check "gh pr checks"` は pr route の除外対象 (PR 作成前は評価できない)
 - Tier 0 の test-failure 回復は発動なし (`bats --jobs 4 tests/` は 2269 件すべて PASS)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 実装は Spec の分岐表 (D1 / D2 / R1〜R4) と exit code の列挙に沿っており、構造的な乖離はなかった。ただし追跡 ref (`refs/remotes/origin/<base>`) が無い場合の `RANGE` 失敗を Spec が想定しておらず、squash 本文が無警告で空になる穴があった (レビューで `fetch` + fail-closed に修正)
+- `resolve-merge-strategy.sh` が CWD 基準で `.wholework.yml` を読む点も Spec に無く、サブディレクトリ実行で設定した `merge-strategy` が黙って `--squash` に落ちた (リポジトリルートで実行するよう修正)
+
+### Recurring issues
+- CI でだけ落ちる環境依存のテスト: `gh` モックの `git commit-tree` が committer identity を必要とし、開発機 (global identity あり) では PASS、CI ランナーでは決定的に失敗した。実 git を使うモックの fixture は、identity を自前で設定する必要がある。`GIT_CONFIG_GLOBAL=/dev/null` と `HOME` を空にして実行すると再現できる
+- `/code` の完了報告 (全件 PASS) は、開発機の環境でのものだった。pr route の `/code` が CI 相当の無 identity 環境でテストを一度回していれば、レビューより前に見つかった
+
+### Acceptance criteria verification difficulty
+- rubric AC 6 件は、グレーダーが PASS を返した (Spec を渡さない構成でも判定できた)。`github_check "gh pr checks" "Run bats tests"` は CI の完了待ちが長く (6 分超)、修正後の再確認が `/review` の中で終わらなかった。AC 7 は未チェックのまま `/merge` に引き継ぐ
+- UNCERTAIN はなく、verify command の誤りもなかった
+
 ## Phase Handoff
 
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec どおり、直接 push の拒否は設定キーではなく git の `[remote rejected]` トークンで判定する `push-to-base.sh` に集約した。`worktree-merge-push.sh` と `/merge` の双方がこのスクリプトを通る。終了コードは 0 / 1 (再試行可能) / 2 (取り込めず) の 3 値
-- 記録用 PR の成否は `gh pr merge` の終了コードではなく `gh pr view` の state (`MERGED`) で判定する。`--delete-branch` の後処理だけが失敗する場合を成功として扱うため
-- 記録用 PR のあと、`worktree-merge-push.sh` がローカル `<base>` と `--from` ブランチを `origin/<base>` に揃える。squash / rebase で祖先関係が切れても、呼び出し元の `git branch -d` を変えずに済む
-- lock+push only で記録用ブランチがコミットを保持していない exit 2 は、巻き戻しでコミットを失わないようローカル `<base>` を触らず exit 1 にした (Spec に無い安全弁)
+- CI 失敗 (MUST) の原因を、`gh` モックの `git commit-tree` に identity が無いことと特定し、モック側で `GIT_AUTHOR_*` / `GIT_COMMITTER_*` を渡して直した。identity なしの環境で全 bats 2271 件が PASS することをローカルで確認した
+- 追跡 ref の欠落は `git fetch origin <base>` を一度試し、それでも解決できなければ `fail_record` (exit 2) に倒した。squash 本文が空のまま成功を名乗るより安全なため
+- `resolve-merge-strategy.sh` はリポジトリルートで実行する。`.wholework.yml` を CWD 基準で読むため
+- `[remote rejected]` を一律にポリシー拒否とみなす点 (一時的な競合でも記録用 PR になる) などの CONSIDER は、スコープ外としてこの PR では直さなかった
 
 ### Deferred Items
-- 実リポジトリ (saitoco/keio など `main` が PR 必須) での `/auto N` 通し確認は、Post-merge の manual AC のまま (権限のある人による確認が要る)
-- `run-auto-sub.sh`・`run-spec.sh`・`run-code.sh` の `_push_with_retry()` (回復記録の push) と `/doc` の push は対象外のまま。PR 必須のリポジトリでは同じ問題を持つので、フォローアップ候補
-- 記録用 PR に承認や必須チェックが要るリポジトリは未対応 (R4 で PR URL を報告して停止する)
-- Pre-merge の rubric AC 6 件は、`/review` での評価待ち (チェックは付けていない)
+- `push-to-base.sh` の `[remote rejected]` を括弧内の理由で分類し、一時的な競合を exit 1 に回す案 (CONSIDER)
+- `--base @` / `@{-1}` の受理、同名タグでの push 失敗 (CONSIDER)
+- `docs/guide/customization.md` の `patch-lock-timeout` の説明に記録用 PR 経路を足す案 (CONSIDER)
+- 実リポジトリ (saitoco/keio など `main` が PR 必須) での `/auto N` 通し確認は、Post-merge の manual AC のまま
 
 ### Notes for Next Phase
-- `/review` では、`push-to-base.sh` の分岐表 (D1 / D2 / R1〜R4) と、`worktree-merge-push.sh` の exit 0 (`record-pr`) / exit 1 / exit 2 の整列処理が Spec どおりかを見る。とくに exit 2 の「ローカル `<base>` を巻き戻す / 巻き戻さない」の分岐
-- `skills/verify/SKILL.md` の `skill-body-sha` は `5304ad31` に更新済み。レビューでの修正でこのファイルを触ったら再計算が必要 (`bash scripts/check-skill-body-hash.sh`)
-- 新規テストは `tests/push-to-base.bats` (6 件)、`tests/worktree-merge-push.bats` (3 件)、`tests/reconcile-phase-state.bats` (2 件)。`bats --jobs 4 tests/` の全件が PASS している
+- AC 7 (`github_check "gh pr checks" "Run bats tests"`) は未チェック。修正 push (`3020834c`) 後の CI が `/review` の時点で pending だったので、`/merge` で `Run bats tests` が PASS したことを確認してからマージする
+- pr route の `/merge` は squash でマージするため、`skills/*/SKILL.md` を触っていないこの修正では `skill-body-sha` の再計算は不要だった
 - 記録用 PR を作るたびに、そのリポジトリの `pull_request` トリガーの CI が走る (直接 push できるリポジトリでは発生しない)
