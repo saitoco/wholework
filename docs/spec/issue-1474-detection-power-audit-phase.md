@@ -8,6 +8,12 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-5965874088
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-5978134865
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6073964683
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1474#issuecomment-6081944114
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6117287103
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6137910575
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6196312681
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6236816398
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1474#issuecomment-6343835981
 ## Overview
 
 `skills/triage/skill-dev-verify-audit.md` の Pattern 2 サブパターン「検出力ゼロの成果物を証明する AC (新規テスト追加を主張する AC)」(#1325 で追加) は、Detection approach (b)(c) が「追加されたフィクスチャ」の中身を見ることを要求する。しかしこの監査を呼び出す `/triage` Step 7 (一括実行を含む) と `/issue` Existing Issue Refinement Step 15 はいずれも実装前に走るため、フィクスチャはまだ存在しない。(b)(c) は常に評価不能となり、(d)「判定が難しい場合は検出せず素通しする」が構造的にほぼ常に適用される。
