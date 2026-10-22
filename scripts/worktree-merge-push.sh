@@ -4,6 +4,18 @@
 # Usage: worktree-merge-push.sh [--from <worktree-branch>] [--base <branch>]
 #   --from  Branch to merge into base (omit to skip merge; lock+push only)
 #   --base  Target branch for push (default: main)
+#
+# The push is delegated to scripts/push-to-base.sh. A non-fast-forward rejection is retried
+# (fetch + rebase) as before. When the remote rejects the push by policy ("[remote rejected]":
+# branch protection, ruleset, hook), push-to-base.sh lands the commits through a phase-record
+# PR instead; this script then realigns the local <base> (and the --from branch) to
+# origin/<base>, so the caller's cleanup (git branch -d) keeps working even after a squash or
+# rebase merge. When the commits cannot be landed, the local <base> is reset to origin/<base>
+# and the script exits non-zero with where the record is kept (branch / PR).
+# Invariant: a push rejected by the remote never leaves local <base> ahead of origin/<base>
+# (the only exception is lock+push only with no record branch holding the commits, where
+# resetting would drop them; the script says so and exits non-zero).
+# See modules/worktree-lifecycle.md "Direct push rejected by the remote: phase-record PR".
 
 set -euo pipefail
 
@@ -144,11 +156,78 @@ if [[ -n "$FROM_BRANCH" ]]; then
   fi
 fi
 
+# Bring local <base> back onto origin/<base> after the push was delegated to a record PR (or
+# could not land). Returns non-zero when local <base> could not be aligned.
+#   $1 = "fetch": refresh origin/<base> first (needed after a record PR merged);
+#        anything else: use the origin/<base> already fetched at the top of this script
+realign_base_to_origin() {
+  if [[ "${1:-}" == "fetch" ]]; then
+    git fetch origin "$BASE_BRANCH" || return 1
+  fi
+  if git fetch . "+refs/remotes/origin/${BASE_BRANCH}:refs/heads/${BASE_BRANCH}" 2>/dev/null; then
+    return 0
+  fi
+  # git refuses a ref-fetch into a checked-out branch. When <base> is checked out here, move it
+  # in place; `git reset --keep` keeps uncommitted changes and changes nothing when they conflict.
+  local current_branch
+  current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+  if [[ "$current_branch" == "$BASE_BRANCH" ]]; then
+    git reset --keep "origin/${BASE_BRANCH}" -- || return 1
+    return 0
+  fi
+  return 1
+}
+
+# After a record PR landed the commits, move the --from branch onto origin/<base> as well so
+# the caller's `git branch -d` succeeds (squash / rebase merges break ancestry).
+realign_from_branch_to_origin() {
+  [[ -n "$FROM_BRANCH" ]] || return 0
+  local wt warn
+  warn="Warning: could not move ${FROM_BRANCH} onto origin/${BASE_BRANCH}; remove it with 'git branch -D ${FROM_BRANCH}' after confirming the record PR merged"
+  wt=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
+  if [[ -n "$wt" ]]; then
+    git -C "$wt" reset --keep "origin/${BASE_BRANCH}" -- || echo "$warn" >&2
+  else
+    git fetch . "+refs/remotes/origin/${BASE_BRANCH}:refs/heads/${FROM_BRANCH}" 2>/dev/null || echo "$warn" >&2
+  fi
+  return 0
+}
+
 MAX_PUSH_RETRY=3
 push_count=0
 while true; do
-  if git push origin "$BASE_BRANCH"; then
+  push_rc=0
+  push_out=$("$SCRIPT_DIR/push-to-base.sh" --base "$BASE_BRANCH") || push_rc=$?
+  if [[ $push_rc -eq 0 ]]; then
+    case "$push_out" in
+      *"result=record-pr"*)
+        record_pr_url=$(printf '%s\n' "$push_out" | sed -n 's/.*result=record-pr url=//p' | tail -n 1)
+        echo "Direct push to ${BASE_BRANCH} was rejected by the remote; landed via phase-record PR: ${record_pr_url}" >&2
+        if ! realign_base_to_origin fetch; then
+          echo "Error: PR ${record_pr_url} landed the commits, but local ${BASE_BRANCH} could not be aligned with origin/${BASE_BRANCH}. Run 'git reset --keep origin/${BASE_BRANCH}' on ${BASE_BRANCH}." >&2
+          exit 1
+        fi
+        realign_from_branch_to_origin
+        ;;
+    esac
     break
+  fi
+  if [[ $push_rc -ne 1 ]]; then
+    # push-to-base.sh exit 2 (or an unexpected value): the commits could not be landed.
+    # push-to-base.sh keeps them on a record branch / PR (its stderr above says where); the
+    # --from branch also keeps them. Do not leave local <base> ahead of origin/<base>, unless
+    # nothing else holds the commits (lock+push only, no record branch): then leave it as is.
+    if [[ -z "$FROM_BRANCH" ]] && [[ -z "$(git branch --contains "$BASE_BRANCH" --list 'wholework-record/*' 2>/dev/null)" ]]; then
+      echo "Error: could not land ${BASE_BRANCH} on origin (push-to-base.sh exit ${push_rc}) and no record branch holds the commits; local ${BASE_BRANCH} is left as is. Resolve manually." >&2
+      exit 1
+    fi
+    kept_on="${FROM_BRANCH:-the wholework-record/* branch or PR reported above}"
+    if realign_base_to_origin; then
+      echo "Error: could not land the commits on origin/${BASE_BRANCH} (push-to-base.sh exit ${push_rc}). Local ${BASE_BRANCH} was reset to origin/${BASE_BRANCH}; the commits are kept on ${kept_on}." >&2
+    else
+      echo "Error: could not land the commits on origin/${BASE_BRANCH} (push-to-base.sh exit ${push_rc}), and local ${BASE_BRANCH} could not be reset: it is still ahead of origin/${BASE_BRANCH}. Run 'git reset --keep origin/${BASE_BRANCH}' on ${BASE_BRANCH} after confirming the commits are kept on ${kept_on}." >&2
+    fi
+    exit 1
   fi
   push_count=$((push_count + 1))
   if [[ $push_count -ge $MAX_PUSH_RETRY ]]; then

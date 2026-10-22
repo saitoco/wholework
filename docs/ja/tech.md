@@ -304,6 +304,7 @@ Issue 本文の「Scope」または「Acceptance Criteria」セクションに�
 |----------|---------|-------------|
 | `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | `wait-ci-checks.sh` の最大待機秒数。タイムアウト挙動をテストするには低い値 (例: `60`) に設定する。 |
 | `WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC` | `120` | `gh pr checks` が登録済みチェック 0 件を報告している間、`wait-ci-checks.sh` がポーリングを続ける猶予期間 (秒)。猶予期間が経過してもまだ 0 件の場合、スクリプトは明示的な警告を発して待機を停止する。テストでは猶予期間をスキップするため `0` に設定する。 |
+| `WHOLEWORK_PUSH_RETRY_INTERVAL` | `2` | `scripts/push-to-base.sh` のフェーズ記録用 PR 経路で、`gh pr merge` の再試行と PR の状態確認の間隔 (秒)。テストでは `0` にして待たないようにする。 |
 | `WHOLEWORK_SCRIPT_DIR` | *(自動解決)* | `scripts/*.sh` が兄弟ヘルパーを解決する際に使用する `SCRIPT_DIR` を上書きする。BATS テストで呼び出しをモックディレクトリにリダイレクトするために使用される。本番では未設定のままにすること (自動的にスクリプト自身のディレクトリに解決される)。 |
 | `WHOLEWORK_CONFIG_PATH` | *(未設定)* | `scripts/get-config-value.sh` が使用する設定ファイルパスを上書きする。設定されている場合、スクリプトは CWD 相対の `.wholework.yml` の代わりに指定されたパスを読む。BATS テストではデフォルト値を強制するため `/dev/null` に設定する。未設定または空の場合は `.wholework.yml` (CWD 相対) にフォールバックする。 |
 | `WHOLEWORK_ISSUE_BODY_DIR` | *(未設定)* | `scripts/get-auto-session-report.sh` が verify-type breakdown を取得する際に使用する issue body のソースを上書きする。設定されている場合、`gh issue view` を呼び出す代わりに `${WHOLEWORK_ISSUE_BODY_DIR}/<issue_number>.md` を読む。ヘルメティックな実行のため BATS テストで使用される。未設定または空の場合は `gh issue view` にフォールバックする (`--no-github` の場合はスキップ)。 |

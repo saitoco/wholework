@@ -434,7 +434,7 @@ fires where it can safely reach that branch:
   the same Step) and the worktree fast-forwarded to `origin/main`
   — by the time the call runs, the working branch's content is `main`, not the (now-gone) PR
   branch. `/merge` passes `--no-push` and rides the same push as its Step 4 Phase Handoff
-  commit (`git push origin HEAD:main`). `/issue` has no Primary layer: no Spec exists at that
+  commit (`push-to-base.sh --ref HEAD --base main`). `/issue` has no Primary layer: no Spec exists at that
   point in the pipeline, so its Consumed Comments record lives in the Step 13 Issue
   Retrospective comment instead (see `skills/issue/SKILL.md` Step 13) and has no deterministic
   bash writeback — the LLM step is the only layer for `/issue`.

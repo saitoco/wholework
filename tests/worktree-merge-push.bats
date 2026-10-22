@@ -34,6 +34,9 @@ echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    # WHOLEWORK_SCRIPT_DIR points at $MOCK_DIR, so the real push helper must be there too.
+    cp "$(dirname "$SCRIPT")/push-to-base.sh" "$MOCK_DIR/push-to-base.sh"
 }
 
 teardown() {
@@ -802,4 +805,132 @@ MOCK
     [ "$status" -ne 0 ]
     [[ "$output" == *"Conflict markers remain"* ]]
     ! grep -q "push" "$GIT_LOG"
+}
+
+# --- Direct push rejected by a remote rule (phase-record PR fallback) ---
+#
+# Real-git fixture: a bare origin whose pre-receive hook rejects updates of refs/heads/main
+# while $REJECT_FLAG exists (a server-side "[remote rejected]", unlike the client-side
+# non-fast-forward "[rejected]"), a shared clone with main checked out, and a worktree on
+# branch test-branch holding one feature commit. `gh` is a PATH mock that records its argv and
+# imitates a squash merge on the bare origin.
+_setup_rejecting_origin() {
+    rm -f "$MOCK_DIR/git"
+
+    REAL_ORIGIN="$BATS_TEST_TMPDIR/origin.git"
+    SHARED="$BATS_TEST_TMPDIR/test-repo"
+    WT="$BATS_TEST_TMPDIR/wt-feature"
+    REJECT_FLAG="$BATS_TEST_TMPDIR/reject-main"
+    export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
+    export GH_ORIGIN="$REAL_ORIGIN"
+    export GH_STATE_DIR="$BATS_TEST_TMPDIR/gh-state"
+    mkdir -p "$GH_STATE_DIR"
+    unset GH_MERGE_FAIL
+    export WHOLEWORK_PUSH_RETRY_INTERVAL=0
+
+    git init --bare -q "$REAL_ORIGIN"
+    git clone -q "$REAL_ORIGIN" "$SHARED" 2>/dev/null
+    cd "$SHARED"
+    git config user.email test@test.com
+    git config user.name test
+    git checkout -q -B main
+    echo base > base.txt
+    git add base.txt
+    git commit -q -m "base"
+    git push -q origin main
+
+    git worktree add -q -b test-branch "$WT" main
+    cd "$WT"
+    git config user.email test@test.com
+    git config user.name test
+    echo feature > feature.txt
+    git add feature.txt
+    git commit -q -m "feature work"
+    cd "$SHARED"
+
+    cat > "$REAL_ORIGIN/hooks/pre-receive" <<HOOK
+#!/bin/bash
+while read old new ref; do
+  if [ "\$ref" = "refs/heads/main" ] && [ -f "$REJECT_FLAG" ]; then
+    echo "remote: error: GH013: Repository rule violations found for refs/heads/main." >&2
+    exit 1
+  fi
+done
+exit 0
+HOOK
+    chmod +x "$REAL_ORIGIN/hooks/pre-receive"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GH_LOG"
+if [[ "$1" == "pr" && "$2" == "create" ]]; then
+    while [[ $# -gt 0 ]]; do
+        [[ "$1" == "--head" ]] && echo "$2" > "$GH_STATE_DIR/head"
+        shift
+    done
+    echo "https://github.com/o/r/pull/1"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "merge" ]]; then
+    if [[ -n "${GH_MERGE_FAIL:-}" ]]; then
+        echo "merge blocked by required checks" >&2
+        exit 1
+    fi
+    head=$(cat "$GH_STATE_DIR/head")
+    # commit-tree needs a committer identity; CI runners have no global git identity.
+    new=$(GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@test.com GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@test.com \
+        git --git-dir "$GH_ORIGIN" commit-tree "refs/heads/$head^{tree}" -p refs/heads/main -m "squash merge")
+    git --git-dir "$GH_ORIGIN" update-ref refs/heads/main "$new"
+    git --git-dir "$GH_ORIGIN" update-ref -d "refs/heads/$head"
+    echo merged > "$GH_STATE_DIR/state"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+    [[ -f "$GH_STATE_DIR/state" ]] && echo MERGED || echo OPEN
+    exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+}
+
+@test "push rejected by a remote rule: lands via record PR and realigns local base and from-branch to origin" {
+    _setup_rejecting_origin
+    touch "$REJECT_FLAG"
+
+    run bash "$SCRIPT" --from test-branch
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"landed via phase-record PR"* ]] || false
+
+    git --git-dir "$REAL_ORIGIN" cat-file -e main:feature.txt
+    [ "$(git rev-parse main)" = "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" ]
+    [ "$(git rev-parse test-branch)" = "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" ]
+    # The caller's cleanup (Exit: merge-to-main step 4) goes through unchanged.
+    git worktree remove "$WT"
+    git branch -d test-branch
+}
+
+@test "push rejected by a remote rule and record PR cannot be merged: exits non-zero and local base is not left ahead" {
+    _setup_rejecting_origin
+    touch "$REJECT_FLAG"
+    export GH_MERGE_FAIL=1
+
+    run bash "$SCRIPT" --from test-branch
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"https://github.com/o/r/pull/1"* ]] || false
+
+    [ "$(git rev-parse main)" = "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" ]
+    # The feature commit is still reachable from the worktree branch.
+    git cat-file -e test-branch:feature.txt
+}
+
+@test "direct push allowed: pushes base directly without creating a record PR or branch" {
+    _setup_rejecting_origin
+
+    run bash "$SCRIPT" --from test-branch
+    [ "$status" -eq 0 ]
+
+    [ ! -s "$GH_LOG" ]
+    [ "$(git --git-dir "$REAL_ORIGIN" for-each-ref --format='%(refname)' refs/heads)" = "refs/heads/main" ]
+    [ "$(git --git-dir "$REAL_ORIGIN" rev-parse main)" = "$(git rev-parse test-branch)" ]
 }

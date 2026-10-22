@@ -29,7 +29,7 @@
 | フェーズ | 前提条件 | 成功シグネチャ (完了) | 実装状況 |
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue が存在し、状態が CLOSED でない | Issue に `phase/(issue\|ready\|code\|review\|merge\|verify\|done)` ラベルが付与されている | 実装済み |
-| spec | Issue に `phase/issue` または `phase/spec` ラベルが付与されている | `$SPEC_PATH/issue-N-*.md` が存在し、かつ `phase/(ready\|code\|review\|merge\|verify\|done)` ラベルが付与されている | 実装済み |
+| spec | Issue に `phase/issue` または `phase/spec` ラベルが付与されている | `$SPEC_PATH/issue-N-*.md` がローカル作業ツリー、または `origin/main` (リモート追跡 ref。fetch はしない) に存在し、かつ `phase/(ready\|code\|review\|merge\|verify\|done)` ラベルが付与されている | 実装済み |
 | code-patch | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` が新規コミットを 1 件以上返す (reopen タイムスタンプは `get-last-reopen` で取得); reopen タイムスタンプが取得できない場合は `git log origin/main --grep="closes #N"` にフォールバック; または operate ルート完了マーカーコメントが見つかる (後述の「Operate ルート完了シグネチャ」参照); または `worktree-code+issue-N` ブランチ上にオープンな PR が見つかる (後述の「残留 PR 完了シグネチャ」参照) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
 | code-pr | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists OR Size=XS | `worktree-code+issue-N` ブランチにオープンな PR (#310 が SSoT) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
 | review | PR が OPEN | PR に `<!-- review-summary -->` マーカーを含むコメントがある (主判定); または `## Review Response Summary` / `## レビュー回答サマリ` (マーカー不在の投稿に対するフォールバック)。同一コメントが `type=review-incomplete` マーカー (`post-fallback-review-summary.sh` が投稿) も併せ持つ場合、完了判定は引き続き `true` を返すが、その完了がオーガニックではなくフォールバック起源であることを示すため `actual.review_incomplete_fallback` が設定される (#1174 参照) | 実装済み |

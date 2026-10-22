@@ -3,7 +3,7 @@ name: merge
 description: Merge a PR (strategy configurable via `merge-strategy` in `.wholework.yml`; default squash) and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-merge-strategy.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/push-to-base.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Merge PR
@@ -315,10 +315,13 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
    git rev-list --count origin/main..HEAD
    ```
    - If both branches above find nothing to push (no staged Phase Handoff changes AND `git rev-list --count origin/main..HEAD` is `0`): skip the push and proceed to Step 5.
-   - Otherwise (either branch produced a commit, or unpushed commits already existed from substep 1): push:
+   - Otherwise (either branch produced a commit, or unpushed commits already existed from substep 1): push through the shared script (tries a direct push first; when the remote rejects it by policy, e.g. a branch ruleset that requires pull requests, it lands the commits through a phase-record PR instead):
    ```bash
-   git push origin HEAD:main
+   ${CLAUDE_PLUGIN_ROOT}/scripts/push-to-base.sh --ref HEAD --base main
    ```
+   - Exit 0: proceed to Step 5 (`result=direct` or `result=record-pr`).
+   - Exit 1 (retryable, e.g. non-fast-forward): run `git fetch origin main`, then `git rebase origin/main`, and run the same command once more. If it still exits non-zero, treat it like exit 2.
+   - Exit 2 (could not land): output the script's stderr (record branch name, PR URL) as a warning, include it in the completion report, and proceed to Step 5. The merge itself is complete, and the Phase Handoff stays on the record branch / PR instead of being dropped.
 
 ### Step 5: Label Transition (after successful merge)
 

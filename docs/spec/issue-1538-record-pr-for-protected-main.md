@@ -73,7 +73,7 @@
      | R3 PR 作成失敗 | `gh` が無い (`command -v gh`)・未認証・API エラー | ローカルとリモートの記録用ブランチを残す | 2 / なし (同上) |
      | R4 マージ未完了 | `gh pr merge` が 3 回とも失敗し、state も `MERGED` でない (必須承認・必須チェック・merge queue で auto-merge になった場合を含む) | ローカル・リモートの記録用ブランチと開いた PR を残す | 2 / なし (stderr に PR URL と「手でマージする」復旧手順) |
 
-     タイムアウトやシグナル送出は行わない。待機は `gh pr merge` の再試行 (最大 3 回、間隔 2 秒) と state 確認 (`gh pr view <url> --json state -q .state`、最大 3 回、間隔 2 秒) だけで、上限は固定値。
+     タイムアウトやシグナル送出は行わない。待機は `gh pr merge` の再試行 (最大 3 回、間隔 2 秒) と state 確認 (`gh pr view <url> --json state -q .state`、最大 3 回、間隔 2 秒) だけで、上限は固定値。間隔だけは環境変数 `WHOLEWORK_PUSH_RETRY_INTERVAL` (既定 2) で上書きできる (テストで待たないため)。`gh pr create` の stderr は握りつぶさず流す
    - **記録用 PR 経路の手順**: (a) 記録用ブランチ名 `wholework-record/<base の / を - に置換>-<UTC %Y%m%dT%H%M%SZ>-<pid>` を `git check-ref-format --branch` で検証し、ローカルに `git branch <name> <ref>` を作る (以後どの段階で失敗してもコミットはこの ref から辿れる)。(b) `git push origin "refs/heads/<name>:refs/heads/<name>"`。(c) `gh pr create --base <base> --head <name> --title "Phase record: <ref 先端の subject>" --body-file <tmp>`。本文は固定の英語文 (直接 push がリモートで拒否されたため wholework がこの PR で取り込む旨) と `git log --format='- %h %s' "refs/remotes/origin/<base>..<ref>"` の一覧。tmp は `mktemp` で作り EXIT trap で削除する。(d) マージ方式は `"$SCRIPT_DIR/resolve-merge-strategy.sh" --flag` で解決する。失敗・空・`--squash`/`--merge`/`--rebase` 以外の値なら `--squash` にする (リゾルバー自身のフォールバックと同じ)。(e) `gh pr merge <url> <flag> --delete-branch --match-head-commit <記録用ブランチの SHA>`。`--squash` のときだけ `--subject "<PR タイトル>" --body-file <tmp2>` を付け、tmp2 には `git log --format=%B "refs/remotes/origin/<base>..<ref>"` (元のコミットメッセージ全文。`closes #N` と `Signed-off-by:` が squash コミットに残る) を入れる。(f) 成否は `gh pr merge` の終了コードではなく `gh pr view` の state で判定する (`--delete-branch` の後処理だけが失敗するケースを成功と扱うため)
    - **エッジケース (fail-safe critical)**: コミットの subject と本文に含まれる `>`・`"`・改行・CRLF・マルチバイト文字は、ファイル (`--body-file`) か単一の argv 要素でだけ渡し、`eval` しない。タイトルは `%s` (1 行) から CR を `tr -d '\r'` で除く。コミット数が多い場合も本文はファイル経由なので argv 長の制限を受けない。依存コマンドが失敗したときは、成功を名乗らない側 (exit 2) に倒す。ただし `resolve-merge-strategy.sh` の失敗は `--squash` に、マージ後の `git fetch` の失敗は warning に倒す (PR は `MERGED` を確認済み)。拒否の分類がつかない出力は D2 (exit 1) に倒し、意図しない PR を作らない
    - ヘッダーコメントに用途、終了コードの契約、呼び出し元 (`worktree-merge-push.sh`、`skills/merge/SKILL.md`) を書く。`chmod +x` する
@@ -85,7 +85,7 @@
      | 0 | `result=direct` | `break` してそのまま exit 0 (既存挙動と同じ) |
      | 0 | `result=record-pr url=...` | `realign_base_to_origin` を実行。`--from` があれば `--from` ブランチも `origin/<base>` に揃える (worktree があれば `git -C <wt> reset --keep "origin/<base>" --`、無ければ `git fetch . "+refs/remotes/origin/<base>:refs/heads/<from>"`。失敗は warning のみ。呼び出し元の cleanup で `git branch -d` が通るようにするため)。base の整列に失敗したら「PR <url> で取り込み済みだがローカル <base> を揃えられなかった。`git reset --keep origin/<base>` を実行すること」と出して exit 1。成功なら exit 0 |
      | 1 | — | 既存の再試行ロジック (カウント・fetch・rebase・ref 更新) をそのまま使う。メッセージ `Push rejected (non-fast-forward); retry` も維持する |
-     | 2 (と想定外の値) | — | `realign_base_to_origin` でローカル `<base>` を `origin/<base>` に戻す (`--from` ブランチには触らない。コミットは `--from` ブランチ、または push-to-base.sh が残した記録用ブランチ・PR にある)。原因と記録の置き場所を出して exit 1。巻き戻しに失敗したら、ローカル `<base>` がまだ先に進んでいることと手順を明記する |
+     | 2 (と想定外の値) | — | `realign_base_to_origin` でローカル `<base>` を `origin/<base>` に戻す (`--from` ブランチには触らない。コミットは `--from` ブランチ、または push-to-base.sh が残した記録用ブランチ・PR にある)。原因と記録の置き場所を出して exit 1。ただし `--from` が無く、`wholework-record/*` ブランチがローカル `<base>` の先端を保持していないときは、コミットを失わないよう巻き戻さずにその旨を出して exit 1。巻き戻しに失敗したら、ローカル `<base>` がまだ先に進んでいることと手順を明記する |
 
    - `realign_base_to_origin()` を新設する: `git fetch origin "<base>"` (record-pr のあとに失敗したら return 1。exit 2 経路ではスクリプト冒頭で取得済みの `origin/<base>` をそのまま使う) → `git fetch . "+refs/remotes/origin/<base>:refs/heads/<base>"` → 拒否され、かつ `git rev-parse --abbrev-ref HEAD` が `<base>` なら `git reset --keep "origin/<base>" --` (コンフリクトしない未コミット変更は保持し、コンフリクトするなら何も変えずに失敗する。#1536 と同じ選択) → それ以外は return 1
    - ファイル先頭の説明と Usage コメントに、push の委譲と記録用 PR フォールバック、「拒否されたまま終了してもローカル `<base>` は `origin/<base>` より先に進まない」不変条件を追記する。lock の取得と EXIT trap の解放は変えない (記録用 PR 経路もロック内で完結する)
@@ -271,22 +271,59 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 - merge queue のブランチでは `gh pr merge` が auto-merge の有効化だけで終わることを `gh pr merge --help` で確認し、state 判定で R4 (exit 2) に倒す設計にした
 - 未確定のまま残したもの: `gh pr create` 直後の一時的なマージ不可 (再試行で吸収する)、`--squash` の `--body-file` が squash コミットにどう反映されるか (Post-merge で観察する)
 
+## Code Retrospective
+
+### Deviations from Design
+- `scripts/push-to-base.sh` に環境変数 `WHOLEWORK_PUSH_RETRY_INTERVAL` (既定 2 秒) を追加した。Spec は間隔を固定値としていたが、R4 (マージ未完了) のテストが 3 回 × 3 回の待機で十数秒かかるため、テストからだけ 0 に上書きできるようにした。本番の既定値は Spec どおり
+- `gh pr create` の stderr は握りつぶさず、そのまま流すようにした。Spec は `2>/dev/null` を許容していたが、PR 作成失敗の原因 (認証・API エラー) を呼び出し側のログに残すほうが復旧しやすい。標準出力の最終行だけを URL として使い、`http` で始まらなければ R3 (exit 2) に倒す
+- `worktree-merge-push.sh` の exit 2 経路に、Spec に無い安全弁を足した。`--from` が無い (lock+push only) 呼び出しで、`wholework-record/*` ブランチがローカル `<base>` の先端を保持していないときは、ローカル `<base>` を巻き戻さず、その旨を出して exit 1 にする。巻き戻すとコミットが reflog にしか残らなくなるため。入力検証の exit 2 (記録用ブランチを作る前) だけがこの条件に当たる
+- Spec の `/merge` 手順は「Step 4 substep 4」を参照している箇所があったが、実際の push は substep 5 だったので、`modules/worktree-lifecycle.md` の伝搬表は substep 5 に直した
+
+### Design Gaps/Ambiguities
+- `reconcile-phase-state.bats` の既存 spec テストは `MOCK_SPEC_PATH` に絶対パスを使っている。`_completion_spec` の `origin/main` 確認は相対 `spec_path` のときだけ行うため (絶対パスは git のツリー指定にできない)、既存テストは影響を受けない。新規 2 件は相対パスと実 git のフィクスチャで書いた
+- `check-bare-bracket-assertions.sh` は既存の bare `[[ ]]` を大量に報告する (情報のみ)。新規テストは `|| false` を付けて bash 3.2 でも失敗が伝わる形にした
+- worktree 隔離ガードは、git を含む文字列を渡す `python3 - <<EOF` や、`;` で連結した複数コマンドを拒否した。編集は Edit ツールに、検証コマンドは単独実行に切り替えて対処した
+
+### Rework
+- `skills/verify/SKILL.md` の `skill-body-sha` を一度更新し忘れ、`check-skill-body-hash.sh` が失敗した。行数は変わらず (1003 のまま)、sha のみ再計算した
+
+### Verification Notes
+- Confirmed pre-implementation FAIL for 2 new test(s) in `tests/worktree-merge-push.bats` (リモート拒否から記録用 PR で取り込む / PR がマージできないときローカル `main` が先に進まない): 修正前の `worktree-merge-push.sh` と今回のテストで実行して `not ok` を確認した。残る 1 件 (直接 push できるリポジトリでは PR もブランチも作らない) は既存挙動の保持を確認するテストなので、修正前でも PASS する設計
+- `tests/push-to-base.bats` 6 件と `tests/reconcile-phase-state.bats` の新規 2 件は、いずれも新規のスクリプト・分岐に対する出力・終了コードの検証で、ファイル内容の文字列照合ではない
+- Step 10: Pre-merge の rubric AC 6 件はグレーダーを起動せず (`/review` が PR 上で評価する)、チェックを付けていない。`github_check "gh pr checks"` は pr route の除外対象 (PR 作成前は評価できない)
+- Tier 0 の test-failure 回復は発動なし (`bats --jobs 4 tests/` は 2269 件すべて PASS)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 実装は Spec の分岐表 (D1 / D2 / R1〜R4) と exit code の列挙に沿っており、構造的な乖離はなかった。ただし追跡 ref (`refs/remotes/origin/<base>`) が無い場合の `RANGE` 失敗を Spec が想定しておらず、squash 本文が無警告で空になる穴があった (レビューで `fetch` + fail-closed に修正)
+- `resolve-merge-strategy.sh` が CWD 基準で `.wholework.yml` を読む点も Spec に無く、サブディレクトリ実行で設定した `merge-strategy` が黙って `--squash` に落ちた (リポジトリルートで実行するよう修正)
+
+### Recurring issues
+- CI でだけ落ちる環境依存のテスト: `gh` モックの `git commit-tree` が committer identity を必要とし、開発機 (global identity あり) では PASS、CI ランナーでは決定的に失敗した。実 git を使うモックの fixture は、identity を自前で設定する必要がある。`GIT_CONFIG_GLOBAL=/dev/null` と `HOME` を空にして実行すると再現できる
+- `/code` の完了報告 (全件 PASS) は、開発機の環境でのものだった。pr route の `/code` が CI 相当の無 identity 環境でテストを一度回していれば、レビューより前に見つかった
+
+### Acceptance criteria verification difficulty
+- rubric AC 6 件は、グレーダーが PASS を返した (Spec を渡さない構成でも判定できた)。`github_check "gh pr checks" "Run bats tests"` は CI の完了待ちが長く (6 分超)、修正後の再確認が `/review` の中で終わらなかった。AC 7 は未チェックのまま `/merge` に引き継ぐ
+- UNCERTAIN はなく、verify command の誤りもなかった
+
 ## Phase Handoff
 
+<!-- phase: review -->
+
 ### Key Decisions
-- 方針 A を採用した。新規 `scripts/push-to-base.sh` が直接 push を試み、`[remote rejected]` のときだけ記録用ブランチ `wholework-record/...` → PR 作成 → `resolve-merge-strategy.sh` の方式でマージ → `MERGED` 確認、と進む。終了コードは 0 (direct / record-pr) / 1 (再試行可能) / 2 (取り込めず) の 3 値
-- `worktree-merge-push.sh` は push をこのスクリプトに委ねる。record-pr で成功したらローカル `<base>` と `--from` ブランチを `origin/<base>` に揃え、exit 2 ならローカル `<base>` だけ戻して exit 1 にする。exit 1 なら既存の再試行ループを使う
-- 設定キーは新設しない。`detect-config-markers.md` と `customization.md` は変更対象外
-- `_completion_spec` は、ローカル作業ツリーに Spec が無ければ `refs/remotes/origin/main` のツリーを確認する (fetch はしない)
+- CI 失敗 (MUST) の原因を、`gh` モックの `git commit-tree` に identity が無いことと特定し、モック側で `GIT_AUTHOR_*` / `GIT_COMMITTER_*` を渡して直した。identity なしの環境で全 bats 2271 件が PASS することをローカルで確認した
+- 追跡 ref の欠落は `git fetch origin <base>` を一度試し、それでも解決できなければ `fail_record` (exit 2) に倒した。squash 本文が空のまま成功を名乗るより安全なため
+- `resolve-merge-strategy.sh` はリポジトリルートで実行する。`.wholework.yml` を CWD 基準で読むため
+- `[remote rejected]` を一律にポリシー拒否とみなす点 (一時的な競合でも記録用 PR になる) などの CONSIDER は、スコープ外としてこの PR では直さなかった
 
 ### Deferred Items
-- `_push_with_retry()` (run-auto-sub.sh / run-spec.sh / run-code.sh の回復記録) と `/doc` の push は対象外で、フォローアップ候補
-- 記録用 PR に承認や必須チェックが要るリポジトリへの対応 (Out of Scope。R4 で報告して停止する)
-- keio 実機での通し確認 (Post-merge manual)
+- `push-to-base.sh` の `[remote rejected]` を括弧内の理由で分類し、一時的な競合を exit 1 に回す案 (CONSIDER)
+- `--base @` / `@{-1}` の受理、同名タグでの push 失敗 (CONSIDER)
+- `docs/guide/customization.md` の `patch-lock-timeout` の説明に記録用 PR 経路を足す案 (CONSIDER)
+- 実リポジトリ (saitoco/keio など `main` が PR 必須) での `/auto N` 通し確認は、Post-merge の manual AC のまま
 
 ### Notes for Next Phase
-- `tests/worktree-merge-push.bats` は `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を使うので、`setup()` で実物の `push-to-base.sh` を `$MOCK_DIR` にコピーしないと既存テストがすべて失敗する。直接 push のコマンド形は `git push origin <base>` のまま保ち、既存テストの `grep "push origin main"` を壊さない
-- 新規テストは、修正前の実装で FAIL する形にする (受入条件 2)。拒否は実 git の pre-receive hook で再現し、`gh` は PATH のモックで squash マージを模す (bare origin への `commit-tree` と `update-ref`)
-- `skills/verify/SKILL.md` を編集したら、`skill-body-lines` と `skill-body-sha` のマーカーを更新する (CI の Skill Body Hash check)
-- `skills/merge/SKILL.md` には `push-to-base.sh`、`skills/auto/SKILL.md` には `worktree-merge-push.sh` を `allowed-tools` に追加する
-- `modules/orchestration-fallbacks.md` の新エントリには 5 セクションと、Rationale の `#1538` が必要 (`tests/orchestration-fallbacks.bats`)
+- AC 7 (`github_check "gh pr checks" "Run bats tests"`) は未チェック。修正 push (`3020834c`) 後の CI が `/review` の時点で pending だったので、`/merge` で `Run bats tests` が PASS したことを確認してからマージする
+- pr route の `/merge` は squash でマージするため、`skills/*/SKILL.md` を触っていないこの修正では `skill-body-sha` の再計算は不要だった
+- 記録用 PR を作るたびに、そのリポジトリの `pull_request` トリガーの CI が走る (直接 push できるリポジトリでは発生しない)

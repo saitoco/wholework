@@ -2,7 +2,7 @@
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session. `--batch --until <query>` runs a condition-driven loop (resolve a `label:`/`status:` query → process results as List mode → re-resolve → repeat until 0 Issues match or `--max-rounds` (default 3) is reached).
 loop-paths-used: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-round-order.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/rotate-observation-dispatch.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-round-order.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/rotate-observation-dispatch.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -517,8 +517,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    git commit -s -m "Add issue retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-   git push origin main
+   ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh
    ```
+
+   `worktree-merge-push.sh` without `--from` is lock+push only. When the remote rejects a direct push to `main` (e.g. a ruleset that requires pull requests), it lands the commit through a phase-record PR (see `modules/worktree-lifecycle.md` § "Direct push rejected by the remote: phase-record PR"). On a non-zero exit, output the script's stderr (where the record is kept) as a warning and continue with the remaining steps — do not discard the record.
 
 ### Step 4a: Auto Retrospective
 
@@ -639,8 +641,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    git commit -s -m "Add auto retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-   git push origin main
+   ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh
    ```
+
+   `worktree-merge-push.sh` without `--from` is lock+push only, with the same phase-record PR fallback as Step 4b substep 4. On a non-zero exit, output the script's stderr as a warning and continue with the remaining steps.
 
    If no recovery events were appended, omit `docs/reports/orchestration-recoveries.md` from `git add` (only add it when it was actually modified).
 
@@ -882,9 +886,9 @@ If `collect-run-facts.sh`, `scan-pending-ac.sh`, or `apply-run-fact-match.sh` fa
      git commit -s -m "Add L3 session data for session ${AUTO_SESSION_ID}
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-     git push origin main
+     ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh
      ```
-     Output "L3 session events committed (not notable — session.md skipped)." and skip the remaining L3 steps.
+     On a non-zero exit of `worktree-merge-push.sh` (lock+push only, with the phase-record PR fallback), output its stderr as a warning. Output "L3 session events committed (not notable — session.md skipped)." and skip the remaining L3 steps.
 
 4. **Fetch the Metrics section** (--no-github; retry-once on failure; log stderr to auto-metrics-stderr.log), capturing stdout to a scratch file:
    ```bash
@@ -993,8 +997,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-    git push origin main
+    ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh
     ```
+
+    `worktree-merge-push.sh` without `--from` is lock+push only, with the phase-record PR fallback. On a non-zero exit, output its stderr as a warning and continue.
 
 ### Step 6: On Failure: 3-Tier Recovery
 
