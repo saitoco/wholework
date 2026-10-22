@@ -325,3 +325,29 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 ### Notes for Next Phase
 - verify では Post-merge の manual AC 1 件が残る。`main` が PR 必須のリポジトリでの実機確認が必要
 - 記録用 PR は、そのリポジトリの `pull_request` トリガーの CI を走らせる点に注意
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 変更ファイル 18 件で Size L のまま進めた判断は妥当だった。spec 時点で `_push_with_retry()` と `/doc` の push を範囲外として Notes に残しており、フォローアップの起点が明確
+
+#### design
+- `[remote rejected]` と `[rejected]` を ref status token で判別する方式は、設定キーを増やさずに既存挙動を保てた。ただし並行 push の競合でも `[remote rejected]` になりうる点は CONSIDER として残っている
+
+#### code
+- 開発機 (global identity あり) で全件 PASS としたが、CI ランナー (identity なし) では `gh` モックの `git commit-tree` が決定的に失敗した。pr route の `/code` で無 identity 環境のテストを一度回していればレビュー前に検出できた
+
+#### review
+- CI 失敗 (MUST) と SHOULD 2 件を検出・修正し、有効だった。一方、修正 push 後の `Run bats tests` 完了を待たずに終了したため、AC 7 (`github_check "gh pr checks"`) が未チェックのまま `/merge` に渡った
+
+#### merge
+- 初回の `/merge` は、CI が 17/17 PASS かつ mergeable だったにもかかわらず、未チェックの AC 7 を理由に非対話モードで停止した (exit 1)。`/auto` の Tier 3 回復 (cause: `ac-unchecked-after-review-fix-push`) で CI 状態を確認したうえで AC 7 にチェックを付け、再実行でマージした
+
+#### verify
+- Pre-merge 7 件はすべてチェック済みで SKIPPED。Post-merge の manual AC 1 件 (PR 必須リポジトリでの `/auto` 通し確認) は keio での実行待ち
+- このセッションの verify SKILL.md はキャッシュが古く (PR #1539 が Step 13 を変更)、Step 13 はディスク上の版に従った
+
+### Improvement Proposals
+- `/merge` (非対話モード) で、未チェックの Pre-merge AC が `github_check "gh pr checks" ...` だけの場合、その場で verify command を実行し PASS ならチェックを付けて続行する。`/review` が修正 push 後の CI 完了前に終了するたびに `/merge` が停止し、Tier 3 回復が必要になるのを防ぐ
