@@ -351,3 +351,21 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 
 ### Improvement Proposals
 - `/merge` (非対話モード) で、未チェックの Pre-merge AC が `github_check "gh pr checks" ...` だけの場合、その場で verify command を実行し PASS ならチェックを付けて続行する。`/review` が修正 push 後の CI 完了前に終了するたびに `/merge` が停止し、Tier 3 回復が必要になるのを防ぐ
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | - | SUCCESS | Size L に判定 |
+| spec | - | SUCCESS | `--opus` |
+| code | pr | SUCCESS | PR #1539 |
+| review | pr (`--full`) | SUCCESS | CI fail 2 件 → 修正済み、SHOULD 2 件修正 |
+| merge | pr | SUCCESS (Tier 3 recovery) | 初回 exit 1 (未チェック AC 7 で gate 停止) → AC 7 チェック後に再実行 |
+| verify | - | PARTIAL | Post-merge manual AC 1 件待ち (phase/verify) |
+
+### Orchestration Anomalies
+- `run-merge.sh 1539` が exit 1。`/review` が修正 push 後の CI 完了前に終了し、AC 7 (`github_check "gh pr checks" "Run bats tests"`) が未チェックのまま残ったため、非対話の `/merge` が pre-merge AC gate で停止した。external kill・CI infra・Tier 2 はいずれも該当せず、Tier 3 の回復計画 (recover) で CI 17/17 PASS を確認して AC 7 をチェックし、再実行でマージした
+
+### Improvement Proposals
+- N/A (verify retrospective の提案と同一のため重複を避ける)

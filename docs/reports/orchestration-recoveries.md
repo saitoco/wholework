@@ -89,6 +89,27 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-10-22 14:44 UTC: merge-blocked-unchecked-pre-merge-ac
+
+### Context
+- Issue #1538, phase: merge
+- Source: recovery-sub-agent
+- Wrapper: run-merge.sh, exit code: 1
+- Log tail: "Warning: claude exited 0 but merge phase did not complete (silent no-op)."
+
+### Diagnosis
+- cause: ac-unchecked-after-review-fix-push
+- /review pushed a MUST fix (bats gh mocks needing a git committer identity) and ended before the re-run of `Run bats tests` completed, so pre-merge AC 7 (`github_check "gh pr checks" "Run bats tests"`) stayed unchecked. /merge (non-interactive) then stopped at the pre-merge AC gate even though CI was 17/17 PASS and the PR was mergeable.
+
+### Recovery Applied
+- Tier 3 plan (action=recover, 2 steps): confirmed `Run bats tests` PASS on both runs, checked AC 7 with `gh-issue-edit.sh 1538 --checkbox 7 --check`, posted a recovery comment, then re-ran run-merge.sh 1539 (merged).
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
 ## 2026-10-04 12:36 UTC: manual-recovery-label-backfill
 
 ### Context
