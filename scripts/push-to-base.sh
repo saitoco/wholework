@@ -149,6 +149,17 @@ fi
 
 RANGE="refs/remotes/origin/${BASE}..refs/heads/${RECORD_BRANCH}"
 
+# The PR body and the squash message are built from RANGE; without the remote-tracking ref
+# the log would come back empty and the squash commit would lose the original messages
+# (closes #N, Signed-off-by). Try to fetch it once, otherwise fail closed.
+if ! git rev-parse --verify --quiet "refs/remotes/origin/${BASE}^{commit}" >/dev/null 2>&1; then
+  git fetch origin "$BASE" >&2 2>&1 || true
+  if ! git rev-parse --verify --quiet "refs/remotes/origin/${BASE}^{commit}" >/dev/null 2>&1; then
+    fail_record "resolve refs/remotes/origin/${BASE}" "kept" "not pushed" \
+      "run: git fetch origin ${BASE}, then push ${RECORD_BRANCH} and open a PR against ${BASE} manually"
+  fi
+fi
+
 if ! LC_ALL=C git push origin "refs/heads/${RECORD_BRANCH}:refs/heads/${RECORD_BRANCH}" >&2; then
   fail_record "push record branch" "kept" "not pushed" \
     "fix the push failure, then run: git push origin ${RECORD_BRANCH} and open a PR against ${BASE}"
@@ -181,7 +192,9 @@ if [[ -z "$PR_URL" ]] || [[ "$PR_URL" != http* ]]; then
 fi
 
 # Merge method: same fail-safe as resolve-merge-strategy.sh itself (anything unexpected -> squash).
-MERGE_FLAG=$("$SCRIPT_DIR/resolve-merge-strategy.sh" --flag 2>/dev/null || true)
+# The resolver reads .wholework.yml relative to the CWD, so run it from the repository root.
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+MERGE_FLAG=$( (cd "${REPO_ROOT:-.}" && "$SCRIPT_DIR/resolve-merge-strategy.sh" --flag) 2>/dev/null || true)
 case "$MERGE_FLAG" in
   --squash|--merge|--rebase) ;;
   *) MERGE_FLAG="--squash" ;;

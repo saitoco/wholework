@@ -65,7 +65,9 @@ if [[ "$1" == "pr" && "$2" == "merge" ]]; then
         exit 1
     fi
     head=$(cat "$GH_STATE_DIR/head")
-    new=$(git --git-dir "$GH_ORIGIN" commit-tree "refs/heads/$head^{tree}" -p refs/heads/main -m "squash merge")
+    # commit-tree needs a committer identity; CI runners have no global git identity.
+    new=$(GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@test.com GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@test.com \
+        git --git-dir "$GH_ORIGIN" commit-tree "refs/heads/$head^{tree}" -p refs/heads/main -m "squash merge")
     git --git-dir "$GH_ORIGIN" update-ref refs/heads/main "$new"
     git --git-dir "$GH_ORIGIN" update-ref -d "refs/heads/$head"
     echo merged > "$GH_STATE_DIR/state"
@@ -156,6 +158,37 @@ _commit_file() {
     [[ "$output" != *"result=record-pr"* ]] || false
     [ "$(git --git-dir "$ORIGIN" rev-parse main)" = "$before" ]
     [ -n "$(git -C "$CLONE" branch --list 'wholework-record/*')" ]
+}
+
+@test "record PR merge honors .wholework.yml merge-strategy when run from a subdirectory" {
+    (
+        cd "$CLONE"
+        mkdir -p sub/dir
+        echo "merge-strategy: merge" > .wholework.yml
+        git add .wholework.yml
+        git commit -q -m "config"
+    )
+    _commit_file feature.txt
+    touch "$REJECT_FLAG"
+    # Use the real resolver (it reads .wholework.yml relative to the CWD).
+    export WHOLEWORK_SCRIPT_DIR="$(dirname "$SCRIPT")"
+
+    run bash -c "cd '$CLONE/sub/dir' && bash '$SCRIPT'"
+    [ "$status" -eq 0 ]
+    grep -q -- "--merge" "$GH_LOG"
+    run grep -q -- "--squash" "$GH_LOG"
+    [ "$status" -ne 0 ]
+}
+
+@test "missing remote-tracking ref is fetched so the record PR still lands" {
+    _commit_file feature.txt
+    touch "$REJECT_FLAG"
+    git -C "$CLONE" update-ref -d refs/remotes/origin/main
+
+    run bash -c "cd '$CLONE' && bash '$SCRIPT'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"push-to-base: result=record-pr"* ]] || false
+    git --git-dir "$ORIGIN" cat-file -e main:feature.txt
 }
 
 @test "--ref HEAD pushes a worktree branch tip to main" {

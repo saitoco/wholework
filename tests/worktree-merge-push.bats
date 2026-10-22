@@ -877,7 +877,9 @@ if [[ "$1" == "pr" && "$2" == "merge" ]]; then
         exit 1
     fi
     head=$(cat "$GH_STATE_DIR/head")
-    new=$(git --git-dir "$GH_ORIGIN" commit-tree "refs/heads/$head^{tree}" -p refs/heads/main -m "squash merge")
+    # commit-tree needs a committer identity; CI runners have no global git identity.
+    new=$(GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@test.com GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@test.com \
+        git --git-dir "$GH_ORIGIN" commit-tree "refs/heads/$head^{tree}" -p refs/heads/main -m "squash merge")
     git --git-dir "$GH_ORIGIN" update-ref refs/heads/main "$new"
     git --git-dir "$GH_ORIGIN" update-ref -d "refs/heads/$head"
     echo merged > "$GH_STATE_DIR/state"
