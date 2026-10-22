@@ -224,3 +224,69 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue retrospective: 方針 A/B/C と判定方法の選択は /spec に委ね、対象範囲を 7 箇所に確定、Size L の根拠 / https://github.com/saitoco/wholework/issues/1538#issuecomment-6341640802
+
+## issue retrospective
+
+### 曖昧点の自動解決 (非対話モード)
+
+- **方針 A/B/C は決めない** — 理由: 取り込み経路の選択は How にあたり、`/spec` の責務のため。完了条件は方針に依存しない結果 (取り込み経路への移行または原因報告つきの非ゼロ終了、ローカル `main` が先に進んだまま残らないこと、既存挙動の維持) で書いた
+  - 他の候補: 方針 A を前提に AC を書く案 (`/spec` の選択肢を狭めるため不採用)
+- **直接 push の可否の検出方法も `/spec` に委ねる** — 設定キーを新設した場合に限り、`modules/detect-config-markers.md` と `docs/guide/customization.md` への記載を求める AC にした
+- **「各フェーズの記録」の範囲を確定** — 元の 5 箇所に加え、調査で `skills/spec/SKILL.md` Step 14 と `skills/verify/SKILL.md` Step 13 の `ENTERED_WORKTREE=false` 経路 (`git push origin main` を直接実行) も同じ問題を持つことを確認し、調査の出発点と AC に含めた
+
+### 完了条件の変更理由
+
+- 元の「完了条件の案」4 件を、検証可能な Pre-merge 6 件と Post-merge 1 件に整理した
+  - 「`/auto N` が手動介入なしに進む」「記録が欠落しない」は、wholework 本体が `main` へ直接 push できるため pre-merge では再現できない。pre-merge は rubric と bats で部分的に確認し、実リポジトリでの通し確認は Post-merge の manual にした
+  - 新規テストの追加を主張する AC には、フィクスチャが修正前の実装で FAIL することを問う rubric AC を併記した (検出力ゼロのテストを防ぐため)
+- 記録用 PR に承認が必須のルールセットは無人で満たせないため、Out of Scope に明記した
+
+### 方針に関する判断
+
+- 実行環境の前提として、実リポジトリでの確認に必要な権限 (対象リポジトリへの書き込み、PR のマージ) を Background に記録した。実行アカウントがこの権限を持つかは未確認のオープンクエスチョンとして残した
+- Size は L とした (スクリプト 3 本・skill 3 本・modules/docs・テストにまたがるが、書き込み箇所を共通の取り込み経路に集約できる想定)。非対話モードのためサブ Issue 分割 (Step 12) はスキップした。`/spec` で規模が XL に相当すると判断された場合は、対話モードで `/issue 1538` を実行して分割を検討すること
+
+## spec retrospective
+
+### Minor observations
+
+- `/auto` の `allowed-tools` には `git commit`・`git push` が無い。Step 4b・4a・L3 の commit と push は、frontmatter ではなく実行時の権限設定 (auto mode) で通っていた。今回 `worktree-merge-push.sh` を追加すると、push 側だけが frontmatter で明示されることになる
+- `/auto` の L3 には push が 2 箇所ある (not-notable 経路の events.jsonl と、session.md の commit)。Issue 本文の「L3 retrospective」は 1 箇所に見えるが、実際は 2 箇所とも対象になる
+- `scripts/run-auto-sub.sh`・`run-spec.sh`・`run-code.sh` に同じ `_push_with_retry()` が 3 つ複製されている。回復記録の push も PR 必須のリポジトリでは同じ問題を持つので、フォローアップ候補として Notes に記録した
+
+### Judgment rationale
+
+- 方針は A (記録用 PR) にした。B と C は spec の記録しか救えず、verify・merge・auto の記録には別の仕組みが要る。A なら 1 つのスクリプトに集約できる
+- 直接 push の可否は、設定キーではなく push 出力の `[remote rejected]` トークンで判定する。リモートがすでに強制しているポリシーを設定に二重に書かずに済み、直接 push できるリポジトリには追加の API 呼び出しも PR も発生しない
+- `worktree-merge-push.sh` へのインライン実装ではなく、新しいスクリプト `push-to-base.sh` にした。`/merge` は worktree ブランチの `HEAD` を push するため、ローカル `main` に取り込んでから push する `worktree-merge-push.sh` の形に載らない
+- squash・rebase で祖先関係が切れる問題は、呼び出し元の cleanup (`git branch -d`) を変えずに、スクリプトの中でローカル `<base>` と `--from` ブランチを `origin/<base>` に揃えて解決した。cleanup 側を `-D` に変える案は、LLM が実行する手順に分岐が増えるので採らなかった
+- `_completion_spec` の `origin/main` 確認では `git fetch` をしない。既存の単体テストがネットワークに依存しないようにするため。追跡 ref は push と記録用 PR 経路の fetch で更新される
+- Size は L のまま (Changed Files は 18 件だが、ロジックの変更は 10 件。XL にすると無人ではサブ Issue 分割ができず止まる)
+- 新規分岐ロジックに必要な新規テストケース: `tests/push-to-base.bats` に 6 件 (D1 / D2 / R1 / R4 / `--ref HEAD` / 引数エラー)、`tests/worktree-merge-push.bats` に 3 件 (拒否から記録用 PR で取り込んで整列 / PR マージ失敗でも base が先に進まない / 直接 push の既存挙動)、`tests/reconcile-phase-state.bats` に 2 件 (`origin/main` のみ → true / どこにも無い → false)
+
+### Uncertainty resolution
+
+- `[remote rejected]` と `[rejected]` の区別は、ローカルの bare リポジトリと pre-receive hook で再現して確認した (git 2.47.3、`LANG=ja_JP.UTF-8` でもトークンは不変)。GitHub ルールセットの理由文は公開事例 (MongoDB Jira JAVA-6032) で確認した。keio 実機での確認は Post-merge の manual に残る
+- keio のルールセットは承認数 0・全マージ方式許可・bypass なしで、記録用 PR は無人でマージできることを `gh api` で確認した
+- merge queue のブランチでは `gh pr merge` が auto-merge の有効化だけで終わることを `gh pr merge --help` で確認し、state 判定で R4 (exit 2) に倒す設計にした
+- 未確定のまま残したもの: `gh pr create` 直後の一時的なマージ不可 (再試行で吸収する)、`--squash` の `--body-file` が squash コミットにどう反映されるか (Post-merge で観察する)
+
+## Phase Handoff
+
+### Key Decisions
+- 方針 A を採用した。新規 `scripts/push-to-base.sh` が直接 push を試み、`[remote rejected]` のときだけ記録用ブランチ `wholework-record/...` → PR 作成 → `resolve-merge-strategy.sh` の方式でマージ → `MERGED` 確認、と進む。終了コードは 0 (direct / record-pr) / 1 (再試行可能) / 2 (取り込めず) の 3 値
+- `worktree-merge-push.sh` は push をこのスクリプトに委ねる。record-pr で成功したらローカル `<base>` と `--from` ブランチを `origin/<base>` に揃え、exit 2 ならローカル `<base>` だけ戻して exit 1 にする。exit 1 なら既存の再試行ループを使う
+- 設定キーは新設しない。`detect-config-markers.md` と `customization.md` は変更対象外
+- `_completion_spec` は、ローカル作業ツリーに Spec が無ければ `refs/remotes/origin/main` のツリーを確認する (fetch はしない)
+
+### Deferred Items
+- `_push_with_retry()` (run-auto-sub.sh / run-spec.sh / run-code.sh の回復記録) と `/doc` の push は対象外で、フォローアップ候補
+- 記録用 PR に承認や必須チェックが要るリポジトリへの対応 (Out of Scope。R4 で報告して停止する)
+- keio 実機での通し確認 (Post-merge manual)
+
+### Notes for Next Phase
+- `tests/worktree-merge-push.bats` は `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を使うので、`setup()` で実物の `push-to-base.sh` を `$MOCK_DIR` にコピーしないと既存テストがすべて失敗する。直接 push のコマンド形は `git push origin <base>` のまま保ち、既存テストの `grep "push origin main"` を壊さない
+- 新規テストは、修正前の実装で FAIL する形にする (受入条件 2)。拒否は実 git の pre-receive hook で再現し、`gh` は PATH のモックで squash マージを模す (bare origin への `commit-tree` と `update-ref`)
+- `skills/verify/SKILL.md` を編集したら、`skill-body-lines` と `skill-body-sha` のマーカーを更新する (CI の Skill Body Hash check)
+- `skills/merge/SKILL.md` には `push-to-base.sh`、`skills/auto/SKILL.md` には `worktree-merge-push.sh` を `allowed-tools` に追加する
+- `modules/orchestration-fallbacks.md` の新エントリには 5 セクションと、Rationale の `#1538` が必要 (`tests/orchestration-fallbacks.bats`)
