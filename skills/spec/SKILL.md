@@ -1037,7 +1037,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 
 `ENTERED_WORKTREE` value determines behavior:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
-- `ENTERED_WORKTREE=false`: run `git push origin main` directly
+- `ENTERED_WORKTREE=false`: run `${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh` without `--from` (lock+push only; see "When `ENTERED_WORKTREE=false`" in `modules/worktree-lifecycle.md`)
 
 ### Step 15: Issue Comment
 

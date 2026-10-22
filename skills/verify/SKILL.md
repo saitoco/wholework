@@ -9,7 +9,7 @@ allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, g
 # Acceptance Test
 
 <!-- skill-body-lines: 1003 -->
-<!-- skill-body-sha: a72a919c -->
+<!-- skill-body-sha: 5304ad31 -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
@@ -885,7 +885,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 
 Behavior differs based on `ENTERED_WORKTREE`:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
-- `ENTERED_WORKTREE=false`: run `git push origin main` normally
+- `ENTERED_WORKTREE=false`: run `${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh` without `--from` (lock+push only; see "When `ENTERED_WORKTREE=false`" in `modules/worktree-lifecycle.md`)
 
 ### Step 14: Opportunistic Verification
 
