@@ -218,7 +218,7 @@ Issue が方針の選択を `/spec` に委ねているので、比較を記録�
 
 - keio のルールセット: `gh api repos/saitoco/keio/rulesets/6390875` (取得日時: 2026-10-22)。`refs/heads/main` に `pull_request` (required_approving_review_count: 0、allowed_merge_methods: merge / squash / rebase)・`non_fast_forward`・`deletion` の 3 ルールがあり、bypass_actors は空
 - keio のリポジトリ設定: `gh api repos/saitoco/keio` (取得日時: 2026-10-22)。allow_squash_merge / allow_merge_commit / allow_rebase_merge はすべて true、delete_branch_on_merge は false。`.wholework.yml` は `always-pr: true` で、`merge-strategy` は未設定 (squash にフォールバック)
-- `[remote rejected]` の再現: このセッションの `.tmp/probe-1538/probe.sh` と `probe2.sh` (bare リポジトリと pre-receive hook。git 2.47.3、2026-10-22)。tests のフィクスチャも同じ構成にする
+- `[remote rejected]` の再現: /spec のセッション内で一時的に作った検証スクリプト (2026-10-22、git 2.47.3。スクリプト自体は残していない)。構成は、bare リポジトリに `refs/heads/main` への更新だけを exit 1 で拒否する pre-receive hook を置き、クローンから `git push origin main` (hook で拒否) と、別クローンが先に push したあとの `git push origin main` (non-fast-forward) を比べるもの。Step 4 のフィクスチャと同じ構成なので、そこで再現できる
 - GitHub ルールセット拒否の出力例: https://jira.mongodb.org/browse/JAVA-6032 (取得日時: 2026-10-22。GH013 と "Changes must be made through a pull request" による拒否の事例)
 
 ## Consumed Comments
