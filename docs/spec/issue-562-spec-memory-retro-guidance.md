@@ -207,3 +207,8 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6073947640
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6117272012
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6137893048
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/562#issuecomment-6137924720
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6196269864
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6236783110
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6343794986
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-6368980566
