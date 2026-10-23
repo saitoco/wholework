@@ -136,6 +136,44 @@ EOF
     [ "$output" != "$first" ]
 }
 
+@test "path differs between separate-git-dir repositories that share a git dir parent" {
+    mkdir -p "$BATS_TEST_TMPDIR/gd" "$BATS_TEST_TMPDIR/sep"
+    git init -q --separate-git-dir="$BATS_TEST_TMPDIR/gd/a.git" "$BATS_TEST_TMPDIR/sep/a"
+    git init -q --separate-git-dir="$BATS_TEST_TMPDIR/gd/b.git" "$BATS_TEST_TMPDIR/sep/b"
+    cd "$BATS_TEST_TMPDIR/sep/a"
+    run "$SCRIPT" path 5 spec
+    [ "$status" -eq 0 ]
+    first="$output"
+    cd "$BATS_TEST_TMPDIR/sep/b"
+    run "$SCRIPT" path 5 spec
+    [ "$status" -eq 0 ]
+    [ "$output" != "$first" ]
+}
+
+@test "path differs between bare repositories that share a parent directory" {
+    mkdir -p "$BATS_TEST_TMPDIR/bare"
+    git init -q --bare "$BATS_TEST_TMPDIR/bare/foo.git"
+    git init -q --bare "$BATS_TEST_TMPDIR/bare/bar.git"
+    cd "$BATS_TEST_TMPDIR/bare/foo.git"
+    run "$SCRIPT" path 7 code
+    [ "$status" -eq 0 ]
+    first="$output"
+    cd "$BATS_TEST_TMPDIR/bare/bar.git"
+    run "$SCRIPT" path 7 code
+    [ "$status" -eq 0 ]
+    [ "$output" != "$first" ]
+}
+
+@test "path is not redirected by CDPATH" {
+    run "$SCRIPT" path 1540 code
+    [ "$status" -eq 0 ]
+    expected="$output"
+    mkdir -p "$BATS_TEST_TMPDIR/cdpath/.git"
+    CDPATH="$BATS_TEST_TMPDIR/cdpath" run "$SCRIPT" path 1540 code
+    [ "$status" -eq 0 ]
+    [ "$output" = "$expected" ]
+}
+
 @test "path works outside a git repository" {
     plain="$BATS_TEST_TMPDIR/plain"
     mkdir -p "$plain"

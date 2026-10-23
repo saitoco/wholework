@@ -18,8 +18,10 @@
 # Location: <base>/<repo-key>/issue-<N>-<phase>
 #   <base>      ${XDG_CACHE_HOME}/wholework/work when XDG_CACHE_HOME is an absolute
 #               path, otherwise $HOME/.cache/wholework/work. Never falls back to /tmp.
-#   <repo-key>  <name>-<cksum> built from the main checkout path, so a worktree and
-#               the main checkout resolve to the same key.
+#   <repo-key>  <name>-<cksum> built from the git common directory, so a worktree and
+#               the main checkout resolve to the same key while repositories whose
+#               git directories share a parent (separate-git-dir, bare, submodule)
+#               stay distinct.
 #
 # Environment:
 #   XDG_CACHE_HOME  Changes the base location (must be absolute; otherwise ignored)
@@ -127,13 +129,22 @@ resolve_base() {
 
 resolve_repo_key() {
     local common root name sum
+    # The key is derived from the git common dir itself (shared by a worktree and its
+    # main checkout, unique per repository), not from its parent: a --separate-git-dir
+    # repository, a bare repository, or a submodule keeps its git dir next to others.
     if common="$(git rev-parse --git-common-dir 2>/dev/null)" && [ -n "$common" ] \
-        && root="$(cd "$common" 2>/dev/null && pwd -P)"; then
-        root="$(dirname "$root")"
+        && root="$(CDPATH= cd -- "$common" 2>/dev/null && pwd -P)"; then
+        name="$(basename "$root")"
+        if [ "$name" = ".git" ]; then
+            name="$(basename "$(dirname "$root")")"
+        else
+            name="${name%.git}"
+        fi
     else
         root="$(pwd -P)"
+        name="$(basename "$root")"
     fi
-    name="$(printf '%s' "$(basename "$root")" | tr -c 'A-Za-z0-9._-' '_')"
+    name="$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '_')"
     sum="$(printf '%s' "$root" | cksum | cut -d' ' -f1)" || sum=""
     [ -n "$sum" ] || die "cannot compute a repository key"
     REPO_KEY="${name}-${sum}"
@@ -148,7 +159,7 @@ TARGET="$BASE/$REPO_KEY/issue-$ISSUE-$PHASE"
 # Human-readable size of a directory ("123 KiB" / "12 MiB" / "1.5 GiB" / "size unknown").
 dir_size() {
     local kb
-    kb="$(du -sk -- "$1" 2>/dev/null | cut -f1)" || kb=""
+    kb="$(du -sk -- "$1" 2>/dev/null | cut -f1 || true)"
     case "$kb" in
         ''|*[!0-9]*) echo "size unknown"; return 0 ;;
     esac

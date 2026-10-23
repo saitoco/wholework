@@ -31,7 +31,7 @@ Put every large work file under the directory printed by `${CLAUDE_PLUGIN_ROOT}/
 
 1. **On disk, not in memory.** Do not use a location that uses memory: `/tmp`, `$TMPDIR`, `/dev/shm`, `/run`, or any tmpfs. The script resolves the location under `${XDG_CACHE_HOME:-$HOME/.cache}/wholework/work/` and refuses (exit 1) when that location is on tmpfs or ramfs.
 2. **Outside the scan scope of the repository under work.** Do not place it inside the repository tree: not in the main checkout, not in a worktree, and not in the gitignored `.tmp/`. TypeScript `include`, test-runner discovery, and lint or formatter globs can pick up a copy there, depending on the tool and its configuration.
-3. **Named by Issue number and phase.** The directory is `issue-<N>-<phase>` (for example `issue-347-spec`), under a per-repository key (`<repo-key>`, built from the path of the main checkout), so the name alone shows which Issue and phase created it and which repository it belongs to.
+3. **Named by Issue number and phase.** The directory is `issue-<N>-<phase>` (for example `issue-347-spec`), under a per-repository key (`<repo-key>`, built from the repository's git common directory, which a worktree shares with its main checkout), so the name alone shows which Issue and phase created it and which repository it belongs to.
 
 The phase may create any subdirectories it needs under the printed directory (for example `repo-copy`, `browser-profile`). A tool that places its own scratch under `$TMPDIR` (for example a Chrome launch started by an audit tool) is run with `TMPDIR=<work directory>/tmp` for that command only; create that `tmp` subdirectory first.
 
@@ -39,7 +39,7 @@ If the verification can run inside the phase's own worktree without creating lar
 
 ### 2. Cleanup timing
 
-1. **When the phase ends, remove what it created, whether it ended in success or in failure.** Run `${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh clean $ISSUE_NUMBER $PHASE_NAME`. Removing early, as soon as the files are no longer needed, is also fine. A path that stops the phase with an error runs the same cleanup.
+1. **When the phase ends, remove what it created, whether it ended in success or in failure.** Run `${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh clean $ISSUE_NUMBER $PHASE_NAME`. Removing early, as soon as the files are no longer needed, is also fine. A path that stops the phase with an error runs the same cleanup when it can; whatever such a path leaves behind is removed by the next run's phase-start sweep (item 2).
 2. **What could not be removed is removed by the next run, at its start.** A forced termination (watchdog stop, OOM killer, crash) skips the cleanup in item 1, so the phase-start sweep in section 3 is the guarantee that leftovers do not accumulate.
 
 ### 3. Phase-start sweep
@@ -58,7 +58,7 @@ If the script exits non-zero (the location cannot be resolved, the location is o
 ## Output
 
 - `create`: the absolute path of the work directory on stdout (exit 0)
-- `sweep`: one stderr line for a removed leftover, and one warning line for each directory it left in place
+- `sweep`: one stderr line for a removed leftover, and one warning line for each directory it left in place (up to 20, then one summary line for the rest)
 - Exit codes: `0` success, `1` usage error or an unsafe environment (nothing was touched), `2` part of a removal failed (the next run's sweep retries it)
 
 ## Notes
