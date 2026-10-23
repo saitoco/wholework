@@ -220,3 +220,47 @@ Post-merge の 2 条件はどちらも `verify-type: manual` で、Issue Retrosp
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (対象範囲を全フェーズ共通にした、前回の残骸は同じ Issue の同じフェーズだけ開始時に消し別の分は警告、OOM の再現試験はしない、置き場所の条件は /spec に委ねる、の確認と受け入れ条件の書き直し) / https://github.com/saitoco/wholework/issues/1540#issuecomment-6367144432
+- (code phase) No new comments since last phase (cutoff: 2026-10-23T15:06:01Z, the `phase/ready` assignment).
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりの構成で実装した (新規 3 件、変更 9 件、翻訳ミラー 2 件を含む)。
+
+### Design Gaps/Ambiguities
+- Spec は `sweep` の警告上限を 20 件としたが、「ほか N 件」の文言は未規定だった。スクリプトは `N more directories not shown` とし、`tests/phase-work-dir.bats` で固定した。
+- 新規テストはすべてスクリプトの挙動 (終了コード・出力・ファイルシステムの状態) を検証するもので、対象ファイルの内容を文字列照合する verification 型の assert は無い。そのため「New Verification-Test Pre-implementation FAIL Check」は該当なし。
+- AC1〜AC4 の rubric は `/code` の中で自己評価して PASS とし、Issue のチェックを付けた。AC5・AC6 (`gh pr checks`) は PR 作成前のため未チェックのままで、`/review` が確認する。
+
+### Rework
+- なし。`tests/phase-work-dir.bats` は初回の実行で 38 件が通り、`bats --jobs 4 tests/` の全 2309 件も通った。
+- worktree 隔離ガードが `git` を含む複合コマンド (`python3 - <<EOF` や `$(...)`) を拒否したため、文書同期のスクリプトを `.tmp/` に Write して単純なコマンドで実行する形に切り替えた。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec は `<repo-key>` を「メインのチェックアウトのパスから作る」と定め、通常の `git init` と `git worktree add` の構成だけで実測していた。実装は git common dir の `dirname` を使ったため、`--separate-git-dir`・bare・submodule では git dir の親ディレクトリがキーになり、無関係なリポジトリが同じキーになった (`sweep` が別リポジトリの同名ディレクトリを消しうる)。Spec の「別リポジトリの分は消さず警告する」という不変条件は、キーの一意性に依存している。`/review` で common dir の実パスから作る形に直した。
+- 「成功でも失敗でも終了時に消す」という約束に対し、`clean` の配線は最後の Worktree Exit の Step だけで、`create` 後のエラー中断経路には無い。次回の `sweep` が回収するため、module の文言を「できるときは実行し、残った分は次回の sweep が回収する」に改めた。中断経路への配線は範囲外として見送った。
+
+### Recurring issues
+- 削除を伴うスクリプトの検証が、通常構成の単体テストに偏りがちである。エッジケースの実測 (別構成のリポジトリ、`CDPATH`、読めないツリー) で 2 件の実害候補が見つかった。削除対象の一意性を決める入力 (キー、パス) は、通常以外の構成でも別の値になることをテストに含めるとよい。
+
+### Acceptance criteria verification difficulty
+- AC1〜AC4 は rubric で、`/code` の自己評価と `/review` の読み合わせが一致した。AC5・AC6 は `gh pr checks` を PR 番号なしで呼ぶ書き方で、worktree 上では対象の PR を決められない。statusCheckRollup で代替して PASS と判定した。UNCERTAIN は無い。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `<repo-key>` を git common dir の実パスから作る形に変更した (表示名は basename が `.git` のときだけ親の basename)。worktree と main checkout が同じキーになる性質は保ち、別リポジトリの衝突を防ぐ。bats に separate-git-dir・bare・`CDPATH` の 3 ケースを追加した。
+- 中断経路の `clean` 配線は足さず、module の文言を実際の配線 (最後の Step で実行し、残りは次回の開始時 sweep が回収する) に合わせた。
+- `chmod -R` のハードリンク副作用と stat エラー時の exit 0 は発生条件が限られるため見送った。
+
+### Deferred Items
+- Post-merge の 2 件 (tmpfs の環境での実機観察、中断後の再実行) は manual のまま `/verify` に残る。
+- 見送った指摘: ローカル `git clone` のハードリンク先モードを `chmod -R` が変える件、`XDG_CACHE_HOME` が 4096 文字超または親に検索権限がないとき `sweep` / `clean` が exit 0 になる件、tmpfs 確認が GNU `stat` 依存である旨の明記。必要なら follow-up Issue にする。
+- 中断経路 (`/code` の hard-error abort など) への `clean` の配線は範囲外のまま。
+
+### Notes for Next Phase
+- `/review` の修正コミット (386f3f35) で `scripts/phase-work-dir.sh` の repo-key 導出と `tests/phase-work-dir.bats` を変えた。CI (`Run bats tests`) の再実行結果を `/merge` が確認すること。
+- 検証項目は `modules/phase-work-dir.md` の `### 1. Placement` の 3 点、`### 2. Cleanup timing` の 2 点、`### 3. Phase-start sweep` の 2 点の番号付きの記述と照合できる。

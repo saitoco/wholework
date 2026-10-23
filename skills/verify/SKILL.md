@@ -3,13 +3,13 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-unrecorded-kills.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
 
-<!-- skill-body-lines: 1003 -->
-<!-- skill-body-sha: 5304ad31 -->
+<!-- skill-body-lines: 1023 -->
+<!-- skill-body-sha: b3907462 -->
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
@@ -159,6 +159,20 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry
 This step is always mandatory regardless of the Issue's Size or route (including XS/S patch route) — there is no condition under which it may be skipped. Skipping it causes Step 4's `append-consumed-comments-section.sh` to commit/push directly onto a branch outside the worktree — the wrong branch (Issue #1037; see `modules/worktree-lifecycle.md` § "Spec file write destination" for why this specific branch matters). As of #1058, that main-tree push is lock-mediated via `worktree-merge-push.sh`, so a bare-push race against concurrent `/verify` runs (e.g. under `/auto --batch`) is no longer the primary risk; the remaining reason this step is mandatory is branch-destination correctness — writing to the wrong branch still produces the two-sided Spec edit #1058 exists to prevent.
 
 Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
+
+**Phase work directory sweep (start of phase):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md` and follow it for every large verification work file this phase creates (repository copy, `node_modules`, build output, browser-automation profile). Before creating anything, remove the leftover of an earlier interrupted `/verify` run for this Issue, and relay the warnings about other Issues' or phases' directories to the user without deleting them:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh sweep $NUMBER verify
+```
+
+When running verify commands or a browser check needs a repository copy, installed dependencies, a build, or a browser-automation profile, create them only under the directory printed by the following command. Never use `/tmp`, `$TMPDIR`, or `.tmp/` for them, and remove them with `clean` (Step 13) once they are no longer needed:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh create $NUMBER verify
+```
 
 ### Step 4: Fetch Issue Acceptance Conditions
 
@@ -880,6 +894,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
      ```
 
 ### Step 13: Worktree Exit (merge-to-main)
+
+**Phase work directory cleanup (end of phase):** remove the large verification work files this phase created, whether the phase ended in success or in failure (see `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md`). Nothing happens when no work directory exists:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh clean $NUMBER verify
+```
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main section" to exit the worktree.
 

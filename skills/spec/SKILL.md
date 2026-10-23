@@ -1,7 +1,7 @@
 ---
 name: spec
 description: Issue specification (`/spec 123`). Reads Issue requirements and creates an implementation plan. Automatically adjusts investigation depth (light/full) based on Size (`--light`/`--full` to override).
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
 ---
 
 # Issue Specification
@@ -75,6 +75,14 @@ Record `ENTERED_WORKTREE` for later use. The Entry section includes running `.cl
 **Consume comments since the last phase (L0 input; run after Worktree Entry above — see `modules/worktree-lifecycle.md` § "Spec file write destination"):**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=spec`. The cutoff resolves to the most recent `phase/issue` label assignment. Record results in the Spec's `## Consumed Comments` section.
+
+**Phase work directory sweep (start of phase):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md` and follow it for every large verification work file this phase creates (repository copy, `node_modules`, build output, browser-automation profile). Before creating anything, remove the leftover of an earlier interrupted `/spec` run for this Issue, and relay the warnings about other Issues' or phases' directories to the user without deleting them:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh sweep $NUMBER spec
+```
 
 ### Step 3: Label Transition (start)
 
@@ -151,6 +159,14 @@ Read `skills/spec/external-spec.md` and follow the "Processing Steps" section to
 - Framework/library API specs (Claude Code hooks, GitHub API, etc.)
 - Environment variable/config file formats (JSON schemas, YAML structures, etc.)
 - Filesystem/OS behavior (symlinks, permissions, etc.)
+
+**Large verification work files (only when verification needs them):**
+
+When checking an external spec or an uncertainty requires a repository copy, installed dependencies, a build, or a browser-automation profile, create them only under the directory printed by the following command. Never use `/tmp`, `$TMPDIR`, or `.tmp/` for them. Follow `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md`, and remove them with `clean` (Step 14) once they are no longer needed:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh create $NUMBER spec
+```
 
 **Issue body vs. existing implementation conflict detection (regardless of SPEC_DEPTH):**
 
@@ -1032,6 +1048,12 @@ Reflect on the specification phase and present improvement suggestions to the us
 also covers `SPEC_DEPTH=light` runs where this step is skipped entirely.)
 
 ### Step 14: Worktree Exit (merge-to-main)
+
+**Phase work directory cleanup (end of phase):** remove the large verification work files this phase created, whether the phase ended in success or in failure (see `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md`). Nothing happens when no work directory exists:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh clean $NUMBER spec
+```
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main" section.
 

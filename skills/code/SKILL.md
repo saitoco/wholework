@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`. Does not update CLAUDE.md, run session retrospectives, or manage memory.
 context: fork
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, git merge-base:*, git rev-parse:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, gh pr checks:*, gh run view:*, gh run list:*, gh run watch:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, git merge-base:*, git rev-parse:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/dedupe-phase-handoff-section.sh:*, gh pr checks:*, gh run view:*, gh run list:*, gh run watch:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -147,6 +147,14 @@ After entering the worktree, CWD switches to the worktree directory. When editin
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=code`. The cutoff resolves to the most recent `phase/ready` label assignment. For resume runs (PR already exists), use `COMMENT_SCOPE=issue+pr`. Record results in the Spec's `## Consumed Comments` section.
 
+**Phase work directory sweep (start of phase):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md` and follow it for every large verification work file this phase creates (repository copy, `node_modules`, build output, browser-automation profile). Before creating anything, remove the leftover of an earlier interrupted `/code` run for this Issue, and relay the warnings about other Issues' or phases' directories to the user without deleting them:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh sweep $NUMBER code
+```
+
 ### Step 3: `phase/ready` Label Check
 
 **Skip this check if Size is XS** (XS does not require Spec — skip this entire step and proceed to Step 4).
@@ -231,6 +239,14 @@ If the Spec has an "Uncertainties" section, before implementing:
 **If uncertainties cannot be verified, or the design premise turns out to be incorrect:**
 - In interactive mode: abort implementation and propose Spec revision
 - In non-interactive mode: auto-resolve by proceeding with best-effort implementation; note the unresolved uncertainty in the Spec's `## Autonomous Auto-Resolve Log` subsection
+
+**Large verification work files (only when verification needs them):**
+
+When verifying an uncertainty, or any later step, requires a repository copy, installed dependencies, a build, or a browser-automation profile, create them only under the directory printed by the following command. Never use `/tmp`, `$TMPDIR`, or `.tmp/` for them. Follow `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md`, and remove them with `clean` (Step 14) once they are no longer needed:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh create $NUMBER code
+```
 
 ### Step 7: Reference Steering Documents (if present)
 
@@ -813,6 +829,12 @@ Rows 3–4 bound the wait to **4 wait calls** (counter values 0, 1, 2, 3) — 4 
 5. **Escape hatch** — reached when 3 fix iterations complete with `failed>0` still true, or step 2 yields no actionable diagnosis: stop attempting further fixes, output a failure report naming the failing checks and their links, then proceed to Step 14. Do not exit non-zero — the commit and PR are already valid deliverables, and `/review` continues to detect the CI failure (see `skills/code/SKILL.md` pr route convention).
 
 ### Step 14: Worktree Exit
+
+**Phase work directory cleanup (end of phase):** remove the large verification work files this phase created, whether the phase ended in success or in failure (see `${CLAUDE_PLUGIN_ROOT}/modules/phase-work-dir.md`). Nothing happens when no work directory exists:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh clean $NUMBER code
+```
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit section appropriate for the route.
 
