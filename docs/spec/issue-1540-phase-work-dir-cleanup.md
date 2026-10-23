@@ -220,3 +220,34 @@ Post-merge の 2 条件はどちらも `verify-type: manual` で、Issue Retrosp
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (対象範囲を全フェーズ共通にした、前回の残骸は同じ Issue の同じフェーズだけ開始時に消し別の分は警告、OOM の再現試験はしない、置き場所の条件は /spec に委ねる、の確認と受け入れ条件の書き直し) / https://github.com/saitoco/wholework/issues/1540#issuecomment-6367144432
+- (code phase) No new comments since last phase (cutoff: 2026-10-23T15:06:01Z, the `phase/ready` assignment).
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec どおりの構成で実装した (新規 3 件、変更 9 件、翻訳ミラー 2 件を含む)。
+
+### Design Gaps/Ambiguities
+- Spec は `sweep` の警告上限を 20 件としたが、「ほか N 件」の文言は未規定だった。スクリプトは `N more directories not shown` とし、`tests/phase-work-dir.bats` で固定した。
+- 新規テストはすべてスクリプトの挙動 (終了コード・出力・ファイルシステムの状態) を検証するもので、対象ファイルの内容を文字列照合する verification 型の assert は無い。そのため「New Verification-Test Pre-implementation FAIL Check」は該当なし。
+- AC1〜AC4 の rubric は `/code` の中で自己評価して PASS とし、Issue のチェックを付けた。AC5・AC6 (`gh pr checks`) は PR 作成前のため未チェックのままで、`/review` が確認する。
+
+### Rework
+- なし。`tests/phase-work-dir.bats` は初回の実行で 38 件が通り、`bats --jobs 4 tests/` の全 2309 件も通った。
+- worktree 隔離ガードが `git` を含む複合コマンド (`python3 - <<EOF` や `$(...)`) を拒否したため、文書同期のスクリプトを `.tmp/` に Write して単純なコマンドで実行する形に切り替えた。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 削除を伴う操作はすべて `scripts/phase-work-dir.sh` に閉じ込め、Skill からは `allowed-tools` で事前許可したスクリプト呼び出しだけを行う形にした (Spec の判断どおり)。
+- `/verify` の Step 3 は開始時の掃除と使用場面 (`create`) を同じ位置にまとめ、`skills/verify/SKILL.md` の本文マーカー (行数 1023、ハッシュ `b3907462`) を最後の編集後に再計算した。
+
+### Deferred Items
+- AC5 (`Run bats tests`) と AC6 (`Validate skill syntax`) は PR の CI を待つ。`/review` で確認する。
+- Post-merge の 2 件 (tmpfs の環境での実機観察) は manual のまま `/verify` に残る。
+- `run-*.sh` ラッパーへの掃除の組み込みと `/review` などほかのフェーズへの `sweep` / `clean` の組み込みは範囲外 (Spec Notes のとおり)。
+
+### Notes for Next Phase
+- `docs/ja/product.md` と `docs/ja/structure.md` は英語版と同じコミットで更新済み。`scripts/check-translation-sync.sh` で `product.md` と `structure.md` は IN_SYNC (`guide/xl-decomposition.md` の OUTDATED は本変更と無関係の既存分)。
+- 検証項目は `modules/phase-work-dir.md` の `### 1. Placement` の 3 点、`### 2. Cleanup timing` の 2 点、`### 3. Phase-start sweep` の 2 点の番号付きの記述と照合できる。
