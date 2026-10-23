@@ -236,18 +236,31 @@ Post-merge の 2 条件はどちらも `verify-type: manual` で、Issue Retrosp
 - なし。`tests/phase-work-dir.bats` は初回の実行で 38 件が通り、`bats --jobs 4 tests/` の全 2309 件も通った。
 - worktree 隔離ガードが `git` を含む複合コマンド (`python3 - <<EOF` や `$(...)`) を拒否したため、文書同期のスクリプトを `.tmp/` に Write して単純なコマンドで実行する形に切り替えた。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec は `<repo-key>` を「メインのチェックアウトのパスから作る」と定め、通常の `git init` と `git worktree add` の構成だけで実測していた。実装は git common dir の `dirname` を使ったため、`--separate-git-dir`・bare・submodule では git dir の親ディレクトリがキーになり、無関係なリポジトリが同じキーになった (`sweep` が別リポジトリの同名ディレクトリを消しうる)。Spec の「別リポジトリの分は消さず警告する」という不変条件は、キーの一意性に依存している。`/review` で common dir の実パスから作る形に直した。
+- 「成功でも失敗でも終了時に消す」という約束に対し、`clean` の配線は最後の Worktree Exit の Step だけで、`create` 後のエラー中断経路には無い。次回の `sweep` が回収するため、module の文言を「できるときは実行し、残った分は次回の sweep が回収する」に改めた。中断経路への配線は範囲外として見送った。
+
+### Recurring issues
+- 削除を伴うスクリプトの検証が、通常構成の単体テストに偏りがちである。エッジケースの実測 (別構成のリポジトリ、`CDPATH`、読めないツリー) で 2 件の実害候補が見つかった。削除対象の一意性を決める入力 (キー、パス) は、通常以外の構成でも別の値になることをテストに含めるとよい。
+
+### Acceptance criteria verification difficulty
+- AC1〜AC4 は rubric で、`/code` の自己評価と `/review` の読み合わせが一致した。AC5・AC6 は `gh pr checks` を PR 番号なしで呼ぶ書き方で、worktree 上では対象の PR を決められない。statusCheckRollup で代替して PASS と判定した。UNCERTAIN は無い。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 削除を伴う操作はすべて `scripts/phase-work-dir.sh` に閉じ込め、Skill からは `allowed-tools` で事前許可したスクリプト呼び出しだけを行う形にした (Spec の判断どおり)。
-- `/verify` の Step 3 は開始時の掃除と使用場面 (`create`) を同じ位置にまとめ、`skills/verify/SKILL.md` の本文マーカー (行数 1023、ハッシュ `b3907462`) を最後の編集後に再計算した。
+- `<repo-key>` を git common dir の実パスから作る形に変更した (表示名は basename が `.git` のときだけ親の basename)。worktree と main checkout が同じキーになる性質は保ち、別リポジトリの衝突を防ぐ。bats に separate-git-dir・bare・`CDPATH` の 3 ケースを追加した。
+- 中断経路の `clean` 配線は足さず、module の文言を実際の配線 (最後の Step で実行し、残りは次回の開始時 sweep が回収する) に合わせた。
+- `chmod -R` のハードリンク副作用と stat エラー時の exit 0 は発生条件が限られるため見送った。
 
 ### Deferred Items
-- AC5 (`Run bats tests`) と AC6 (`Validate skill syntax`) は PR の CI を待つ。`/review` で確認する。
-- Post-merge の 2 件 (tmpfs の環境での実機観察) は manual のまま `/verify` に残る。
-- `run-*.sh` ラッパーへの掃除の組み込みと `/review` などほかのフェーズへの `sweep` / `clean` の組み込みは範囲外 (Spec Notes のとおり)。
+- Post-merge の 2 件 (tmpfs の環境での実機観察、中断後の再実行) は manual のまま `/verify` に残る。
+- 見送った指摘: ローカル `git clone` のハードリンク先モードを `chmod -R` が変える件、`XDG_CACHE_HOME` が 4096 文字超または親に検索権限がないとき `sweep` / `clean` が exit 0 になる件、tmpfs 確認が GNU `stat` 依存である旨の明記。必要なら follow-up Issue にする。
+- 中断経路 (`/code` の hard-error abort など) への `clean` の配線は範囲外のまま。
 
 ### Notes for Next Phase
-- `docs/ja/product.md` と `docs/ja/structure.md` は英語版と同じコミットで更新済み。`scripts/check-translation-sync.sh` で `product.md` と `structure.md` は IN_SYNC (`guide/xl-decomposition.md` の OUTDATED は本変更と無関係の既存分)。
+- `/review` の修正コミット (386f3f35) で `scripts/phase-work-dir.sh` の repo-key 導出と `tests/phase-work-dir.bats` を変えた。CI (`Run bats tests`) の再実行結果を `/merge` が確認すること。
 - 検証項目は `modules/phase-work-dir.md` の `### 1. Placement` の 3 点、`### 2. Cleanup timing` の 2 点、`### 3. Phase-start sweep` の 2 点の番号付きの記述と照合できる。
