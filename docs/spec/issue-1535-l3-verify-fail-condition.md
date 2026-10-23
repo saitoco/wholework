@@ -367,6 +367,11 @@ observation / opportunistic / manual 条件を待つだけで `phase/verify` に
 
 - saito / MEMBER / first-class / ## Issue Retrospective: 前フェーズ (/issue) の自動解決ログ。未チェックの auto 条件を数えるコマンドと「この session 中」の取得方法を /spec の責務としたこと、AC1 への section_contains の併記、Post-merge の observation 条件の検証結果 (event=auto-run は語彙表にあり session=next も付与済み)、Background の事実確認 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6214480354
 
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/1535#issuecomment-6215337607
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6215368206
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6236818747
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6343839124
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1535#issuecomment-6369018185
 ## Code Retrospective
 
 ### Deviations from Design
