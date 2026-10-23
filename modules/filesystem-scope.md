@@ -23,6 +23,7 @@ All file I/O during skill execution MUST originate from one of:
 | `${CLAUDE_PLUGIN_ROOT}` | Plugin-owned files only |
 | Single named config file under `$HOME` | `~/.wholework/config.yml` (exact path, no traversal) |
 | Script-private scratch under `$TMPDIR` | bare `mktemp` / `mktemp -d` inside a bundled script — see Temporary Files below |
+| Phase work directory | `${XDG_CACHE_HOME:-$HOME/.cache}/wholework/work/<repo-key>/issue-<N>-<phase>/`, resolved only by `scripts/phase-work-dir.sh` — see `modules/phase-work-dir.md` |
 
 ### Prohibited Patterns
 
@@ -43,6 +44,7 @@ Where a temporary file lives depends on who creates it and whether its path leav
 | Bundled script — path handed back to the caller, or file read/removed by a later tool call | `.tmp/` (absolute `$PWD/.tmp/` path) | The path outlives the script, so it stays inside the project like any LLM-created file. Put the `X` run at the very end of the template (BSD `mktemp` does not randomize it otherwise) |
 | Bundled script — credential-bearing scratch file | `.tmp/` | Project-local and owner-only (`mktemp` creates mode 600); remove it right after use so secrets stay out of the shared `$TMPDIR` |
 | Bundled script — private scratch file | `$TMPDIR` via bare `mktemp` / `mktemp -d` (no template; default `/tmp`) | Out of scope of the Non-Goal. Created, consumed, and removed within one script invocation, and never exposed to an LLM tool call. Remove it before exit (`trap ... EXIT` or an explicit `rm`). Use `mktemp -d` when the scratch space must stay outside the working tree (e.g. the ephemeral detached git worktree in `scripts/pre-merge-check.sh`) |
+| Skill / module procedure — large verification work files (repository copy, `node_modules`, build output, browser-automation profile) | the phase work directory (on disk, outside the repository) | Never `/tmp/` and not `.tmp/`: a copy inside the repository tree can be scanned by the build, test, or lint of the repository under work. Created, swept, and removed only through `scripts/phase-work-dir.sh` — see `modules/phase-work-dir.md` |
 
 Why private scratch is out of scope: the Non-Goal keeps files that Claude creates, or hands from one tool call to the next, inside the project (gitignored, inspectable, covered by worktree isolation). A bundled script's private scratch file never crosses a tool-call boundary, and a uniquely named `mktemp` file avoids the collisions that fixed `/tmp/` names cause between concurrent sessions. A hard kill (SIGKILL) skips every cleanup path: a leftover in `$TMPDIR` can be reclaimed by the OS, whereas a leftover in `.tmp/` would persist in the project.
 
@@ -107,3 +109,5 @@ Grep(pattern="keyword", type="sh")        # Good
 - `modules/doc-checker.md` — `$STEERING_DOCS_PATH` document candidate listing uses `Glob("*.md", path="$STEERING_DOCS_PATH")` form (compliant with this module)
 - `scripts/resolve-preview-env.sh` — creates credential-bearing temp files under an absolute `$PWD/.tmp/` template and hands the path back to its caller (compliant with Temporary Files)
 - `scripts/pre-merge-check.sh` — `mktemp -d` host directory for an ephemeral detached git worktree, kept outside the repository working tree; the other bare-`mktemp` scratch files in `scripts/` (enumerate with `git grep -nE '\$\(mktemp( -d)?\)' -- scripts/`) follow the same private-scratch rule (examples)
+- `modules/phase-work-dir.md` — rules for where phases place large verification work files, when they remove them, and how an interrupted run's leftovers are handled at phase start (the large-file counterpart of Temporary Files above)
+- `scripts/phase-work-dir.sh` — resolves, creates, sweeps, and cleans the phase work directory (`path` / `create` / `sweep` / `clean`)
