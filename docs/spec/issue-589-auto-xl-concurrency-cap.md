@@ -245,3 +245,8 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6073948045
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6117272321
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6137893476
+- saito / MEMBER / first-class / ⚠️ This `/verify` run may have executed a stale, session-cached copy of `skills/ / https://github.com/saitoco/wholework/issues/589#issuecomment-6137928901
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6196270635
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6236783919
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6343795915
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-6368981357
