@@ -260,3 +260,32 @@ Post-merge の 2 条件はどちらも `verify-type: manual` で、Issue Retrosp
 
 ### Notes for Next Phase
 - 検証項目は `modules/phase-work-dir.md` の `### 1. Placement` の 3 点、`### 2. Cleanup timing` の 2 点、`### 3. Phase-start sweep` の 2 点の番号付きの記述と照合できる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は置き場所を「条件」で書き、具体的な場所を `/spec` に委ねた。`/spec` はリポジトリ外の `${XDG_CACHE_HOME:-$HOME/.cache}/wholework/work/` を選び、Non-Goal と `filesystem-scope.md` の Allowed Base Paths も同期した。条件の書き方が設計の自由度を残しつつ、検証可能性も保てた
+- `run-spec.sh` は約 1860 秒の無出力の後に完了した (watchdog の spec 既定 2964 秒の 63%)。Size L 相当の設計で余裕はあるが、`/spec` の所要時間が伸びている兆候として記録する
+
+#### design
+- 削除を LLM の `rm -rf` ではなくスクリプトに閉じ込めた判断は、auto モードの分類器と誤削除の両面で妥当だった。範囲は Issue の想定より広がった (Size M → L)
+
+#### code
+- 手戻りなし。worktree 隔離ガードが複合コマンドを拒否したため、文書同期を `.tmp/` のスクリプト経由に切り替えた
+
+#### review
+- `<repo-key>` の衝突 (`--separate-git-dir`・bare・submodule で別リポジトリが同じキーになる) を実測で見つけた。`sweep` が別リポジトリの作業ディレクトリを消しうる実害候補で、`/review --full` の価値が出た
+- CONSIDER 3 件 (`chmod -R` のハードリンク副作用、stat エラー時の exit 0、GNU `stat` 依存の明記) は見送られた
+
+#### merge
+- 問題なし。CI 全件成功後に squash でマージした
+
+#### verify
+- Pre-merge の 6 件はマージ前にチェック済みで、既定どおり SKIPPED とした。Post-merge の 2 件は tmpfs 環境での実機観察が必要な manual 条件で、`phase/verify` に残る
+- 本 Issue 自身が `skills/verify/SKILL.md` を変更したため、このセッションの `/verify` はキャッシュされた古い本文 (1003 行) で動いた。新しいセッションでの再実行を推奨する
+- Consumed Comments: (verify phase) No new comments since last phase (cutoff: 2026-10-23T15:48:39Z, the `phase/verify` assignment).
+
+### Improvement Proposals
+- `scripts/phase-work-dir.sh` の review で見送ったエッジケース 3 件 (`chmod -R` がローカル `git clone` のハードリンク先のモードを変える件、stat エラー時に `sweep` / `clean` が exit 0 になる件、tmpfs 判定が GNU `stat` 依存である旨の明記) をまとめて対応する
