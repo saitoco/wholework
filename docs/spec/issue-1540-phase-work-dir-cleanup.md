@@ -249,18 +249,14 @@ Post-merge の 2 条件はどちらも `verify-type: manual` で、Issue Retrosp
 - AC1〜AC4 は rubric で、`/code` の自己評価と `/review` の読み合わせが一致した。AC5・AC6 は `gh pr checks` を PR 番号なしで呼ぶ書き方で、worktree 上では対象の PR を決められない。statusCheckRollup で代替して PASS と判定した。UNCERTAIN は無い。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `<repo-key>` を git common dir の実パスから作る形に変更した (表示名は basename が `.git` のときだけ親の basename)。worktree と main checkout が同じキーになる性質は保ち、別リポジトリの衝突を防ぐ。bats に separate-git-dir・bare・`CDPATH` の 3 ケースを追加した。
-- 中断経路の `clean` 配線は足さず、module の文言を実際の配線 (最後の Step で実行し、残りは次回の開始時 sweep が回収する) に合わせた。
-- `chmod -R` のハードリンク副作用と stat エラー時の exit 0 は発生条件が限られるため見送った。
+- CI 成功・レビュー承認済み・pre-merge AC 全件チェック済みを確認し、squash でマージした (戦略は `resolve-merge-strategy.sh --flag` の結果)。
 
 ### Deferred Items
 - Post-merge の 2 件 (tmpfs の環境での実機観察、中断後の再実行) は manual のまま `/verify` に残る。
-- 見送った指摘: ローカル `git clone` のハードリンク先モードを `chmod -R` が変える件、`XDG_CACHE_HOME` が 4096 文字超または親に検索権限がないとき `sweep` / `clean` が exit 0 になる件、tmpfs 確認が GNU `stat` 依存である旨の明記。必要なら follow-up Issue にする。
-- 中断経路 (`/code` の hard-error abort など) への `clean` の配線は範囲外のまま。
+- review で見送った指摘 (`chmod -R` のハードリンク副作用、stat エラー時の exit 0、GNU `stat` 依存の明記) は必要なら follow-up Issue にする。
 
 ### Notes for Next Phase
-- `/review` の修正コミット (386f3f35) で `scripts/phase-work-dir.sh` の repo-key 導出と `tests/phase-work-dir.bats` を変えた。CI (`Run bats tests`) の再実行結果を `/merge` が確認すること。
 - 検証項目は `modules/phase-work-dir.md` の `### 1. Placement` の 3 点、`### 2. Cleanup timing` の 2 点、`### 3. Phase-start sweep` の 2 点の番号付きの記述と照合できる。
