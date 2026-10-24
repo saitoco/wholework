@@ -3,6 +3,8 @@
 # Tests for gh-label-transition.sh
 # Mock external commands (gh) by placing them at the front of PATH
 
+bats_require_minimum_version 1.5.0
+
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/gh-label-transition.sh"
 SCRIPTS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts"
 
@@ -298,4 +300,150 @@ MOCK
     [ "$status" -eq 0 ]
     # Target label still added to the issue
     grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+}
+
+# --- --assign (opt-in assignee update) ---
+
+# gh stub that routes label, assignee-read, user and write calls separately
+write_assign_gh_mock() {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    echo "phase/code"
+    exit 0
+fi
+if [ "\$1" = "api" ] && [ "\$2" = "user" ]; then
+    echo "me"
+    exit 0
+fi
+if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
+    case "\$*" in
+        *assignees*)
+            n=0
+            [ -f "$BATS_TEST_TMPDIR/view_count" ] && n=\$(cat "$BATS_TEST_TMPDIR/view_count")
+            n=\$((n + 1))
+            echo "\$n" > "$BATS_TEST_TMPDIR/view_count"
+            if [ "\$n" -ge 2 ]; then
+                echo '{"assignees":[{"id":"U_dummy","login":"me","name":"Me","databaseId":1}]}'
+            else
+                echo '{"assignees":[]}'
+            fi
+            ;;
+    esac
+    exit 0
+fi
+case "\$*" in
+    *"-X POST"*)
+        [ "\${MOCK_WRITE_FAIL:-}" = "1" ] && exit 1
+        echo '{}'
+        exit 0
+        ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+}
+
+@test "assign: no --assign flag never touches assignees" {
+    write_assign_gh_mock
+    run bash "$SCRIPT" 99 code
+    [ "$status" -eq 0 ]
+    ! grep -q -- "assignees" "$GH_CALL_LOG"
+    ! grep -q -- "api" "$GH_CALL_LOG"
+}
+
+@test "assign: --assign updates the assignee after the label update" {
+    write_assign_gh_mock
+    run bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 0 ]
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+    grep -q -- "-X POST" "$GH_CALL_LOG"
+    label_line=$(grep -n -- "--add-label phase/code" "$GH_CALL_LOG" | head -1 | cut -d: -f1)
+    post_line=$(grep -n -- "-X POST" "$GH_CALL_LOG" | head -1 | cut -d: -f1)
+    [ "$label_line" -lt "$post_line" ]
+}
+
+@test "assign: --assign leaves the stdout of the label transition unchanged" {
+    write_assign_gh_mock
+    run --separate-stderr bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"assigned"* ]]
+}
+
+@test "assign: --assign is accepted before the positional arguments" {
+    write_assign_gh_mock
+    run bash "$SCRIPT" --assign 99 code
+    [ "$status" -eq 0 ]
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+    grep -q -- "-X POST" "$GH_CALL_LOG"
+}
+
+@test "assign: assignee API failure does not fail the label transition" {
+    write_assign_gh_mock
+    export MOCK_WRITE_FAIL=1
+    run --separate-stderr bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 0 ]
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+    [[ "$stderr" == *"Warning: failed to update the assignee of issue #99"* ]]
+}
+
+@test "assign: a crashing assignee helper does not fail the label transition" {
+    write_assign_gh_mock
+    cat > "$MOCK_DIR/gh-issue-assignee.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh-issue-assignee.sh"
+    WHOLEWORK_SCRIPT_DIR="$MOCK_DIR" run --separate-stderr bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 0 ]
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+    [[ "$stderr" == *"Warning: assignee update for issue #99 failed"* ]]
+}
+
+@test "assign: a missing assignee helper does not fail the label transition" {
+    write_assign_gh_mock
+    WHOLEWORK_SCRIPT_DIR="$MOCK_DIR" run --separate-stderr bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 0 ]
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+}
+
+@test "assign: label update failure skips the assignee update" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    echo "phase/code"
+    exit 0
+fi
+if [ "\$1" = "issue" ] && [ "\$2" = "edit" ]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 99 code --assign
+    [ "$status" -eq 1 ]
+    ! grep -q -- "-X POST" "$GH_CALL_LOG"
+    ! grep -q -- "api" "$GH_CALL_LOG"
+}
+
+@test "assign: --assign without a target phase is a usage error" {
+    write_assign_gh_mock
+    run --separate-stderr bash "$SCRIPT" 99 --assign
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"--assign requires a target phase"* ]]
+    [ ! -s "$GH_CALL_LOG" ]
+}
+
+@test "assign: --assign alone reports the missing issue number" {
+    run --separate-stderr bash "$SCRIPT" --assign
+    [ "$status" -eq 1 ]
+    [[ "$stderr" == *"issue number is required"* ]]
+}
+
+@test "help: --help documents --assign" {
+    run bash "$SCRIPT" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"--assign"* ]]
 }

@@ -84,3 +84,12 @@ EOF
   [[ "$output" == *"Unrecognized top-level key syntax"* ]]
   [[ "$output" == *"capabilities[browser]"* ]]
 }
+
+@test "auto-assign: accepted as a known key" {
+  cat > .wholework.yml << 'EOF'
+auto-assign: false
+EOF
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Unknown key"* ]]
+}
