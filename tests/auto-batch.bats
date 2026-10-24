@@ -4,6 +4,10 @@
 # Structural tests: verify that skills/auto/SKILL.md contains required content
 # in the "### List mode" section.
 
+# Issue #1545: assignee handling in Count/List/Until/Resume modes (structural tests at the end of
+# this file). The exclusion logic itself is tested in tests/filter-other-assignees.bats and
+# tests/resolve-batch-query.bats; these tests only pin what SKILL.md tells the LLM to do.
+
 SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL.md"
 
 load 'helpers/markdown-section'
@@ -21,6 +25,11 @@ count_mode_section() {
 # Extract the "### Until mode (--batch --until <query>)" section from SKILL.md
 until_mode_section() {
     md_section "$SKILL_FILE" "### Until mode"
+}
+
+# Extract the "### Resume mode (--batch --resume)" section from SKILL.md
+resume_mode_section() {
+    md_section "$SKILL_FILE" "### Resume mode"
 }
 
 @test "List mode section: wholework:verify Skill invocation present" {
@@ -176,4 +185,97 @@ until_mode_section() {
     resume_line=$(echo "$output" | grep '### Resume mode' | cut -d: -f1)
     [ "$list_line" -lt "$until_line" ]
     [ "$until_line" -lt "$resume_line" ]
+}
+
+# --- Assignee handling (Issue #1545) ---
+
+@test "Count mode section: candidates pass through filter-other-assignees.sh with assignees and createdAt" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    line="$(printf '%s\n' "$section" | grep 'gh issue list --state open --label triaged')"
+    [[ "$line" == *"assignees"* ]] || false
+    [[ "$line" == *"createdAt"* ]] || false
+    [[ "$line" == *"filter-other-assignees.sh"* ]] || false
+}
+
+@test "Count mode section: backward compatibility sentence mentions the assignee exception and the Japanese original is gone" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'is never a candidate' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q '後方互換で維持する' <<< "$section"
+    [ "$status" -ne 0 ]
+}
+
+@test "Count mode section: fail-closed behavior when the executing user is unknown is described" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'fail-closed' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: command failure stops Count mode without an unfiltered fallback" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'stop Count mode without processing any Issue' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'do not fall back to an unfiltered list' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: filtering criteria for Size and createdAt are unchanged" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'Sort by `createdAt` descending (newest first) and select the top N' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: Assignee warning block uses gh-issue-assignee.sh status and does not exclude" {
+    section="$(list_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'Assignee warning' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'gh-issue-assignee.sh status' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'never excluded because of its assignee' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: Assignee warning block comes before Process each Issue" {
+    section="$(list_mode_section)"
+    [ -n "$section" ]
+    warn_line="$(printf '%s\n' "$section" | grep -n 'Assignee warning' | head -1 | cut -d: -f1)"
+    process_line="$(printf '%s\n' "$section" | grep -n 'Process each Issue in' | head -1 | cut -d: -f1)"
+    [ -n "$warn_line" ]
+    [ -n "$process_line" ]
+    [ "$warn_line" -lt "$process_line" ]
+}
+
+@test "Until mode section: exclusion happens inside resolve-batch-query.sh and the List mode warning is not applied" {
+    section="$(until_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'resolve-batch-query.sh' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'Assignee warning' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'intentionally not applied' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: step 4 relays the script stderr" {
+    section="$(until_mode_section)"
+    [ -n "$section" ]
+    run grep -q "Relay the script's stderr" <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Resume mode section: Assignee warning of List mode is run against REMAINING" {
+    section="$(resume_mode_section)"
+    [ -n "$section" ]
+    run grep -q 'Assignee warning' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'REMAINING' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'do NOT call `write_batch` again' <<< "$section"
+    [ "$status" -eq 0 ]
 }

@@ -2,7 +2,7 @@
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session. `--batch --until <query>` runs a condition-driven loop (resolve a `label:`/`status:` query → process results as List mode → re-resolve → repeat until 0 Issues match or `--max-rounds` (default 3) is reached).
 loop-paths-used: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-round-order.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/rotate-observation-dispatch.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-other-assignees.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-round-order.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/rotate-observation-dispatch.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-env.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-pr-ci-workflows.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -91,23 +91,67 @@ Skipping this pointer file re-generation (再生成) means the sub-process reads
 
 **`--resume` detection (single-Issue resume):**
 
-If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` and extract the numeric token following `--resume` as `NUMBER`. Output a log line: "Resume mode: restoring checkpoint for issue #$NUMBER". Proceed to Step 2 as normal (checkpoint restoration happens in Step 4 before the verify loop).
+If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` and extract the numeric token following `--resume` as `NUMBER`. Output a log line: "Resume mode: restoring checkpoint for issue #$NUMBER". Proceed to Step 1a, then Step 2 as normal (checkpoint restoration happens in Step 4 before the verify loop).
 
 **`--batch` detection:**
 
 If `--batch` flag is present:
 
-- If `--resume` is present AND no numeric tokens follow `--batch` (i.e., `ARGUMENTS = "--batch --resume"` or similar with no numbers after `--batch`): record `RESUME_BATCH=true` and branch to `### Resume mode (--batch --resume)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
-- Else if `--until` follows `--batch`: record the quoted token immediately after `--until` as `UNTIL_QUERY` and branch to `### Until mode (--batch --until <query>)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**). This branch must be checked before the numeric-token collection branch below — `--batch --until "..."` has no numeric token directly after `--batch`, so checking numeric collection first would leave it matching neither Count nor List mode. Also extract, anywhere in ARGUMENTS:
+- If `--resume` is present AND no numeric tokens follow `--batch` (i.e., `ARGUMENTS = "--batch --resume"` or similar with no numbers after `--batch`): record `RESUME_BATCH=true` and branch to `### Resume mode (--batch --resume)` in the "Batch Mode (--batch)" section (**skip Steps 1a–6**)
+- Else if `--until` follows `--batch`: record the quoted token immediately after `--until` as `UNTIL_QUERY` and branch to `### Until mode (--batch --until <query>)` in the "Batch Mode (--batch)" section (**skip Steps 1a–6**). This branch must be checked before the numeric-token collection branch below — `--batch --until "..."` has no numeric token directly after `--batch`, so checking numeric collection first would leave it matching neither Count nor List mode. Also extract, anywhere in ARGUMENTS:
   - `--max-rounds <N>`: record as `MAX_ROUNDS`. If not specified, default to `3`. If the value is non-numeric or ≤0, output a warning and fall back to `3`.
   - `--checkin-per-round`: record `CHECKIN_PER_ROUND=true` if present, else `false` (default).
 - Else: collect all consecutive numeric tokens following `--batch`, stopping at any non-numeric token or ARGUMENTS end.
-  - If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
-  - If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+  - If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 1a–6**)
+  - If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 1a–6**)
 
 No Issue number needed for batch mode.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="auto".
+
+### Step 1a: Assignee Check (single-Issue path)
+
+Applies to `/auto N` and `/auto --resume N`. Every `--batch` form branched away in Step 1 and never reaches this step (Batch Mode handles assignees itself). Run it once, right after the Step 1 banner and before any step with side effects (Step 2 onward).
+
+**Why the parent checks**: child phases (`run-*.sh`) always run with `--non-interactive`, so a confirmation inside a child phase can only print a warning and the assignee stays with the previous member. Splitting the work between the member who refines an Issue and the member who implements it is normal, so the parent asks once before it launches any child phase. This step is an L0 read plus a replacement made only when the user chooses it; it depends neither on the autonomy tier nor on `auto-assign` (`gh-issue-assignee.sh` decides by itself whether it may write, so do not read `auto-assign` here).
+
+1. From the repository root (`gh-issue-assignee.sh` reads `auto-assign` from the current directory), run:
+
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status $NUMBER
+   ```
+
+   `STATUS` is the stdout line that, after trimming whitespace and CR, is exactly one of `unassigned`, `self`, `other`, `unknown`. Lines starting with `Info:` or `Warning:` are messages for people, not results. `LOGINS` is the login list in the stderr line `Info: issue #N is assigned to: <logins>`; when that line is absent use a generic word for the other members. Use `LOGINS` only for display and never put it in a shell command. When no result line is found (the command cannot run, exits non-zero, or prints something unexpected), treat it as no result: print the following message (inside a code fence, in Japanese) and go to Step 2, because an assignee problem must never stop `/auto`:
+
+   ```
+   assignee を確認できませんでした (Issue #{N})。そのまま続行します
+   ```
+
+2. Branch on `STATUS`:
+   - `unassigned`, `self`, `unknown`: go to Step 2 without asking (for `unknown` the helper has already printed a `Warning:`).
+   - `other` (bots and Copilot count as other; when the executing user cannot be identified, any assignee makes it `other`):
+     - If ARGUMENTS contains `--non-interactive`: do not call AskUserQuestion and do not call `reassign`. Print the standard Skip-tier warning of `modules/ambiguity-detector.md` (Three-Tier Policy) as the two lines below, leave the assignee unchanged, and go to Step 2:
+
+       ```
+       [non-interactive mode] Skipping high-stakes action: reassigning issue #{N} from {LOGINS} to the executing user
+       To perform this action, run `/auto {N}` interactively.
+       ```
+
+     - Otherwise (interactive): use AskUserQuestion with a single choice. The options are the three below, in this order and with exactly these labels. Write the question text (showing `{LOGINS}`) and each option description inside a code fence, in Japanese. When AskUserQuestion is unavailable (the call fails), handle it as in the `--non-interactive` case:
+       - "自分に付け替えて続ける": run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh reassign $NUMBER` and branch on the word it prints. Go to Step 2 in every case (a failed reassignment never stops `/auto`; always offer the option and report `disabled` as the result). Print each message inside a code fence, in Japanese:
+         - `assigned`: `assignee を実行ユーザーに付け替えました (Issue #{N})`. If the helper printed a `Warning:` about a simultaneous start, show it to the user as is.
+         - `unchanged`: print nothing.
+         - `disabled`: `auto-assign: false のため assignee は付け替えていません。そのまま続行します`
+         - `failed`, no word, or an unexpected word: `assignee を付け替えられませんでした (理由は上の Warning を参照)。assignee は変更せず続行します`
+       - "付け替えずに続ける": do nothing and go to Step 2.
+       - "中止": print the two lines below (inside a code fence, in Japanese) and end `/auto` immediately. Do not run any later step: no Step 2 or later, no `run-*.sh`, no label transition, no Issue comment.
+
+         ```
+         中止しました: Issue #{N} は {LOGINS} にアサインされています。フェーズは起動しておらず、assignee もラベルも変更していません
+         続行する場合は、担当者に確認してから /auto {N} を再実行してください
+         ```
+
+3. XL: this step checks only the Issue given on the command line (the XL parent). Sub-issues are covered by the warning in Step 4's XL route.
 
 ### Step 2: Route Detection and Base Branch
 
@@ -362,6 +406,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh $NUMBER
    ```
    Parse the result JSON and extract `execution_order` (array of sub-issue numbers per level).
+
+   **Assignee warning for sub-issues**: before item 2, from the repository root, run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status N` once for each sub-issue number N in `execution_order` and collect the numbers whose output is `other`. If there is at least one, print a single warning that lists them with their assignees (the `Info:` line of the helper carries the logins) and says the fan-out will process them too; if there is none, print nothing. Neither ask nor exclude: giving the XL parent is the explicit instruction to run its sub-issues, the same relation as naming Issue numbers in List mode. Silently skip a sub-issue whose check fails. The XL parent itself was already checked in Step 1a.
 
 2. **Run levels in order, in parallel**: Process each level in `execution_order` sequentially.
 
@@ -1177,7 +1223,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 ## Batch Mode (--batch)
 
-When `--batch` is detected in Step 1, process Issues sequentially (skip Steps 2–6).
+When `--batch` is detected in Step 1, process Issues sequentially (skip Steps 1a–6).
 
 Three modes:
 - **Count mode** (`--batch N`): selects the N most recent XS/S Issues from the backlog
@@ -1186,13 +1232,15 @@ Three modes:
 
 ### Count mode (--batch N)
 
-既存の `--batch N` の挙動は変更せず後方互換で維持する。
+The existing `--batch N` behavior is kept backward compatible, with one exception: an Issue assigned to someone other than the executing user is never a candidate (see Fetch Batch Candidates). Unassigned Issues and Issues assigned only to the executing user remain candidates as before.
 
 #### Fetch Batch Candidates
 
 ```bash
-gh issue list --state open --label triaged --json number,title,labels,createdAt --limit 200
+gh issue list --state open --label triaged --json number,title,labels,createdAt,assignees --limit 200 | ${CLAUDE_PLUGIN_ROOT}/scripts/filter-other-assignees.sh
 ```
+
+The output array of `filter-other-assignees.sh` is the candidate list. Relay its `Info:` lines on stderr (the excluded Issues) to the user. When the executing user cannot be identified, the script excludes every Issue that has an assignee (fail-closed) and prints a warning; relay that warning too. If the command fails (non-zero exit), output a warning and stop Count mode without processing any Issue: do not fall back to an unfiltered list. The evaluation happens once, at selection time; an assignee added during a long run is not re-checked (an assignee is not a lock).
 
 #### Filtering criteria
 
@@ -1247,6 +1295,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "N1 N2 
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT` for use in step 7's verify orchestration gate below.
 
+**Assignee warning (List mode and Resume mode; run once, before the first Issue):**
+
+An explicitly listed Issue is never excluded because of its assignee (naming the number is a stronger signal than the automatic selection rule of Count mode and Until mode), but the user is warned once at the start. From the repository root, run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status N` once for each number N in `BATCH_LIST` and collect the numbers whose output is `other`. If there is at least one, print a single warning that lists those numbers (with the logins from the helper's `Info:` line) and says they will be processed as well; if there is none, print nothing. Silently skip an Issue whose check fails (non-zero exit or `unknown`). Do not change `BATCH_LIST`, the checkpoint, or the order, and do not ask for confirmation: a batch with explicit numbers must be able to run unattended (the confirmation belongs to the single-Issue Step 1a).
+
 Process each Issue in `BATCH_LIST` in order:
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
@@ -1297,6 +1349,8 @@ Entered from Step 1 when `--until` follows `--batch`, with `UNTIL_QUERY`, `MAX_R
 
 Condition-driven loop: resolve the query → process the results as List mode → re-resolve the query → repeat until it returns 0 Issues (converged) or `MAX_ROUNDS` is reached. The round loop is the only new mechanism here — per-Issue processing within a round reuses `### List mode (--batch N1 N2 ...)` verbatim (triage → size gate → blocked-by gate → `run-auto-sub.sh` → verify orchestration → `update_batch`), and convergence bookkeeping reuses the existing `auto-checkpoint.sh` `write_batch`/`delete_batch` checkpoint (`COMPLETED`/`FAILED` accumulate across rounds) — no new subcommand and no seed file are introduced.
 
+**Assignee exclusion**: `resolve-batch-query.sh` (step 4) excludes every Issue assigned to someone other than the executing user, on every round. Unassigned Issues and Issues assigned only to the executing user stay in the result, so an Issue whose assignee is removed or changed to the executing user returns as a candidate in a later round. The rule is the same as Count mode, including fail-closed behavior when the executing user cannot be identified. Step 6 reuses only the numbered steps 1–7 of List mode; the "Assignee warning" block of List mode sits outside those numbered steps (like its stop-at block) and is intentionally not applied here, because `ROUND_LIST` has already been filtered and no other member's Issue remains to warn about.
+
 **Safety valve**: `--max-rounds` defaults to `3` and cannot be disabled (opt-out is not supported) — Until mode always terminates after at most `MAX_ROUNDS` rounds even if the query keeps matching new Issues every round.
 
 1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`. Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section; retain `AUTO_STOP_AT` for step 6's delegation to List mode step 7's verify orchestration gate below — List mode's own "Load stop-at setting (List mode only)" block sits outside its numbered steps 1–7, so step 6's "steps 1–7 unchanged" reuse does not cover it on its own.
@@ -1310,6 +1364,7 @@ Condition-driven loop: resolve the query → process the results as List mode �
    ```
    - Exit 1 (parse error — the query itself is malformed): abort Until mode entirely (no `delete_batch` call needed if `write_batch` was never reached — see step 6).
    - Exit 2 (`gh` failure): if `ROUND == 1`, abort Until mode; if `ROUND >= 2`, output a warning and treat as converged (go to step 8).
+   - Relay the script's stderr to the user: the `Info:` line naming the Issues it excluded because of their assignee, and the warning printed when the executing user cannot be identified. The exit code handling above is unchanged.
 5. If the output is empty: output "Until mode: query returned 0 issues at round $ROUND; converged." and go to step 8.
 6. Record the output as `ROUND_LIST`. Read `${CLAUDE_PLUGIN_ROOT}/modules/round-ordering.md` and
    follow its Processing Steps to reorder `ROUND_LIST` (this reordering does not change which
@@ -1343,7 +1398,7 @@ Entered from Step 1 when `--batch --resume` is detected with no numeric tokens a
 2. Call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_batch "$BATCH_ID"` and capture the output as `REMAINING`.
 3. If `REMAINING` is empty: output "No resume target found. Run `/auto --batch N1 N2 ...` to start a new batch." and exit.
 4. Output a log line: "Resuming batch: batch_id=$BATCH_ID, remaining issues = $REMAINING"
-5. Treat `REMAINING` as `BATCH_LIST` and process each Issue following the same steps as `### List mode (--batch N1 N2 ...)`.
+5. Treat `REMAINING` as `BATCH_LIST` and, before the first Issue, run the "Assignee warning" block of `### List mode (--batch N1 N2 ...)` against `REMAINING` (another member may have started on a remaining Issue while the batch was interrupted; that block sits outside List mode's numbered steps, so referring to "the same steps" alone would not include it). Then process each Issue following the same steps as `### List mode (--batch N1 N2 ...)`.
    - Note: do NOT call `write_batch` again at the start (the existing batch state file is the live state); only call `update_batch "$BATCH_ID"` and `delete_batch "$BATCH_ID"` as per List mode.
 
 ### Batch Completion Report
