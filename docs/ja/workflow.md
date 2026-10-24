@@ -176,7 +176,7 @@ bash scripts/check-translation-sync.sh
 
 ## ラベル管理
 
-`phase/*` ラベルを使って Issue の進捗を可視化します。各スキルはワークフロー進行に合わせて自動でラベルを管理します。
+`phase/*` ラベルを使って Issue の進捗を可視化します。各スキルはワークフロー進行に合わせて自動でラベルを管理します。Issue の assignee は誰が作業しているかを表します (「担当者」の小節を参照)。
 
 セットアップ: Wholework は初回実行時に必要なラベルを自動作成します。Plugin ユーザーが手動でラベルを作成する必要はありません。ラベルを強制的に再作成する場合は `scripts/setup-labels.sh` を手動実行してください。
 
@@ -194,6 +194,17 @@ bash scripts/check-translation-sync.sh
 | `phase/verify` | 受入テストフェーズ | `/merge` | `/verify` |
 | `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時）、`/audit stats --retention` (Level 3 auto-retire、autonomy tier L2/L3、retire 後に未チェックの post-merge 条件が残らない場合) | — |
 | （ラベルなし） | バックログ / 未着手 | — | `/verify`（FAIL 時） |
+
+### 担当者 (assignee)
+
+`phase/*` ラベルは Issue の進み具合を、assignee は誰が作業しているかを表します。どちらもフェーズの着手時に変わるため、他のメンバーは Issue 一覧・Projects ボード・"Assigned to me" など、ふだん見る場所で担当者と進捗を確認できます。
+
+- **着手時の付与**: `/issue N` (既存 Issue の精査)・`/spec`・`/code` がフェーズラベルを `phase/issue`・`phase/spec`・`phase/code` に遷移するとき、Issue に assignee がいない場合に限り、実行ユーザーも assignee に設定します。すでにいる assignee は上書きせず、2 人目も追加しません。そのため、Issue に最初に着手したフェーズが付与します。
+- **付与しないもの**: `/issue "タイトル"` で作成した新規 Issue (作成者が担当者とは限らないため)、`/triage`、`/audit`、`scripts/run-issue.sh` のラベル補完。`/review`・`/merge`・`/verify` も付与しません (担当者は前のフェーズで決まっているため)。
+- **他のメンバーがアサイン済みのとき**: `/issue N`・`/spec`・`/code` は、他の処理より前にこれを確認します (`/issue N` は triage の自動実行より前、`/spec`・`/code` は worktree に入る前)。対話実行では、自分に付け替えて続ける・付け替えずに続ける・中止のいずれかを確認します。中止すると、フェーズラベル・triage の書き込み・worktree は何も変わりません。`--non-interactive` の実行では assignee を変えずに警告を出して続けます。手順は [`modules/assignee-check.md`](../../modules/assignee-check.md) に定義しています。
+- **完了後も残す**: `phase/done` への遷移や Issue のクローズでは assignee を外しません。誰が対応したかの記録として残ります。
+- **失敗してもフェーズは止まらない**: 実行ユーザーを特定できない (GitHub App のトークンや CI の `GITHUB_TOKEN` など)・付与の権限がないときは、警告を出すだけです。assignee はロックではありません。付与したあとに Issue を読み直し、ほぼ同時に別の人が付いていれば警告しますが、同じユーザーの 2 つのセッションは区別できません。
+- **設定**: `.wholework.yml` の `auto-assign: false` は付与と付け替えだけを止めます。他のメンバーの担当の確認は引き続き動きます。どちらも autonomy tier には依存しません。[カスタマイズガイド](guide/customization.md)を参照してください。
 
 ### XL 親 Issue のフェーズ管理
 

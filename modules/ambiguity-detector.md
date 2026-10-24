@@ -75,6 +75,7 @@ High-Stakes Decisions (exhaustive list — skip these in non-interactive mode):
 - **Bulk approvals**: approving multiple issues/PRs at once in `--backlog` flows (high blast radius)
 - **Optional section additions**: adding optional steering document sections during `/doc` creation (user preference; safe to defer)
 - **Size downgrade from XL to L**: requires human judgment on scope; skip and retain XL label
+- **Assignee takeover**: replacing another member's assignee with the executing user (the "自分に付け替えて続ける" choice in `modules/assignee-check.md`); it removes someone else's ownership marker, so it needs a human decision — leave the assignee unchanged and continue
 
 Warning message format:
 ```
