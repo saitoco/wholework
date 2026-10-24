@@ -280,3 +280,33 @@ Changed Files は 10 件 (新規 2、翻訳ミラー 2、残りは既存ファ�
 - **Pre-merge 項目数**: この Spec の Pre-merge は 7 件で、SPEC_DEPTH=light の目安 (5 件) を超える。Issue 本文の `## Acceptance Criteria > Pre-merge` を verify command ごと転記する規則 (件数の一致検査を含む) を優先した。Implementation Steps は目安内の 5 件にまとめた
 - **Smoke Test は省略**: 実 GitHub への書き込みを伴う確認 (`--assign`・`reassign`) は Issue の assignee を変更し通知を発生させるため入れない。読み取りだけの `status` の疎通は #1543 の Smoke Test で済んでいる
 - **コミット前の確認**: 新規ファイル (`modules/assignee-check.md`・`tests/assignee-check.bats`) は `git add` する。`.claude/` 配下は変更しない
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec のとおりに実施した (モジュール、3 SKILL.md、`ambiguity-detector.md`、`docs/workflow.md`・`docs/structure.md` と ja ミラー、bats)
+
+### Design Gaps/Ambiguities
+- Step 3 の `phase/ready` 確認は `matches_expected: true` (観測ラベル: `triaged`, `phase/ready`) で、Auto-Resolve Log に記録する判断は発生しなかった
+- 実装前 FAIL 確認: コミット前の作業ツリーのため `git stash` は使わず、`git archive HEAD` の展開コピー (phase work directory 配下) に新規 bats だけを置いて実行した。worktree 分離ガードが複合の git コマンドを拒否するため、アーカイブ作成と展開を別コマンドに分けた
+- Confirmed pre-implementation FAIL for 17 new test(s). 実装前でも PASS したのは回帰ガードの否定検査 2 本 (`skill: issue New Issue Creation does not assign ...`、`run-issue: ...`) で、Spec の想定どおり
+- bats の実行は `bats --jobs 4 tests/` (全 2390 件) で not ok なし。`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-language-convention.py` も問題なし。`check-bare-bracket-assertions.sh` の警告 (1009 件) は既存ファイル由来で、今回追加した `tests/assignee-check.bats` は該当なし
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 共通手順を `modules/assignee-check.md` に集約し、各 SKILL.md には呼び出しと要点だけを書いた (`l0-surfaces.md` に足す案は `allowed-tools` のクロスファイル検査の影響が広いため不採用、Spec の判断どおり)
+- 付与は `gh-label-transition.sh ... --assign`、付け替えは確認の直後の `reassign` に分けた。非対話は High-Stakes (skip 層) で、警告して続行する
+
+### Deferred Items
+- AC6・AC7 (CI の `Run bats tests`・`Validate skill syntax`) は PR #1548 の CI 完了後に `/review` で確認する (Step 10 では未評価のため未チェックのまま)
+- Post-merge の opportunistic AC (未アサインの Issue で実際に assignee が設定されること) と、書き込みを伴う `reassign` の実機確認は `/verify` 以降に持ち越し
+
+### Notes for Next Phase
+- 対話での 3 択の表示・中止の挙動は LLM 駆動で bats では確認できない (配線と文言の構造テストまで)
+- `/auto` 配下の子フェーズは常に `--non-interactive` なので、親が確認した後も同じ警告が 1 フェーズにつき 1 回出る (許容済み、モジュールの Notes に記載)
+- `modules/l0-surfaces.md` の Primary callers は意図的に変更していない (#1545 と同じセルを触らないため)
