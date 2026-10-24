@@ -316,3 +316,29 @@ Changed Files は 14 件 (候補の `docs/guide/autonomy.md` を除く)。内訳
 - マージ前に `Run bats tests` などの CI が修正コミット (207cacbd) 後も SUCCESS か確認すること
 - #1544・#1545 は、リポジトリルートの CWD から `gh-issue-assignee.sh` を呼ぶこと。`auto-assign: false` のとき `assign` / `reassign` は `disabled` を返すだけ
 - `status` は実行ユーザーを特定できず assignee がいる Issue を `other` にする (fail-closed)。#1545 の候補除外の方針を決めるときに考慮する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 外部サービスの挙動 (`gh issue edit --add-assignee` が実質置換型) を `gh` のソースで確認し、REST の追加 API を使う設計にした判断は妥当だった。書き込み系の実機確認は #1544 の Post-merge に委ねている
+
+#### design
+- Size を M → L に更新 (Changed Files 14 件)。XL 分割時の見積もりが翻訳ミラー・索引系ドキュメントを数えていなかった (親 #1542 の Auto Retrospective に記録済み)
+
+#### code
+- rework なし。新規テストが修正前の実装で FAIL することを実測で確認しており、AC 10 の要求どおり
+
+#### review
+- bats の非最終行 `! grep` / `[[ ... ]]` が失敗を検出しない問題と、`auto-assign` の CWD 依存を事前計測で見つけた。実行による計測 (CWD 軸) が diff 読解では見つからない欠陥を拾った事例
+- SHOULD 1 件 (「唯一の例外」の表現) を未対応のまま Deferred Items に残した
+
+#### merge
+- 競合なし
+
+#### verify
+- Pre-merge 11 件は /code・/review でチェック済みのため SKIPPED (既定動作)。Post-merge 条件なし
+
+### Improvement Proposals
+- `docs/guide/autonomy.md` (と `docs/ja/guide/autonomy.md`) の L1 の説明が assignee の付与を「唯一の例外 (The one exception)」としているが、同じ文で根拠にしている `phase/*` ラベル遷移も L1 で GitHub に書き込むため、「自動書き込みを行わない」の例外は実際には 1 つではない。#1543 の /review で SHOULD として指摘され、Spec 指定の文面だったため未対応のまま残っている。`modules/autonomy-tier.md` の Tier-independent L0 write 節と表現を揃え、「フェーズ進行の一部 (ラベル遷移・assignee 付与) は tier に依存しない」と書き直す
