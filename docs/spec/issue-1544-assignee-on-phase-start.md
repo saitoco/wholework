@@ -295,18 +295,30 @@ Changed Files は 10 件 (新規 2、翻訳ミラー 2、残りは既存ファ�
 ### Rework
 - なし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の「質問文と各選択肢の説明は、コードフェンスの中に日本語で書く」を、実装が実行時の指示として英訳しただけで、文面そのものをモジュールに固定していなかった (SHOULD)。Spec の記述が「固定する」とも「実行時に作る」とも読めたことが原因で、他の固定文言 (結果なし・中止の通知) とは扱いがそろっていなかった。Spec で文面を固定したい箇所は、「コードフェンスの中に書く」ではなく、文面そのものを Spec に載せると取りこぼしにくい
+- ヘルパー (`gh-issue-assignee.sh`) の出力契約をモジュールが要約するとき、実装の細部 (`status` が括弧書きを付ける・`unchanged` を返す条件) と食い違った。ヘルパーのヘッダーコメントを転記するか参照にすると食い違わない
+
+### Recurring issues
+- `LOGINS` の切り出しが、`modules/assignee-check.md` と同じ手順を持つ #1545 の `skills/auto/SKILL.md` Step 1a (`/spec` 済み) にもそのまま写っている。#1545 の `/code` 時点で、今回の修正後の定義 (最初の ` (` の前まで) に揃える必要がある
+
+### Acceptance criteria verification difficulty
+- rubric 4 件は diff の読み取りだけで判定でき、UNCERTAIN はなかった。CI の 2 件は `gh pr checks` で確認でき、PASS にしてチェックを付けた
+- 対話での 3 択の表示・中止の挙動は LLM 駆動で bats では確認できず、構造テスト (配線と固定文言) までに限られる。実機の確認は Post-merge の opportunistic AC に残る
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 共通手順を `modules/assignee-check.md` に集約し、各 SKILL.md には呼び出しと要点だけを書いた (`l0-surfaces.md` に足す案は `allowed-tools` のクロスファイル検査の影響が広いため不採用、Spec の判断どおり)
-- 付与は `gh-label-transition.sh ... --assign`、付け替えは確認の直後の `reassign` に分けた。非対話は High-Stakes (skip 層) で、警告して続行する
+- MUST の指摘はなく、SHOULD 1 件・CONSIDER 3 件を `modules/assignee-check.md` と `tests/assignee-check.bats` で修正した (質問文の固定・`LOGINS` の定義・`unchanged` の説明・状況語テストの強化)
+- review-bug の 5 件の指摘は、検証 sub-agent を起動せず、`scripts/gh-issue-assignee.sh` と突き合わせて事実であることを確認した。いずれも文言の食い違いで、動作は変わらない
 
 ### Deferred Items
-- AC6・AC7 (CI の `Run bats tests`・`Validate skill syntax`) は PR #1548 の CI 完了後に `/review` で確認する (Step 10 では未評価のため未チェックのまま)
 - Post-merge の opportunistic AC (未アサインの Issue で実際に assignee が設定されること) と、書き込みを伴う `reassign` の実機確認は `/verify` 以降に持ち越し
 
 ### Notes for Next Phase
-- 対話での 3 択の表示・中止の挙動は LLM 駆動で bats では確認できない (配線と文言の構造テストまで)
-- `/auto` 配下の子フェーズは常に `--non-interactive` なので、親が確認した後も同じ警告が 1 フェーズにつき 1 回出る (許容済み、モジュールの Notes に記載)
-- `modules/l0-surfaces.md` の Primary callers は意図的に変更していない (#1545 と同じセルを触らないため)
+- `/merge` 前に、修正コミット (`cddbbfe2`) 後の CI が通ることを確認する
+- #1545 の `/code` では、`skills/auto/SKILL.md` Step 1a の `LOGINS` の定義と AskUserQuestion が使えないときの出力を、今回修正した `modules/assignee-check.md` に揃える
+- 対話での 3 択の表示・中止の挙動は、構造テストでは確認できていない
