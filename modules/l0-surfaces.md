@@ -39,7 +39,7 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 
 Note: label namespace rules and bare-namespace exceptions (e.g., `triaged`) are defined in [`modules/label-conventions.md`](label-conventions.md).
 
-Note: Assignees writes (`assign`, `reassign`) are not governed by the autonomy tier; they are an exception to the Tier × L0 Write Matrix (see [`modules/autonomy-tier.md`](autonomy-tier.md) § "Tier-independent L0 write: assignee assignment"). The result vocabulary and the behavior when the executing user cannot be identified are defined in the header comment of `scripts/gh-issue-assignee.sh`.
+Note: Assignees writes (`assign`, `reassign`) are not governed by the autonomy tier; they are an exception to the Tier × L0 Write Matrix (see [`modules/autonomy-tier.md`](autonomy-tier.md) § "Tier-independent L0 write: assignee assignment"). The result vocabulary and the behavior when the executing user cannot be identified are defined in the header comment of `scripts/gh-issue-assignee.sh`. The bulk read behind `/auto` candidate exclusion (`filter-other-assignees.sh`, also called by `resolve-batch-query.sh`) follows the same rule when the executing user cannot be identified: every issue that has an assignee is excluded (fail-closed); see its header comment.
 
 ## AC Enumeration Convention
 
