@@ -178,7 +178,8 @@ wholework/
 - `scripts/gh-graphql.sh` — キャッシュ付き GraphQL クエリ実行
 - `scripts/gh-issue-comment.sh` — issue へのコメント投稿
 - `scripts/gh-issue-edit.sh` — issue 本文の編集 (チェックボックス更新)
-- `scripts/gh-label-transition.sh` — フェーズラベルの遷移
+- `scripts/gh-label-transition.sh` — フェーズラベルの遷移 (opt-in の `--assign` でラベル更新後に実行ユーザーも assignee に設定)
+- `scripts/gh-issue-assignee.sh` — issue の assignee ヘルパー: `status` (unassigned / self / other / unknown)、`assign` (未アサインのときだけ)、`reassign` (他のメンバーを外して実行ユーザーに付け替え)。失敗しても呼び出し側を止めない。書き込みは `auto-assign` に従い、autonomy tier の対象外
 - `scripts/gh-check-blocking.sh` — ブロッキング issue 依存関係のチェック
 - `scripts/set-blocked-by.sh` — issue 番号による GitHub blocked-by 関係の設定 (`add-blocked-by` mutation の wrapper)
 - `scripts/get-blocked-by.sh` — GitHub blocked-by 関係の単一読み取りウィンドウ (単一 issue モード、または全 open issue グラフ用の `--all`)

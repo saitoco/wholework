@@ -29,6 +29,9 @@ skill-proposals: true       # /verify 中に Wholework 改善 issue を生成
 # Steering ヒント（デフォルト有効、false にするとオプトアウト）
 steering-hint: false        # steering docs 欠如時に表示される「/doc init」ヒントを抑制
 
+# 自動アサイン（デフォルト有効、false にするとオプトアウト）
+auto-assign: false          # フェーズが Issue に着手するときに実行ユーザーを assignee に設定しない
+
 # カスタムパス（括弧内はデフォルト）
 spec-path: docs/spec              # spec の保存先
 steering-docs-path: docs          # steering documents の配置先
@@ -117,6 +120,7 @@ capabilities:
 | `skill-proposals` | boolean | `false` | `/verify` 中に Wholework 改善 issue を生成する |
 | `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする。どのマシンのセッションかを区別したい場合 (例: Remote Control の一覧) は、`claude` プロセスの環境に env var `WHOLEWORK_SESSION_TITLE_PREFIX` を設定する。値は `/auto N` / `--resume` / `--batch` のいずれのタイトルにも先頭へそのまま付く (例: `🐧` → `🐧auto #123: ...`)。区切り文字は自動挿入されない (必要なら値に含める。例: `"mac "`)。50 文字の truncate は本体タイトルに適用されるため prefix は切られず、未設定・空文字ならタイトルは変わらない。キーではなく env var なのは、`.wholework.yml` がコミットされてマシン間で共有されるため。 |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
+| `auto-assign` | boolean | `true` | フェーズが Issue に着手するときに実行ユーザーを assignee に設定する (すでに assignee がいるときは上書きも追加もしない)。`false` にすると付与と付け替えだけを止める。他のメンバーの担当の確認・警告と `/auto` の候補除外は、人が手で付けた assignee を尊重するためのものなので、この値に関係なく動く。`autonomy:` tier には依存せず、`phase/*` ラベルの遷移と同じくフェーズ進行の一部として L1 でも付与する。付与に失敗 (実行ユーザーを特定できない・権限がない・API エラー) したときは警告だけでフェーズは続く |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
 | `preview-url-command` | string | `""` | プロジェクト側スクリプト (例: `.wholework/adapters/` 配下の hosting provider adapter) で `PREVIEW_URL` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`run-review.sh` の `pr-preview` ゲート・`/review` の Step 8.0 のいずれの解決呼び出し箇所もこの capability でゲートされる)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接呼ぶ経路の Step 8.0 の両方が参照する (共有スクリプト `scripts/resolve-preview-env.sh` 経由、Issue #1428)。コマンド文字列に半角スペース + `#` を含めてはならない (`scripts/get-config-value.sh` がインラインコメントとして切り捨てるため)。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (このファイル内の他の実行コマンド系キーと同じ信頼レベル)。 |
 | `preview-basic-auth-command` | string | `""` | `preview-url-command` が `PREVIEW_URL` を解決するのと同じ仕組みで、プロジェクト側スクリプトが `PREVIEW_BASIC_USER`/`PREVIEW_BASIC_PASS` を解決するシェルコマンド。`capabilities.pr-preview: true` が必須 — 未設定の場合このキーは無視される (`preview-url-command` と同じゲート)。PR 番号に置換される `{pr}` プレースホルダをサポートする。`scripts/run-review.sh` の preview 待ちゲートと、`/review` を skill として直接呼び出す経路 (`modules/verify-executor.md` / `modules/browser-adapter.md`、共有スクリプト `scripts/resolve-preview-env.sh` 経由、Issue #1429) の両方が参照する。コマンド標準出力の 1 行目は `username:password` 形式である必要がある (最初の `:` で分割) — それ以外の結果 (非 0 終了、空出力、2048 文字超の出力、1 行目に `:` が無い) の場合は両変数を未設定のまま維持し、既存の非認証フォールバックを保持する。値は `bash -c` 経由でそのまま実行されるため、`.wholework.yml` はチェックアウトされたブランチ上で信頼できるものとして扱う必要がある (`preview-url-command` と同じ信頼レベル)。 |

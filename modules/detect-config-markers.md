@@ -21,7 +21,7 @@ Skills that Read this file should detect configuration values following the step
 
 Read `.wholework.yml` from the project root using the Read tool.
 
-- If `.wholework.yml` does not exist: Set all variables to their default values (boolean variables to `false`, `PRODUCTION_URL` to `""`), and end the procedure
+- If `.wholework.yml` does not exist: Set all variables to their default values (boolean variables to `false` except the default-true ones, `HAS_STEERING_HINT` and `HAS_AUTO_ASSIGN`, which are set to `true`; `PRODUCTION_URL` to `""`), and end the procedure
 
 ### 2. Interpret YAML Keys
 
@@ -39,6 +39,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `skill-proposals` | `HAS_SKILL_PROPOSALS` | `true` | `false` |
 | `session-auto-rename` | `HAS_SESSION_AUTO_RENAME` | `true` | `false` |
 | `steering-hint` | `HAS_STEERING_HINT` | `true` | `true` (default true; `false` when `steering-hint: false`) |
+| `auto-assign` | `HAS_AUTO_ASSIGN` | `true` | `true` (default true; `false` when `auto-assign: false`) |
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
 | `preview-url-command` | `PREVIEW_URL_COMMAND` | Command string (extract value as-is) | `""` |
 | `preview-basic-auth-command` | `PREVIEW_BASIC_AUTH_COMMAND` | Command string (extract value as-is) | `""` |
@@ -88,6 +89,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - Boolean values determined by `true` / `false` (case-insensitive)
 - `review-bug` has inverse mapping: `review-bug: false` → `SKIP_REVIEW_BUG=true` (skip bug detection), `review-bug: true` → `SKIP_REVIEW_BUG=false` (bug detection enabled)
 - `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
+- `auto-assign` defaults to true; only `auto-assign: false` sets `HAS_AUTO_ASSIGN=false`. When false, `scripts/gh-issue-assignee.sh` `assign` and `reassign` (and `gh-label-transition.sh --assign`) make no writes. The assignment status check (`status`, used to confirm or warn about other members' assignments and to exclude candidates in `/auto`) works regardless of the value. The setting does not depend on the autonomy tier: assignment happens at L1 too. `gh-issue-assignee.sh` decides by itself whether it may write, so callers must not re-check `HAS_AUTO_ASSIGN` before calling it
 - `production-url` is treated as URL string with quotes removed
 - `preview-url-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Because `scripts/get-config-value.sh` strips everything from an inline ` #` onward, the command string must not contain a space followed by `#`. Consumed by `scripts/run-review.sh` (bash wrapper) directly via `get-config-value.sh`, and by `skills/review/SKILL.md` Step 8.0 (via the shared `scripts/resolve-preview-env.sh`, Issue #1428) for direct `/review` execution — see `docs/guide/customization.md` § "Resolving `PREVIEW_URL`" for coverage scope
 - `preview-basic-auth-command` is treated as a shell command string with quotes removed (same handling as `production-url`). Same inline-comment-stripping caveat as `preview-url-command` (a space followed by `#` is stripped by `scripts/get-config-value.sh`). Consumed by `scripts/run-review.sh` (bash wrapper) directly via `get-config-value.sh`, and by `modules/verify-executor.md` / `modules/browser-adapter.md` (via the shared `scripts/resolve-preview-env.sh`, Issue #1429) for direct `/review` execution — see `docs/guide/customization.md` § "Automating Basic Auth credential resolution with `preview-basic-auth-command`" for coverage scope
@@ -123,6 +125,7 @@ HAS_OPPORTUNISTIC_VERIFY: true if opportunistic-verify: true is set (default: fa
 HAS_SKILL_PROPOSALS: true if skill-proposals: true is set (default: false)
 HAS_SESSION_AUTO_RENAME: true if session-auto-rename: true is set (default: false)
 HAS_STEERING_HINT: false if steering-hint: false is set (default: true)
+HAS_AUTO_ASSIGN: false if auto-assign: false is set (default: true)
 PRODUCTION_URL: URL string extracted from production-url (default: "")
 PREVIEW_URL_COMMAND: shell command string extracted from preview-url-command (default: "")
 PREVIEW_BASIC_AUTH_COMMAND: shell command string extracted from preview-basic-auth-command (default: "")

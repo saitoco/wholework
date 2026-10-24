@@ -28,6 +28,7 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 | Issue body | edit | `/issue`, `/spec`, `/verify`, `/audit` (`apply-verify-retire.sh`) | mutable | yes |
 | Issue state (OPEN/CLOSED) | close, reopen | `/verify`, `/auto`, `/audit` (`apply-verify-retire.sh`) | mutable | yes |
 | Labels (`phase/*`, `audit/*`, ...) | add, remove | `gh-label-transition.sh` | mutable | yes |
+| Assignees | read (`status`), add (`assign`), replace (`reassign`) | `gh-issue-assignee.sh`; `gh-label-transition.sh --assign` (opt-in `assign`) | mutable | yes |
 | Issue comments | append + read | `gh-issue-comment.sh` (write); all skills (read — introduced here) | append-only | yes (introduced in #705) |
 | PR comments | append + read | `/review` (write); `/code`, `/review` (read) | append-only | yes (introduced in #705) |
 | Project v2 fields (Size, Priority, ...) | update | `project-field-update.md` | mutable | yes |
@@ -37,6 +38,8 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 | Issue blocked-by relationships | add, remove, read | `set-blocked-by.sh`, `gh-check-blocking.sh`, `gh-graphql.sh` (`add-blocked-by`, `remove-blocked-by`), `get-blocked-by.sh` (read) | mutable | yes |
 
 Note: label namespace rules and bare-namespace exceptions (e.g., `triaged`) are defined in [`modules/label-conventions.md`](label-conventions.md).
+
+Note: Assignees writes (`assign`, `reassign`) are not governed by the autonomy tier; they are an exception to the Tier × L0 Write Matrix (see [`modules/autonomy-tier.md`](autonomy-tier.md) § "Tier-independent L0 write: assignee assignment"). The result vocabulary and the behavior when the executing user cannot be identified are defined in the header comment of `scripts/gh-issue-assignee.sh`.
 
 ## AC Enumeration Convention
 

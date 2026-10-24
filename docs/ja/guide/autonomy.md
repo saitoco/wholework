@@ -14,7 +14,7 @@ autonomy tier は、各スキルを個別に設定することなく、これら
 
 ### L1 Report (デフォルト)
 
-スキルは GitHub state を読み取り、推奨事項を表示します。**GitHub state への自動書き込みも、自動ループ発火も行いません。**
+スキルは GitHub state を読み取り、推奨事項を表示します。**GitHub state への自動書き込みも、自動ループ発火も行いません。** 唯一の例外は、フェーズが着手するときに自分を Issue の assignee に設定する処理です。`phase/*` ラベルの遷移と同じくフェーズ進行の一部なので tier では制御されません。止めたいときは `.wholework.yml` に `auto-assign: false` を設定してください。
 
 L1 を使うべき場合:
 - Wholework を初めて評価している

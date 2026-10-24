@@ -57,6 +57,18 @@ Autonomy tier controls how far a skill may write GitHub state. For the exhaustiv
 | **L2 Assisted** | ○ | ○ (current `/auto` / `/verify` behavior) | × (human judgment required) |
 | **L3 Unattended** | ○ | ○ | ○ (`/audit recurring` and future features) |
 
+### Tier-independent L0 write: assignee assignment
+
+Assigning the executing user as an Issue assignee (`scripts/gh-issue-assignee.sh` `assign` / `reassign`, and `scripts/gh-label-transition.sh --assign`) is an L0 write, but it is an exception to the matrix above: the autonomy tier does not control it, and it is performed at L1 too. Reading the assignment status (`status`) is an L0 read and is not gated either.
+
+| Tier | Assignee assignment |
+|------|---------------------|
+| **L1 Report** | ○ — assign |
+| **L2 Assisted** | ○ — assign |
+| **L3 Unattended** | ○ — assign |
+
+**Rationale**: like the `phase/*` label transition, assignment is part of phase progress, and its purpose is to show other members who is working on the Issue. Gating it by tier would make it ineffective in downstream repositories that do not set `autonomy:` (default `L1`). To stop assignment, set `auto-assign: false` in `.wholework.yml` (see `modules/detect-config-markers.md`), not a lower tier.
+
 ### Tier × External System Write (operate route)
 
 `/code`'s operate route (Issue #995) writes to external systems (CMS, infrastructure, third-party APIs) that fall outside the L0 surface table above — L0 is GitHub state specifically, and this write happens on a different system. It is gated as an independent surface rather than folded into the Tier × L0 Write Matrix above:

@@ -18,7 +18,7 @@ The autonomy tier gives you a single dial to control all of this — without hav
 
 ### L1 Report (default)
 
-Skills read GitHub state and print recommendations. **No automatic writes to GitHub state, no automatic loop firing.**
+Skills read GitHub state and print recommendations. **No automatic writes to GitHub state, no automatic loop firing.** The one exception is assigning yourself as the Issue assignee when a phase starts: it is part of phase progress like the `phase/*` label transition, so it is not controlled by the tier; set `auto-assign: false` in `.wholework.yml` to stop it.
 
 Use L1 when:
 - You are evaluating Wholework for the first time
