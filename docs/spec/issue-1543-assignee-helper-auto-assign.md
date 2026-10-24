@@ -267,3 +267,36 @@ Changed Files は 14 件 (候補の `docs/guide/autonomy.md` を除く)。内訳
 - **英語のみにするファイル**: `scripts/`・`modules/` に追記する文字列に CJK 文字を入れない (`scripts/check-language-convention.py` が CI と `/code` のコミット前に検出する)。`docs/`・`tests/` は対象外だが、`tests/` のコード・コメントは英語にする
 - **コミット前の確認**: 新規スクリプトは `chmod +x` してから `git add` する (git mode 100755)。`.claude/` 配下のファイルは変更しないので `git add -f` は不要
 - **実行する確認コマンド**: `bats tests/gh-issue-assignee.bats tests/gh-label-transition.bats tests/check-config-schema.bats`、`bats tests/` 全体、`bash scripts/check-config-schema.sh`、`bash scripts/check-forbidden-expressions.sh`、`bash scripts/check-translation-sync.sh`
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec 通りに実装した。`status` の `other` の Info 行に出す login 一覧用に、`classify_assignees` が `ALL_LOGINS` (全 assignee の ", " 区切り) を持つようにした点だけが Spec の記述にない内部実装の追加
+- Spec が「候補」としていた `docs/guide/autonomy.md` は、推奨どおり L1 の説明に例外の 1 文を追加し、`docs/ja/guide/autonomy.md` も同期した
+
+### Design Gaps/Ambiguities
+- `tests/gh-label-transition.bats` に `run --separate-stderr` を使う @test を足すと BW02 警告が出るため、ファイル先頭に `bats_require_minimum_version 1.5.0` を追加した (既存の @test と mock は変更していない)
+- `scripts/check-bare-bracket-assertions.sh` が新規テストの `[[ ... ]]` 単独文を検出したため、`|| false` を付けた (情報提供のみのチェックだが、新規の assert は安全な形にする方針に従った)
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告するが、今回の変更とは無関係の既存の差分
+
+### Rework
+- なし (Confirmed pre-implementation FAIL for 4 new test(s): `assign` の「assignee がいれば何もしない」分岐を外すと 3 件、`assign` の API 失敗時の exit 0 を外すと 1 件の新規 @test が FAIL し、元に戻して 47 件 PASS を確認した)
+- Smoke Test: `scripts/gh-issue-assignee.sh status 1543` は実 GitHub に対して `unassigned` を返した (PASS)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `gh issue edit` を使わず REST の追加 API (`assign`) と置換 API (`reassign`) にした。`reassign` は未アサインのとき追加 API を使い、見ていない他のメンバーの assignee を消さない
+- 実行時の失敗はすべて語彙 (`unknown` / `failed`) で返して exit 0 にした。終了コード 1 は使い方の誤りだけ
+- `gh-label-transition.sh --assign` は引数ループで解析し、ラベル更新の成功後にだけ `assign` を別の呼び出しで実行する。呼び出し失敗は警告のみ
+
+### Deferred Items
+- 各 SKILL.md からの呼び出しと `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh:*` の追加は #1544・#1545 で行う
+- 書き込みを伴う実機確認 (追加 API が割り当てできないユーザーを黙って無視するか、置換 API の実挙動) は未実施。#1544 の Post-merge (opportunistic) で確認する
+- AC 11 (CI の `Run bats tests`) は PR 作成後に `/review` が確認する
+
+### Notes for Next Phase
+- Pre-merge AC 1〜10 は `/code` で確認済みとして Issue 上でチェックした (rubric 型は実装との突き合わせによる自己確認)。`/review` で rubric の再確認をお願いしたい
+- `auto-assign: false` のとき `reassign` は `disabled` を返すだけで何も起きない。#1544・#1545 の手順で `disabled` を扱うこと
+- `status` は実行ユーザーを特定できず assignee がいる Issue を `other` にする (fail-closed)。#1545 の候補除外はこの規約に合わせるか別方針にするかを決める
