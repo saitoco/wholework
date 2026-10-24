@@ -44,15 +44,30 @@ assignee を確認できませんでした (Issue #{ISSUE_NUMBER})。そのま�
 
 ### 2. Another member is assigned (STATUS is other)
 
-`LOGINS` is the list of logins on the standard error line `Info: issue #N is assigned to: <logins>`. When that line is absent, use a phrase meaning "another member" in the messages instead. `LOGINS` is for display only and is never placed into a shell command.
+`LOGINS` is the list of logins on the standard error line `Info: issue #N is assigned to: <logins>`: take the text after `assigned to: ` up to, and not including, the first ` (` (the helper appends an English note in parentheses when the executing user cannot be identified). The list holds every assignee, including the executing user. When that line is absent, use a phrase meaning "another member" in the messages instead. `LOGINS` is for display only and is never placed into a shell command.
 
-- **Interactive run** (`NON_INTERACTIVE=false`): ask a single-select question with AskUserQuestion. Offer exactly these three choices, in this order and with this wording (double quotes included). Write the question text and the description of each choice in Japanese inside a code fence. When AskUserQuestion is unavailable (the call fails), handle the run the same way as a non-interactive run.
+- **Interactive run** (`NON_INTERACTIVE=false`): ask a single-select question with AskUserQuestion. Offer exactly these three choices, in this order and with this wording (double quotes included). Use the question text and the choice descriptions in the code fence below as is.
 
   | Choice | Action | Outcome |
   |---|---|---|
   | `"自分に付け替えて続ける"` | Run `### 3.` | `continue` |
   | `"付け替えずに続ける"` | Do nothing | `continue` |
   | `"中止"` | Output the abort notice below and end the calling skill immediately. Do not run any later step (triage, worktree entry, label transition, assignee writes, comment posting, Spec creation, and everything after them) | `abort` |
+
+  The question text and the description of each choice:
+
+  ```
+  質問: Issue #{ISSUE_NUMBER} は {LOGINS} にアサインされています。どうしますか
+  "自分に付け替えて続ける": assignee を自分に付け替えて、このフェーズを続けます
+  "付け替えずに続ける": assignee は変えずに、このフェーズを続けます
+  "中止": 何も変更せずに終了します
+  ```
+
+  When AskUserQuestion is unavailable (the call fails), do not stop and do not reassign: output this one line and continue with the assignee unchanged (outcome `continue`):
+
+  ```
+  担当者を確認できませんでした (Issue #{ISSUE_NUMBER} は {LOGINS} にアサインされています)。assignee は変更せず続行します
+  ```
 
   The abort notice (two lines):
 
@@ -80,8 +95,8 @@ Branch on the result word in the output. Whatever the result, the calling skill 
 
 | Result word | Meaning | Output |
 |---|---|---|
-| `assigned` | The executing user is now an assignee (when the helper printed a `Warning:` about a simultaneous start, show it to the user as is) | `assignee を実行ユーザーに付け替えました (Issue #{ISSUE_NUMBER})` |
-| `unchanged` | There is no one left to replace (removed during the confirmation), or the executing user is already the only assignee | none |
+| `assigned` | The executing user is now an assignee. This includes the case where everyone was removed during the confirmation (the executing user is added, nothing is replaced). When the helper printed a `Warning:` about a simultaneous start, show it to the user as is | `assignee を実行ユーザーに付け替えました (Issue #{ISSUE_NUMBER})` |
+| `unchanged` | The executing user is already the only assignee | none |
 | `disabled` | Nothing was done because `auto-assign: false` is set | `auto-assign: false のため assignee は付け替えていません。そのまま続行します` |
 | `failed`, no word, or an unexpected word | The update failed (the reason is the helper's `Warning:`) | `assignee を付け替えられませんでした (理由は上の Warning を参照)。assignee は変更せず続行します` |
 

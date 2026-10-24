@@ -44,7 +44,7 @@ issue_existing_section() {
 @test "module: covers every status word and every reassign result word" {
     local word missing=""
     for word in unassigned self other unknown assigned unchanged disabled failed; do
-        grep -qw -- "$word" "$MODULE" || missing="$missing $word"
+        grep -qF -- "| \`$word\`" "$MODULE" || missing="$missing $word"
     done
     if [ -n "$missing" ]; then
         echo "missing words:$missing"
