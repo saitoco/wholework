@@ -320,3 +320,29 @@ Changed Files は 10 件 (新規 2、翻訳ミラー 2、残りは既存ファ�
 ### Notes for Next Phase
 - 対話での 3 択の表示・中止の挙動と、書き込みを伴う `reassign` の実機確認は構造テストでは見られていない
 - #1545 の `/code` では `modules/assignee-check.md` に揃えること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 確認を副作用 (triage・worktree 入場) より前に置く設計と、`/auto` 配下の子フェーズの重複警告を許容する判断を Notes に明記しており、並行する #1545 が参照して整合できた
+
+#### design
+- Size を M → L に更新 (Changed Files 10 件)。親 #1542 の Auto Retrospective に分割時の見積もり過小として記録済み
+
+#### code
+- rework なし。実装前 FAIL を 17 件の新規テストで確認した
+
+#### review
+- 3 択の質問文をモジュールに固定していなかった点と、ヘルパーの出力契約の要約の食い違いを SHOULD として拾い、修正された
+- `LOGINS` の切り出し定義 (最初の ` (` の前まで) を #1545 の `/auto` Step 1a にも揃えるよう申し送ったが、マージ後の `skills/auto/SKILL.md` Step 1a は「`assigned to:` の後の login 一覧」とだけ書いており、括弧書きを除く規則が反映されていない (表示用のみで動作への影響は小さい)
+
+#### merge
+- 競合なし。#1545 とは別箇所の編集で CLEAN
+
+#### verify
+- Pre-merge 7 件は SKIPPED (チェック済み)。Post-merge の opportunistic 条件 1 件は、この /auto の子フェーズが新機能のマージ前の skill で動いたため観測できず、未チェックのまま `phase/verify` に残す
+
+### Improvement Proposals
+- `skills/auto/SKILL.md` の Step 1a が `modules/assignee-check.md` と同じ担当確認手順を重複して持っており、すでに `LOGINS` の切り出し規則 (最初の ` (` の前まで) が食い違っている。Step 1a をモジュール呼び出しに置き換える (モジュールの `PHASE_NAME` に `auto` を加え、`/auto` 固有の「子フェーズを起動しない」中止文言だけを Step 1a に残す)。#1545 の Spec Notes が「両方が main に入った後の改善候補」として /verify に委ねていたもの
