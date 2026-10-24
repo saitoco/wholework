@@ -304,3 +304,39 @@ Changed Files は 12 件 (候補の `docs/guide/workflow.md` と、その日本�
 - **コミット前の確認**: 新規スクリプトは `chmod +x` してから `git add` する (git mode 100755)
 - **実行する確認コマンド**: `bats tests/filter-other-assignees.bats tests/resolve-batch-query.bats tests/auto-batch.bats tests/auto.bats tests/auto-xl-concurrency.bats`、`bats tests/` 全体、`python3 scripts/validate-skill-syntax.py skills/`、`bash scripts/check-allowed-tools.sh`、`bash scripts/check-forbidden-expressions.sh`、`bash scripts/check-translation-sync.sh` (`docs/guide/xl-decomposition.md` の OUTDATED は今回と無関係の既存の差分)、`git diff -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py`、`bash scripts/check-bare-bracket-assertions.sh`
 - **bats の書き方の注意** (#1543 のレビューで 2 回重なった問題): 最終行ではない `! grep ...` と `[[ "$stderr" ... ]]` は、失敗しても テストが FAIL しない (または bash 3.2 で ok と報告される)。`|| false` を付けるか、`run grep ...` の後に `[ "$status" -ne 0 ]` で書く。`"$stderr"` を使う行は `scripts/check-bare-bracket-assertions.sh` が見ないので特に注意する
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec どおりに実装した。意図的な差異は、候補の `docs/guide/workflow.md` と `docs/ja/guide/workflow.md` に Spec の推奨どおり 1 文を追加したこと (Changed Files の「推奨: 追加」に従った)
+- Smoke Test (2) のパイプ形 `gh issue list ... | bash scripts/filter-other-assignees.sh` は拒否されず exit 0 で実行できたので、(2) を外す退避策は使わなかった
+
+### Design Gaps/Ambiguities
+- rubric 形式の Pre-merge AC (1〜6 番目) は、Step 10 では独立した grader を起動せず、自己採点を避けるためチェックを付けなかった。pr route なので `/review` が grader を走らせる
+- CI 系 AC (`gh pr checks`、7・8 番目) は PR 作成前の Step 10 では評価できないため未チェックのまま (route 共通の除外規則どおり)
+
+### Rework
+- `tests/resolve-batch-query.bats` の新規 @test 2 件で、stderr の `Info:` / 警告行が `$output` に混ざり assert が落ちた。`run --separate-stderr` に直して解消した (既存の stderr 混在を前提にした @test は変えていない)
+- 上の修正のために使った `sed` が既存の @test 1 行も書き換えてしまい、差分確認で気づいて元に戻した。既存の @test と fixture を変えない、という Spec の条件は守られている
+- 新規の検証用テストの検出力: 修正前の `resolve-batch-query.sh` (`git checkout origin/main`) では `assignee:` 系 11 件のうち 7 件が FAIL (1・4 に当たる @test を含む)。`filter-other-assignees.sh` の `only_me` を常に真にすると 14 件、実行ユーザー不明時の除外を外すと 4 件の `lookup:` が FAIL。`skills/auto/SKILL.md` を `origin/main` の内容に戻すと新規の構造テスト 20 件のうち 19 件が FAIL (残り 1 件は Size / `createdAt` の絞り込み条件が変わっていないことを確かめる回帰ガード)。確認用の変更はコミットしていない
+- Confirmed pre-implementation FAIL for 5 new test group(s) (filter / resolve-batch-query / Count・List・Until・Resume の構造テスト / Step 1a・XL route・allowed-tools の構造テスト)。Tier 0 の構造化復旧は発動していない (テスト全件 PASS)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 担当の判定を新規の `scripts/filter-other-assignees.sh` に集約した。Count mode (SKILL.md の散文) と Until mode (`resolve-batch-query.sh`) が同じ規則を共有でき、bats で検証できる。実行ユーザー不明時は fail-closed
+- 実行ユーザーの特定 (`gh api user`) は assignee のある Issue があるときだけ 1 回呼ぶ。`resolve-batch-query.sh` ではラベル一致した Issue だけを評価する
+- Step 1a は `modules/assignee-check.md` (#1544) を使わず、SKILL.md に手順を直接書いた (#1544 とは並行作業で、AC1 が SKILL.md 単体で満たされる必要があるため)
+- List / Resume mode は警告のみ、XL は親のみ確認して子 Issue は警告のみ
+
+### Deferred Items
+- rubric 形式の Pre-merge AC (1〜6 番目) は `/review` の grader で評価する。`/code` 時点ではチェックを付けていない
+- CI 系 AC (7・8 番目: Run bats tests / Validate skill syntax) は PR 作成後に `/review` が確認する
+- Post-merge の opportunistic 条件 (対話セッションで `/auto 123` を実行して 3 択の表示を確認) は `/verify` に委ねる
+- #1544 のマージ後に Step 1a を共通モジュール呼び出しに置き換える余地がある (Spec Notes の改善候補。`/verify` の振り返りで扱う)
+
+### Notes for Next Phase
+- `skills/auto/SKILL.md` の散文は英語のみ (日本語は inline code・二重引用符・コードフェンス内だけ)。`scripts/check-language-convention.py` と `validate-skill-syntax.py` は通っている
+- `bats --jobs 4 tests/` 全体 (2432 件) が PASS。`check-translation-sync.sh` の OUTDATED は `docs/guide/xl-decomposition.md` の既存の差分で、この Issue とは無関係
+- `docs/ja/workflow.md` と `docs/workflow.md` はコードフェンス数が一致している (14 / 14)
