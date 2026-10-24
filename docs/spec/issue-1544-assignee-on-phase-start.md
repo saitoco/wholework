@@ -309,16 +309,14 @@ Changed Files は 10 件 (新規 2、翻訳ミラー 2、残りは既存ファ�
 - 対話での 3 択の表示・中止の挙動は LLM 駆動で bats では確認できず、構造テスト (配線と固定文言) までに限られる。実機の確認は Post-merge の opportunistic AC に残る
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST の指摘はなく、SHOULD 1 件・CONSIDER 3 件を `modules/assignee-check.md` と `tests/assignee-check.bats` で修正した (質問文の固定・`LOGINS` の定義・`unchanged` の説明・状況語テストの強化)
-- review-bug の 5 件の指摘は、検証 sub-agent を起動せず、`scripts/gh-issue-assignee.sh` と突き合わせて事実であることを確認した。いずれも文言の食い違いで、動作は変わらない
+- CI (bats・Skill 構文チェック) 成功・approved・pre-merge AC 全件チェック済みの状態で、設定どおり squash でマージした (コンフリクトなし)
 
 ### Deferred Items
-- Post-merge の opportunistic AC (未アサインの Issue で実際に assignee が設定されること) と、書き込みを伴う `reassign` の実機確認は `/verify` 以降に持ち越し
+- Post-merge の opportunistic AC (未アサインの Issue で `/issue 123`・`/spec`・`/code` を実行したとき assignee が設定されること) は `/verify` で確認する
 
 ### Notes for Next Phase
-- `/merge` 前に、修正コミット (`cddbbfe2`) 後の CI が通ることを確認する
-- #1545 の `/code` では、`skills/auto/SKILL.md` Step 1a の `LOGINS` の定義と AskUserQuestion が使えないときの出力を、今回修正した `modules/assignee-check.md` に揃える
-- 対話での 3 択の表示・中止の挙動は、構造テストでは確認できていない
+- 対話での 3 択の表示・中止の挙動と、書き込みを伴う `reassign` の実機確認は構造テストでは見られていない
+- #1545 の `/code` では `modules/assignee-check.md` に揃えること
