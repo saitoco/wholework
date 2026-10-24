@@ -13,11 +13,24 @@
 #                   (the query is whitespace-split, so a space inside a status value produces
 #                   an unrecognized bare token and is treated as a parse error).
 #
-# Exit codes:
+# Assignee exclusion: an Issue that is assigned to someone other than the executing user is
+# excluded, so that `/auto --batch --until` does not pick up an Issue another member is working
+# on. Kept: unassigned Issues (`assignees` is [], null or missing) and Issues whose only
+# assignee is the executing user. The check runs after the label match and before the Status
+# lookup, only on the Issues that matched the label, and is implemented by
+# `filter-other-assignees.sh` (the executing user is the login from `gh api user`, looked up
+# only when a matching Issue has an assignee). When the executing user cannot be identified,
+# every Issue that has an assignee is excluded (fail-closed) and a warning is printed to
+# stderr; that does not fail this script, the excluded Issues just do not appear in the
+# result. The `Info:` summary line of the filter is passed through to stderr as is. The
+# evaluation is a single read at call time; an assignee is not a lock.
+#
+# Exit codes (unchanged by the assignee exclusion):
 #   0  success. stdout: ascending Issue numbers, one per line (empty stdout on 0 matches).
 #   1  parse error (missing/empty --query, no label: clause, unknown key, duplicate key).
 #      stderr: "resolve-batch-query: <reason>"; no stdout.
-#   2  `gh issue list` failed (non-zero exit). stderr: error detail; no stdout.
+#   2  `gh issue list` failed (non-zero exit), or its output or the assignees of the matching
+#      Issues could not be evaluated. stderr: error detail; no stdout.
 #
 # A per-Issue Status GraphQL resolution failure (error / no project item / Status unset) is
 # treated fail-closed: that Issue is excluded (not a hard error) and a warning is printed to
@@ -94,7 +107,7 @@ fi
 
 # (a) Fetch candidate Issues
 ISSUES_JSON=""
-if ! ISSUES_JSON=$(gh issue list --state open --json number,labels --limit "$LIMIT" 2>/dev/null); then
+if ! ISSUES_JSON=$(gh issue list --state open --json number,labels,assignees --limit "$LIMIT" 2>/dev/null); then
     echo "resolve-batch-query: gh issue list failed" >&2
     exit 2
 fi
@@ -130,11 +143,29 @@ while IFS=$'\t' read -r num labels_csv; do
     fi
 done <<< "$LABEL_TSV"
 
+# (b2) Exclude Issues assigned to someone other than the executing user. Only the Issues that
+# matched the label are evaluated (nothing is evaluated, and `gh api user` is not called, when
+# none matched). The filter prints its Info/Warning lines to stderr, which pass through as is.
+ASSIGNEE_FILTERED=""
+if [ -n "$LABEL_FILTERED" ]; then
+    ASSIGNEE_NUMS=""
+    if ! ASSIGNEE_NUMS=$(printf '%s' "$ISSUES_JSON" \
+        | jq -c --arg nums "$LABEL_FILTERED" '($nums | split(" ") | map(select(length > 0) | tonumber)) as $keep | map(select(.number as $n | any($keep[]; . == $n)))' \
+        | "$SCRIPT_DIR/filter-other-assignees.sh" \
+        | jq -r '[.[].number | tostring] | join(" ")'); then
+        echo "resolve-batch-query: failed to evaluate the assignees of the candidate issues" >&2
+        exit 2
+    fi
+    if [ -n "$ASSIGNEE_NUMS" ]; then
+        ASSIGNEE_FILTERED=" $ASSIGNEE_NUMS"
+    fi
+fi
+
 # (c) Filter by status (only when a status: clause was given — no GraphQL call otherwise)
 STATUS_FILTERED=""
 if [ "$HAS_STATUS" = true ]; then
     STATUS_GQL='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){projectItems(first:10){nodes{fieldValues(first:20){nodes{... on ProjectV2ItemFieldSingleSelectValue{field{... on ProjectV2SingleSelectField{name}}value:name}}}}}}}}'
-    for num in $LABEL_FILTERED; do
+    for num in $ASSIGNEE_FILTERED; do
         ISSUE_STATUS=""
         if ! ISSUE_STATUS=$("$SCRIPT_DIR/gh-graphql.sh" "$STATUS_GQL" -F num="$num" \
             --jq '.data.repository.issue.projectItems.nodes[].fieldValues.nodes[] | select(.field.name=="Status") | .value' \
@@ -152,7 +183,7 @@ if [ "$HAS_STATUS" = true ]; then
         STATUS_FILTERED="$STATUS_FILTERED $num"
     done
 else
-    STATUS_FILTERED="$LABEL_FILTERED"
+    STATUS_FILTERED="$ASSIGNEE_FILTERED"
 fi
 
 # (d) Exclude already-processed Issue numbers (`for n in $EXCLUDE`, not `while read`, to

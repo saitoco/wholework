@@ -7,6 +7,11 @@ SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL
 
 load 'helpers/markdown-section'
 
+# Extract Step 1a section: from "### Step 1a:" to the next heading of level 3 or higher (Issue #1545)
+step1a_section() {
+    md_section "$1" "### Step 1a:"
+}
+
 # Extract Step 3a section: from "### Step 3a:" to the next heading of level 3 or higher
 step3a_section() {
     md_section "$1" "### Step 3a:"
@@ -604,4 +609,102 @@ verify_fail_marker_comment() {
     # Origin comparison correctly detects the divergent commit B.
     [ "$origin_hash" = "$commit_b" ]
     [ "$local_head_hash" != "$origin_hash" ]
+}
+
+# --- Step 1a: assignee check (Issue #1545) ---
+
+@test "Step 1a section: located between Step 1 and Step 2" {
+    run grep -n '^### Step 1:\|^### Step 1a:\|^### Step 2:' "$SKILL_FILE"
+    [ "$status" -eq 0 ]
+    step1_line="$(printf '%s\n' "$output" | grep '### Step 1:' | cut -d: -f1)"
+    step1a_line="$(printf '%s\n' "$output" | grep '### Step 1a:' | cut -d: -f1)"
+    step2_line="$(printf '%s\n' "$output" | grep '### Step 2:' | cut -d: -f1)"
+    [ "$step1_line" -lt "$step1a_line" ]
+    [ "$step1a_line" -lt "$step2_line" ]
+}
+
+@test "Step 1a section: calls gh-issue-assignee.sh status and reassign" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    run grep -q 'gh-issue-assignee.sh status' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'gh-issue-assignee.sh reassign' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Step 1a section: the three option labels appear in order" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    a="$(printf '%s\n' "$section" | grep -n '"自分に付け替えて続ける"' | head -1 | cut -d: -f1)"
+    b="$(printf '%s\n' "$section" | grep -n '"付け替えずに続ける"' | head -1 | cut -d: -f1)"
+    c="$(printf '%s\n' "$section" | grep -n '"中止"' | head -1 | cut -d: -f1)"
+    [ -n "$a" ]
+    [ -n "$b" ]
+    [ -n "$c" ]
+    [ "$a" -lt "$b" ]
+    [ "$b" -lt "$c" ]
+    run grep -q 'AskUserQuestion' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Step 1a section: --non-interactive warns with the Skip-tier format and changes nothing" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    run grep -q -- '--non-interactive' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q '\[non-interactive mode\] Skipping high-stakes action:' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'do not call AskUserQuestion and do not call `reassign`' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Step 1a section: abort stops before any later step and leaves labels alone" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    run grep -q 'Do not run any later step' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'run-\*\.sh' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -q 'no label transition' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "Step 1a section: disabled result of reassign is handled" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    run grep -q 'disabled' <<< "$section"
+    [ "$status" -eq 0 ]
+}
+
+@test "SKILL.md: batch branches skip Steps 1a-6 and no skip Steps 2-6 remains" {
+    run grep -c 'skip Steps 1a–6' "$SKILL_FILE"
+    [ "$output" = "5" ]
+    run grep -c 'skip Steps 2–6' "$SKILL_FILE"
+    [ "$output" = "0" ]
+}
+
+@test "Step 1: --resume detection routes through Step 1a" {
+    run grep -q 'Proceed to Step 1a, then Step 2 as normal' "$SKILL_FILE"
+    [ "$status" -eq 0 ]
+}
+
+@test "XL route: sub-issue assignee warning comes before the fan-out inside the XL route block" {
+    block="$(awk '/^\*\*XL route:/{found=1} /^---/{if(found)exit} found{print}' "$SKILL_FILE")"
+    [ -n "$block" ]
+    warn_line="$(printf '%s\n' "$block" | grep -n 'Assignee warning for sub-issues' | head -1 | cut -d: -f1)"
+    run_line="$(printf '%s\n' "$block" | grep -n 'Run levels in order, in parallel' | head -1 | cut -d: -f1)"
+    [ -n "$warn_line" ]
+    [ -n "$run_line" ]
+    [ "$warn_line" -lt "$run_line" ]
+    run grep -q 'gh-issue-assignee.sh status' <<< "$block"
+    [ "$status" -eq 0 ]
+}
+
+@test "allowed-tools: gh-issue-assignee.sh and filter-other-assignees.sh are listed" {
+    frontmatter="$(awk 'NR == 1 { next } /^---$/ { exit } { print }' "$SKILL_FILE")"
+    [ -n "$frontmatter" ]
+    run grep -q 'scripts/gh-issue-assignee.sh:\*' <<< "$frontmatter"
+    [ "$status" -eq 0 ]
+    run grep -q 'scripts/filter-other-assignees.sh:\*' <<< "$frontmatter"
+    [ "$status" -eq 0 ]
 }

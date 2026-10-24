@@ -304,3 +304,49 @@ Changed Files は 12 件 (候補の `docs/guide/workflow.md` と、その日本�
 - **コミット前の確認**: 新規スクリプトは `chmod +x` してから `git add` する (git mode 100755)
 - **実行する確認コマンド**: `bats tests/filter-other-assignees.bats tests/resolve-batch-query.bats tests/auto-batch.bats tests/auto.bats tests/auto-xl-concurrency.bats`、`bats tests/` 全体、`python3 scripts/validate-skill-syntax.py skills/`、`bash scripts/check-allowed-tools.sh`、`bash scripts/check-forbidden-expressions.sh`、`bash scripts/check-translation-sync.sh` (`docs/guide/xl-decomposition.md` の OUTDATED は今回と無関係の既存の差分)、`git diff -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py`、`bash scripts/check-bare-bracket-assertions.sh`
 - **bats の書き方の注意** (#1543 のレビューで 2 回重なった問題): 最終行ではない `! grep ...` と `[[ "$stderr" ... ]]` は、失敗しても テストが FAIL しない (または bash 3.2 で ok と報告される)。`|| false` を付けるか、`run grep ...` の後に `[ "$status" -ne 0 ]` で書く。`"$stderr"` を使う行は `scripts/check-bare-bracket-assertions.sh` が見ないので特に注意する
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec どおりに実装した。意図的な差異は、候補の `docs/guide/workflow.md` と `docs/ja/guide/workflow.md` に Spec の推奨どおり 1 文を追加したこと (Changed Files の「推奨: 追加」に従った)
+- Smoke Test (2) のパイプ形 `gh issue list ... | bash scripts/filter-other-assignees.sh` は拒否されず exit 0 で実行できたので、(2) を外す退避策は使わなかった
+
+### Design Gaps/Ambiguities
+- rubric 形式の Pre-merge AC (1〜6 番目) は、Step 10 では独立した grader を起動せず、自己採点を避けるためチェックを付けなかった。pr route なので `/review` が grader を走らせる
+- CI 系 AC (`gh pr checks`、7・8 番目) は PR 作成前の Step 10 では評価できないため未チェックのまま (route 共通の除外規則どおり)
+
+### Rework
+- `tests/resolve-batch-query.bats` の新規 @test 2 件で、stderr の `Info:` / 警告行が `$output` に混ざり assert が落ちた。`run --separate-stderr` に直して解消した (既存の stderr 混在を前提にした @test は変えていない)
+- 上の修正のために使った `sed` が既存の @test 1 行も書き換えてしまい、差分確認で気づいて元に戻した。既存の @test と fixture を変えない、という Spec の条件は守られている
+- 新規の検証用テストの検出力: 修正前の `resolve-batch-query.sh` (`git checkout origin/main`) では `assignee:` 系 11 件のうち 7 件が FAIL (1・4 に当たる @test を含む)。`filter-other-assignees.sh` の `only_me` を常に真にすると 14 件、実行ユーザー不明時の除外を外すと 4 件の `lookup:` が FAIL。`skills/auto/SKILL.md` を `origin/main` の内容に戻すと新規の構造テスト 20 件のうち 19 件が FAIL (残り 1 件は Size / `createdAt` の絞り込み条件が変わっていないことを確かめる回帰ガード)。確認用の変更はコミットしていない
+- Confirmed pre-implementation FAIL for 5 new test group(s) (filter / resolve-batch-query / Count・List・Until・Resume の構造テスト / Step 1a・XL route・allowed-tools の構造テスト)。Tier 0 の構造化復旧は発動していない (テスト全件 PASS)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec どおりに実装されており、構造的な乖離は見つからなかった。Step 1a・List/Resume の警告・Count/Until の除外・`filter-other-assignees.sh` の fail-closed 規則・各ヘッダーコメント・日本語ミラーまで、Changed Files の項目がそのまま差分に入っていた
+- /review の時点で main が先に進んでおり (#1544 が `docs/workflow.md`・`docs/structure.md` と日本語ミラーに `Assignee` の節と `modules/assignee-check.md` の行を追加)、4 ファイルが両側で編集されていた。テキスト競合はなく (mergeStateStatus: CLEAN)、意味上の矛盾もなかった
+
+### Recurring issues
+- 指摘事項は 0 件で、同種の問題の繰り返しは見つからなかった
+- review-spec / review-bug ×2 / エッジケース実測の 5 つのサブエージェントが、結果も結果ファイルも返さないままバックグラウンドで動き続けた。オーケストレーターが代わりに 4 観点を直接レビューし、影響する bats 4 ファイルを再実行して補った。Workflow を使わない静的 Task 構成でも同じ状況が起きたため、`--full` かつ `--non-interactive` での実測ありのレビューは、結果ファイルが間に合わない前提で設計する余地がある
+
+### Acceptance criteria verification difficulty
+- rubric 形式の AC 6 件は、独立した grader を起動せずオーケストレーターが敵対的な立場で差分とテストを読んで判定した。UNCERTAIN は出なかった
+- CI 系 AC (`gh pr checks`) は push と pull_request の両方で同名のジョブが出るため、どちらも SUCCESS であることを確認した
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 指摘 0 件のため、コードの修正は行わなかった。Step 8 の Pre-merge AC 8 件はすべて PASS としてチェックを付けた
+- サブエージェントの結果が得られなかったため、仕様乖離・ドキュメント整合・バグ・セキュリティの観点を自分で確認した。補強として、影響する bats 4 ファイルを再実行した (失敗 0 件)
+- 基底ブランチとの同時編集 4 ファイルは、テキスト競合なし・意味上の矛盾なしと判断した
+
+### Deferred Items
+- Post-merge の opportunistic 条件 (対話セッションの `/auto 123` で 3 択の確認が表示される) は `/verify` に委ねる
+- #1544 のマージ後に Step 1a を共通モジュール (`modules/assignee-check.md`) の呼び出しに置き換える余地がある。`/verify` の振り返りで扱う
+
+### Notes for Next Phase
+- `/merge` 前に main がさらに進んでいる場合は、`docs/workflow.md`・`docs/structure.md` と日本語ミラーの同時編集を再確認する
+- エッジケース実測 (パーサー系の入力軸と実行 CWD 軸) は結果が得られていない。bats 側には空入力・不正 JSON・CRLF・制御文字・400 件の大きな入力のケースがある

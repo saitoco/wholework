@@ -135,6 +135,8 @@ Chains all phases based on issue size. The most common way to run Wholework.
 
 If no `phase/*` label is set, `/auto` starts from issue triage. If no spec exists, it runs `/spec` first.
 
+If another member is already assigned to an issue, `/auto 42` asks before it starts any phase (it only warns when run non-interactively), and `--batch 5` and `--batch --until` skip such issues when selecting candidates.
+
 ## Supporting Skills
 
 These skills operate outside the main Issue → verify flow. They maintain metadata, foundation documents, and codebase health — you invoke them when the situation calls for it, rather than on every issue.

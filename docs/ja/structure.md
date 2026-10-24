@@ -225,7 +225,8 @@ wholework/
 
 **プロセス管理:**
 - `scripts/auto-checkpoint.sh` — `/auto --resume` 用のチェックポイントヘルパー: 単一 Issue の verify カウンタとバッチの remaining リストのアトミックな読み書き/削除。BATCH_ID で名前空間化されたセッションごとの状態ファイルが並行 `--batch` の衝突を防ぐ (サブコマンド: `read_single`、`write_single`、`delete_single`、`read_batch`、`write_batch`、`update_batch`、`delete_batch`、`list_active_batches`)
-- `scripts/resolve-batch-query.sh` — `/auto --batch --until <query>` の `label:`/`status:` クエリを、ソート済みで除外考慮済みのマッチする open Issue 番号リストに解決する (決定的、bash 3.2 互換。Issue ごとの Status GraphQL 失敗はハードエラーではなく fail-closed で除外される)
+- `scripts/resolve-batch-query.sh` — `/auto --batch --until <query>` の `label:`/`status:` クエリを、ソート済みで除外考慮済みのマッチする open Issue 番号リストに解決する (決定的、bash 3.2 互換。Issue ごとの Status GraphQL 失敗はハードエラーではなく fail-closed で除外される。実行ユーザー以外がアサインされている Issue は `filter-other-assignees.sh` で除外する)
+- `scripts/filter-other-assignees.sh` — 標準入力の `gh issue list --json number,...,assignees` の JSON 配列から、実行ユーザー以外がアサインされている Issue (bot は other) を除く。実行ユーザーは、assignee のある Issue があるときだけ `gh api user` で特定し、特定できなければ assignee のある Issue をすべて除外する (fail-closed)。`resolve-batch-query.sh` と `/auto` の Count mode が使う (bash 3.2 互換)
 - `scripts/should-stop-at-phase.sh` — phase 順序 (`spec`/`code`/`review`/`merge`/`verify`) に基づく stop-at 判定 predicate (exit 0=stop、1=continue、2=usage error)。`run-auto-sub.sh` の `AUTO_STOP_AT` 判定箇所が共通利用する。未知の値・値の取得失敗はいずれも fail-open
 - `scripts/watchdog-defaults.sh` — `WATCHDOG_TIMEOUT_DEFAULT` 定数と run-*.sh スクリプト向けの `load_watchdog_timeout` 関数を提供する sourceable なヘルパー
 - `scripts/retry-on-kill.sh` — `run_with_retry_on_kill()` を提供する sourceable なヘルパー: early-kill ウィンドウ (<300s) 内での SIGTERM/SIGKILL (exit 137/143) を検出し、自動的に 1 回リトライする。run-issue.sh、run-spec.sh、run-code.sh、run-auto-sub.sh で使用される
