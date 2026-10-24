@@ -185,7 +185,8 @@ Key modules:
 - `scripts/gh-graphql.sh` — GraphQL query executor with caching
 - `scripts/gh-issue-comment.sh` — post comments to issues
 - `scripts/gh-issue-edit.sh` — edit issue body (checkbox updates)
-- `scripts/gh-label-transition.sh` — phase label transitions
+- `scripts/gh-label-transition.sh` — phase label transitions (opt-in `--assign` also assigns the executing user after the label update)
+- `scripts/gh-issue-assignee.sh` — issue assignee helper: `status` (unassigned / self / other / unknown), `assign` (only when unassigned), `reassign` (replace others with the executing user); failures never stop the caller; writes follow `auto-assign` and are not governed by the autonomy tier
 - `scripts/gh-check-blocking.sh` — check blocking issue dependencies
 - `scripts/set-blocked-by.sh` — set GitHub blocked-by relationship by issue number (wrapper for `add-blocked-by` mutation)
 - `scripts/get-blocked-by.sh` — single read window for GitHub blocked-by relationships (single-issue mode, or `--all` for the full open-issue graph)

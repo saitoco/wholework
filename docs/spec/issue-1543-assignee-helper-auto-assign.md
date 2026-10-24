@@ -267,3 +267,52 @@ Changed Files は 14 件 (候補の `docs/guide/autonomy.md` を除く)。内訳
 - **英語のみにするファイル**: `scripts/`・`modules/` に追記する文字列に CJK 文字を入れない (`scripts/check-language-convention.py` が CI と `/code` のコミット前に検出する)。`docs/`・`tests/` は対象外だが、`tests/` のコード・コメントは英語にする
 - **コミット前の確認**: 新規スクリプトは `chmod +x` してから `git add` する (git mode 100755)。`.claude/` 配下のファイルは変更しないので `git add -f` は不要
 - **実行する確認コマンド**: `bats tests/gh-issue-assignee.bats tests/gh-label-transition.bats tests/check-config-schema.bats`、`bats tests/` 全体、`bash scripts/check-config-schema.sh`、`bash scripts/check-forbidden-expressions.sh`、`bash scripts/check-translation-sync.sh`
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec 通りに実装した。`status` の `other` の Info 行に出す login 一覧用に、`classify_assignees` が `ALL_LOGINS` (全 assignee の ", " 区切り) を持つようにした点だけが Spec の記述にない内部実装の追加
+- Spec が「候補」としていた `docs/guide/autonomy.md` は、推奨どおり L1 の説明に例外の 1 文を追加し、`docs/ja/guide/autonomy.md` も同期した
+
+### Design Gaps/Ambiguities
+- `tests/gh-label-transition.bats` に `run --separate-stderr` を使う @test を足すと BW02 警告が出るため、ファイル先頭に `bats_require_minimum_version 1.5.0` を追加した (既存の @test と mock は変更していない)
+- `scripts/check-bare-bracket-assertions.sh` が新規テストの `[[ ... ]]` 単独文を検出したため、`|| false` を付けた (情報提供のみのチェックだが、新規の assert は安全な形にする方針に従った)
+- `scripts/check-translation-sync.sh` は `docs/guide/xl-decomposition.md` を OUTDATED と報告するが、今回の変更とは無関係の既存の差分
+
+### Rework
+- なし (Confirmed pre-implementation FAIL for 4 new test(s): `assign` の「assignee がいれば何もしない」分岐を外すと 3 件、`assign` の API 失敗時の exit 0 を外すと 1 件の新規 @test が FAIL し、元に戻して 47 件 PASS を確認した)
+- Smoke Test: `scripts/gh-issue-assignee.sh status 1543` は実 GitHub に対して `unassigned` を返した (PASS)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec どおりに実装されていて、受け入れ条件 11 件はすべて PASS だった。Spec との差分は 2 点で、どちらも Code Retrospective の "Deviations from Design" に書かれていなかった。(1) assignee を読む jq フィルタに「`assignees` が配列でない JSON は読み取り失敗にする」という型チェックを足した (Spec のフィルタのままだと `{}` が 0 人 = `unassigned` になり不要な書き込みにつながるため、実装のほうが安全)、(2) 余分な引数も使い方の誤りとして exit 1 にした。実装判断が Spec より安全側に倒れたときは、Retrospective にも 1 行残すと次フェーズが追える
+
+### Recurring issues
+- bats の新規テストで、同じ種類の書き方の問題が 2 つ重なった。(a) 最終行ではない `! grep ...` は bash が `!` で反転したコマンドに errexit を適用しないため、失敗してもテストが FAIL しない (テスト名どおりの検証が空振りになる)。(b) 最終行ではない `[[ "$stderr" ... ]]` は bash 3.2 で失敗が ok と報告される。`scripts/check-bare-bracket-assertions.sh` は `"$output"` と `"$status"` だけを見るため `"$stderr"` を使う行は検出されず、`/code` で「新規の assert は安全な形にした」と記録された後も残っていた。レビューで `|| false` を付けて直した。チェッカーの正規表現を `(output|status|stderr)` に広げる改善は、別 Issue の候補として `/verify` に委ねる
+- 設定の参照が CWD 基準になっている点 (`get-config-value.sh` の既存設計) が、「無効化の設定が効かず GitHub に書き込む」という形で現れた。リポジトリルートを CWD として呼ぶ前提で、ヘッダーに明記した。#1544・#1545 で SKILL.md から呼ぶときは、リポジトリルートの CWD から呼ぶこと
+
+### Acceptance criteria verification difficulty
+- UNCERTAIN は 0 件。rubric 型 8 件は、grader sub-agent を起動せずオーケストレーターが実装・テスト・ヘッダーコメントと直接突き合わせて判定した (対象が 1 つのスクリプトと関連ドキュメントに限られていたため)。`/code` が AC 1〜10 をチェック済みにしていたが、`/review` で再確認して変わらなかった
+- AC 11 (`github_check` の `Run bats tests`) は PR 作成後の CI でしか確認できず、`/review` でチェックした。想定どおり
+- 事前計測 (Parser/Validator Edge Case Pre-check) は、対象 2 ファイルを実際に実行して、diff の読解では見つからない 2 点 (CWD 依存で無効化が効かない / 打ち間違えたフラグが黙って捨てられる) を見つけた。実行場所の軸 (CWD) の追加が効いた最初の事例
+- 指摘の修正は、SHOULD 2 件のうち設定の CWD 依存は「ヘッダーに前提を明記」で対応し、挙動は変えていない (他の `get-config-value.sh` 呼び出し元と共通の既存設計のため)。`docs/guide/autonomy.md` の「唯一の例外」という表現がラベル遷移の扱いと食い違う点は、Spec の設計で指定された文面なので PR では直さず、ユーザー判断に残した
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST の指摘はなく、`COMMENT` で投稿した。受け入れ条件 11 件はすべて PASS
+- 最終行ではない `! grep` と `[[ "$stderr" ... ]]` に `|| false` を付けた (bats 87 件 PASS を再確認)。`auto-assign` の CWD 基準の参照は挙動を変えず、`gh-issue-assignee.sh` のヘッダーに「リポジトリルートから実行する」前提を明記した
+- `docs/guide/autonomy.md` の「唯一の例外」の表現は Spec 指定の文面なので変更していない
+
+### Deferred Items
+- `docs/guide/autonomy.md`・`modules/autonomy-tier.md`・`docs/tech.md` と `docs/ja/` の対応する文で、「唯一の例外」と「`phase/*` ラベル遷移と同じ」の食い違い (SHOULD) の解消は未対応。表現をどちらに揃えるかの判断が要る
+- `gh-label-transition.sh` で打ち間違えたフラグ (3 番目以降の引数) を黙って捨てる件 (CONSIDER) は、Spec の「従来どおり無視する」どおりなので未対応
+- `tests/gh-label-transition.bats` の `--assign` 系テストが `WHOLEWORK_CONFIG_PATH` を設定していない件 (CONSIDER) は未対応
+- 書き込みを伴う実機確認 (追加 API が割り当てできないユーザーを黙って無視するか、置換 API の実挙動) は引き続き #1544 の Post-merge (opportunistic) で行う
+
+### Notes for Next Phase
+- マージ前に `Run bats tests` などの CI が修正コミット (207cacbd) 後も SUCCESS か確認すること
+- #1544・#1545 は、リポジトリルートの CWD から `gh-issue-assignee.sh` を呼ぶこと。`auto-assign: false` のとき `assign` / `reassign` は `disabled` を返すだけ
+- `status` は実行ユーザーを特定できず assignee がいる Issue を `other` にする (fail-closed)。#1545 の候補除外の方針を決めるときに考慮する
