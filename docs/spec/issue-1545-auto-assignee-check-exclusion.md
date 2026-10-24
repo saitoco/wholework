@@ -321,22 +321,32 @@ Changed Files は 12 件 (候補の `docs/guide/workflow.md` と、その日本�
 - 新規の検証用テストの検出力: 修正前の `resolve-batch-query.sh` (`git checkout origin/main`) では `assignee:` 系 11 件のうち 7 件が FAIL (1・4 に当たる @test を含む)。`filter-other-assignees.sh` の `only_me` を常に真にすると 14 件、実行ユーザー不明時の除外を外すと 4 件の `lookup:` が FAIL。`skills/auto/SKILL.md` を `origin/main` の内容に戻すと新規の構造テスト 20 件のうち 19 件が FAIL (残り 1 件は Size / `createdAt` の絞り込み条件が変わっていないことを確かめる回帰ガード)。確認用の変更はコミットしていない
 - Confirmed pre-implementation FAIL for 5 new test group(s) (filter / resolve-batch-query / Count・List・Until・Resume の構造テスト / Step 1a・XL route・allowed-tools の構造テスト)。Tier 0 の構造化復旧は発動していない (テスト全件 PASS)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec どおりに実装されており、構造的な乖離は見つからなかった。Step 1a・List/Resume の警告・Count/Until の除外・`filter-other-assignees.sh` の fail-closed 規則・各ヘッダーコメント・日本語ミラーまで、Changed Files の項目がそのまま差分に入っていた
+- /review の時点で main が先に進んでおり (#1544 が `docs/workflow.md`・`docs/structure.md` と日本語ミラーに `Assignee` の節と `modules/assignee-check.md` の行を追加)、4 ファイルが両側で編集されていた。テキスト競合はなく (mergeStateStatus: CLEAN)、意味上の矛盾もなかった
+
+### Recurring issues
+- 指摘事項は 0 件で、同種の問題の繰り返しは見つからなかった
+- review-spec / review-bug ×2 / エッジケース実測の 5 つのサブエージェントが、結果も結果ファイルも返さないままバックグラウンドで動き続けた。オーケストレーターが代わりに 4 観点を直接レビューし、影響する bats 4 ファイルを再実行して補った。Workflow を使わない静的 Task 構成でも同じ状況が起きたため、`--full` かつ `--non-interactive` での実測ありのレビューは、結果ファイルが間に合わない前提で設計する余地がある
+
+### Acceptance criteria verification difficulty
+- rubric 形式の AC 6 件は、独立した grader を起動せずオーケストレーターが敵対的な立場で差分とテストを読んで判定した。UNCERTAIN は出なかった
+- CI 系 AC (`gh pr checks`) は push と pull_request の両方で同名のジョブが出るため、どちらも SUCCESS であることを確認した
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 担当の判定を新規の `scripts/filter-other-assignees.sh` に集約した。Count mode (SKILL.md の散文) と Until mode (`resolve-batch-query.sh`) が同じ規則を共有でき、bats で検証できる。実行ユーザー不明時は fail-closed
-- 実行ユーザーの特定 (`gh api user`) は assignee のある Issue があるときだけ 1 回呼ぶ。`resolve-batch-query.sh` ではラベル一致した Issue だけを評価する
-- Step 1a は `modules/assignee-check.md` (#1544) を使わず、SKILL.md に手順を直接書いた (#1544 とは並行作業で、AC1 が SKILL.md 単体で満たされる必要があるため)
-- List / Resume mode は警告のみ、XL は親のみ確認して子 Issue は警告のみ
+- 指摘 0 件のため、コードの修正は行わなかった。Step 8 の Pre-merge AC 8 件はすべて PASS としてチェックを付けた
+- サブエージェントの結果が得られなかったため、仕様乖離・ドキュメント整合・バグ・セキュリティの観点を自分で確認した。補強として、影響する bats 4 ファイルを再実行した (失敗 0 件)
+- 基底ブランチとの同時編集 4 ファイルは、テキスト競合なし・意味上の矛盾なしと判断した
 
 ### Deferred Items
-- rubric 形式の Pre-merge AC (1〜6 番目) は `/review` の grader で評価する。`/code` 時点ではチェックを付けていない
-- CI 系 AC (7・8 番目: Run bats tests / Validate skill syntax) は PR 作成後に `/review` が確認する
-- Post-merge の opportunistic 条件 (対話セッションで `/auto 123` を実行して 3 択の表示を確認) は `/verify` に委ねる
-- #1544 のマージ後に Step 1a を共通モジュール呼び出しに置き換える余地がある (Spec Notes の改善候補。`/verify` の振り返りで扱う)
+- Post-merge の opportunistic 条件 (対話セッションの `/auto 123` で 3 択の確認が表示される) は `/verify` に委ねる
+- #1544 のマージ後に Step 1a を共通モジュール (`modules/assignee-check.md`) の呼び出しに置き換える余地がある。`/verify` の振り返りで扱う
 
 ### Notes for Next Phase
-- `skills/auto/SKILL.md` の散文は英語のみ (日本語は inline code・二重引用符・コードフェンス内だけ)。`scripts/check-language-convention.py` と `validate-skill-syntax.py` は通っている
-- `bats --jobs 4 tests/` 全体 (2432 件) が PASS。`check-translation-sync.sh` の OUTDATED は `docs/guide/xl-decomposition.md` の既存の差分で、この Issue とは無関係
-- `docs/ja/workflow.md` と `docs/workflow.md` はコードフェンス数が一致している (14 / 14)
+- `/merge` 前に main がさらに進んでいる場合は、`docs/workflow.md`・`docs/structure.md` と日本語ミラーの同時編集を再確認する
+- エッジケース実測 (パーサー系の入力軸と実行 CWD 軸) は結果が得られていない。bats 側には空入力・不正 JSON・CRLF・制御文字・400 件の大きな入力のケースがある
