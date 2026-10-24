@@ -99,7 +99,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" status 42
     [ "$status" -eq 0 ]
     [ "$output" = "other" ]
-    [[ "$stderr" == *"Info: issue #42 is assigned to: alice, Copilot"* ]]
+    [[ "$stderr" == *"Info: issue #42 is assigned to: alice, Copilot"* ]] || false
 }
 
 @test "status: a bot only is treated as other" {
@@ -125,7 +125,7 @@ count_calls() {
     export MOCK_VIEW_1="$BRACKET_JSON"
     run --separate-stderr bash "$SCRIPT" status 42
     [ "$output" = "other" ]
-    [[ "$stderr" == *"dependabot[bot]"* ]]
+    [[ "$stderr" == *"dependabot[bot]"* ]] || false
 }
 
 @test "status: auto-assign false does not change the judgement" {
@@ -149,7 +149,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" status 42
     [ "$status" -eq 0 ]
     [ "$output" = "other" ]
-    [[ "$stderr" == *"could not be identified"* ]]
+    [[ "$stderr" == *"could not be identified"* ]] || false
 }
 
 @test "status: malformed executing user login is treated as unidentified" {
@@ -164,7 +164,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" status 42
     [ "$status" -eq 0 ]
     [ "$output" = "unknown" ]
-    [[ "$stderr" == *"Warning: could not read the assignees of issue #42; status is unknown"* ]]
+    [[ "$stderr" == *"Warning: could not read the assignees of issue #42; status is unknown"* ]] || false
 }
 
 @test "status: malformed JSON prints unknown" {
@@ -258,7 +258,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"Warning: failed to update the assignee of issue #42 (no permission or API error); continuing"* ]]
+    [[ "$stderr" == *"Warning: failed to update the assignee of issue #42 (no permission or API error); continuing"* ]] || false
 }
 
 @test "assign: another member found on re-read warns about simultaneous start" {
@@ -267,7 +267,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "assigned" ]
-    [[ "$stderr" == *"Warning: issue #42 is also assigned to: alice. Another member may have started this Issue at about the same time"* ]]
+    [[ "$stderr" == *"Warning: issue #42 is also assigned to: alice. Another member may have started this Issue at about the same time"* ]] || false
 }
 
 @test "assign: executing user missing on re-read prints failed with a warning" {
@@ -276,7 +276,7 @@ count_calls() {
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"Warning: @me is not an assignee of issue #42 after the update"* ]]
+    [[ "$stderr" == *"Warning: @me is not an assignee of issue #42 after the update"* ]] || false
 }
 
 @test "assign: re-read failure still reports assigned with a warning" {
@@ -303,7 +303,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "assigned" ]
-    [[ "$stderr" == *"could not re-read the assignees of issue #42"* ]]
+    [[ "$stderr" == *"could not re-read the assignees of issue #42"* ]] || false
 }
 
 @test "assign: unknown executing user writes nothing and prints failed" {
@@ -312,7 +312,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"Warning: could not identify the executing user (gh api user failed); skipping the assignee update for issue #42"* ]]
+    [[ "$stderr" == *"Warning: could not identify the executing user (gh api user failed); skipping the assignee update for issue #42"* ]] || false
     [ "$(count_calls '-X POST')" -eq 0 ]
 }
 
@@ -329,7 +329,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" assign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"could not read the assignees of issue #42; skipping the assignee update"* ]]
+    [[ "$stderr" == *"could not read the assignees of issue #42; skipping the assignee update"* ]] || false
     [ "$(count_calls '-X POST')" -eq 0 ]
 }
 
@@ -386,7 +386,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" reassign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"Warning: failed to update the assignee of issue #42"* ]]
+    [[ "$stderr" == *"Warning: failed to update the assignee of issue #42"* ]] || false
 }
 
 @test "reassign: another member still present after the replace warns" {
@@ -394,7 +394,7 @@ MOCK
     export MOCK_VIEW_2="$ME_AND_ALICE_JSON"
     run --separate-stderr bash "$SCRIPT" reassign 42
     [ "$output" = "assigned" ]
-    [[ "$stderr" == *"also assigned to: alice"* ]]
+    [[ "$stderr" == *"also assigned to: alice"* ]] || false
 }
 
 @test "reassign: unknown executing user writes nothing and prints failed" {
@@ -403,7 +403,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" reassign 42
     [ "$status" -eq 0 ]
     [ "$output" = "failed" ]
-    [[ "$stderr" == *"could not identify the executing user"* ]]
+    [[ "$stderr" == *"could not identify the executing user"* ]] || false
     [ "$(count_calls '-X PATCH')" -eq 0 ]
     [ "$(count_calls '-X POST')" -eq 0 ]
 }
@@ -418,7 +418,7 @@ MOCK
 @test "usage: unknown subcommand exits 1" {
     run --separate-stderr bash "$SCRIPT" bogus 42
     [ "$status" -eq 1 ]
-    [[ "$stderr" == *"unknown subcommand"* ]]
+    [[ "$stderr" == *"unknown subcommand"* ]] || false
 }
 
 @test "usage: missing issue number exits 1" {

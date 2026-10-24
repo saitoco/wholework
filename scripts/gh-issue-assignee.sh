@@ -44,7 +44,10 @@
 #
 # auto-assign (.wholework.yml, default true): when false, assign and reassign print
 # "disabled" without calling gh at all. status is never affected. The setting does
-# not depend on the autonomy tier.
+# not depend on the autonomy tier. The setting is read from .wholework.yml in the
+# current directory (or WHOLEWORK_CONFIG_PATH), like every get-config-value.sh
+# caller, so run this script from the repository root: from another directory the
+# file is not found and the default (true) applies.
 #
 # Writes use the REST API instead of `gh issue edit`: `gh issue edit --add-assignee`
 # sends a client-computed full assignee set, which can drop an assignee another

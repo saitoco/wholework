@@ -349,8 +349,8 @@ MOCK
     write_assign_gh_mock
     run bash "$SCRIPT" 99 code
     [ "$status" -eq 0 ]
-    ! grep -q -- "assignees" "$GH_CALL_LOG"
-    ! grep -q -- "api" "$GH_CALL_LOG"
+    ! grep -q -- "assignees" "$GH_CALL_LOG" || false
+    ! grep -q -- "api" "$GH_CALL_LOG" || false
 }
 
 @test "assign: --assign updates the assignee after the label update" {
@@ -385,7 +385,7 @@ MOCK
     run --separate-stderr bash "$SCRIPT" 99 code --assign
     [ "$status" -eq 0 ]
     grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
-    [[ "$stderr" == *"Warning: failed to update the assignee of issue #99"* ]]
+    [[ "$stderr" == *"Warning: failed to update the assignee of issue #99"* ]] || false
 }
 
 @test "assign: a crashing assignee helper does not fail the label transition" {
@@ -398,7 +398,7 @@ MOCK
     WHOLEWORK_SCRIPT_DIR="$MOCK_DIR" run --separate-stderr bash "$SCRIPT" 99 code --assign
     [ "$status" -eq 0 ]
     grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
-    [[ "$stderr" == *"Warning: assignee update for issue #99 failed"* ]]
+    [[ "$stderr" == *"Warning: assignee update for issue #99 failed"* ]] || false
 }
 
 @test "assign: a missing assignee helper does not fail the label transition" {
@@ -424,22 +424,22 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
     run bash "$SCRIPT" 99 code --assign
     [ "$status" -eq 1 ]
-    ! grep -q -- "-X POST" "$GH_CALL_LOG"
-    ! grep -q -- "api" "$GH_CALL_LOG"
+    ! grep -q -- "-X POST" "$GH_CALL_LOG" || false
+    ! grep -q -- "api" "$GH_CALL_LOG" || false
 }
 
 @test "assign: --assign without a target phase is a usage error" {
     write_assign_gh_mock
     run --separate-stderr bash "$SCRIPT" 99 --assign
     [ "$status" -eq 1 ]
-    [[ "$stderr" == *"--assign requires a target phase"* ]]
+    [[ "$stderr" == *"--assign requires a target phase"* ]] || false
     [ ! -s "$GH_CALL_LOG" ]
 }
 
 @test "assign: --assign alone reports the missing issue number" {
     run --separate-stderr bash "$SCRIPT" --assign
     [ "$status" -eq 1 ]
-    [[ "$stderr" == *"issue number is required"* ]]
+    [[ "$stderr" == *"issue number is required"* ]] || false
 }
 
 @test "help: --help documents --assign" {
