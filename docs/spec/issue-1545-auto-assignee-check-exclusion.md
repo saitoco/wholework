@@ -350,3 +350,31 @@ Changed Files は 12 件 (候補の `docs/guide/workflow.md` と、その日本�
 ### Notes for Next Phase
 - `/merge` 前に main がさらに進んでいる場合は、`docs/workflow.md`・`docs/structure.md` と日本語ミラーの同時編集を再確認する
 - エッジケース実測 (パーサー系の入力軸と実行 CWD 軸) は結果が得られていない。bats 側には空入力・不正 JSON・CRLF・制御文字・400 件の大きな入力のケースがある
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 並行する #1544 の Spec が main に入った時点で読み、文言・メッセージ・`modules/l0-surfaces.md` の編集箇所を揃えた (コミット `aed1d549`)。並行 sub-issue 間の調整として有効だった
+- 判定を新規スクリプト `filter-other-assignees.sh` に集約し、散文ではなく bats で検証できる形にした判断は妥当 (#1457 の教訓の適用)
+
+#### design
+- Size を M → L に更新 (Changed Files 12 件)。親 #1542 の Auto Retrospective に記録済み
+- 共通モジュール `modules/assignee-check.md` を Step 1a から使わない判断は並行計画上やむを得なかったが、#1544 の /review が申し送った `LOGINS` の切り出し規則が反映されず、マージ時点ですでに食い違っている。#1544 の /verify で #1550 として起票済み (ここでは重複して起票しない)
+
+#### code
+- `sed` で既存の @test を誤って書き換え、差分確認で戻した (rework 1 件)。新規テストの検出力は修正前の実装で確認済み
+
+#### review
+- 指摘 0 件。ただし review-spec / review-bug ×2 / エッジケース実測の 5 つのサブエージェントが結果も結果ファイルも返さないままバックグラウンドで動き続け、オーケストレーターが直接レビューして補った。同じ症状は #1481 (2026-10-02 close)・#1522 (2026-10-13 close) で対処済みのはずで、その後の再発にあたる
+- #1544 の申し送り (`LOGINS` 規則を揃える) を拾えなかった。他 sub-issue の Phase Handoff は /review の入力に入っていない
+
+#### merge
+- #1544 のマージで main が先行し 4 ファイルが両側で編集されていたが、CLEAN でマージできた
+
+#### verify
+- Pre-merge 8 件は SKIPPED (チェック済み)。Post-merge の opportunistic 条件 1 件は、この `/auto` が新機能のマージ前の skill で動いたため観測できず、未チェックのまま `phase/verify` に残す
+
+### Improvement Proposals
+- `/review --full` を `--non-interactive` で実行したとき、起動したサブエージェント (review-spec / review-bug / エッジケース実測) が結果も結果ファイルも返さず、オーケストレーターが代わりにレビューする事象が再発した (PR #1549, 2026-10-24)。#1481・#1522 で対処済みの症状と同系で、対処後の再発である。`skills/review/SKILL.md` の結果回収と、結果が届かないときの扱い (待機上限、結果ファイル未着時の明示的な縮退と記録) を見直す。Workflow を使わない静的 Task 構成でも起きている
