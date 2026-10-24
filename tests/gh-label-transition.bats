@@ -368,7 +368,7 @@ MOCK
     write_assign_gh_mock
     run --separate-stderr bash "$SCRIPT" 99 code --assign
     [ "$status" -eq 0 ]
-    [[ "$output" != *"assigned"* ]]
+    [[ "$output" != *"assigned"* ]] || false
 }
 
 @test "assign: --assign is accepted before the positional arguments" {
@@ -445,5 +445,5 @@ MOCK
 @test "help: --help documents --assign" {
     run bash "$SCRIPT" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"--assign"* ]]
+    [[ "$output" == *"--assign"* ]] || false
 }

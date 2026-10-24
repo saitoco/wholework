@@ -443,8 +443,8 @@ MOCK
 @test "usage: --help exits 0 and shows the result vocabulary" {
     run --separate-stderr bash "$SCRIPT" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"unassigned | self | other | unknown"* ]]
-    [[ "$output" == *"assigned | unchanged | disabled | failed"* ]]
+    [[ "$output" == *"unassigned | self | other | unknown"* ]] || false
+    [[ "$output" == *"assigned | unchanged | disabled | failed"* ]] || false
 }
 
 # ---------------------------------------------------------------- docs
@@ -465,13 +465,13 @@ MOCK
 @test "docs: L0 Surface SSoT table lists Assignees" {
     run md_section "$PROJECT_ROOT/modules/l0-surfaces.md" "## L0 Surface SSoT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"| Assignees |"* ]]
+    [[ "$output" == *"| Assignees |"* ]] || false
 }
 
 @test "docs: autonomy-tier.md documents the tier-independent assignee exception" {
     run md_section "$PROJECT_ROOT/modules/autonomy-tier.md" "### Tier-independent L0 write: assignee assignment"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"L1"* ]]
-    [[ "$output" == *"phase/*"* ]]
-    [[ "$output" == *"auto-assign: false"* ]]
+    [[ "$output" == *"L1"* ]] || false
+    [[ "$output" == *"phase/*"* ]] || false
+    [[ "$output" == *"auto-assign: false"* ]] || false
 }
