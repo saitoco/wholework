@@ -183,7 +183,7 @@ To regenerate all translations, run `/doc translate ja`. This command generates 
 
 ## Label Management
 
-Uses `phase/*` labels to visualize Issue progress. Each skill automatically manages labels as the workflow advances.
+Uses `phase/*` labels to visualize Issue progress. Each skill automatically manages labels as the workflow advances. The Issue's assignee shows who is working on it (see [Assignee](#assignee)).
 
 Setup: Wholework automatically creates the labels it needs on first run. Manual label creation is not required for Plugin users. To force re-create all labels, run `scripts/setup-labels.sh` manually.
 
@@ -201,6 +201,17 @@ Setup: Wholework automatically creates the labels it needs on first run. Manual 
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
 | `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked); `/audit stats --retention` (Level 3 auto-retire, autonomy tier L2/L3, when the retire leaves no unchecked post-merge condition) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
+
+### Assignee
+
+`phase/*` labels show how far an Issue has progressed; the Issue's assignee shows who is working on it. Both change when a phase starts, so other members can see the owner and the progress in the places they already look (the Issue list, the Projects board, "Assigned to me").
+
+- **Assignment at phase start**: when `/issue N` (refining an existing Issue), `/spec`, or `/code` moves the phase label to `phase/issue`, `phase/spec`, or `phase/code`, it also sets the executing user as the assignee, but only when the Issue has no assignee. An existing assignee is never overwritten and a second assignee is never added, so the first phase that starts on an Issue is the one that assigns it.
+- **Not assigned**: a new Issue created with `/issue "title"` (the creator is not necessarily the owner), `/triage`, `/audit`, and the label backfill in `scripts/run-issue.sh`. `/review`, `/merge`, and `/verify` do not assign either, because an earlier phase has already settled the owner.
+- **When another member is assigned**: `/issue N`, `/spec`, and `/code` check this first, before any other action (before the triage auto-chain for `/issue N`, before entering the worktree for `/spec` and `/code`). An interactive run asks whether to reassign the Issue to you and continue, to continue without reassigning, or to abort; aborting leaves the phase label, the triage fields, and the worktree untouched. A `--non-interactive` run leaves the assignee unchanged, prints a warning, and continues. The procedure is defined in [`modules/assignee-check.md`](../modules/assignee-check.md).
+- **Kept after completion**: the assignee is not removed at `phase/done` or when the Issue is closed, so it records who handled the Issue.
+- **Failures never stop a phase**: when the executing user cannot be identified (for example with a GitHub App token or the CI `GITHUB_TOKEN`) or the assignment is not permitted, only a warning is printed. An assignee is not a lock: after assigning, the Issue is re-read and a warning is printed if someone else was assigned at about the same time, but two sessions of the same user cannot be told apart.
+- **Settings**: `auto-assign: false` in `.wholework.yml` stops the assignment and the reassignment only; the check for other members' assignments still runs. Neither depends on the autonomy tier. See the [Customization Guide](guide/customization.md).
 
 ### XL Parent Issue Phase Management
 

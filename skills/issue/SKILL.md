@@ -1,7 +1,7 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
@@ -17,6 +17,7 @@ If ARGUMENTS contains `--non-interactive` (set automatically by `run-issue.sh`),
 Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). The specific branching at each step is noted inline below.
 
 Key per-step behavior in non-interactive mode:
+- **Existing Issue Step 1** (Assignee check): **skip** (High-Stakes Decision — taking over another member's Issue); output the warning, leave the assignee unchanged, and continue
 - **New Issue Creation Step 5 / Existing Issue Step 8** (Clarification Questions): auto-resolve each ambiguity point using model judgment; record decisions in the Auto-Resolve Log posted as an issue retrospective comment
 - **Existing Issue Step 12** (Scope Assessment / sub-issue splitting): **skip** (High-Stakes Decision — sub-issue splitting is irreversible); output warning and continue without splitting
 
@@ -357,6 +358,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and normalize the title
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 ```
 
+This transition does not set an assignee: a newly created Issue is not assigned to its creator. Only Existing Issue Refinement sets an assignee (its Step 3).
+
 After applying labels, set blocked-by relationships from `Blocked by #N` patterns in the issue body:
 
 ```bash
@@ -465,6 +468,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 Detect embedded links in body and comments; fetch GitHub-hosted attachments via WebFetch or Read. Use attachment content and all comments as context for subsequent steps.
 
+**Assignee check (run before Step 2's triage auto-chain):** Read `${CLAUDE_PLUGIN_ROOT}/modules/assignee-check.md` and follow the "Processing Steps" section with parameters: `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=issue`, `NON_INTERACTIVE=true` when ARGUMENTS contains `--non-interactive` (otherwise `false`). The check only reads the assignee, and it must come before Step 2 because Step 2 writes the title, Type, Size, and Value. When a member other than the executing user is assigned, an interactive run asks with AskUserQuestion whether to "自分に付け替えて続ける", "付け替えずに続ける", or "中止"; a `--non-interactive` run leaves the assignee unchanged, prints a warning, and continues. Choosing "中止" ends the refinement here: no triage write, no label change, and no assignee change remains. An Issue with no assignee is assigned in Step 3 together with the label transition; an existing assignee is never overwritten or added to.
+
 ### Step 2: Auto-chain to triage (if `triaged` label is absent)
 
 If `triaged` is absent from `labels`: read `skills/triage/SKILL.md` and run the "Single Execution" section starting from Step 2 (title normalization). Output an intermediate triage results table after completion.
@@ -474,8 +479,10 @@ If `triaged` is present: skip this step.
 ### Step 3: Label Transition
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue --assign
 ```
+
+`--assign` also sets the executing user as the assignee, but only when the Issue has none: an existing assignee is never overwritten or added to. It runs after the label update succeeds, and a failure to set the assignee only prints a warning, so the transition still succeeds. If the command prints a `Warning:` line (for example, another member was assigned at about the same time), show it to the user and continue.
 
 ### Step 4: Reference Steering Documents (if present)
 

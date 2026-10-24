@@ -1,7 +1,7 @@
 ---
 name: spec
 description: Issue specification (`/spec 123`). Reads Issue requirements and creates an implementation plan. Automatically adjusts investigation depth (light/full) based on Size (`--light`/`--full` to override).
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/check-plugin-staleness.sh:*, gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-skill-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
 ---
 
 # Issue Specification
@@ -15,6 +15,7 @@ If ARGUMENTS contains `--non-interactive` (set automatically by `run-spec.sh`), 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). The specific branching at each step is noted inline below.
 
 Key per-step behavior in non-interactive mode:
+- **Step 1** (Assignee check): **skip** (High-Stakes Decision — taking over another member's Issue); output the warning, leave the assignee unchanged, and continue
 - **Step 6** (Codebase Investigation — conflict detection, `SPEC_DEPTH=full`): auto-resolve the conflict using model judgment (note the resolution in the Spec's "Notes" section); record the decision in the Auto-Resolve Log posted as an issue retrospective comment
 - **Step 7** (Ambiguity Resolution): auto-resolve each ambiguity point using model judgment; record decisions in the Auto-Resolve Log
 - **Step 8** (Uncertainty): verify using the documented method if possible; if verification fails and the design premise is incorrect, record the issue in the Spec's "Notes" section and continue with best-effort implementation approach rather than aborting
@@ -64,6 +65,8 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and store the resu
 
 `ISSUE_TYPE` is referenced in Step 10 template selection.
 
+**Assignee check (run before Step 2's Worktree Entry):** Read `${CLAUDE_PLUGIN_ROOT}/modules/assignee-check.md` and follow the "Processing Steps" section with parameters: `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=spec`, `NON_INTERACTIVE=true` when ARGUMENTS contains `--non-interactive` (otherwise `false`). The check only reads the assignee, and it must come before Step 2 because Step 2 creates the worktree, consumes comments, and sweeps the work directory. When a member other than the executing user is assigned, an interactive run asks with AskUserQuestion whether to "自分に付け替えて続ける", "付け替えずに続ける", or "中止"; a `--non-interactive` run leaves the assignee unchanged, prints a warning, and continues. Choosing "中止" ends /spec here: no worktree, no label change, and no assignee change remains. An Issue with no assignee is assigned in Step 3 together with the label transition; an existing assignee is never overwritten or added to.
+
 ### Step 2: Worktree Entry
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry" section.
@@ -87,8 +90,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/phase-work-dir.sh sweep $NUMBER spec
 ### Step 3: Label Transition (start)
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER spec
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER spec --assign
 ```
+
+`--assign` also sets the executing user as the assignee, but only when the Issue has none: an existing assignee is never overwritten or added to. It runs after the label update succeeds, and a failure to set the assignee only prints a warning, so the transition still succeeds. If the command prints a `Warning:` line (for example, another member was assigned at about the same time), show it to the user and continue.
 
 ### Step 4: Blocked-by Detection
 

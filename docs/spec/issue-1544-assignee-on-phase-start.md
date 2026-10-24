@@ -280,3 +280,45 @@ Changed Files は 10 件 (新規 2、翻訳ミラー 2、残りは既存ファ�
 - **Pre-merge 項目数**: この Spec の Pre-merge は 7 件で、SPEC_DEPTH=light の目安 (5 件) を超える。Issue 本文の `## Acceptance Criteria > Pre-merge` を verify command ごと転記する規則 (件数の一致検査を含む) を優先した。Implementation Steps は目安内の 5 件にまとめた
 - **Smoke Test は省略**: 実 GitHub への書き込みを伴う確認 (`--assign`・`reassign`) は Issue の assignee を変更し通知を発生させるため入れない。読み取りだけの `status` の疎通は #1543 の Smoke Test で済んでいる
 - **コミット前の確認**: 新規ファイル (`modules/assignee-check.md`・`tests/assignee-check.bats`) は `git add` する。`.claude/` 配下は変更しない
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec のとおりに実施した (モジュール、3 SKILL.md、`ambiguity-detector.md`、`docs/workflow.md`・`docs/structure.md` と ja ミラー、bats)
+
+### Design Gaps/Ambiguities
+- Step 3 の `phase/ready` 確認は `matches_expected: true` (観測ラベル: `triaged`, `phase/ready`) で、Auto-Resolve Log に記録する判断は発生しなかった
+- 実装前 FAIL 確認: コミット前の作業ツリーのため `git stash` は使わず、`git archive HEAD` の展開コピー (phase work directory 配下) に新規 bats だけを置いて実行した。worktree 分離ガードが複合の git コマンドを拒否するため、アーカイブ作成と展開を別コマンドに分けた
+- Confirmed pre-implementation FAIL for 17 new test(s). 実装前でも PASS したのは回帰ガードの否定検査 2 本 (`skill: issue New Issue Creation does not assign ...`、`run-issue: ...`) で、Spec の想定どおり
+- bats の実行は `bats --jobs 4 tests/` (全 2390 件) で not ok なし。`validate-skill-syntax.py`・`check-forbidden-expressions.sh`・`check-language-convention.py` も問題なし。`check-bare-bracket-assertions.sh` の警告 (1009 件) は既存ファイル由来で、今回追加した `tests/assignee-check.bats` は該当なし
+
+### Rework
+- なし
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の「質問文と各選択肢の説明は、コードフェンスの中に日本語で書く」を、実装が実行時の指示として英訳しただけで、文面そのものをモジュールに固定していなかった (SHOULD)。Spec の記述が「固定する」とも「実行時に作る」とも読めたことが原因で、他の固定文言 (結果なし・中止の通知) とは扱いがそろっていなかった。Spec で文面を固定したい箇所は、「コードフェンスの中に書く」ではなく、文面そのものを Spec に載せると取りこぼしにくい
+- ヘルパー (`gh-issue-assignee.sh`) の出力契約をモジュールが要約するとき、実装の細部 (`status` が括弧書きを付ける・`unchanged` を返す条件) と食い違った。ヘルパーのヘッダーコメントを転記するか参照にすると食い違わない
+
+### Recurring issues
+- `LOGINS` の切り出しが、`modules/assignee-check.md` と同じ手順を持つ #1545 の `skills/auto/SKILL.md` Step 1a (`/spec` 済み) にもそのまま写っている。#1545 の `/code` 時点で、今回の修正後の定義 (最初の ` (` の前まで) に揃える必要がある
+
+### Acceptance criteria verification difficulty
+- rubric 4 件は diff の読み取りだけで判定でき、UNCERTAIN はなかった。CI の 2 件は `gh pr checks` で確認でき、PASS にしてチェックを付けた
+- 対話での 3 択の表示・中止の挙動は LLM 駆動で bats では確認できず、構造テスト (配線と固定文言) までに限られる。実機の確認は Post-merge の opportunistic AC に残る
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST の指摘はなく、SHOULD 1 件・CONSIDER 3 件を `modules/assignee-check.md` と `tests/assignee-check.bats` で修正した (質問文の固定・`LOGINS` の定義・`unchanged` の説明・状況語テストの強化)
+- review-bug の 5 件の指摘は、検証 sub-agent を起動せず、`scripts/gh-issue-assignee.sh` と突き合わせて事実であることを確認した。いずれも文言の食い違いで、動作は変わらない
+
+### Deferred Items
+- Post-merge の opportunistic AC (未アサインの Issue で実際に assignee が設定されること) と、書き込みを伴う `reassign` の実機確認は `/verify` 以降に持ち越し
+
+### Notes for Next Phase
+- `/merge` 前に、修正コミット (`cddbbfe2`) 後の CI が通ることを確認する
+- #1545 の `/code` では、`skills/auto/SKILL.md` Step 1a の `LOGINS` の定義と AskUserQuestion が使えないときの出力を、今回修正した `modules/assignee-check.md` に揃える
+- 対話での 3 択の表示・中止の挙動は、構造テストでは確認できていない
