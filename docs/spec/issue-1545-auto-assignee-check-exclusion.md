@@ -38,7 +38,7 @@ No new comments since last phase.
 - `docs/ja/workflow.md`: [translation sync] 上記の日本語ミラーを同期 (`docs/translation-workflow.md` の Sync Procedure に従う。コードフェンス数の一致を確認する)
 - `docs/structure.md`: [Steering Docs sync candidate: listing-side sub-check] Key Files の「Process management」で、`scripts/resolve-batch-query.sh` の行に担当による除外を追記し、直後に `scripts/filter-other-assignees.sh` の行を追加 (`ssot_for: directory-layout` を frontmatter で確認済み。Directory Layout の木構造には個別スクリプトもファイル数も載っていないため、木構造は変更不要)
 - `docs/ja/structure.md`: [translation sync] 上記の日本語ミラーを同期
-- `modules/l0-surfaces.md`: L0 Surface SSoT 表の `Assignees` 行の Primary callers 列に `/auto` を追記する (#1543 の申し送り: スキル名を足すのは #1544・#1545 の側)。スクリプト名は `${CLAUDE_PLUGIN_ROOT}/scripts/` 付きの形では書かない (`validate-skill-syntax.py` の `validate_modules_scripts_in_allowed_tools` の検出対象にしないため)。追記する文字列は英語のみ
+- `modules/l0-surfaces.md`: L0 Surface SSoT 表の直後の Note (Assignees の書き込みが autonomy tier の対象外であることと、判定結果の語彙の定義先を書いた Note) に 1 文を足す。内容: 担当者の一括読み取り (`filter-other-assignees.sh`。`resolve-batch-query.sh` と `/auto` の Count mode が使う) は、実行ユーザーを特定できないとき assignee のある Issue をすべて除外する (fail-closed) 規則で、その定義は同スクリプトのヘッダーコメントにある。表の `Assignees` 行の Primary callers 列は変えない (Labels 行と同じくスクリプト名だけの書き方で、`/auto` が呼ぶ `gh-issue-assignee.sh` は既に載っている。#1544 の Spec も同じ理由で同じ列を変えない)。スクリプト名は `${CLAUDE_PLUGIN_ROOT}/scripts/` 付きの形では書かない (`validate-skill-syntax.py` の `validate_modules_scripts_in_allowed_tools` の検出対象にしないため)。追記する文字列は英語のみ
 - [Steering Docs sync candidate] `docs/guide/workflow.md`: 「`/auto` — Full Automation」の例 (`/auto --batch 5` など) の近くに、他のメンバーがアサイン済みの Issue は開始時に確認され (`/auto N`)、`--batch N` と `--batch --until` では候補から除かれる旨を 1〜2 文足すかどうかを `/code` が読んで判断する (推奨: 追加。追加する場合は `docs/ja/guide/workflow.md` も同期)
 
 **変更不要 (grep・Read で確認済み。測定範囲は `docs/`・`modules/`・`skills/`・`scripts/`・`README.md`・`SECURITY.md`、`docs/spec/`・`docs/reports/`・`docs/sessions/` を除く。main の ca1b5b31 時点):**
@@ -47,6 +47,7 @@ No new comments since last phase.
 - `modules/detect-config-markers.md`: `auto-assign` の箇条書きが「`status` は `/auto` の候補除外に使う」と既に書いている。`modules/autonomy-tier.md`: assignee の付与の例外の節は `status` を L0 read としてゲートしないと既に書いている
 - `modules/round-ordering.md`: `resolve-batch-query.sh` の出力を並べ替える手順だけで、候補の選定規則には触れない (`grep -n -i "assign\|candidate\|exclud" modules/round-ordering.md` の一致は無関係な 1 件のみ)
 - `README.md`: スクリプト・サブコマンドの列挙がない。`SECURITY.md`: 13 行目の GitHub 操作の一覧が「edit (title, body, labels, assignees)」を既に含み、60 行目の許可パターンに `gh api` が既にある
+- `modules/l0-surfaces.md` の表の `Assignees` 行 (Primary callers 列): スクリプト名だけの書き方 (Labels 行と同じ) で、`/auto` が呼ぶ `gh-issue-assignee.sh` は既に載っている。#1544 の Spec (main に入っている) は、並行する 2 つの Issue が同じセルを触らないよう、スキル名を足さないと決めている。この Issue も足さない
 - `.claude/settings.json.template`: ワイルドカードが全スクリプトを覆う (#1543 の Spec で確認済み)。`.claude/` 配下のファイルは変更しないので `git add -f` は不要
 - `docs/migration-notes.md`・`docs/ja/migration-notes.md`: 既存スクリプトの CLI の署名・引数順を変えないので対象外 (`resolve-batch-query.sh` の引数と終了コードの規約は不変)
 - `docs/product.md` の Terms の `/auto` の行: `--batch N` の説明は「XS/S Issue を一括処理」のままで正しい。除外の詳細は `docs/workflow.md` が持つ
@@ -139,11 +140,13 @@ No new comments since last phase.
    - **Step 1a** (`md_section` で `### Step 1a:` から切り出せる見出し。Step 1 の「Read `phase-banner.md`...」の段落の後、`### Step 2:` の前):
      1. 位置と範囲: Step 1 のバナーの直後、副作用のある処理 (Step 2 以降) の前に 1 回。`/auto N` と `/auto --resume N` に適用し、`--batch` の形はすべて Step 1 で分岐して飛ばす (Batch Mode の節が担当を扱う)
      2. 理由: 子フェーズ (`run-*.sh`) は常に `--non-interactive` で動くため、子フェーズの中の確認は警告にしかならず、assignee は以前の担当者のまま残る。精査した人と実装する人が違う分担は普通にあるので、確認は親が子フェーズを起動する前に 1 回行う。L0 の読み取りと (ユーザーが選んだときだけの) 置換で、autonomy tier にも `auto-assign` にも依存しない (書き込みの可否は `gh-issue-assignee.sh` が自分で判定する)
-     3. 手順: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status $NUMBER` をリポジトリルートから実行して標準出力の 1 語を読む。標準エラー出力の `Warning:` / `Info:` (`Info:` が assignee の login を示す) はユーザーに伝える。コマンドが実行できない (非 0) ときは警告して `unknown` と同じに扱う (assignee の問題で `/auto` を止めない)
-     4. 分岐: `unassigned`・`self`・`unknown` は確認なしで Step 2 へ。`other` (bot・Copilot を含む) は、`--non-interactive` なら「#$NUMBER は <login> が担当しているが assignee を変えずに続ける」旨を警告して Step 2 へ。そうでなければ AskUserQuestion で担当者を示して、次の 3 択を出す:
-        - `自分に付け替えて続ける`: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh reassign $NUMBER` を実行し、`assigned` なら付け替えた旨、`unchanged` なら何も言わない、`disabled` なら `auto-assign: false` のため assignee を変えなかった旨、`failed` なら (ヘルパーが理由を出力済み) を伝える。どの語でも Step 2 へ進む (付け替えができなかったことで `/auto` を止めない。#1543 の申し送り: 選択肢は常に出し、`disabled` を結果として伝える)
-        - `付け替えずに続ける`: assignee を変えずに Step 2 へ
-        - `中止`: 担当者を示し、フェーズを起動しておらずラベルも変えていない旨を出力して止まる。Step 2 以降に入らず、`run-*.sh` も実行しない
+     3. 手順: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status $NUMBER` をリポジトリルートから実行する (`gh-issue-assignee.sh` は `auto-assign` を CWD から読むため)。結果の語 `STATUS` は、標準出力のうち行全体が `unassigned` / `self` / `other` / `unknown` のいずれかに一致する行 (前後の空白と CR を除いて比べる)。`Info:` / `Warning:` で始まる行は人向けのメッセージで、結果の語ではない。`LOGINS` は標準エラー出力の `Info: issue #N is assigned to: <logins>` の行にある login の一覧 (その行がないときは、メッセージで「他のメンバー」にあたる語を使う)。`LOGINS` は表示にだけ使い、シェルのコマンドには入れない。該当する行がない (コマンドが実行できない・非 0 で終了・想定外の出力) ときは「結果なし」とし、次のメッセージを (コードフェンスの中に日本語で) 出力して Step 2 へ進む: `assignee を確認できませんでした (Issue #{N})。そのまま続行します` (assignee の問題で `/auto` を止めない)
+     4. 分岐: `unassigned`・`self`・`unknown` は確認なしで Step 2 へ (`unknown` はヘルパーが `Warning:` を出している)。`other` (bot・Copilot を含む。実行ユーザーを特定できないときは assignee が 1 人でもいれば `other`) は次のとおり:
+        - `ARGUMENTS` に `--non-interactive` がある: AskUserQuestion も `reassign` も呼ばず、Skip 層 (`modules/ambiguity-detector.md` の Three-Tier Policy) の標準の警告形式で 2 行を出力して Step 2 へ進む (assignee は変えない): `[non-interactive mode] Skipping high-stakes action: reassigning issue #{N} from {LOGINS} to the executing user` / ``To perform this action, run `/auto {N}` interactively.``
+        - ない (対話実行): AskUserQuestion で単一選択を出す。選択肢は次の 3 つで、この順序・この文言 (ダブルクォート付き) にする (#1544 の `modules/assignee-check.md` と同じ)。質問文 (`{LOGINS}` を示す) と各選択肢の説明は、コードフェンスの中に日本語で書く。AskUserQuestion が使えない (呼び出しが失敗する) ときは、非対話実行と同じ扱いにする:
+          - "自分に付け替えて続ける": `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh reassign $NUMBER` を実行し、出力の語で分岐する。どの結果でも Step 2 へ進む (付け替えができなかったことで `/auto` を止めない。#1543 の申し送り: 選択肢は常に出し、`disabled` を結果として伝える)。`assigned`: `assignee を実行ユーザーに付け替えました (Issue #{N})` (ヘルパーが同時着手の `Warning:` を出していたら、そのまま利用者に見せる) / `unchanged`: 何も出力しない / `disabled`: `auto-assign: false のため assignee は付け替えていません。そのまま続行します` / `failed`・語なし・想定外の語: `assignee を付け替えられませんでした (理由は上の Warning を参照)。assignee は変更せず続行します` (メッセージはいずれもコードフェンスの中に日本語で書く)
+          - "付け替えずに続ける": 何もせず Step 2 へ
+          - "中止": 次の 2 行を出力して `/auto` をただちに終了する。`Do not run any later step` と書く (Step 2 以降・`run-*.sh`・ラベル遷移・コメント投稿は一切実行しない): `中止しました: Issue #{N} は {LOGINS} にアサインされています。フェーズは起動しておらず、assignee もラベルも変更していません` / `続行する場合は、担当者に確認してから /auto {N} を再実行してください`
      5. XL: この Step が確認するのはコマンドで指定された Issue (XL 親) だけ。子 Issue は Step 4 の XL route の警告が扱う
    - **Count mode** (e): 後方互換の文は「`--batch N` の既存の挙動は後方互換で維持するが、実行ユーザー以外がアサインされている Issue は候補にならない (Fetch Batch Candidates 参照)。未アサインの Issue と実行ユーザーだけがアサインされている Issue は従来どおり候補」という内容を英語で。Fetch Batch Candidates のコマンドは次の形 (1 行):
      ```bash
@@ -155,7 +158,7 @@ No new comments since last phase.
    - **Resume mode** (h): step 5 に、`REMAINING` を `BATCH_LIST` とみなし、最初の Issue の前に List mode の「Assignee warning」ブロックを `REMAINING` に対して実行すること (中断の間に assignee が変わりうる。List mode の番号付きの手順の外にあるため、「同じ手順」という参照だけでは含まれない) を、既存の `write_batch` を呼ばない旨の記述を保ったまま追記
    - **XL route** (d): 項目 1 の直後に、太字の 1 行 `**Assignee warning for sub-issues**` で始まる段落を追加 (`#` の見出しにはしない。番号付きの項目も増やさず、項目 2 以降の番号を変えない)。内容: 項目 2 の前に、`execution_order` の各子 Issue 番号 N に対して `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status N` をリポジトリルートから実行し、`other` を集める / 1 件以上あれば assignee つきの一覧を 1 回の警告で出し、扇形展開が「それらも処理する」旨を伝える / 確認も除外もしない (XL 親を指定したことが子 Issue を実行する明示的な指示で、List mode で番号を明示するのと同じ) / 失敗は黙って飛ばす / XL 親自体は Step 1a で確認済み
    - **後方互換の確認**: `grep -c "skip Steps 2–6" skills/auto/SKILL.md` が 0、`grep -c "skip Steps 1a–6" skills/auto/SKILL.md` が 5 になること
-   - **テストが検査する固定の語句** (文面を変えるときはテストと同時に直す): Step 1a — `gh-issue-assignee.sh status`・`gh-issue-assignee.sh reassign`・`--non-interactive`・`AskUserQuestion`・`自分に付け替えて続ける`・`付け替えずに続ける`・`中止`・`disabled`・`run-*.sh`。Count mode — `filter-other-assignees.sh`・`assignees`・`createdAt`・`fail-closed`。List mode — `Assignee warning`・`gh-issue-assignee.sh status`。Resume mode — `Assignee warning`・`REMAINING`。Until mode — `resolve-batch-query.sh`・`Assignee warning`。XL route — `Assignee warning for sub-issues`
+   - **テストが検査する固定の語句** (文面を変えるときはテストと同時に直す): Step 1a — `gh-issue-assignee.sh status`・`gh-issue-assignee.sh reassign`・`--non-interactive`・`AskUserQuestion`・`[non-interactive mode] Skipping high-stakes action:`・`Do not run any later step`・`disabled`・`run-*.sh`、およびダブルクォート付きの `"自分に付け替えて続ける"`・`"付け替えずに続ける"`・`"中止"` (この順に現れる)。Count mode — `filter-other-assignees.sh`・`assignees`・`createdAt`・`fail-closed`。List mode — `Assignee warning`・`gh-issue-assignee.sh status`。Resume mode — `Assignee warning`・`REMAINING`。Until mode — `resolve-batch-query.sh`・`Assignee warning`。XL route — `Assignee warning for sub-issues`
 
 4. テストを追加する (after 1, 2, 3) (→ acceptance criteria 5, 7, 8)。既存スイートが PASS することだけでなく、新規ロジックを検証する新規テストケース (`tests/filter-other-assignees.bats` の各 @test、`tests/resolve-batch-query.bats` の `assignee:` 系、`tests/auto-batch.bats` と `tests/auto.bats` の構造テスト) を追加したうえでスイートが PASS すること
 
@@ -179,7 +182,7 @@ No new comments since last phase.
 
    **`tests/auto.bats`** (追記): `step1a_section()` ヘルパー (`md_section "$1" "### Step 1a:"`) を定義する。観点ごとに 1 件以上:
 
-   - `Step 1a section:` `### Step 1` と `### Step 2:` の間にある / `gh-issue-assignee.sh status` と `gh-issue-assignee.sh reassign` を呼ぶ / 3 つの選択肢のラベル (`自分に付け替えて続ける`・`付け替えずに続ける`・`中止`) が揃っている / `--non-interactive` で assignee を変えずに警告して続ける / 中止で `run-*.sh` を実行せずラベルも変えない / `disabled` の扱いがある / `--batch` の形では飛ばす (SKILL.md 全体で `skip Steps 1a–6` が 5 か所、`skip Steps 2–6` が 0 か所)
+   - `Step 1a section:` `### Step 1` と `### Step 2:` の間にある / `gh-issue-assignee.sh status` と `gh-issue-assignee.sh reassign` を呼ぶ / 3 つの選択肢のラベル (`"自分に付け替えて続ける"`・`"付け替えずに続ける"`・`"中止"`) がこの順に揃っている / `--non-interactive` で `[non-interactive mode] Skipping high-stakes action:` の警告を出して assignee を変えずに続ける (その分岐に AskUserQuestion も `reassign` も呼ばない旨がある) / 中止で `Do not run any later step` と、`run-*.sh` を実行せずラベルも変えない旨がある / `disabled` の扱いがある / `--batch` の形では飛ばす (SKILL.md 全体で `skip Steps 1a–6` が 5 か所、`skip Steps 2–6` が 0 か所)
    - `XL route:` 子 Issue の警告が扇形展開の前にある (`**XL route:` から最初の `---` までの範囲に `status` と警告の記述がある)
    - `allowed-tools:` frontmatter に `gh-issue-assignee.sh:*` と `filter-other-assignees.sh:*` がある
 
@@ -188,14 +191,14 @@ No new comments since last phase.
 5. ドキュメントと日本語ミラーを更新する (after 1, 2, 3) (→ acceptance criteria 6)
 
    - `docs/workflow.md`: Orchestration の `/auto` の説明に次を追記する (英語。各 1〜3 文):
-     - `/auto 123` の段落 (「If `phase/ready` is absent...」の段落の後に新しい段落): 開始時の担当の確認 (Step 1a)。`/auto 123` と `/auto --resume 123` は、フェーズを起動する前に Issue の assignee を読む。実行ユーザー以外 (bot・Copilot を含む) がアサイン済みなら、対話実行では `自分に付け替えて続ける` / `付け替えずに続ける` / `中止` で確認し (中止ではフェーズを起動せずラベルも変えない)、`--non-interactive` では警告して assignee を変えずに続ける。確認が親にある理由 (子フェーズは常に `--non-interactive`)。未アサインと自分だけの Issue は黙って進む。XL では確認は XL 親だけで、他のメンバーが担当の子 Issue は扇形展開の前に警告だけを出す。`auto-assign` と autonomy tier に依存しない
+     - `/auto 123` の段落 (「If `phase/ready` is absent...」の段落の後に新しい段落): 開始時の担当の確認 (Step 1a)。`/auto 123` と `/auto --resume 123` は、フェーズを起動する前に Issue の assignee を読む。実行ユーザー以外 (bot・Copilot を含む) がアサイン済みなら、対話実行では `自分に付け替えて続ける` / `付け替えずに続ける` / `中止` で確認し (中止ではフェーズを起動せずラベルも変えない)、`--non-interactive` では警告して assignee を変えずに続ける。確認が親にある理由 (子フェーズは常に `--non-interactive`)。未アサインと自分だけの Issue は黙って進む。XL では確認は XL 親だけで、他のメンバーが担当の子 Issue は扇形展開の前に警告だけを出す。`auto-assign` と autonomy tier に依存しない。`/issue`・`/spec`・`/code` が着手時に行う確認と同じ選択肢・同じ非対話の扱いである旨を添え、Label Management の節を参照先として名指しする (#1544 が追加する小節が入る前後どちらでも壊れないよう、アンカーのリンクにはしない)
      - `--batch N` / `--batch N1 N2 ...` の項: Count mode は実行ユーザー以外がアサインされている Issue を候補から除く (未アサインと実行ユーザーだけの Issue は残る)。判定は `scripts/filter-other-assignees.sh`、選定時の 1 回。実行ユーザーを特定できないとき (GitHub App のトークンなど) は assignee のある Issue をすべて除外する (fail-closed)。List mode は除外せず、開始時に他のメンバーがアサイン済みの Issue を 1 回の警告で一覧する
      - `--batch --resume` の項: 残りの Issue に対して同じ開始時の警告を出す
      - `--batch --until <query>` の項: 各ラウンドの候補から、実行ユーザー以外がアサインされている Issue を除く (`scripts/resolve-batch-query.sh` の内部。規則は Count mode と同じ)。毎ラウンド再評価されるので、assignee が外れた Issue は次のラウンドで候補に戻る。このため List mode の開始時の警告はラウンドごとには出さない
    - `docs/ja/workflow.md`: 上記を日本語で同期する (114・122・124 行付近の `--batch` の段落と、`/auto` の説明の段落)。コードフェンスの数が英語版と一致していることを確認する (`docs/translation-workflow.md` の手順 5)。日本語の括弧は半角 `()` の前後に半角スペースを入れる
    - `docs/structure.md`: Key Files の「Process management」で、`scripts/resolve-batch-query.sh` の行に「実行ユーザー以外がアサインされている Issue を `filter-other-assignees.sh` で除外する」旨を追記し、直後に `scripts/filter-other-assignees.sh` の行を追加する (標準入力の JSON 配列から実行ユーザー以外が担当の Issue を除く / bot は other / assignee がいるときだけ実行ユーザーを `gh api user` で特定し、特定できなければ assignee のある Issue をすべて除外する fail-closed / `resolve-batch-query.sh` と `/auto` の Count mode が使う / bash 3.2 互換、を 1 行にまとめる)
    - `docs/ja/structure.md`: 227 行付近の `scripts/resolve-batch-query.sh` の行の同じ位置に日本語で同期する
-   - `modules/l0-surfaces.md`: L0 Surface SSoT 表の `Assignees` 行の Primary callers 列に `/auto` を追記する (`status` と `reassign` をヘルパー経由で呼び、候補の一括除外は `filter-other-assignees.sh` と `resolve-batch-query.sh` で行う旨を括弧で)。#1544 が同じセルに `/issue`・`/spec`・`/code` を足すので、競合したら両方を残す形で解消する
+   - `modules/l0-surfaces.md`: L0 Surface SSoT 表の直後の Note (`Note: Assignees writes (...) are not governed by the autonomy tier; ...`) の末尾に、次の趣旨の英語 1 文を足す: "The bulk read behind `/auto` candidate exclusion (`filter-other-assignees.sh`, also called by `resolve-batch-query.sh`) follows the same rule when the executing user cannot be identified: every issue that has an assignee is excluded (fail-closed); see its header comment." 表の行は変えない
    - 最後に `docs/guide/workflow.md` (Changed Files の候補) を読み、追加する場合は `docs/ja/guide/workflow.md` も同期する
 
 ## Verification
@@ -252,7 +255,7 @@ Issue 本文が `/spec` で決めると委ねた 3 点 (`--batch --resume` の�
 - **評価は選定時の 1 回だけ (処理直前の再確認はしない)**: 処理直前の再確認を List mode の手順に入れると、明示指定の List mode にも効いてしまい (除外しない方針と衝突する)、Until mode の再利用との条件分岐が増える。assignee はロックではないという #1542 の制約の範囲内であり、SKILL.md の Count mode にその旨を書く。Until mode はラウンドごとに再評価される
 - **`status` が `unknown` のとき Step 1a は続行する**: #1542 の方針 8 (失敗しても止めない)。ヘルパー自身が標準エラー出力に警告を出している。List mode と XL の警告では、失敗を黙って飛ばす (警告の対象が増える見込みがなく、ヘルパーの警告が既に出ているため)
 - **`--resume N` にも Step 1a を適用する**: 中断の間に状況が変わりうるため。以前に「付け替えずに続ける」を選んでいた場合は再度聞かれるが、頻度が低く、情報の古さのほうが問題になる
-- **子フェーズが同じ警告を重ねて出すこと**: 親で「付け替えずに続ける」を選んだ後に、#1544 で組み込まれる子フェーズ (`--non-interactive`) が警告を重ねて出す件の扱いは #1544 の `/spec` で決める (そちらの Issue 本文が明記している)。この Issue の範囲外
+- **子フェーズが同じ警告を重ねて出すこと**: 親で「付け替えずに続ける」を選んだ後に、#1544 で組み込まれる子フェーズ (`--non-interactive`) が警告を重ねて出す件は、#1544 の Spec が「許容する」と決めた (警告は事実どおりで 1 行にすぎず、抑止には `run-*.sh` と全 SKILL.md を通る引数が新たに要る)。この Issue でも抑止しない
 - **Issue 本文と既存実装の矛盾は検出されなかった**: 背景に書かれた事実 (子フェーズが `--non-interactive` で動く: `run-spec.sh`・`run-code.sh`・`run-issue.sh` が `ARGUMENTS: N --non-interactive` を渡す / Count mode の `gh issue list --state open --label triaged ...` / `resolve-batch-query.sh` が `assignees` を見ていない / `/auto` の `allowed-tools` に `gh issue edit` も `gh api` もない / Count mode 冒頭の後方互換の文 / Until mode と Resume mode が List mode の手順を参照する / `resolve-batch-query.bats` の fixture に `assignees` も `gh api user` の mock もない / `tests/auto-batch.bats` が `### Count mode`・`### List mode`・`### Until mode`・`### Resume mode` の見出しと順序で検査する) をすべてコードで確認した
 - 実行ユーザーの特定は既存の先例 (`scripts/gh-issue-assignee.sh` の `resolve_me`、`scripts/post-fallback-review-summary.sh`、`skills/triage/SKILL.md` の `--assignee me`) と同じ `gh api user` を使う。新しい検出方法は導入しない
 - 監査・調査型の Issue ではない (新機能の実装であり、複数の既存項目を分類する成果物はない)
@@ -272,10 +275,10 @@ Issue 本文が `/spec` で決めると委ねた 3 点 (`--batch --resume` の�
 
 Changed Files は 12 件 (候補の `docs/guide/workflow.md` と、その日本語ミラーを除く)。内訳はスクリプトのロジック変更 2 (新規 1)、SKILL.md 1、テスト 4 (新規 1)、`docs/` 4 (うち翻訳ミラー 2)、`modules/` 1。ファイル数の軸は、翻訳ミラー (`modules/doc-checker.md` が「`/doc translate` が生成する翻訳出力で、実装対象ではない」として扱う `docs/ja/`) の 2 件を除くと 10 件で L。複雑さの補正は、加算要因が「分岐の多い新規スクリプトのロジック」と「複数モードにまたがる SKILL.md の変更」、減算要因が「#1543 で確立した `gh-issue-assignee.sh` と同じ規約の横展開」と「半数がドキュメントとテストの追記」で、差し引き 0 段階として L。triage 時点の M より大きい。
 
-### 他の Issue との並行作業
+### 他の Issue との並行作業 (#1544 の Spec は main に入っている。取得日 2026-10-24)
 
-- **#1544 (`/issue`・`/spec`・`/code`)** は取得日 2026-10-24 時点で `phase/spec` で、#1545 と並行して進む。`modules/l0-surfaces.md` の `Assignees` 行の Primary callers 列は両方が編集するため、後からマージするほうで競合する。両方の追記を残す形で解消する
-- **`docs/workflow.md`**: #1544 は Label Management の節、#1545 は Orchestration の `/auto` の節を編集するので、同じ行は競合しない
+- **#1544 (`/issue`・`/spec`・`/code`)** は #1545 と並行して進む。#1544 の Spec (`docs/spec/issue-1544-assignee-on-phase-start.md`) を読み、重なる箇所を次のとおり調整した: (1) `modules/l0-surfaces.md` — #1544 は表のセルを変えないと決めたので、この Issue も表は変えず、Note に 1 文足すだけにした (編集箇所が重ならない)。(2) `docs/workflow.md` — #1544 は Label Management の節、この Issue は Orchestration の `/auto` の節を編集するので、同じ行は競合しない。(3) `docs/structure.md`・`docs/ja/structure.md` — #1544 は modules 一覧に 1 行足し、この Issue は scripts の「Process management」を編集する。同じファイルでも別の箇所。(4) `skills/auto/SKILL.md` はこの Issue だけが編集する。(5) 3 択の選択肢の文言・順序、各メッセージ、非対話の警告の書式、結果の語の読み取り方は、#1544 の `modules/assignee-check.md` に揃えた (Step 1a)
+- **共通モジュール `modules/assignee-check.md` を `/auto` の Step 1a から使わない理由**: (a) 2 つの Issue は並行して進む (親の #1542 が明記) ので、この Issue の `/code` 時点でモジュールが main にあるとは限らず、モジュールを読む形にすると `Blocked by #1544` を足すことになる。計画の変更なので `/spec` では行わない。(b) この Issue の AC1 は「`skills/auto/SKILL.md` に手順が書かれている」ことを求めており、モジュールへの参照だけでは SKILL.md 単体で満たせない。(c) モジュールの Input の `PHASE_NAME` は `issue` / `spec` / `code` のメッセージ用で、`auto` は想定していない。ただし 2 つの手順は同じ内容なので、#1544 のマージ後に Step 1a をモジュールの呼び出し (`PHASE_NAME=auto` の追加を含む) に置き換えて重複をなくす余地がある。これは両方が main に入った後の改善候補として、`/verify` の振り返りに委ねる
 
 ### 既存の関連事項 (この Issue の範囲外)
 
