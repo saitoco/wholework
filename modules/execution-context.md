@@ -48,6 +48,7 @@ Inspect `ARGUMENTS` at skill start:
 | `AskUserQuestion` | **Not available** — the process has no interactive TTY. Calling it would hang indefinitely. Use auto-resolve instead (see `modules/ambiguity-detector.md`). |
 | verify-executor mode | **safe mode** — `command` and `build_success` verify commands are skipped (UNCERTAIN). Read-only commands (`file_exists`, `file_contains`, `section_contains`, `grep`, `rubric`, etc.) execute normally; some commands (`http_status`, `github_check`, etc.) run with restrictions. See `modules/verify-executor.md` for the complete per-command safe mode behavior. |
 | Error handling | Apply auto-resolve + log policy for ambiguities. Abort only for hard-error conditions (missing Size label, XL without sub-issues, test FAIL after 1 repair on patch route). |
+| `${CLAUDE_PLUGIN_ROOT}` | **Not resolved by Claude Code** — `run-*.sh` pass the SKILL.md body as a raw prompt, so the inline substitution Claude Code applies when it loads a Skill never runs, and the variable is not exported to the Bash tool either. The wrapper resolves it itself via `scripts/plugin-root.sh` (Issue #1546): it replaces the placeholder in the body, exports `CLAUDE_PLUGIN_ROOT` (the same path as `--plugin-dir`), and adds a `Plugin root:` note to the prompt. Bash commands inside modules read at run time resolve through the export; Read paths inside those modules are not resolved mechanically — the model replaces them using the note. |
 
 ### Main Context (no `--non-interactive`)
 
@@ -196,5 +197,8 @@ Skills/modules that explicitly read this module:
 - `scripts/guard-prefix.sh` — not a reader of this module; distributes this section's MUST rule
   into the prompt for every phase, via the `GUARD_PREFIX` string the five `run-*.sh` wrappers
   prepend to `PROMPT` (see "Wrapper-Level Constraint Injection" above)
+- `scripts/plugin-root.sh` — not a reader of this module; implements the Fork Context
+  `${CLAUDE_PLUGIN_ROOT}` row (placeholder expansion, `CLAUDE_PLUGIN_ROOT` export, and the prompt
+  note), sourced by the five `run-*.sh` wrappers
 
 Update this list when a skill or module begins reading `modules/execution-context.md` explicitly.

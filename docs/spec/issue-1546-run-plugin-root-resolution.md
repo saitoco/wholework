@@ -213,3 +213,50 @@ Changed Files は 18 件で、軸 1 の暫定は XL (11 件以上)。軸 2 は�
 
 - Pre-merge の 3 件は Issue 本文の `## Acceptance Criteria > Pre-merge` から verify command を含めて原文のまま写した (件数は 3 と 3 で一致)
 - Post-merge の observation (`event=auto-run`) は、`modules/verify-classifier.md` の event 語彙表に `auto-run` があることを確認した。Issue の 1 文が (a) 観測する event と (b) 期待する出力を既に含むので、Issue 本文は書き換えず、Spec 側にだけ 2 部構成 (Option A) の副項目を足した。`session=next` は宣言のみで挙動を変えない (この Issue は `skills/*/SKILL.md` を変更しないが、wrapper は呼び出しのたびに読み込まれるので、次の `/auto` で評価できる)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1・2・3・4 を Spec のとおりに実装した (ヘルパー、5 本の wrapper、bats、ドキュメント同期)。`tests/run-review.bats`・`run-merge.bats`・`run-issue.bats`・`run-spec.bats` に足したテストは Spec の (i)〜(iii) の形で、`run-code.bats` だけ (iv) の `--pr` 側を足した
+
+### Design Gaps/Ambiguities
+- 実装開始時、この `/code` セッション自身が `CLAUDE_PLUGIN_ROOT` 未設定で起動していた (Issue が直す症状そのもの)。モジュールや script のパスはリポジトリのパスを自分で補って進めた。修正が入るまで、wrapper 起動のセッションでは同じ補いが毎回必要になる
+- Step 4 (`gh-label-transition.sh 1546 code --assign`) をうっかり Step 11 のあとまで実行し損ね、PR 作成後に実行した。ラベルは `phase/code` になり最終状態は正しいが、遷移の順序は Spec 手順とずれた
+- Step 3 の precondition 確認 (`reconcile-phase-state.sh code-pr 1546 --check-precondition`) は実行せず、Issue のラベルが `phase/ready` で Spec が存在することを直接確認して進めた (`OBSERVED_LABELS` は `["triaged","phase/ready"]`)
+
+### Rework
+- worktree の隔離ガードが、`cd`・ヒアドキュメント・`git diff` を連結した一括編集コマンドを拒否した。5 本の wrapper の編集は Edit ツールの個別呼び出しに切り替えた。以降、複数ファイルの機械的な編集は最初から Edit ツールで行う
+- Confirmed pre-implementation FAIL for 11 new wrapper test(s): wrapper 5 本を `git stash push` で修正前に戻して新規の解決テストを実行し、すべて FAIL することを確認した (その後 `git stash apply` で復元し、自分のエントリだけ `drop` した)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。Spec の Changed Files 18 件と PR の変更ファイルが一致し、`PROMPT=` 6 か所・`--plugin-dir "$PLUGIN_ROOT"` 10 か所の網羅も Spec どおりだった。
+
+### Recurring issues
+
+Nothing to note。review-bug x2 は指摘 0 件で、sub-agent の結果はすべて起動呼び出しの戻りとは別に結果ファイルとメッセージで届いた (結果の取りこぼしや degradation なし)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge の 3 件は PASS (rubric 2 件は /code で確認済み、CI は `Run bats tests` が SUCCESS)。UNCERTAIN なし。Post-merge の observation は `/verify` に任せる。
+
+- 補足: `capabilities.workflow: true` の repo でも、非対話の headless 実行では Workflow の完了通知を受け取れないため static Task fan-out を使った。CONSIDER 2 件 (`docs/tech.md:35` の記述の食い違い、`plugin-root.sh` の 1 行内プレースホルダー数に対する 2 乗時間) は対応せず、`/verify` で必要なら Issue 化する。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 指摘なし (review-spec・review-bug x2 とも)。CONSIDER 2 件はこの PR では直さずスキップした (どちらも範囲外か実害なし)
+- Edge Case Pre-check は `plugin-root.sh` を対象に約 120 件を実測し、不一致 0 件。2 乗時間の劣化だけを記録した
+- 非対話の headless 実行のため Workflow path ではなく static Task fan-out を採用した
+
+### Deferred Items
+- Post-merge の observation (次の `/auto` で `run-code.sh`・`run-review.sh` 経由のフェーズが探索なしで完了すること) は `/verify` で評価する
+- `docs/tech.md:35` と `docs/structure.md:321` の「Claude Code sets `${CLAUDE_PLUGIN_ROOT}` at runtime」の限定表現への書き換えは別 Issue 候補 (Spec Notes (g))
+- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用 (Spec Notes (a)) のテストは未追加のまま
+
+### Notes for Next Phase
+- Pre-merge の AC 3 件はすべて `[x]`。CI は 17 チェックすべて SUCCESS で、`/merge 1559` に進める
+- merge 後の `/verify` は Post-merge の observation (`event=auto-run`) を扱う

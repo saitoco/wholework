@@ -128,8 +128,18 @@ if [[ -z "$FRONTMATTER_END" ]]; then
 fi
 SKILL_BODY=$(tail -n +"$((FRONTMATTER_END + 1))" "$SKILL_FILE")
 source "$SCRIPT_DIR/guard-prefix.sh"
+source "$SCRIPT_DIR/plugin-root.sh"
+# Resolve ${CLAUDE_PLUGIN_ROOT} for this headless session (Issue #1546). The SKILL.md body is
+# passed as a raw prompt, so Claude Code's inline substitution never runs and it does not export
+# the variable to the Bash tool. PLUGIN_ROOT is also the --plugin-dir value below.
+PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+export CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT"
+SKILL_BODY="$(expand_plugin_root_placeholder "$SKILL_BODY" "$PLUGIN_ROOT")"
+PLUGIN_ROOT_NOTE="$(plugin_root_note "$PLUGIN_ROOT")"
 
 PROMPT="${GUARD_PREFIX}
+
+${PLUGIN_ROOT_NOTE}
 
 ${SKILL_BODY}
 
@@ -151,7 +161,7 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
       --model sonnet \
       --effort low \
       --output-format json \
-      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+      --plugin-dir "$PLUGIN_ROOT" \
       $PERMISSION_FLAG \
       > "$TOKEN_USAGE_FILE"
   EXIT_CODE=$?
@@ -162,7 +172,7 @@ else
     env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
       --model sonnet \
       --effort low \
-      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+      --plugin-dir "$PLUGIN_ROOT" \
       $PERMISSION_FLAG
   EXIT_CODE=$?
 fi

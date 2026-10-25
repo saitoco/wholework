@@ -252,6 +252,7 @@ wholework/
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — 全 run-*.sh からソースされる共有 GUARD_PREFIX 定義。自律実行のための anti-early-stop・境界に関するリマインダーと、5 つの wrapper 起動フェーズ (issue/spec/code/review/merge) すべてに及ぶバックグラウンドタスク完了待ち禁止 (これらの実行サーフェスには re-invocation 保証がない) を含む。`modules/execution-context.md` § "Wrapper-Level Constraint Injection" 参照
+- `scripts/plugin-root.sh` — 5 つの run-*.sh wrapper からソースされ、headless セッションの `${CLAUDE_PLUGIN_ROOT}` を解決する sourceable ヘルパー (`expand_plugin_root_placeholder`・`plugin_root_note`。本文のプレースホルダー置換、`CLAUDE_PLUGIN_ROOT` の export、プロンプトへの注記)。`modules/execution-context.md` § "Fork Context" 参照
 - `scripts/run-auto-sub.sh` — sub-issue 用の auto ワークフローを実行
 - `scripts/run-code.sh` — code skill を実行
 - `scripts/run-issue.sh` — issue skill を実行
