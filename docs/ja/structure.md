@@ -123,7 +123,7 @@ wholework/
 - `modules/codebase-analysis.md` — `/doc` の deep モード用コードベース分析
 - `modules/title-normalizer.md` — issue title の正規化
 - `modules/l0-surfaces.md` — L0 (GitHub) サーフェスの SSoT と comment-as-first-class-input ポリシー
-- `modules/assignee-check.md` — `/issue` (既存 Issue の精査)・`/spec`・`/code` が最初の副作用より前に実行する担当者確認の共通手順。他のメンバーがアサイン済みのとき、付け替え・続行・中止を確認する (`--non-interactive` では警告して続行)。未アサインの Issue には付与しない (ラベル遷移の `--assign` が付与する)
+- `modules/assignee-check.md` — `/issue` (既存 Issue の精査)・`/spec`・`/code`・`/auto` (単一 Issue の経路) が最初の副作用より前 (`/auto` は子 phase の起動より前) に実行する担当者確認の共通手順。他のメンバーがアサイン済みのとき、付け替え・続行・中止を確認する (`--non-interactive` では警告して続行)。未アサインの Issue には付与しない (ラベル遷移の `--assign` が付与する)
 - `modules/label-conventions.md` — ラベル名前空間の規約と裸名前空間の例外 (SSoT)
 - `modules/ambiguity-detector.md` — issue 記述内の曖昧性検出
 - `modules/review-output-format.md` — review 出力のフォーマットと MUST/SHOULD/CONSIDER の重大度分類基準

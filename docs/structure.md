@@ -130,7 +130,7 @@ Key modules:
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
 - `modules/title-normalizer.md` — issue title normalization
 - `modules/l0-surfaces.md` — L0 (GitHub) surface SSoT and comment-as-first-class-input policy
-- `modules/assignee-check.md` — pre-flight assignee check shared by `/issue` (existing Issue refinement), `/spec`, and `/code`, run before the first side effect: asks whether to reassign, continue, or abort when another member is assigned (a `--non-interactive` run warns and continues); never assigns an unassigned Issue (the label transition's `--assign` does)
+- `modules/assignee-check.md` — pre-flight assignee check shared by `/issue` (existing Issue refinement), `/spec`, `/code`, and `/auto` (single-Issue path), run before the first side effect (for `/auto`, before any child phase starts): asks whether to reassign, continue, or abort when another member is assigned (a `--non-interactive` run warns and continues); never assigns an unassigned Issue (the label transition's `--assign` does)
 - `modules/label-conventions.md` — Label namespace conventions and bare-namespace exceptions (SSoT)
 - `modules/ambiguity-detector.md` — ambiguity detection in issue descriptions
 - `modules/review-output-format.md` — review output formatting and MUST/SHOULD/CONSIDER severity classification criteria

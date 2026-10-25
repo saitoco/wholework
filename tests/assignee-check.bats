@@ -200,3 +200,36 @@ issue_existing_section() {
     run grep -F -- '--assign' "$PROJECT_ROOT/scripts/run-issue.sh"
     [ "$status" -eq 1 ]
 }
+
+@test "module: Input accepts PHASE_NAME auto" {
+    local section line
+    section=$(md_section "$MODULE" "## Input")
+    [ -n "$section" ]
+    line=$(printf '%s\n' "$section" | grep -F -- '`PHASE_NAME`')
+    [ -n "$line" ]
+    printf '%s\n' "$line" | grep -qF '`auto`'
+}
+
+@test "module: defines an abort notice for PHASE_NAME auto that says no child phase was started" {
+    local section
+    section=$(md_section "$MODULE" "### 2.")
+    [ -n "$section" ]
+    printf '%s\n' "$section" | grep -qF 'PHASE_NAME=auto'
+    printf '%s\n' "$section" | grep -qF 'フェーズは起動しておらず'
+    printf '%s\n' "$section" | grep -qF '/auto {ISSUE_NUMBER} を再実行してください'
+}
+
+@test "module: the Callers table lists every SKILL.md that reads the module, including auto" {
+    local section file rel missing
+    section=$(md_section "$MODULE" "### Callers")
+    [ -n "$section" ]
+    missing=""
+    for file in "$PROJECT_ROOT"/skills/*/SKILL.md; do
+        if grep -qF -- "$MODULE_PATH" "$file"; then
+            rel="skills/$(basename "$(dirname "$file")")/SKILL.md"
+            printf '%s\n' "$section" | grep -qF -- "\`$rel\`" || missing="$missing $rel"
+        fi
+    done
+    [ -z "$missing" ] || { echo "Callers table is missing:$missing"; false; }
+    printf '%s\n' "$section" | grep -qF '`skills/auto/SKILL.md`'
+}
