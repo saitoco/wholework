@@ -245,18 +245,16 @@ Nothing to note。Pre-merge の 3 件は PASS (rubric 2 件は /code で確認�
 - 補足: `capabilities.workflow: true` の repo でも、非対話の headless 実行では Workflow の完了通知を受け取れないため static Task fan-out を使った。CONSIDER 2 件 (`docs/tech.md:35` の記述の食い違い、`plugin-root.sh` の 1 行内プレースホルダー数に対する 2 乗時間) は対応せず、`/verify` で必要なら Issue 化する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘なし (review-spec・review-bug x2 とも)。CONSIDER 2 件はこの PR では直さずスキップした (どちらも範囲外か実害なし)
-- Edge Case Pre-check は `plugin-root.sh` を対象に約 120 件を実測し、不一致 0 件。2 乗時間の劣化だけを記録した
-- 非対話の headless 実行のため Workflow path ではなく static Task fan-out を採用した
+- Pre-merge AC は 3 件すべて `[x]`、review-incomplete-fallback も無しで、ゲートを通過した
+- マージ方式は `resolve-merge-strategy.sh` の結果どおり `--squash` を使った (競合なし、CI 成功)
 
 ### Deferred Items
 - Post-merge の observation (次の `/auto` で `run-code.sh`・`run-review.sh` 経由のフェーズが探索なしで完了すること) は `/verify` で評価する
-- `docs/tech.md:35` と `docs/structure.md:321` の「Claude Code sets `${CLAUDE_PLUGIN_ROOT}` at runtime」の限定表現への書き換えは別 Issue 候補 (Spec Notes (g))
-- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用 (Spec Notes (a)) のテストは未追加のまま
+- `docs/tech.md` と `docs/structure.md` の「Claude Code sets `${CLAUDE_PLUGIN_ROOT}` at runtime」の限定表現への書き換えは別 Issue 候補
 
 ### Notes for Next Phase
-- Pre-merge の AC 3 件はすべて `[x]`。CI は 17 チェックすべて SUCCESS で、`/merge 1559` に進める
-- merge 後の `/verify` は Post-merge の observation (`event=auto-run`) を扱う
+- `/verify 1546` では Post-merge の observation (`event=auto-run`) を扱う
+- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用は、テスト未追加のまま
