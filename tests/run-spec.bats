@@ -126,6 +126,7 @@ MOCK
 
     # Real guard-prefix.sh and retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR)
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/plugin-root.sh" "$MOCK_DIR/plugin-root.sh"
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
     # Mock git: default handles `rev-parse --show-toplevel` (used for REPO_ROOT), else no-op success.
@@ -275,6 +276,65 @@ SKILL
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "PROMPT_HAS_GUARD=1" "$CLAUDE_CALL_LOG"
+}
+
+# Install a SKILL.md fixture holding CLAUDE_PLUGIN_ROOT placeholders and a claude stub that
+# records the prompt, the --plugin-dir value, and the CLAUDE_PLUGIN_ROOT it sees (Issue #1546)
+_install_plugin_root_probe() {
+    cat > "$BATS_TEST_TMPDIR/skills/spec/SKILL.md" <<'SKILL'
+---
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/frontmatter-only.sh:*)
+---
+# Probe Skill Body
+Read `${CLAUDE_PLUGIN_ROOT}/modules/example.md` and follow it.
+${CLAUDE_PLUGIN_ROOT}/scripts/example.sh 123
+Pair: ${CLAUDE_PLUGIN_ROOT}/a and ${CLAUDE_PLUGIN_ROOT}/b on one line.
+SKILL
+    export PROBE_PROMPT_FILE="$BATS_TEST_TMPDIR/probe_prompt.txt"
+    export PROBE_PLUGIN_DIR_FILE="$BATS_TEST_TMPDIR/probe_plugin_dir.txt"
+    export PROBE_ENV_FILE="$BATS_TEST_TMPDIR/probe_env.txt"
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+prev=""
+for arg in "$@"; do
+    case "$prev" in
+        -p) printf '%s' "$arg" > "$PROBE_PROMPT_FILE" ;;
+        --plugin-dir) printf '%s' "$arg" > "$PROBE_PLUGIN_DIR_FILE" ;;
+    esac
+    prev="$arg"
+done
+printf '%s' "${CLAUDE_PLUGIN_ROOT-__UNSET__}" > "$PROBE_ENV_FILE"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+}
+
+_assert_plugin_root_resolved() {
+    local expected_root="$1" prompt
+    prompt="$(cat "$PROBE_PROMPT_FILE")"
+    [[ "$prompt" != *'${CLAUDE_PLUGIN_ROOT}'* ]] || false
+    [[ "$prompt" == *"Read \`$expected_root/modules/example.md\`"* ]] || false
+    [[ "$prompt" == *"$expected_root/scripts/example.sh 123"* ]] || false
+    [[ "$prompt" == *"Pair: $expected_root/a and $expected_root/b on one line."* ]] || false
+    [[ "$prompt" == *"Plugin root: $expected_root"* ]] || false
+    [ "$(cat "$PROBE_PLUGIN_DIR_FILE")" = "$expected_root" ]
+    [ "$(cat "$PROBE_ENV_FILE")" = "$expected_root" ]
+}
+
+@test "plugin-root: CLAUDE_PLUGIN_ROOT placeholders in the prompt are resolved and exported to claude (Issue #1546)" {
+    unset CLAUDE_PLUGIN_ROOT
+    _install_plugin_root_probe
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    _assert_plugin_root_resolved "$BATS_TEST_TMPDIR"
+}
+
+@test "plugin-root: an inherited CLAUDE_PLUGIN_ROOT is overridden by the wrapper plugin root (Issue #1546)" {
+    export CLAUDE_PLUGIN_ROOT=/inherited/elsewhere
+    _install_plugin_root_probe
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    _assert_plugin_root_resolved "$BATS_TEST_TMPDIR"
 }
 
 @test "guard: prompt contains background-wait no re-invocation guarantee text" {
