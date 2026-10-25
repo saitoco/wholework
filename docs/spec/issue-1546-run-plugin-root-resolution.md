@@ -228,20 +228,35 @@ Changed Files は 18 件で、軸 1 の暫定は XL (11 件以上)。軸 2 は�
 - worktree の隔離ガードが、`cd`・ヒアドキュメント・`git diff` を連結した一括編集コマンドを拒否した。5 本の wrapper の編集は Edit ツールの個別呼び出しに切り替えた。以降、複数ファイルの機械的な編集は最初から Edit ツールで行う
 - Confirmed pre-implementation FAIL for 11 new wrapper test(s): wrapper 5 本を `git stash push` で修正前に戻して新規の解決テストを実行し、すべて FAIL することを確認した (その後 `git stash apply` で復元し、自分のエントリだけ `drop` した)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。Spec の Changed Files 18 件と PR の変更ファイルが一致し、`PROMPT=` 6 か所・`--plugin-dir "$PLUGIN_ROOT"` 10 か所の網羅も Spec どおりだった。
+
+### Recurring issues
+
+Nothing to note。review-bug x2 は指摘 0 件で、sub-agent の結果はすべて起動呼び出しの戻りとは別に結果ファイルとメッセージで届いた (結果の取りこぼしや degradation なし)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge の 3 件は PASS (rubric 2 件は /code で確認済み、CI は `Run bats tests` が SUCCESS)。UNCERTAIN なし。Post-merge の observation は `/verify` に任せる。
+
+- 補足: `capabilities.workflow: true` の repo でも、非対話の headless 実行では Workflow の完了通知を受け取れないため static Task fan-out を使った。CONSIDER 2 件 (`docs/tech.md:35` の記述の食い違い、`plugin-root.sh` の 1 行内プレースホルダー数に対する 2 乗時間) は対応せず、`/verify` で必要なら Issue 化する。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 置換は awk の `index`/`substr` ループにし、ROOT は `ENVIRON` で渡した (`-v` はバックスラッシュを解釈し、`${var//pat/rep}` は bash 5.2 の `&` と bash 3.2 の引用符で安全な書き方が無いため)
-- ヘルパーは fail-open (awk が失敗しても元のテキストを出して終了コード 0)。便宜的な補助処理の失敗で phase 全体を止めない
-- `CLAUDE_PLUGIN_ROOT` の export は wrapper ごとに 1 回だけで、`env -u CLAUDECODE ...` の行には足していない (JSON 分岐と非 JSON 分岐で食い違わせないため)
+- MUST 指摘なし (review-spec・review-bug x2 とも)。CONSIDER 2 件はこの PR では直さずスキップした (どちらも範囲外か実害なし)
+- Edge Case Pre-check は `plugin-root.sh` を対象に約 120 件を実測し、不一致 0 件。2 乗時間の劣化だけを記録した
+- 非対話の headless 実行のため Workflow path ではなく static Task fan-out を採用した
 
 ### Deferred Items
-- Post-merge の observation (次の `/auto` で `run-code.sh`・`run-review.sh` 経由のフェーズが探索なしで完了すること) は、マージ後の `/verify` で評価する
-- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用 (Spec Notes (a)) は、分岐のテストを足していない
-- Notes (b)(d) の `skills/spec/SKILL.md` の説明行の書き換えと、CWD 基準の相対参照 (`skills/<name>/<file>.md`) は別 Issue 候補のまま (この PR では起票していない)
+- Post-merge の observation (次の `/auto` で `run-code.sh`・`run-review.sh` 経由のフェーズが探索なしで完了すること) は `/verify` で評価する
+- `docs/tech.md:35` と `docs/structure.md:321` の「Claude Code sets `${CLAUDE_PLUGIN_ROOT}` at runtime」の限定表現への書き換えは別 Issue 候補 (Spec Notes (g))
+- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用 (Spec Notes (a)) のテストは未追加のまま
 
 ### Notes for Next Phase
-- Pre-merge の `github_check "gh pr checks ... Run bats tests"` AC は未チェックのまま。`/review` で PR #1559 の CI が通ったあとに確認する
-- ローカルでは `bats --jobs 4 tests/` が 2499 件すべて PASS。`docs/guide/xl-decomposition.md` の翻訳 OUTDATED は既存で、この PR の範囲外
-- `modules/execution-context.md` は SSoT として「Fork Context」の表に行を足した。レビューでは、表の記述 (Bash は export で解決、モジュール内の Read は注記で補う) と実装の一致を確認してほしい
+- Pre-merge の AC 3 件はすべて `[x]`。CI は 17 チェックすべて SUCCESS で、`/merge 1559` に進める
+- merge 後の `/verify` は Post-merge の observation (`event=auto-run`) を扱う
