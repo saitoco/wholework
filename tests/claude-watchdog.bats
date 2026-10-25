@@ -13,6 +13,22 @@ setup() {
     # production .tmp/auto-events.jsonl (issue #1136; same class as #989).
     unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME AUTO_SESSION_ID
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+
+    # Isolate CLAUDE_PLUGIN_ROOT inherited from a wrapper-launched session
+    # (run-*.sh exports it since #1546). The watchdog kill branch calls
+    # "$CLAUDE_PLUGIN_ROOT/scripts/observation-trigger.sh" when it is set, so an
+    # inherited repo path would invoke the real script and post observation
+    # comments to GitHub. Point it at a stub plugin root that only records calls
+    # (issue #1561).
+    STUB_PLUGIN_ROOT="$BATS_TEST_TMPDIR/stub-plugin-root"
+    OBSERVATION_TRIGGER_LOG="$BATS_TEST_TMPDIR/observation-trigger-calls.log"
+    mkdir -p "$STUB_PLUGIN_ROOT/scripts"
+    cat > "$STUB_PLUGIN_ROOT/scripts/observation-trigger.sh" <<STUB
+#!/bin/bash
+echo "\$*" >> "$OBSERVATION_TRIGGER_LOG"
+STUB
+    chmod +x "$STUB_PLUGIN_ROOT/scripts/observation-trigger.sh"
+    export CLAUDE_PLUGIN_ROOT="$STUB_PLUGIN_ROOT"
 }
 
 teardown() {
@@ -89,6 +105,25 @@ MOCK
     # Should complete well under 30 seconds (default 2700s would take much longer)
     [ "$elapsed" -lt 30 ]
     [ "$status" -ne 0 ]
+}
+
+@test "kill branch: observation-trigger.sh is called through the stub plugin root, not the real script" {
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+sleep 60
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    real_root="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+    [ "$CLAUDE_PLUGIN_ROOT" != "$real_root" ]
+
+    run env WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -ne 0 ]
+
+    # The stub recorded the kill-branch call; a real script path (or an unset
+    # CLAUDE_PLUGIN_ROOT) would leave this log empty.
+    [ -f "$OBSERVATION_TRIGGER_LOG" ]
+    [ "$(cat "$OBSERVATION_TRIGGER_LOG")" = "--event watchdog-kill" ]
 }
 
 @test "heartbeat: diagnostic message emitted during silence" {
