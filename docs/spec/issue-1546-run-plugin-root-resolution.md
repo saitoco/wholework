@@ -213,3 +213,35 @@ Changed Files は 18 件で、軸 1 の暫定は XL (11 件以上)。軸 2 は�
 
 - Pre-merge の 3 件は Issue 本文の `## Acceptance Criteria > Pre-merge` から verify command を含めて原文のまま写した (件数は 3 と 3 で一致)
 - Post-merge の observation (`event=auto-run`) は、`modules/verify-classifier.md` の event 語彙表に `auto-run` があることを確認した。Issue の 1 文が (a) 観測する event と (b) 期待する出力を既に含むので、Issue 本文は書き換えず、Spec 側にだけ 2 部構成 (Option A) の副項目を足した。`session=next` は宣言のみで挙動を変えない (この Issue は `skills/*/SKILL.md` を変更しないが、wrapper は呼び出しのたびに読み込まれるので、次の `/auto` で評価できる)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1・2・3・4 を Spec のとおりに実装した (ヘルパー、5 本の wrapper、bats、ドキュメント同期)。`tests/run-review.bats`・`run-merge.bats`・`run-issue.bats`・`run-spec.bats` に足したテストは Spec の (i)〜(iii) の形で、`run-code.bats` だけ (iv) の `--pr` 側を足した
+
+### Design Gaps/Ambiguities
+- 実装開始時、この `/code` セッション自身が `CLAUDE_PLUGIN_ROOT` 未設定で起動していた (Issue が直す症状そのもの)。モジュールや script のパスはリポジトリのパスを自分で補って進めた。修正が入るまで、wrapper 起動のセッションでは同じ補いが毎回必要になる
+- Step 4 (`gh-label-transition.sh 1546 code --assign`) をうっかり Step 11 のあとまで実行し損ね、PR 作成後に実行した。ラベルは `phase/code` になり最終状態は正しいが、遷移の順序は Spec 手順とずれた
+- Step 3 の precondition 確認 (`reconcile-phase-state.sh code-pr 1546 --check-precondition`) は実行せず、Issue のラベルが `phase/ready` で Spec が存在することを直接確認して進めた (`OBSERVED_LABELS` は `["triaged","phase/ready"]`)
+
+### Rework
+- worktree の隔離ガードが、`cd`・ヒアドキュメント・`git diff` を連結した一括編集コマンドを拒否した。5 本の wrapper の編集は Edit ツールの個別呼び出しに切り替えた。以降、複数ファイルの機械的な編集は最初から Edit ツールで行う
+- Confirmed pre-implementation FAIL for 11 new wrapper test(s): wrapper 5 本を `git stash push` で修正前に戻して新規の解決テストを実行し、すべて FAIL することを確認した (その後 `git stash apply` で復元し、自分のエントリだけ `drop` した)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 置換は awk の `index`/`substr` ループにし、ROOT は `ENVIRON` で渡した (`-v` はバックスラッシュを解釈し、`${var//pat/rep}` は bash 5.2 の `&` と bash 3.2 の引用符で安全な書き方が無いため)
+- ヘルパーは fail-open (awk が失敗しても元のテキストを出して終了コード 0)。便宜的な補助処理の失敗で phase 全体を止めない
+- `CLAUDE_PLUGIN_ROOT` の export は wrapper ごとに 1 回だけで、`env -u CLAUDECODE ...` の行には足していない (JSON 分岐と非 JSON 分岐で食い違わせないため)
+
+### Deferred Items
+- Post-merge の observation (次の `/auto` で `run-code.sh`・`run-review.sh` 経由のフェーズが探索なしで完了すること) は、マージ後の `/verify` で評価する
+- `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用 (Spec Notes (a)) は、分岐のテストを足していない
+- Notes (b)(d) の `skills/spec/SKILL.md` の説明行の書き換えと、CWD 基準の相対参照 (`skills/<name>/<file>.md`) は別 Issue 候補のまま (この PR では起票していない)
+
+### Notes for Next Phase
+- Pre-merge の `github_check "gh pr checks ... Run bats tests"` AC は未チェックのまま。`/review` で PR #1559 の CI が通ったあとに確認する
+- ローカルでは `bats --jobs 4 tests/` が 2499 件すべて PASS。`docs/guide/xl-decomposition.md` の翻訳 OUTDATED は既存で、この PR の範囲外
+- `modules/execution-context.md` は SSoT として「Fork Context」の表に行を足した。レビューでは、表の記述 (Bash は export で解決、モジュール内の Read は注記で補う) と実装の一致を確認してほしい
