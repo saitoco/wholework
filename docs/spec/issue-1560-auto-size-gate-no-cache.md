@@ -158,3 +158,6 @@
 - fail-safe に関わるゲートか: はい (XL ゲート。Implementation Steps の手順 3 に端のケースを明記)。
 - 認証情報・セキュリティ方針、外部仕様、新規の外部依存パッケージ、Smoke Test: いずれも該当しない。
 - 計測: `get-issue-size.sh` の呼び出し行数は `skills/auto/SKILL.md` で 6 行 (`grep -n 'get-issue-size' skills/auto/SKILL.md` から `allowed-tools` の 1 行を除く)。うち `--no-cache` ありは変更前 1 行 (318)、変更後 4 行 (267・318・1233・1277)。
+
+## Consumed Comments
+No new comments since last phase.
