@@ -113,43 +113,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 Applies to `/auto N` and `/auto --resume N`. Every `--batch` form branched away in Step 1 and never reaches this step (Batch Mode handles assignees itself). Run it once, right after the Step 1 banner and before any step with side effects (Step 2 onward).
 
-**Why the parent checks**: child phases (`run-*.sh`) always run with `--non-interactive`, so a confirmation inside a child phase can only print a warning and the assignee stays with the previous member. Splitting the work between the member who refines an Issue and the member who implements it is normal, so the parent asks once before it launches any child phase. This step is an L0 read plus a replacement made only when the user chooses it; it depends neither on the autonomy tier nor on `auto-assign` (`gh-issue-assignee.sh` decides by itself whether it may write, so do not read `auto-assign` here).
+**Why the parent checks**: child phases (`run-*.sh`) always run with `--non-interactive`, so a confirmation inside a child phase can only print a warning and the assignee stays with the previous member. Splitting the work between the member who refines an Issue and the member who implements it is normal, so the parent asks once before it launches any child phase. This step is an L0 read plus a replacement made only when the user chooses it; it depends neither on the autonomy tier nor on `auto-assign`, and the module makes that decision, so do not read `auto-assign` here.
 
-1. From the repository root (`gh-issue-assignee.sh` reads `auto-assign` from the current directory), run:
+1. From the repository root, Read `${CLAUDE_PLUGIN_ROOT}/modules/assignee-check.md` and follow its "Processing Steps" section with these parameters: `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=auto`, and `NON_INTERACTIVE=true` when ARGUMENTS contains `--non-interactive` (otherwise `false`). The module defines reading the assignment status, the choices, the non-interactive warning, the reassignment, and every message (including the abort notice for `PHASE_NAME=auto`), so none of them is restated here.
 
-   ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh status $NUMBER
-   ```
-
-   `STATUS` is the stdout line that, after trimming whitespace and CR, is exactly one of `unassigned`, `self`, `other`, `unknown`. Lines starting with `Info:` or `Warning:` are messages for people, not results. `LOGINS` is the login list in the stderr line `Info: issue #N is assigned to: <logins>`; when that line is absent use a generic word for the other members. Use `LOGINS` only for display and never put it in a shell command. When no result line is found (the command cannot run, exits non-zero, or prints something unexpected), treat it as no result: print the following message (inside a code fence, in Japanese) and go to Step 2, because an assignee problem must never stop `/auto`:
-
-   ```
-   assignee を確認できませんでした (Issue #{N})。そのまま続行します
-   ```
-
-2. Branch on `STATUS`:
-   - `unassigned`, `self`, `unknown`: go to Step 2 without asking (for `unknown` the helper has already printed a `Warning:`).
-   - `other` (bots and Copilot count as other; when the executing user cannot be identified, any assignee makes it `other`):
-     - If ARGUMENTS contains `--non-interactive`: do not call AskUserQuestion and do not call `reassign`. Print the standard Skip-tier warning of `modules/ambiguity-detector.md` (Three-Tier Policy) as the two lines below, leave the assignee unchanged, and go to Step 2:
-
-       ```
-       [non-interactive mode] Skipping high-stakes action: reassigning issue #{N} from {LOGINS} to the executing user
-       To perform this action, run `/auto {N}` interactively.
-       ```
-
-     - Otherwise (interactive): use AskUserQuestion with a single choice. The options are the three below, in this order and with exactly these labels. Write the question text (showing `{LOGINS}`) and each option description inside a code fence, in Japanese. When AskUserQuestion is unavailable (the call fails), handle it as in the `--non-interactive` case:
-       - "自分に付け替えて続ける": run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-assignee.sh reassign $NUMBER` and branch on the word it prints. Go to Step 2 in every case (a failed reassignment never stops `/auto`; always offer the option and report `disabled` as the result). Print each message inside a code fence, in Japanese:
-         - `assigned`: `assignee を実行ユーザーに付け替えました (Issue #{N})`. If the helper printed a `Warning:` about a simultaneous start, show it to the user as is.
-         - `unchanged`: print nothing.
-         - `disabled`: `auto-assign: false のため assignee は付け替えていません。そのまま続行します`
-         - `failed`, no word, or an unexpected word: `assignee を付け替えられませんでした (理由は上の Warning を参照)。assignee は変更せず続行します`
-       - "付け替えずに続ける": do nothing and go to Step 2.
-       - "中止": print the two lines below (inside a code fence, in Japanese) and end `/auto` immediately. Do not run any later step: no Step 2 or later, no `run-*.sh`, no label transition, no Issue comment.
-
-         ```
-         中止しました: Issue #{N} は {LOGINS} にアサインされています。フェーズは起動しておらず、assignee もラベルも変更していません
-         続行する場合は、担当者に確認してから /auto {N} を再実行してください
-         ```
+2. Act on the outcome the module reports:
+   - `continue`: go to Step 2.
+   - `abort`: after the module prints the abort notice for `PHASE_NAME=auto`, end `/auto` immediately. Do not run any later step: no Step 2 or later, no child phase (`run-*.sh`) start, no label transition, no Issue comment.
 
 3. XL: this step checks only the Issue given on the command line (the XL parent). Sub-issues are covered by the warning in Step 4's XL route.
 

@@ -7,7 +7,7 @@ SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/auto/SKILL
 
 load 'helpers/markdown-section'
 
-# Extract Step 1a section: from "### Step 1a:" to the next heading of level 3 or higher (Issue #1545)
+# Extract Step 1a section: from "### Step 1a:" to the next heading of level 3 or higher (Issues #1545, #1550)
 step1a_section() {
     md_section "$1" "### Step 1a:"
 }
@@ -611,7 +611,7 @@ verify_fail_marker_comment() {
     [ "$local_head_hash" != "$origin_hash" ]
 }
 
-# --- Step 1a: assignee check (Issue #1545) ---
+# --- Step 1a: assignee check (Issues #1545, #1550) ---
 
 @test "Step 1a section: located between Step 1 and Step 2" {
     run grep -n '^### Step 1:\|^### Step 1a:\|^### Step 2:' "$SKILL_FILE"
@@ -623,56 +623,51 @@ verify_fail_marker_comment() {
     [ "$step1a_line" -lt "$step2_line" ]
 }
 
-@test "Step 1a section: calls gh-issue-assignee.sh status and reassign" {
+@test "Step 1a section: reads modules/assignee-check.md with PHASE_NAME=auto" {
     section="$(step1a_section "$SKILL_FILE")"
     [ -n "$section" ]
-    run grep -q 'gh-issue-assignee.sh status' <<< "$section"
+    run grep -qF '${CLAUDE_PLUGIN_ROOT}/modules/assignee-check.md' <<< "$section"
     [ "$status" -eq 0 ]
-    run grep -q 'gh-issue-assignee.sh reassign' <<< "$section"
+    run grep -qF 'PHASE_NAME=auto' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF 'ISSUE_NUMBER=$NUMBER' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF 'NON_INTERACTIVE=true' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF -- '--non-interactive' <<< "$section"
     [ "$status" -eq 0 ]
 }
 
-@test "Step 1a section: the three option labels appear in order" {
+@test "Step 1a section: does not duplicate the module's procedure" {
     section="$(step1a_section "$SKILL_FILE")"
     [ -n "$section" ]
-    a="$(printf '%s\n' "$section" | grep -n '"自分に付け替えて続ける"' | head -1 | cut -d: -f1)"
-    b="$(printf '%s\n' "$section" | grep -n '"付け替えずに続ける"' | head -1 | cut -d: -f1)"
-    c="$(printf '%s\n' "$section" | grep -n '"中止"' | head -1 | cut -d: -f1)"
-    [ -n "$a" ]
-    [ -n "$b" ]
-    [ -n "$c" ]
-    [ "$a" -lt "$b" ]
-    [ "$b" -lt "$c" ]
-    run grep -q 'AskUserQuestion' <<< "$section"
+    for needle in 'gh-issue-assignee.sh' 'AskUserQuestion' 'LOGINS' 'assigned to:' '"自分に付け替えて続ける"' '"付け替えずに続ける"' '"中止"' '[non-interactive mode]' 'Skipping high-stakes action' 'unassigned'; do
+        run grep -qF -- "$needle" <<< "$section"
+        if [ "$status" -eq 0 ]; then echo "Step 1a still contains: $needle"; false; fi
+    done
+}
+
+@test "Step 1a section: keeps the /auto-specific outcomes (continue, abort without child phases)" {
+    section="$(step1a_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    run grep -qF '`continue`' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF '`abort`' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF 'Do not run any later step' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF 'run-*.sh' <<< "$section"
+    [ "$status" -eq 0 ]
+    run grep -qF 'no label transition' <<< "$section"
     [ "$status" -eq 0 ]
 }
 
-@test "Step 1a section: --non-interactive warns with the Skip-tier format and changes nothing" {
+@test "Step 1a section: checks only the XL parent" {
     section="$(step1a_section "$SKILL_FILE")"
     [ -n "$section" ]
-    run grep -q -- '--non-interactive' <<< "$section"
+    run grep -qF 'XL parent' <<< "$section"
     [ "$status" -eq 0 ]
-    run grep -q '\[non-interactive mode\] Skipping high-stakes action:' <<< "$section"
-    [ "$status" -eq 0 ]
-    run grep -q 'do not call AskUserQuestion and do not call `reassign`' <<< "$section"
-    [ "$status" -eq 0 ]
-}
-
-@test "Step 1a section: abort stops before any later step and leaves labels alone" {
-    section="$(step1a_section "$SKILL_FILE")"
-    [ -n "$section" ]
-    run grep -q 'Do not run any later step' <<< "$section"
-    [ "$status" -eq 0 ]
-    run grep -q 'run-\*\.sh' <<< "$section"
-    [ "$status" -eq 0 ]
-    run grep -q 'no label transition' <<< "$section"
-    [ "$status" -eq 0 ]
-}
-
-@test "Step 1a section: disabled result of reassign is handled" {
-    section="$(step1a_section "$SKILL_FILE")"
-    [ -n "$section" ]
-    run grep -q 'disabled' <<< "$section"
+    run grep -qF 'Step 4' <<< "$section"
     [ "$status" -eq 0 ]
 }
 

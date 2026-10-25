@@ -1,6 +1,6 @@
 # assignee-check
 
-Pre-flight assignee check shared by `/issue` (existing Issue refinement), `/spec`, and `/code`. It runs before the calling skill's first side effect and, when another member is assigned to the Issue, asks whether to reassign, continue, or abort.
+Pre-flight assignee check shared by `/issue` (existing Issue refinement), `/spec`, `/code`, and `/auto` (single-Issue path). It runs before the calling skill's first side effect (for `/auto`, before any child phase is started) and, when another member is assigned to the Issue, asks whether to reassign, continue, or abort.
 
 ## Purpose
 
@@ -9,12 +9,12 @@ Prevent duplicate work on an Issue that another member has already taken. The ch
 ## Input
 
 - `ISSUE_NUMBER`: the Issue number being processed
-- `PHASE_NAME`: `issue`, `spec`, or `code` (used only in messages)
+- `PHASE_NAME`: `issue`, `spec`, `code`, or `auto` (used only in messages). `auto` selects the `PHASE_NAME=auto` abort notice in `### 2.`; the other values select the shared abort notice
 - `NON_INTERACTIVE`: `true` when the calling skill's ARGUMENTS contains `--non-interactive`, otherwise `false`
 
 ## Processing Steps
 
-Run every command below from the repository root (the directory that holds `.wholework.yml`), as one simple command at a time. `gh-issue-assignee.sh` reads `auto-assign` from the current directory, and this check runs before the calling skill enters a worktree, so the current directory is the main checkout root.
+Run every command below from the repository root (the directory that holds `.wholework.yml`), as one simple command at a time. `gh-issue-assignee.sh` reads `auto-assign` from the current directory, and this check runs before the calling skill enters a worktree (the `/auto` parent session never enters one), so the current directory is the main checkout root.
 
 ### 1. Read the assignment status
 
@@ -52,7 +52,7 @@ assignee を確認できませんでした (Issue #{ISSUE_NUMBER})。そのま�
   |---|---|---|
   | `"自分に付け替えて続ける"` | Run `### 3.` | `continue` |
   | `"付け替えずに続ける"` | Do nothing | `continue` |
-  | `"中止"` | Output the abort notice below and end the calling skill immediately. Do not run any later step (triage, worktree entry, label transition, assignee writes, comment posting, Spec creation, and everything after them) | `abort` |
+  | `"中止"` | Output the abort notice below and end the calling skill immediately. Do not run any later step (triage, worktree entry, child phase start, label transition, assignee writes, comment posting, Spec creation, and everything after them) | `abort` |
 
   The question text and the description of each choice:
 
@@ -69,11 +69,18 @@ assignee を確認できませんでした (Issue #{ISSUE_NUMBER})。そのま�
   担当者を確認できませんでした (Issue #{ISSUE_NUMBER} は {LOGINS} にアサインされています)。assignee は変更せず続行します
   ```
 
-  The abort notice (two lines):
+  The abort notice for `PHASE_NAME` of `issue`, `spec`, or `code` (two lines):
 
   ```
   中止しました: Issue #{ISSUE_NUMBER} は {LOGINS} にアサインされています。assignee もフェーズラベルも変更していません
   続行する場合は、担当者に確認してから /{PHASE_NAME} {ISSUE_NUMBER} を再実行してください
+  ```
+
+  The abort notice for `PHASE_NAME=auto` (two lines, output as is; no child phase was started):
+
+  ```
+  中止しました: Issue #{ISSUE_NUMBER} は {LOGINS} にアサインされています。フェーズは起動しておらず、assignee もラベルも変更していません
+  続行する場合は、担当者に確認してから /auto {ISSUE_NUMBER} を再実行してください
   ```
 
 - **Non-interactive run** (`NON_INTERACTIVE=true`): call neither AskUserQuestion nor `reassign`. This is the skip tier of the Three-Tier Policy in `modules/ambiguity-detector.md` (a High-Stakes Decision). Output these two lines in the standard warning format and continue (outcome `continue`):
@@ -108,7 +115,7 @@ Branch on the result word in the output. Whatever the result, the calling skill 
 
 ### Why the check comes before any side effect
 
-`/issue N` writes the title, Type, Size, and Value in the Step 2 triage auto-chain. `/spec` and `/code` enter a worktree in Step 2, consume comments, and sweep the work directory. Aborting after those leaves writes on another member's Issue or a leftover worktree, so the check runs first and an abort leaves nothing behind.
+`/issue N` writes the title, Type, Size, and Value in the Step 2 triage auto-chain. `/spec` and `/code` enter a worktree in Step 2, consume comments, and sweep the work directory. Aborting after those leaves writes on another member's Issue or a leftover worktree, so the check runs first and an abort leaves nothing behind. The `/auto` parent checks once, before the child phases (`run-*.sh`) make their label transitions and post their comments.
 
 ### Why `assign` is not called here
 
@@ -124,7 +131,7 @@ A missing helper, an unreadable result, a failed `reassign`, or an unavailable A
 
 ### Child phases under `/auto`
 
-Child phases started by `/auto` (`run-*.sh` always passes `--non-interactive`) print the same warning once per phase, even after the parent confirmed and chose "付け替えずに続ける". This overlap is accepted: the warning is accurate and takes one line, and suppressing it would need a new argument passed through `run-*.sh` and every SKILL.md.
+Child phases started by `/auto` (`run-*.sh` always passes `--non-interactive`) print the same warning once per phase, even after the parent (`/auto` Step 1a, which calls this module with `PHASE_NAME=auto`) confirmed and chose "付け替えずに続ける". This overlap is accepted: the warning is accurate and takes one line, and suppressing it would need a new argument passed through `run-*.sh` and every SKILL.md.
 
 ### Headless runs
 
@@ -137,5 +144,6 @@ In a headless run only the final result of the session is kept in the wrapper lo
 | `skills/issue/SKILL.md` | Existing Issue Refinement, Step 1 |
 | `skills/spec/SKILL.md` | Step 1 |
 | `skills/code/SKILL.md` | Step 1 |
+| `skills/auto/SKILL.md` | Step 1a (single-Issue path: `/auto N` and `/auto --resume N`; Batch Mode and the XL sub-issue fan-out only warn and never call this module) |
 
 Add a row when a new skill starts to read this module.
