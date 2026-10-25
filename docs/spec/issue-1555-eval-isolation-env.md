@@ -242,3 +242,42 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+- Issue 本文の調査 (約 72 箇所の直接の `gh` 呼び出し) は「止める場所の多さ」を示していたが、実際に効いたのは「どの経路が設定ファイルや絶対パスで shim を迂回するか」の確認だった。グローバルの git の認証ヘルパーの `/usr/bin/gh` と、`gh repo view` が `GH_REPO` を無視する挙動は、どちらもコードの grep では見つからず、実機での確認で分かった
+- `pushInsteadOf` が前方一致であることは、sandbox の名前の付け方 (本番の名前で始めない) と、sandbox への恒等の書き換え規則の両方に効く。#1556 で sandbox を作るときに見落としやすい
+
+### Judgment rationale
+- 方式の大きな分かれ目 (sandbox リポジトリかローカルの模擬か、公開範囲、Claude 側の隔離の範囲) はユーザーに確認した。どれも推奨案で決まった
+- node ID は文字列の断片で照合せず、復号してリポジトリ ID を比べる方式にした。base64 の境界の位置で断片が変わるため、断片の照合は脆い。復号の形式は本番の 8 種類の ID で確かめた
+- 本文の中の本番へのリンクは、cross-reference を作らない blob のリンクも含めて一律に止める。規則を単純に保つことを優先し、止めた記録 (`gh-guard.log`) を #1556 の無害化の手がかりにする
+- HOME ごとの隔離は採らなかった。Claude の OAuth の認証情報をコピーすると元の認証が失効するおそれがあり、ユーザー設定を残すというユーザーの判断とも合わない
+
+### Uncertainty resolution
+- 解決済み: `gh repo view` と `GH_REPO` の関係、`pushInsteadOf` と `GIT_CONFIG_GLOBAL` の挙動、node ID の形式 (Notes の「確かめた事実」に出所つきで記録)
+- 未解決 (U1・U2): Claude の Bash ツールに隔離した環境が届くか、`--strict-mcp-config` で claude.ai のコネクタまで止まるか。どちらも `claude -p` の probe (Implementation Step 7) で確かめる。想定と違った場合の対処も Uncertainty に書いた
+- 扱いを決めた (U3): PAT が本番に書き込めないことは機械的には確かめず、PAT を作るときの確認項目にする
+
+### 新しく必要なテストケース
+- 新しいスクリプト 4 つは、どれも分岐を持つ新規ファイルである。必要なテストケースは Notes の「テストの内容」に列挙した。要点は、経路ごとの「止まる」ケースが、スタブのログが空であることと shim 自身の終了コード (97) の両方で判定されること、同じ入力をスタブに直接渡すと記録される対照のケースがあること、git の 2 つの層がそれぞれ単独で止めることを確かめるケースがあること
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- GitHub 側は private な sandbox リポジトリに向け、4 つの層 (認証情報・git・gh の shim・ローカル) で止める。既存の skills・scripts・modules は変更しない
+- gh の shim は本番を指す読み取りも止める。判定の規則は S → R → A → P1 → P2 → P3 → I の順で、止めるときは終了コード 97
+- `gh repo view` が `GH_REPO` を無視するので、shim が引数なしの `gh repo view` に `$GH_REPO` を付け足す
+- node ID は復号してリポジトリ ID を比べる。`PVT` で始まる Projects V2 の ID はすべて止める
+
+### Deferred Items
+- `workspace/` と `plugins/` の作成、sandbox のリセット、入力本文の無害化、sandbox と PAT を実際に作る試運転は #1556
+- PAT が本番に書き込めないことの機械的な確認 (U3) は行わず、文書の確認項目にする
+
+### Notes for Next Phase
+- Implementation Step 7 の probe (U1・U2) の結果で、`exec` の環境 (`ZDOTDIR` / `BASH_ENV`) と claude の shim (claude.ai のコネクタを止める環境変数) に追加が要るかが決まる。結果を Code Retrospective に残す
+- テストでは、止まったことを「shim の終了コード 97 と `BLOCKED` のメッセージ」と「スタブのログが空」の両方で判定する。認証エラーを止まったと誤認しない
+- `docs/structure.md` の `eval/` と Scripts の追記は #1554 と重なる。先にマージされた側の記述に合わせて書き足す
+- `SECURITY.md` の「Wholework does not store or transmit credentials」との整合を、文書の更新で取る
