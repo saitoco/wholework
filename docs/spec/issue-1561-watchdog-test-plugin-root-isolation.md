@@ -28,3 +28,28 @@ No new comments since last phase.
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- XS のため `/spec` なし。`/issue` が、検出力ゼロのテストでも文言上は満たせてしまう AC2 を補うため、修正前の挙動に対して FAIL することを問う AC を起票時点で追加していた
+
+#### design
+- 既存の `setup()` (#1136 の `EMIT_*` の `unset`、`AUTO_EVENTS_LOG` の差し替え) と同じ流儀で `CLAUDE_PLUGIN_ROOT` を隔離した
+
+#### code
+- 変更は `tests/claude-watchdog.bats` のみ (d3a28443)。verify で `CLAUDE_PLUGIN_ROOT=<repo>` を付けて全 14 件を実行し、0 件 FAIL を確認した。修正前は同条件で `WATCHDOG_TIMEOUT env var: custom value takes effect` が FAIL していた (#1560 の verify で再現)
+
+#### review
+- patch route のため review なし
+
+#### merge
+- main へ直接コミット。CI (8d45de8a) は success
+
+#### verify
+- AC1〜3 は /code でチェック済み。AC4 は `gh run list` で success を確認して PASS。修正後に誤った `watchdog-kill` 通知コメントの新規投稿は無い
+
+### Improvement Proposals
+- N/A (誤投稿済みのコメント #535・#585・#802 の扱いは Issue の対象外とした。削除はユーザー判断)
