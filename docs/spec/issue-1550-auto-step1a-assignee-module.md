@@ -149,3 +149,30 @@ Changed Files は 6 件 (内訳: モジュール 1、SKILL.md 1、テスト 2、
 - **コストの高い・不可逆な Implementation Step はない**: `spec-approval-needed` マーカーは付けない。外部サービスへのログインも要らない。Smoke Test は省略した (実 GitHub への書き込みを伴う確認は Issue の assignee を変更し通知を発生させるため入れない。`/auto` の実機の表示は構造テストの範囲外で、手順自体は #1544・#1545 の Post-merge の対象)
 - **英語のみにするファイル**: `skills/`・`modules/`・`scripts/` に追記する散文に CJK 文字を入れない (inline code・二重引用符・単一引用符・コードフェンスの中は検出対象外。二重引用符は複数行にまたがると効かないので、1 行で閉じる)
 - **コミット前の確認**: 新規ファイルはない (`git add` は変更したファイルの明示指定でよい)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を Spec のとおりに実装した。patch route のため、最終の実装 commit (`tests/assignee-check.bats`・`docs/structure.md`・`docs/ja/structure.md`) に `closes #1550` を付けた
+
+### Design Gaps/Ambiguities
+- 実装前の FAIL 確認 (Confirmed pre-implementation FAIL for 6 new test(s).): 新規 7 件のうち 6 件が実装前の `modules/assignee-check.md` / `skills/auto/SKILL.md` で FAIL した。`Step 1a section: checks only the XL parent` だけは、旧 Step 1a にも `XL parent` と `Step 4` の記述があるため実装前から PASS する。Spec の「4 件すべて FAIL する」という見込みはこの 1 件で外れたが、この項目は残す価値がある (XL の親だけを確認する項が置き換え時に消えないことを守る回帰テストで、当初から新規の振る舞いを検証するものではない)
+- language convention check は、`-U100000` を付けない `git diff` では日本語の固定文 (コードフェンス内) を散文として誤検出する。skills/code/language-convention-check.md の手順どおり merge-base からの `-U100000` 差分で実行すると違反なしになる
+- `scripts/check-bare-bracket-assertions.sh` は既存の 1009 件の警告を出す (警告のみで、この変更が増やしたものではない。新規テストは `run` + `$status` と `|| { ...; false; }` の形で書いた)
+
+### Rework
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 1a には `/auto` 固有の差分 (適用範囲・親が確認する理由・`continue` なら Step 2 へ・`abort` なら子フェーズを起動せず終了・XL は親だけ) だけを残し、3 択の文言や非対話の警告は一切載せなかった。要約を残すと複製が再び生まれるため
+- `PHASE_NAME=auto` 用の中止の通知は、`{PHASE_NAME}` の穴あきにせず別の固定文としてモジュールの `### 2.` に定義した
+
+### Deferred Items
+- CI (test.yml の bats) の結果確認は push 後の Step 14 と `/verify` に委ねる (AC 6 は未チェック)
+
+### Notes for Next Phase
+- `/auto` の Step 1a の実際の表示 (LLM が実行する層) は構造テストまでで、実機の確認は #1544・#1545 の Post-merge の対象
+- 挙動の変化: `/auto` の `LOGINS` は最初の ` (` の前までになり、`AskUserQuestion` が使えないときの警告は 1 行になった (Spec Notes で受け入れ済み)
