@@ -188,3 +188,29 @@ No new comments since last phase.
 ### Notes for Next Phase
 - AC1 と AC2 は /code で確認済みでチェック済み。AC3 のみ `- [ ]`。
 - XL ゲートは Size 空のとき fail-open のまま (Spec の端のケースどおり、挙動は変えていない)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 起票時の AC3 (`gh pr checks`) を、`/issue` が patch route 向けの `gh run list` 形式に直していた。AC1 には実装前の記述が消えたことを確かめる `file_not_contains` が補助に付き、判定は明確だった
+
+#### design
+- 呼び出し側に `--no-cache` を付ける方針で、既存の Step 3a や `modules/project-field-update.md` と手段が揃っている
+
+#### code
+- 設計からの逸脱は無い。新規テスト 3 件は実装前に FAIL することを確認している
+- 全体スイートで `tests/claude-watchdog.bats` の `WATCHDOG_TIMEOUT env var: custom value takes effect` が FAIL し、「差分とは無関係な時間依存の失敗」と判断されていた。verify で再現したところ、原因は #1546 で wrapper 起動のセッションに `CLAUDE_PLUGIN_ROOT` が export されるようになったこと。`scripts/claude-watchdog.sh` の kill 分岐が本物の `observation-trigger.sh --event watchdog-kill` を呼び、テストが 30 秒の上限を超える (`CLAUDE_PLUGIN_ROOT` 未設定なら PASS、設定すると FAIL を再現)。同じ時刻 (2026-10-25T02:53Z) に #535・#585・#802 へ誤った observation 通知コメントが投稿されており、テストが GitHub に副作用を残している
+
+#### review
+- patch route のため review なし
+
+#### merge
+- patch route のため main へ直接コミット。CI (8da0ddcf) は success
+
+#### verify
+- AC1・AC2 は /code でチェック済み。AC3 は `gh run list` で success を確認して PASS
+
+### Improvement Proposals
+- `tests/claude-watchdog.bats` (と、watchdog の kill 分岐を通る他のテスト) が `CLAUDE_PLUGIN_ROOT` を継承すると、本物の `observation-trigger.sh` を呼んで GitHub に誤った通知コメントを投稿し、テストも時間切れで FAIL する。#1546 以降は wrapper 起動の `/code` で毎回起きる。テスト側で `CLAUDE_PLUGIN_ROOT` を外すか stub に向ける (Tier 1: 2026-08-15・08-20・10-25 に同じ形の誤投稿が繰り返されている)
