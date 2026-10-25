@@ -343,17 +343,15 @@
 - エッジケース計測が、`<timeout-sec>` の後ろに置いた `--interval` が黙ってパス扱いになる挙動を実行で見つけた (CONSIDER)。AC には現れない種類の差で、計測の有効性を示す例になった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST は 0 件で、CONSIDER 7 件はこの PR では修正せず、`Skipped Issues` として要約コメントに記録した (受入条件に影響せず、`/merge` を止める理由が無い)
-- Workflow 経路は使わなかった。非対話の実行で再起動の保証が無いため、`workflow-guidance.md` の規定どおり、静的な Task fan-out を `run_in_background=false` の前景で実行した
-- 10.3 の検証は、指摘が CONSIDER のみで、テストの 2 件はコードを直接読んで確認できたので、検証サブエージェントを起動せずオーケストレーターが確認した
+- PR #1558 を squash でマージした (`resolve-merge-strategy.sh --flag` の結果。`.wholework.yml` に `merge-strategy` の指定は無い)。conflict は無く、CI は全件 SUCCESS だったので、リベースとテストの再実行は不要だった
+- 事前の受入条件ゲートは、未チェック 0 件で fallback 由来の review 完了でもなかったため、そのまま通した
 
 ### Deferred Items
-- CONSIDER 7 件は follow-up Issue にしていない。起票するなら `scripts/wait-subagent-results.sh` の `--*` 引数の拒否と、bats の `[ -n "$section" ]` ガードの修正が候補。起票の判断は `/verify` の振り返りに委ねる
-- 共有層 (`modules/verify-executor.md` の grader 起動、`scripts/guard-prefix.sh`、`modules/execution-context.md`) の同じ隙は、`/code` からの持ち越しのまま (Spec の Notes「範囲外」)
+- review から持ち越した CONSIDER 7 件 (`wait-subagent-results.sh` の `--*` 引数の拒否、bats の `[ -n "$section" ]` ガードなど) は、follow-up Issue にしていない。起票の判断は `/verify` の振り返りに委ねる
+- 共有層 (`modules/verify-executor.md` の grader 起動、`scripts/guard-prefix.sh`、`modules/execution-context.md`) の同じ隙は、Spec の Notes「範囲外」のまま
 
 ### Notes for Next Phase
-- `/merge`: CI は全 17 件 SUCCESS、受入条件 4 件はすべてチェック済み。base との conflict は無い (`git merge-tree` で確認)
-- `/verify` では、次回以降の `/review --full` で、サブエージェントの結果が戻り値で届くか (今回は hand-back メッセージだった)、縮退時に `- Sub-agent degradation:` の行が載るかを振り返りで見る
+- `/verify`: マージ後の検証条件は無い。次回以降の `/review --full` で、サブエージェントの結果が戻り値で届くか、縮退時に `- Sub-agent degradation:` の行が載るかを振り返りで見る
