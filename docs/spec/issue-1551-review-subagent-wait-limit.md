@@ -314,3 +314,46 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `## Issue Retrospective` (`--non-interactive` での曖昧点 4 点の自動解決、受入条件の変更理由、triage の結果の記録。要件の追加・変更は無い) / https://github.com/saitoco/wholework/issues/1551#issuecomment-6391301422
+
+## Code Retrospective
+
+### Deviations from Design
+- 設計からの逸脱は無い。Implementation Steps 1〜4 を Spec のとおりに実施した (E10 の文は Retrospective の Steps 2 の最後の箇条書きの末尾に足した)
+
+### Design Gaps/Ambiguities
+- 新規テスト `tests/review-subagent-wait.bats` の 12 件のうち 10 件が、変更前の `skills/review/SKILL.md` に対して FAIL することを確認した (Confirmed pre-implementation FAIL for 10 new test(s))。残る 2 件 (`Never wait for a result` が 1 回、検出関数が閉じる側に倒れる) は前提と検出器の自己検査なので、変更前から PASS するのが正しい
+- この `/code` の実行で grader (`Agent`、`run_in_background=false`) を 3 本起動したところ、戻り値には結果が載らず、完了後に別メッセージ (hand-back) として結果が届いた。前景を指定しても、harness の経路によっては結果が戻り値でなくメッセージで届く。結果ファイルの有無は確認していない (grader の結果は届いたので不要だった)。`/review` の "Wait limit" と結果ファイル経路が引き続き必要な根拠の一つになる
+- AC4 (`gh pr checks` の bats) は PR 作成前の Step 10 では評価できないため、チェックを付けずに残した (`/review` が評価する)
+
+### Rework
+- Retrospective の Steps 2 に足した文で、直前の文との間の句点が抜けていた (grader の指摘で発見し、修正コミットを足した)。再発防止は、`E10` のような「既存行の末尾に文を足す」編集で、結合部の句読点を差分で目視すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 構造的な逸脱は無い。Spec の Root Cause の 3 要因 (起動形態の未指定・待機上限の欠如・縮退の未記録) に、`run_in_background=false` の起動例、`wait-subagent-results.sh` と "Wait limit"、固定書式の縮退記録がそれぞれ対応している。review-spec の指摘は、縮退記録の対象が Workflow 経路と「遅れて届いた結果のマージ」を含むかが SKILL.md の項目 6 に書かれていない点 (CONSIDER) だけだった
+
+### Recurring issues
+- `tests/review-subagent-wait.bats` の `[ -n "$section" ]` ガードが、コマンド置換 (`f="$(step10_file)"`) の中では `set -e` が効かず死んだコードになる。review-bug の 2 本が別々に指摘し、同じパターンが 6 か所ある。閉じる側に倒れるので誤 PASS は無い
+- サブエージェントを `run_in_background=false` で起動しても、結果は戻り値ではなく hand-back メッセージで届いた (5 本すべて)。結果ファイルにも同じ内容が書かれていたため、待機・代替レビューは不要で、縮退は起きなかった。この PR の "Wait limit" と結果ファイル経路が引き続き必要な根拠の一つになる (`/code` の grader でも同じ現象が起きている)
+- (`- Sub-agent degradation:` の行は、この review では発生しなかった。今回の `/review` は PR 適用前の SKILL.md で動いたため、新しい書式の実運用での確認は次回以降の `/review` に持ち越す)
+
+### Acceptance criteria verification difficulty
+- AC1〜3 は rubric で、実装と Spec の根拠が揃っていて判定は明確だった。AC4 は `github_check` で、CI が完了していたので PASS にできた。UNCERTAIN は無い
+- エッジケース計測が、`<timeout-sec>` の後ろに置いた `--interval` が黙ってパス扱いになる挙動を実行で見つけた (CONSIDER)。AC には現れない種類の差で、計測の有効性を示す例になった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST は 0 件で、CONSIDER 7 件はこの PR では修正せず、`Skipped Issues` として要約コメントに記録した (受入条件に影響せず、`/merge` を止める理由が無い)
+- Workflow 経路は使わなかった。非対話の実行で再起動の保証が無いため、`workflow-guidance.md` の規定どおり、静的な Task fan-out を `run_in_background=false` の前景で実行した
+- 10.3 の検証は、指摘が CONSIDER のみで、テストの 2 件はコードを直接読んで確認できたので、検証サブエージェントを起動せずオーケストレーターが確認した
+
+### Deferred Items
+- CONSIDER 7 件は follow-up Issue にしていない。起票するなら `scripts/wait-subagent-results.sh` の `--*` 引数の拒否と、bats の `[ -n "$section" ]` ガードの修正が候補。起票の判断は `/verify` の振り返りに委ねる
+- 共有層 (`modules/verify-executor.md` の grader 起動、`scripts/guard-prefix.sh`、`modules/execution-context.md`) の同じ隙は、`/code` からの持ち越しのまま (Spec の Notes「範囲外」)
+
+### Notes for Next Phase
+- `/merge`: CI は全 17 件 SUCCESS、受入条件 4 件はすべてチェック済み。base との conflict は無い (`git merge-tree` で確認)
+- `/verify` では、次回以降の `/review --full` で、サブエージェントの結果が戻り値で届くか (今回は hand-back メッセージだった)、縮退時に `- Sub-agent degradation:` の行が載るかを振り返りで見る
