@@ -264,7 +264,7 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
 - **`phase/done` label present**: the Issue is already complete — do not process it. Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER` (a no-op when no checkpoint exists; Step 4's stale-checkpoint check is not reached on this path), output "Issue #$NUMBER is already at phase/done — nothing to run.", and stop without entering Step 3a, Step 4, or Step 5
 - **No `phase/*` labels** (issue triage not done):
   - Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
-  - After success, re-fetch Size (`${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`). Update route if Size is now set.
+  - After success, re-fetch Size with `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER` (`--no-cache`: read the Size that `run-issue.sh` just set, not the empty result cached before it). Update route if Size is now set.
   - Re-fetch labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
   - If re-fetched labels have **`phase/ready`**: proceed to Step 4
   - If re-fetched labels have **`phase/issue` (no `phase/ready`)**:
@@ -1230,7 +1230,7 @@ Process the selected N Issues **sequentially** (serially):
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
-3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is M, L, or XL: output a warning and skip to the next Issue (do not abort the entire batch)
+3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER` (`--no-cache`: read the Size that step 2's `run-issue.sh` just set, not the empty result cached before it); retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is M, L, or XL: output a warning and skip to the next Issue (do not abort the entire batch)
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
 5. **If `$ISSUE_SIZE` is XS**: transcribe issue retrospective to Spec (see Step 4b)
@@ -1274,7 +1274,7 @@ Process each Issue in `BATCH_LIST` in order:
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER` (`--no-cache`: read the Size that step 2's `run-issue.sh` just set, not the empty result cached before it); retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 4. **Blocked-by check**: materialize any body-text `Blocked by #N` shortcuts into GraphQL, then read the authoritative blocker list from GraphQL (GraphQL is the SSoT — see `docs/workflow.md` § Blocked-by relationships):
    ```
    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER

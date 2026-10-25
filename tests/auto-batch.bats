@@ -279,3 +279,26 @@ resume_mode_section() {
     run grep -q 'do NOT call `write_batch` again' <<< "$section"
     [ "$status" -eq 0 ]
 }
+
+# --- Size gate right after refinement reads Size without the cache (Issue #1560) ---
+# run-issue.sh sets Size just before step 3, but get-issue-size.sh caches the GraphQL response
+# for 300 s by default, so the "Size not set" result read before refinement could be returned
+# and an XL Issue would slip through the gate. The gate is the get-issue-size.sh call whose
+# result is retained as $ISSUE_SIZE; the candidate-selection call before refinement is
+# intentionally excluded by this filter.
+
+@test "Count mode section: step 3 Size gate calls get-issue-size.sh with --no-cache (Issue #1560)" {
+    section="$(count_mode_section)"
+    [ -n "$section" ]
+    gate="$(printf '%s\n' "$section" | grep -F 'get-issue-size.sh' | grep -F 'retain the result as')"
+    [ -n "$gate" ]
+    [[ "$gate" == *'get-issue-size.sh --no-cache $NUMBER'* ]] || false
+}
+
+@test "List mode section: step 3 Size gate calls get-issue-size.sh with --no-cache (Issue #1560)" {
+    section="$(list_mode_section)"
+    [ -n "$section" ]
+    gate="$(printf '%s\n' "$section" | grep -F 'get-issue-size.sh' | grep -F 'retain the result as')"
+    [ -n "$gate" ]
+    [[ "$gate" == *'get-issue-size.sh --no-cache $NUMBER'* ]] || false
+}

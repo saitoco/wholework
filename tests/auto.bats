@@ -703,3 +703,13 @@ verify_fail_marker_comment() {
     run grep -q 'scripts/filter-other-assignees.sh:\*' <<< "$frontmatter"
     [ "$status" -eq 0 ]
 }
+
+# --- Size re-fetch after run-issue.sh bypasses the cache (Issue #1560) ---
+
+@test "Step 3 section: Size re-fetch after run-issue.sh calls get-issue-size.sh with --no-cache (Issue #1560)" {
+    section="$(step3_section "$SKILL_FILE")"
+    [ -n "$section" ]
+    refetch="$(printf '%s\n' "$section" | grep -F 'get-issue-size.sh')"
+    [ -n "$refetch" ]
+    [[ "$refetch" == *'get-issue-size.sh --no-cache $NUMBER'* ]] || false
+}
