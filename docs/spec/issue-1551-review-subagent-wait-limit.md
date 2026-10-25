@@ -355,3 +355,31 @@
 
 ### Notes for Next Phase
 - `/verify`: マージ後の検証条件は無い。次回以降の `/review --full` で、サブエージェントの結果が戻り値で届くか、縮退時に `- Sub-agent degradation:` の行が載るかを振り返りで見る
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 非対話の `/issue` が AC の誤判定の余地 (常時 PASS になる `grep "result file"`、grader の入力範囲外の根拠の置き場所) を自分で直しており、AC 4 件はいずれも実装前に FAIL し得る形になっていた
+
+#### design
+- Root Cause の 3 要因 (起動形態の未指定・待機上限の欠如・縮退の未記録) に、実装の 3 つの変更が 1 対 1 で対応した。共有層 (`modules/verify-executor.md` の grader 起動など) の同じ隙は範囲外とした判断のまま
+
+#### code
+- 設計からの逸脱は無い。Retrospective の Steps 2 に足した文の句点抜けを grader が見つけ、修正コミットを 1 本足した (既存行の末尾に文を足す編集での結合部の確認漏れ)
+
+#### review
+- `/review --full` の 5 本のサブエージェントは `run_in_background=false` でも結果を戻り値ではなく hand-back メッセージで返したが、結果ファイルにも同じ内容があり、縮退は起きなかった。新しい `- Sub-agent degradation:` の書式は、PR 適用前の SKILL.md で動いたため実運用では未確認
+- CONSIDER 7 件 (bats の `[ -n "$section" ]` ガードがコマンド置換内で死んだコードになる 6 か所、`<timeout-sec>` の後ろの `--interval` がパス扱いになる点など) はいずれも閉じる側に倒れ、誤 PASS は無い
+
+#### merge
+- conflict・CI 失敗なし。squash でマージした
+
+#### verify
+- 受入条件 4 件はすべてマージ前にチェック済みで、マージ後の条件は無い。FAIL・UNCERTAIN は無し
+
+### Improvement Proposals
+- bats でコマンド置換の中に置いたガード (`[ -n "$section" ]`) は `set -e` が効かず死んだコードになる。ガードはコマンド置換の外で評価する (Tier 2: 規約)
+- `wait-subagent-results.sh` が `<timeout-sec>` の後ろの `--*` 引数をパスとして受け付ける。テスト用オプションに限られ、実害は無い (Tier 3: 単発)
+- サブエージェントの結果が前景起動でも hand-back メッセージで届く現象は、次回以降の `/review --full` で縮退記録の書式とあわせて観察する (Tier 3: 単発)
