@@ -258,3 +258,32 @@ Nothing to note。Pre-merge の 3 件は PASS (rubric 2 件は /code で確認�
 ### Notes for Next Phase
 - `/verify 1546` では Post-merge の observation (`event=auto-run`) を扱う
 - `claude-watchdog.sh` の `watchdog-kill` 分岐が有効になる副作用は、テスト未追加のまま
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/issue` で、発火元の無い observation (`event=` 未指定) を `event=auto-run session=next` に直し、モデルの挙動を Pre-merge では stub した claude による解決結果の検証に置き換えた。AC は実装前に FAIL し得る形で、判定も明確だった
+
+#### design
+- Spec を作成したセッション自身が `run-spec.sh` 起動で `CLAUDE_PLUGIN_ROOT` 未設定の状態を実測し、根拠にした。環境変数の export を選んだ結果、`claude-watchdog.sh` の `watchdog-kill` 分岐が設計どおり有効になる副作用を、意図した挙動の回復として明示的に受け入れている
+
+#### code
+- 設計からの逸脱は無い。`gh-label-transition.sh 1546 code --assign` の実行が PR 作成後にずれた (最終状態は正しい)。worktree の隔離ガードが連結コマンドを拒否し、Edit ツールの個別呼び出しに切り替えた
+- 修正前の wrapper に対して新規テスト 11 件が FAIL することを確認している
+
+#### review
+- review-bug x2 は指摘 0 件。サブエージェントの結果は結果ファイルとメッセージで届き、縮退は起きなかった (#1551 の直後の実行で、待機上限・縮退の経路は使われていない)
+- CONSIDER 2 件 (`docs/tech.md:35` と `docs/structure.md` の「Claude Code sets `${CLAUDE_PLUGIN_ROOT}` at runtime」が wrapper 起動では成り立たない点、`plugin-root.sh` のプレースホルダー数に対する 2 乗時間) は未対応
+
+#### merge
+- conflict・CI 失敗なし。squash でマージした
+
+#### verify
+- Pre-merge 3 件はマージ前にチェック済み。Post-merge の observation (`event=auto-run session=next`) はまだ発火しておらず SKIPPED。次の `/auto` 実行 (別セッション) で評価する
+
+### Improvement Proposals
+- `docs/tech.md`・`docs/structure.md` の `${CLAUDE_PLUGIN_ROOT}` に関する記述を、wrapper 起動では wrapper が export する旨に合わせる (Tier 2: ドキュメントの食い違い。`/audit drift` の対象)
+- `plugin-root.sh` の置換がプレースホルダー数に対して 2 乗時間になる。Skill 本文の規模では実害は無い (Tier 3: 単発)
+- `claude-watchdog.sh` の `watchdog-kill` 分岐にテストが無い。失敗は握りつぶされ、`observation-trigger.sh` に冪等ガードもある (Tier 3: 単発)
