@@ -32,7 +32,7 @@ English | [日本語](ja/tech.md)
 ## Architecture Decisions
 
 - **Skills-based workflow**: Each development phase (issue/spec/code/review/merge/verify) is implemented as an independent Claude Code Skill. Processing steps are described in SKILL.md, and the LLM executes them step by step.
-- **Plugin directory distribution**: Distributed as a local Claude Code plugin using `--plugin-dir`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules. Public distribution is via a Claude Code marketplace (`.claude-plugin/marketplace.json`) so users can install with `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework`.
+- **Plugin directory distribution**: Distributed as a local Claude Code plugin using `--plugin-dir`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules. Public distribution is via a Claude Code marketplace (`.claude-plugin/marketplace.json`) so users can install with `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework`. Headless sessions started by `run-*.sh` pass the SKILL.md body as a raw prompt, so Claude Code's placeholder substitution does not run; the wrapper resolves `${CLAUDE_PLUGIN_ROOT}` itself (`scripts/plugin-root.sh`, see `modules/execution-context.md` § Fork Context).
 - **fork context vs main context**: Context isolation level is set per skill. Fork justification: "independence/safety" (since 1M context GA, cost/capacity motivation has largely diminished). Fork decision per skill (exhaustive):
 
   | Skill | Fork needed | Execution Platform | Reason |

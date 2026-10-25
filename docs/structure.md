@@ -259,6 +259,7 @@ Key modules:
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution, and a background-task completion-wait prohibition (no re-invocation guarantee on these execution surfaces) that reaches all 5 wrapper-launched phases (issue/spec/code/review/merge), see `modules/execution-context.md` § "Wrapper-Level Constraint Injection"
+- `scripts/plugin-root.sh` — sourceable helper (`expand_plugin_root_placeholder`, `plugin_root_note`) sourced by the 5 run-*.sh wrappers to resolve `${CLAUDE_PLUGIN_ROOT}` in the headless session (body placeholder expansion, `CLAUDE_PLUGIN_ROOT` export, prompt note), see `modules/execution-context.md` § "Fork Context"
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
 - `scripts/run-code.sh` — run code skill
 - `scripts/run-issue.sh` — run issue skill

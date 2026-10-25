@@ -23,7 +23,7 @@
 ## アーキテクチャ決定
 
 - **Skills ベースのワークフロー**: 各開発フェーズ (issue/spec/code/review/merge/verify) は独立した Claude Code Skill として実装される。処理ステップは SKILL.md に記述され、LLM がステップごとに実行する。
-- **Plugin ディレクトリ配布**: `--plugin-dir` を使ったローカル Claude Code plugin として配布される。Claude Code はランタイムで `${CLAUDE_PLUGIN_ROOT}` を plugin ディレクトリに設定し、skill と module はこれを使ってスクリプトやモジュールを参照する。公開配布は Claude Code marketplace (`.claude-plugin/marketplace.json`) 経由で行われ、ユーザーは `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework` でインストールできる。
+- **Plugin ディレクトリ配布**: `--plugin-dir` を使ったローカル Claude Code plugin として配布される。Claude Code はランタイムで `${CLAUDE_PLUGIN_ROOT}` を plugin ディレクトリに設定し、skill と module はこれを使ってスクリプトやモジュールを参照する。公開配布は Claude Code marketplace (`.claude-plugin/marketplace.json`) 経由で行われ、ユーザーは `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework` でインストールできる。`run-*.sh` が起動する headless セッションは SKILL.md の本文を生のプロンプトで渡すため、Claude Code のプレースホルダー置換は走らない。wrapper が自分で `${CLAUDE_PLUGIN_ROOT}` を解決する (`scripts/plugin-root.sh`、`modules/execution-context.md` § Fork Context 参照)。
 - **fork context vs main context**: コンテキスト分離レベルは skill ごとに設定される。fork の根拠は「独立性/安全性」(1M context の GA 以降、コスト/容量的な動機はほぼ薄れている)。skill ごとの fork 判断 (網羅的):
 
   | Skill | Fork 必要性 | 実行プラットフォーム | 理由 |
