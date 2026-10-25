@@ -161,3 +161,30 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps どおり、`skills/auto/SKILL.md` の 3 箇所に `--no-cache` を追加し、回帰テストを 3 件追加した。
+
+### Design Gaps/Ambiguities
+- 全体スイート (`bats --jobs 4 tests/`、2502 件) で `tests/claude-watchdog.bats` の `WATCHDOG_TIMEOUT env var: custom value takes effect` が 1 件 FAIL した。単独で再実行しても FAIL (`elapsed < 30` を満たさない) し、同ファイルの再実行は 300 秒でバックグラウンドへ移ったため止めた。変更ファイルは `skills/auto/SKILL.md` と 2 つの bats だけで `scripts/claude-watchdog.sh` には触れていないため、この環境での時間依存テストの失敗で、本 Issue の差分とは無関係と判断した (未解消。CI の結果で `/verify` が最終確認する)。
+- 対象の 2 ファイル (`tests/auto-batch.bats`, `tests/auto.bats`) は全件 PASS (0 件 FAIL)。
+
+### Rework
+- なし。新規テスト 3 件は実装前に 3 件とも FAIL (red) し、実装後に PASS (green) することを確認した (Confirmed pre-implementation FAIL for 3 new test(s).)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 呼び出し側の `--no-cache` 付与で対処した (`get-issue-size.sh` と `gh-graphql.sh` は変更なし)。既存の Step 3a や `modules/project-field-update.md` と同じ手段で、`--cache-clear` のように無関係なキャッシュを巻き込まない。
+- 精査より前の Size 読み取り (Step 2 の初期取得、Count mode の候補選定) は対象外のまま。
+
+### Deferred Items
+- AC3 (CI の bats テストが通る) は push 後の CI でしか確認できないため未チェックのまま残した。`/verify` が `gh run list` で確認する。
+- 全体スイートの `tests/claude-watchdog.bats` の時間依存テスト 1 件が、この環境で FAIL した (差分とは無関係)。CI で再現するか `/verify` で確認する。
+
+### Notes for Next Phase
+- AC1 と AC2 は /code で確認済みでチェック済み。AC3 のみ `- [ ]`。
+- XL ゲートは Size 空のとき fail-open のまま (Spec の端のケースどおり、挙動は変えていない)。
