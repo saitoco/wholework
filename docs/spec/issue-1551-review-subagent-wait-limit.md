@@ -314,3 +314,33 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `## Issue Retrospective` (`--non-interactive` での曖昧点 4 点の自動解決、受入条件の変更理由、triage の結果の記録。要件の追加・変更は無い) / https://github.com/saitoco/wholework/issues/1551#issuecomment-6391301422
+
+## Code Retrospective
+
+### Deviations from Design
+- 設計からの逸脱は無い。Implementation Steps 1〜4 を Spec のとおりに実施した (E10 の文は Retrospective の Steps 2 の最後の箇条書きの末尾に足した)
+
+### Design Gaps/Ambiguities
+- 新規テスト `tests/review-subagent-wait.bats` の 12 件のうち 10 件が、変更前の `skills/review/SKILL.md` に対して FAIL することを確認した (Confirmed pre-implementation FAIL for 10 new test(s))。残る 2 件 (`Never wait for a result` が 1 回、検出関数が閉じる側に倒れる) は前提と検出器の自己検査なので、変更前から PASS するのが正しい
+- この `/code` の実行で grader (`Agent`、`run_in_background=false`) を 3 本起動したところ、戻り値には結果が載らず、完了後に別メッセージ (hand-back) として結果が届いた。前景を指定しても、harness の経路によっては結果が戻り値でなくメッセージで届く。結果ファイルの有無は確認していない (grader の結果は届いたので不要だった)。`/review` の "Wait limit" と結果ファイル経路が引き続き必要な根拠の一つになる
+- AC4 (`gh pr checks` の bats) は PR 作成前の Step 10 では評価できないため、チェックを付けずに残した (`/review` が評価する)
+
+### Rework
+- Retrospective の Steps 2 に足した文で、直前の文との間の句点が抜けていた (grader の指摘で発見し、修正コミットを足した)。再発防止は、`E10` のような「既存行の末尾に文を足す」編集で、結合部の句読点を差分で目視すること
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `scripts/wait-subagent-results.sh` は `$SECONDS` で期限を切り、`sleep` を入れても期限で必ず終わる設計にした。上限は 540 秒に切り詰め (Bash ツールの 600000 ms の内側)、SKILL.md の例は 480 秒
+- `tests/review-subagent-wait.bats` は `Task(` の起動例を走査する検出関数で「すべての起動例が `run_in_background=false` を持つ」を機械的に固定し、起動例が 5 つ未満なら閉じる側に倒れる
+- SKILL.md の文面は英語のみで、`Never wait for a result` は 1 か所のまま残した (Issue の premise marker が `grep_count` で 1 を見る)
+
+### Deferred Items
+- 共有層 (`modules/verify-executor.md` の grader 起動、`scripts/guard-prefix.sh`、`modules/execution-context.md`) の同じ隙は Spec の Notes「範囲外」のとおり触れていない。起票は `/verify` の振り返りに委ねる
+- AC4 (CI の `Run bats tests`) は PR の CI 結果で確認する
+
+### Notes for Next Phase
+- `/review` では、`skills/review/SKILL.md` の Step 10 の 5 つの起動例に `run_in_background=false` があること、"Wait limit" の 480 秒 / `timeout: 540000` / スクリプトの切り詰め 540 秒の整合、固定書式 `- Sub-agent degradation:` が Step 14.1 と Retrospective に出ることを見る
+- ローカルの `bats --jobs 4 tests/` (2480 件) は失敗なし。`check-translation-sync.sh` の `docs/guide/xl-decomposition.md` の OUTDATED は既存で無関係
+- 変更したのは `/review` の記述だけで、ほかの SKILL.md の `allowed-tools` への影響は無い
