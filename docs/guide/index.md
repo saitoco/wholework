@@ -22,7 +22,7 @@ No prior Wholework experience required.
 
 | Page | What you will learn |
 |------|---------------------|
-| [Quick Start](quick-start.md) | Install Wholework and run your first `/auto` in 10–15 minutes |
+| [Quick Start](quick-start.md) | Install Wholework and walk through `/issue` → `/code` → `/verify` on a sample Issue in about 10 minutes |
 | [Workflow Overview](workflow.md) | Understand what each skill does and when to use it |
 | [Customization](customization.md) | Configure `.wholework.yml`, project domains, and adapters |
 | [Troubleshooting](troubleshooting.md) | Fix common issues: auth errors, plugin failures, verify failures |

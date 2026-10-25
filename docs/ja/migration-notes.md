@@ -416,7 +416,7 @@ Label descriptions and completion message translated to English:
 - `"課題化フェーズ"` → `"Issue phase"`, etc.
 - `"ラベルのセットアップが完了しました（N件）"` → `"Label setup complete (N labels)"`
 
-#### check-file-overlap.sh
+#### check-file-overlap.sh (#1502 で削除)
 **Interface changes**: None
 
 All Japanese text translated to English:

@@ -18,7 +18,7 @@ Wholework の事前経験は不要です。
 
 | ページ | 学べる内容 |
 |------|---------------------|
-| [クイックスタート](quick-start.md) | Wholework をインストールし 10〜15 分で最初の `/auto` を実行 |
+| [クイックスタート](quick-start.md) | Wholework をインストールし、サンプル Issue で `/issue` → `/code` → `/verify` を約 10 分で体験 |
 | [ワークフロー概要](workflow.md) | 各スキルの役割と使うタイミングを理解 |
 | [カスタマイズ](customization.md) | `.wholework.yml`、project domain、adapter の設定 |
 | [トラブルシューティング](troubleshooting.md) | よくある問題の解決: 認証エラー、plugin 失敗、verify 失敗 |

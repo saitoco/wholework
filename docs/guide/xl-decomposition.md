@@ -124,6 +124,6 @@ See `examples/decomposition/nuxt-to-next.yml` for a complete example with 3 sub-
 
 ## Workflow Integration
 
-After bulk creation, each sub-issue starts at `phase/issue`. Run `/spec <N>` on each to create an implementation spec, then `/auto <N>` to execute the full development workflow.
+After bulk creation, sub-issues have no `phase/*` label (they are created with plain `gh issue create`). Run `/auto <N>` on each: with no `phase/*` label it starts from issue triage (Size setting and requirement shaping), then continues through spec → code → review → merge → verify. To step through manually instead, run `/issue <N>` first, then `/spec <N>`.
 
 For XL parent issues, use `/audit progress <N>` to track sub-issue completion status and blocked dependencies.

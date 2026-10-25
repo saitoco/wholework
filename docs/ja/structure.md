@@ -36,10 +36,11 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects board の Issue 自動移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用の decomposition YAML サンプル
-├── tests/               # スクリプト用の Bats テストファイル
-│   ├── <script-name>.bats
+├── tests/               # スクリプト用の Bats テストと、SKILL.md・モジュール本文の構造チェック
+│   ├── <name>.bats      # 多くは <script-name>.bats。それ以外は守る対象の skill・モジュール・挙動にちなんだ名前 (例: assignee-check.bats、review-subagent-wait.bats、worktree-lifecycle.bats)
 │   ├── helpers/         # load で読み込む bats 共有ヘルパー (markdown-section.bash)
-│   └── fixtures/        # テストフィクスチャファイル
+│   ├── fixtures/        # テストフィクスチャファイル
+│   └── .bats/           # (gitignore 対象、実行時の状態) `--filter-status` が必要とする bats の実行ログ
 ├── docs/                # ドキュメントと steering document
 │   ├── structure.md     # このファイル
 │   ├── product.md       # プロジェクトビジョン、Non-Goals、terminology (steering)
@@ -50,7 +51,8 @@ wholework/
 │   ├── versioning.md    # リリースバージョニングポリシー (project)
 │   ├── translation-workflow.md # docs/ja/ ミラー同期のルールと手順 (project)
 │   ├── visual-reproduction.md  # UI 再現方法論ガイド (project)
-│   ├── guide/           # ユーザー向けマニュアル (index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition、autonomy) (project)
+│   ├── event-log-schema.md     # `.tmp/auto-events.jsonl` の auto イベントログスキーマ (project)
+│   ├── guide/           # ユーザー向けマニュアル (index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition、autonomy) (project)。加えて auto-mode-template.json (auto モード用の推奨 allow ルールテンプレート。SECURITY.md から参照される)
 │   ├── {lang}/          # /doc translate {lang} が生成する言語翻訳 (docs/{lang}/)
 │   ├── spec/            # Issue 仕様
 │   ├── reports/         # 最適化と監査のレポート (routines-adoption.md を含む — 採用しなかった方向性だが記録として保持)
@@ -67,14 +69,17 @@ wholework/
 │       ├── code/        # /code 用の Domain file
 │       ├── review/      # /review 用の Domain file
 │       └── verify/      # /verify 用の Domain file
+├── .tmp/                # (gitignore 対象、実行時の状態) auto-events.jsonl、wrapper ログ、サブエージェントの結果ファイル、/auto のチェックポイント、セッションのポインタファイル
 ├── install.sh           # settings.json、marketplace、plugin を同期 (clone または pull 後に実行)
 ├── CONTRIBUTING.md      # コントリビューションガイド (DCO sign-off の手順)
 ├── LICENSE              # Apache License 2.0
 ├── README.md            # プロジェクト概要
 ├── README.{lang}.md     # README.md の言語翻訳 (/doc translate {lang} が生成)
-├── SECURITY.md          # 副作用、必要な権限、permission-bypass の挙動
+├── SECURITY.md          # 副作用、必要なツールと権限、/auto が使う auto パーミッションモード (allow ルールテンプレート、プラン/モデルの要件)
 └── CLAUDE.md            # Claude Code プロジェクト指示
 ```
+
+リポジトリの外では、フェーズは検証用の大きな作業ファイルを `${XDG_CACHE_HOME:-~/.cache}/wholework/work/` 配下に置く (`modules/phase-work-dir.md` 参照)。
 
 ## 主要ファイル（Required）
 
@@ -228,7 +233,7 @@ wholework/
 - `scripts/resolve-batch-query.sh` — `/auto --batch --until <query>` の `label:`/`status:` クエリを、ソート済みで除外考慮済みのマッチする open Issue 番号リストに解決する (決定的、bash 3.2 互換。Issue ごとの Status GraphQL 失敗はハードエラーではなく fail-closed で除外される。実行ユーザー以外がアサインされている Issue は `filter-other-assignees.sh` で除外する)
 - `scripts/filter-other-assignees.sh` — 標準入力の `gh issue list --json number,...,assignees` の JSON 配列から、実行ユーザー以外がアサインされている Issue (bot は other) を除く。実行ユーザーは、assignee のある Issue があるときだけ `gh api user` で特定し、特定できなければ assignee のある Issue をすべて除外する (fail-closed)。`resolve-batch-query.sh` と `/auto` の Count mode が使う (bash 3.2 互換)
 - `scripts/should-stop-at-phase.sh` — phase 順序 (`spec`/`code`/`review`/`merge`/`verify`) に基づく stop-at 判定 predicate (exit 0=stop、1=continue、2=usage error)。`run-auto-sub.sh` の `AUTO_STOP_AT` 判定箇所が共通利用する。未知の値・値の取得失敗はいずれも fail-open
-- `scripts/watchdog-defaults.sh` — `WATCHDOG_TIMEOUT_DEFAULT` 定数と run-*.sh スクリプト向けの `load_watchdog_timeout` 関数を提供する sourceable なヘルパー
+- `scripts/watchdog-defaults.sh` — ベースの `WATCHDOG_TIMEOUT_DEFAULT` とフェーズ別の `WATCHDOG_TIMEOUT_*_DEFAULT` 定数、および run-*.sh スクリプト向けの `load_watchdog_timeout` 関数を提供する sourceable なヘルパー
 - `scripts/retry-on-kill.sh` — `run_with_retry_on_kill()` を提供する sourceable なヘルパー: early-kill ウィンドウ (<300s) 内での SIGTERM/SIGKILL (exit 137/143) を検出し、自動的に 1 回リトライする。run-issue.sh、run-spec.sh、run-code.sh、run-auto-sub.sh で使用される
 - `scripts/claude-watchdog.sh` — `claude -p` 呼び出し用の watchdog wrapper (ハング検出 + 1 回リトライ)
 - `scripts/reconcile-phase-state.sh` — 全フェーズにわたる前提条件・完了チェックのための汎用状態リコンサイラ。`modules/phase-state.md` SSoT に従って JSON v1 を出力する (watchdog-reconcile.sh の後継)
@@ -311,7 +316,7 @@ cd wholework
 claude --plugin-dir <path-to-wholework>
 ```
 
-Skill は `wholework:<skill-name>` として検出される。Claude Code はランタイムで `${CLAUDE_PLUGIN_ROOT}` を plugin ディレクトリに設定し、skill と module はこれを使ってスクリプトやモジュールを参照する。
+Skill は `wholework:<skill-name>` として検出される。skill と module は `${CLAUDE_PLUGIN_ROOT}` (plugin ディレクトリ) を使ってスクリプトやモジュールを参照する。Claude Code は Skill の内容を読み込むときにこれをインラインで置換し、hook のプロセスには環境変数として export する。headless の `claude -p` セッションでは、run-*.sh wrapper が自身で解決して export する (`scripts/plugin-root.sh`、#1546)。
 
 **なぜ `./install.sh` が必要か?** `.claude/settings.json` は `.claude/settings.json.template` からユーザーの実際の `$HOME` を `${HOME}` に置換して生成される。Claude Code は `permissions.allow` 内の `${HOME}` や `~/` を展開しないため、各開発者はテンプレートをローカルで実体化する必要がある。生成された `.claude/settings.json` は gitignore 対象である。clone 後に一度、`.claude/settings.json.template` が変更された `git pull` のたびに再度 `./install.sh` を実行すること。
 

@@ -51,7 +51,7 @@ Reads Layer 1 declarations; dynamically detects any missing information in-sessi
 
 | Mechanism | Detection Target | Used By |
 |-----------|----------------|---------|
-| `detect-config-markers.md` (fixed mappings) | Known flags in `.wholework.yml` → environment variables | `/review`, `/verify`, `/issue` |
+| `detect-config-markers.md` (fixed mappings) | Known flags in `.wholework.yml` → environment variables | All skills (every `skills/*/SKILL.md` Reads it) |
 | `detect-config-markers.md` (dynamic mapping) | Any `capabilities.{name}: true` → `HAS_{UPPERCASE_NAME}_CAPABILITY` variable | All skills that Read `detect-config-markers.md` |
 | `ToolSearch` | MCP tool availability in session | `/issue` (no declaration), `verify-executor` (on `mcp_call` execution) |
 | `command -v` | CLI tool availability | `browser-adapter` (browser-use CLI), `lighthouse-adapter` (lighthouse) |

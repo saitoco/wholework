@@ -118,6 +118,6 @@ sub_issues:            # 必須: 1 件以上のリスト
 
 ## ワークフロー統合
 
-一括起票後、各 sub-issue は `phase/issue` の状態から始まります。`/spec <N>` で実装 Spec を作成し、`/auto <N>` でフル開発ワークフローを実行してください。
+一括起票直後の sub-issue には `phase/*` ラベルが付いていません (ラベルなしの `gh issue create` で作成されるため)。各 sub-issue に対して `/auto <N>` を実行すると、`phase/*` ラベルがないため issue triage (Size 設定と要件整形) から始まり、spec → code → review → merge → verify へと進みます。手動で段階的に進める場合は、先に `/issue <N>` を実行してから `/spec <N>` を実行してください。
 
 XL 親 Issue の進捗は `/audit progress <N>` で確認できます（sub-issue の完了状態とブロック依存関係を表示）。

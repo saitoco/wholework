@@ -62,7 +62,7 @@ cd wholework
 claude --plugin-dir /path/to/wholework
 ```
 
-Check that `${CLAUDE_PLUGIN_ROOT}` is set when skills run — this is automatically set by Claude Code when using `--plugin-dir` or the marketplace install.
+Skills reference scripts and modules through `${CLAUDE_PLUGIN_ROOT}` (the plugin directory). With `--plugin-dir` or the marketplace install, Claude Code substitutes it inline when it loads Skill content and exports it to hook processes. It is not set in the Bash tool environment, so an empty `$CLAUDE_PLUGIN_ROOT` in a Bash call is expected and does not mean the install is broken. Headless sessions started by the `run-*.sh` wrappers (the phases `/auto` launches) do not get Claude Code's substitution; the wrappers resolve the path and export `CLAUDE_PLUGIN_ROOT` themselves (`scripts/plugin-root.sh`, #1546).
 
 ## Reading Verify Command Failures
 
@@ -128,6 +128,16 @@ Wholework never pulls for you.
 
 - The comparison uses the upstream branch as of the last `git fetch` and makes no network access, so a checkout that has not been fetched for a long time can look up to date. Run `git -C /path/to/wholework fetch` now and then (for example from a scheduled job) to keep the warning accurate.
 - No warning appears for a marketplace install (not a git checkout), a detached HEAD, a branch without an upstream, or when the check cannot run. To silence it for a deliberately pinned checkout, run `git -C /path/to/wholework branch --unset-upstream`.
+
+## Leftover Phase Work Directories
+
+**Symptom**: At the start of a phase (`/spec`, `/code`, `/verify`), a warning lists directories under `${XDG_CACHE_HOME:-~/.cache}/wholework/work/` with their sizes, or a verification is recorded as UNCERTAIN because the work directory could not be used.
+
+**Cause**: A phase puts large verification work files (repository copies, `node_modules`, build output, browser profiles) in a per-Issue, per-phase work directory and removes it when it ends. A forced stop (watchdog, OOM killer, crash) skips that cleanup. The phase-start sweep removes the leftover of the same repository, Issue, and phase, but only warns about directories of other Issues, phases, or repositories, since they may belong to a session running in parallel.
+
+**Fix**: Confirm that no session is working on the listed Issue and phase, then delete the directories you no longer need. Wholework never deletes them automatically; you decide. To move the base directory, set `XDG_CACHE_HOME` to an absolute path.
+
+**Note**: the base directory must be on disk. When it is on tmpfs or ramfs (or cannot be created), the phase refuses it and does not fall back to `/tmp`; verification that needs a copy is recorded as UNCERTAIN with the reason. See `modules/phase-work-dir.md`.
 
 ## Further Help
 

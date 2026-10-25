@@ -83,4 +83,4 @@ VALUE=$(gh issue view "$NUMBER" --json labels \
 
 - Issue #355 — `.[0].field` が空配列に対して `"null"` を返す問題の最初の発見
 - `scripts/get-issue-type.sh` — GraphQL とラベル lookup の両方で `// empty` を使う例
-- `scripts/run-merge.sh` — `.[0].databaseId // empty` を使う例
+- `scripts/observation-trigger.sh` — 非空チェックの前に `.[-1].createdAt // empty` を使う例

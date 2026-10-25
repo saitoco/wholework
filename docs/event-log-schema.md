@@ -1,3 +1,11 @@
+---
+type: project
+ssot_for:
+  - auto-event-log-schema
+---
+
+English | [日本語](ja/event-log-schema.md)
+
 # Auto Event Log Schema
 
 This document defines the schema for `.tmp/auto-events.jsonl`, the structured event log emitted during `/auto` sessions.

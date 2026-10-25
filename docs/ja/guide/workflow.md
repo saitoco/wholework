@@ -36,6 +36,8 @@ Size は triage で付与されます（手動または `/triage`）。サイズ
 
 ## スキルリファレンス
 
+`/issue N` (既存 issue のリファイン)・`/spec`・`/code` は、issue に assignee がいない場合にあなたを assignee に設定します。他のメンバーがすでにアサインされている場合、対話実行では自分に付け替えて続ける・付け替えずに続ける・中止のいずれかを確認します (非対話実行では警告のみ)。`.wholework.yml` の `auto-assign: false` は付与だけを止めます。[担当者 (assignee)](../workflow.md#担当者-assignee) を参照してください。
+
 ### `/issue` — 要件明確化
 
 issue 説明があいまいまたは不完全なときに使います。Wholework がインタビューを行い、明確な受入条件と verify command を備えた issue 本文に書き換えます。
@@ -190,7 +192,7 @@ Steering Documents（`docs/product.md`、`tech.md`、`structure.md`）と `docs/
 
 ## Verify 失敗後の修正
 
-`/verify` が失敗すると、Wholework は issue を reopen して全 `phase/*` ラベルを除去します。小さい修正を main 直接コミットで適用するには `/code --patch N` を実行（Size 据え置き）、新規ブランチと PR でより大きい修正には `/code --pr N` を実行します。設計変更を要するケースでは、先に `/spec N` で spec を見直します。
+`/verify` が失敗すると、Wholework は issue を reopen して全 `phase/*` ラベルを除去します。推奨する次の手順は `/auto N` です: Spec が存在すれば fix サイクルを検出し、issue/spec フェーズをスキップして直接 code を実行します。修正を手動で進める場合、小さい修正を main 直接コミットで適用するには `/code --patch N` を実行 (Size 据え置き)、新規ブランチと PR でより大きい修正には `/code --pr N` を実行します。設計変更を要するケースでは、先に `/spec N` で spec を見直します。
 
 ## さらに読む
 

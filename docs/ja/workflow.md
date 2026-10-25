@@ -24,7 +24,7 @@ flowchart TD
 
 **サイズベースのルーティング**: Issue の Size プロパティがワークフロー経路を決めます（patch vs PR、レビュー深度、spec 深度）。判断テーブル（Size 決定の 2 軸基準 + Size→ワークフローのマッピング）は [`modules/size-workflow-table.md`](../../modules/size-workflow-table.md) を参照してください。
 
-main ブランチ保護ルール: [CLAUDE.md](../../CLAUDE.md) を参照。
+**保護された main**: フェーズの記録 (Spec・レトロスペクティブ・Phase Handoff) と patch route のコミットは base ブランチへ直接 push します。リモートが直接 push を拒否した場合 (ruleset・ブランチ保護・pre-receive hook)、`wholework-record/...` の phase-record PR を作成し、リポジトリの `merge-strategy` で即座にマージして反映します — 設定キーは不要です。ruleset がその PR に承認やステータスチェックを要求する場合は、実行を止めて PR の URL を表示します。[`modules/worktree-lifecycle.md` § "Direct push rejected by the remote: phase-record PR"](../../modules/worktree-lifecycle.md#direct-push-rejected-by-the-remote-phase-record-pr) と [`scripts/push-to-base.sh`](../../scripts/push-to-base.sh) を参照。
 
 ## Core Phases
 
@@ -38,7 +38,7 @@ Issue の要件を明確化します。2 つのモード: 新規作成（`/issue
 
 ### 2. `/spec` — 仕様策定
 
-Issue 要件からコードベースを調査し Spec（`docs/spec/issue-N-short-title.md`）を作成します。設計完了時に Size→ワークフローのルーティングを行い、Size に基づいて次アクション（`/code --patch` / `/code`）を提示します。`--light` は軽量設計（あいまいさ解消、不確実性検出、セルフレビューなどを省略）、`--full` はフル設計。オプション省略時は Size ラベルから自動判定します（M → `--light`、L/XL → `--full`）。実機 external/MCP 呼び出しを伴う Issue では optional な `## Smoke Test` セクションを生成します。詳細: [`skills/spec/SKILL.md`](../../skills/spec/SKILL.md)
+Issue 要件からコードベースを調査し Spec (`docs/spec/issue-N-short-title.md`) を作成します。設計完了時に Size→ワークフローのルーティングを行い、次アクションを提示します: patch (XS/S)・pr (M/L) のどちらの route でも `/auto` を推奨し、代替として `/code` を示します (XL はサブ issue 分割を案内)。`--light` は軽量設計 (あいまいさ解消、不確実性検出、セルフレビューなどを省略)、`--full` はフル設計。オプション省略時は Size ラベルから自動判定します (M → `--light`、L/XL → `--full`)。実機 external/MCP 呼び出しを伴う Issue では optional な `## Smoke Test` セクションを生成します。詳細: [`skills/spec/SKILL.md`](../../skills/spec/SKILL.md)
 
 ### 3. `/code` — 実装
 
@@ -69,9 +69,10 @@ PR の受入条件検証、多観点コードレビュー、issue 解決を統�
 
 | Size | Review mode | 挙動 |
 |------|-------------|----------|
-| XS, S | skip（early exit） | "レビュー不要" メッセージで終了（patch 経路） |
+| XS, S | skip (early exit) | "レビュー不要" メッセージで終了 (patch 経路)。`always-pr: true` の場合は PR が存在するため、XS/S も light になる |
 | M | light | Step 10 を軽量統合レビュー（1 agent）として実行 |
 | L, XL | full | 全ステップ実行 |
+| (未設定) | full | `/review` を直接呼び出したときの安全側フォールバック。`/auto` は Size 未設定時に `--light` を渡す |
 
 **operate route**: `/review` は完全にスキップされます — operate route は PR を生成しないため (上記 `/code` を参照)、レビュー対象がありません。
 
@@ -121,7 +122,7 @@ Core Phases を順次連鎖させるオーケストレーター。各フェー�
 
 **review PENDING 時の再試行**: `run-review.sh` が exit code 2 (PENDING — タイムアウト内に CI/preview 状態が確定しない。失敗ではない) で終了した場合、`run_phase_with_recovery()` (`scripts/run-auto-sub.sh`) と `skills/auto/SKILL.md` pr route item 8 の両方が `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` (デフォルト 300 秒) だけ sleep してから再試行し、`WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` (デフォルト 2 回) まで繰り返した後、通常の Tier 1/2/3 リカバリ経路にフォールスルーします。`modules/orchestration-fallbacks.md#review-pending-not-failure` を参照。この exit code 2 が CI プラットフォーム側の障害と判定された場合 (`modules/ci-failure-classifier.md` の verdict が `ci-infra`)、この sleep + retry は適用されず、待機 → 再判定 → 停止の経路に入ります。zero registered checks が `pull_request` / `pull_request_target` をトリガに持つ workflow が一つも存在しないリポジトリの構造的な状態を反映している場合、`run-review.sh` はそもそも exit code 2 を返しません (`scripts/detect-pr-ci-workflows.sh` を参照)。別の理由で exit code 2 が観測され、かつ classifier の verdict が `no-ci-configured` の場合、item 8 は sleep + retry を行わずスキップします。この判定はファイルベースであるため、PR の checks がすべて外部の GitHub App 由来 (`.github/workflows/` 自体が存在しない) であるリポジトリも `absent` として扱われます — この場合 CI 確認なしにレビューが進み、CI ゲートは `/review` Step 9 および `/merge` 自身のチェックにフォールバックします。
 
-**`--batch --resume`**: 中断されたバッチ実行を再開します。`--batch N1 N2 ...` 開始時に自動生成される `.tmp/auto-batch-state.json` から残 Issue リストを読み込みます。ファイルが存在しないか `remaining` が空の場合は「No resume target found」で終了します。Issue は元のバッチと同じ順序で処理されます。中断の間に他のメンバーが残りの Issue に着手している可能性があるため、残りの Issue に対しても同じ開始時の担当の警告を出します。
+**`--batch --resume`**: 中断されたバッチ実行を再開します。List mode の各バッチ (`--batch N1 N2 ...`、およびラウンドごとに書き直す `--batch --until`) は状態を `.tmp/auto-batch-state-<BATCH_ID>.json` に書き込みます。再開時は `auto-checkpoint.sh list_active_batches` でアクティブなバッチを列挙し、対話実行ではどのバッチを再開するかを確認し、非対話実行では最新のバッチを選びます。アクティブなバッチが 1 つもない場合に限り、旧形式の単一ファイル `.tmp/auto-batch-state.json` にフォールバックします。選んだファイルから残 Issue リストを読み込み、ファイルが存在しないか `remaining` が空の場合は「No resume target found」で終了します。Issue は元のバッチと同じ順序で処理されます。中断の間に他のメンバーが残りの Issue に着手している可能性があるため、残りの Issue に対しても同じ開始時の担当の警告を出します。
 
 **`--batch --until <query>`**: 条件駆動のバッチモードです。クエリは内部で空白区切りされるため、必ずダブルクォートで囲んだ単一引数として渡してください (例: `/auto --batch --until "label:retro/*"`)。クエリ文法は空白区切りの `key:value` 句で、対応する key は 2 つのみです — `label:<glob>` (必須。Issue のラベル名に対して照合し `*` glob 可) と `status:<value>` (任意。Project v2 の Status フィールドに対する完全一致・大小文字区別あり。`In progress` のような空白を含む値は非対応でパースエラーになる)。各ラウンドはまず bulk `/triage` (Issue 番号なし) を実行し、プロジェクト全体でまだ triage されていない Issue (セッション中に起票された分だけでなく、ループ開始前から未 triage だった分も含む) を triage します。これにより新たに `theme/*` label が付与された Issue がそのラウンドのクエリで拾えるようになります。そのうえで各ラウンドで `scripts/resolve-batch-query.sh` によりクエリを解決し (このスクリプトは、実行ユーザー以外がアサインされている Issue を `--batch N` と同じ規則で除外します。毎ラウンド評価されるため、assignee が外れた Issue は次のラウンドで候補に戻ります。このため List mode の開始時の担当の警告はラウンドごとには出しません)、得られた `ROUND_LIST` を `modules/round-ordering.md` (ROI + title prefix クラスタリング + 意味的関係判断により、関連する Issue が隣接して処理され、かつ ROI の高い Issue から着手されるようにする — 対象となる Issue の集合は変えず処理順序のみを変更し、blocked-by ゲートを代替しない) に従って並び替えたうえで、一致した Issue を `--batch N1 N2 ...` (List mode) と同じ手順で処理し、再度クエリを解決し、これを繰り返します。クエリが 0 件を返した時点でループは収束します。同一セッション内の前ラウンドで complete / fail 済みの Issue は以降のラウンドから除外されます (blocked-by ゲートでスキップされた Issue のみ例外で、同一セッション中に blocker が解消しうるため次ラウンドで再評価されます) — この除外がないと label 単独のクエリでは完了済み Issue を再ヒットし続け、収束しません。収束とは独立した安全弁として `--max-rounds <N>` (既定 3) がラウンド数の上限を課し、無効化はできません。`--checkin-per-round` (opt-in) を指定すると、対話モードでは次ラウンドに進む前に AskUserQuestion で確認を求めます。`--non-interactive` では警告のうえ無視されます。`--batch --until` 実行の中断後に `--batch --resume` で再開すると、最終ラウンドの `remaining` を単発の List mode バッチとして処理するのみで until ループ自体は再開されません。ループを継続したい場合は `--batch --until` を再実行してください。
 
@@ -188,13 +189,13 @@ bash scripts/check-translation-sync.sh
 |-------|---------|-------------|------------|
 | `phase/issue` | Issue 作成フェーズ | `/issue` | `/spec` |
 | `phase/spec` | 仕様策定フェーズ | `/spec`（開始時） | `/spec`（spec push 後） |
-| `phase/ready` | 設計完了、実装待ち | `/spec`（設計 push 後） | `/code` |
-| `phase/code` | 実装フェーズ | `/code` | `/review` |
-| `phase/merge` | マージ進行中 | `/merge`（開始時、進捗追跡用） | `/merge`（`phase/verify` 遷移時） |
+| `phase/ready` | 設計完了、実装待ち | `/spec` (設計 push 後)、`/issue` (`/spec` を省略する XS Issue)、`/auto` の fix-cycle リセット (残存する `phase/verify` を code 実行前に `phase/ready` へ戻す) | `/code` |
+| `phase/code` | 実装フェーズ | `/code` | `/review`、`/code` (patch route で `phase/verify` へ遷移するとき) |
+| `phase/merge` | マージ進行中 (予約) | — (現在どのスキルも付与しない。`scripts/setup-labels.sh` が作成し、`/auto` の再開時に認識される) | — |
 | `phase/review` | レビューフェーズ | `/review` | `/merge` |
 | `phase/skill` | スキル開発 / 移行トラッキング | 開発者（スキル動作変更 Issue 起票時） | —（追跡ラベル、残存） |
-| `phase/verify` | 受入テストフェーズ | `/merge` | `/verify` |
-| `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時）、`/audit stats --retention` (Level 3 auto-retire、autonomy tier L2/L3、retire 後に未チェックの post-merge 条件が残らない場合) | — |
+| `phase/verify` | 受入テストフェーズ | `/merge`、`/code` (patch route、`phase/code` を置き換える) | `/verify` |
+| `phase/done` | 完了 | `/verify` (全 auto-verify PASS + 全 post-merge 条件 checked 時)、`/issue` (not planned としてクローズするとき)、`scripts/post_merge_check.sh` (手動確認がすべて PASS のとき)、`/audit stats --retention` (Level 3 auto-retire、autonomy tier L2/L3、retire 後に未チェックの post-merge 条件が残らない場合) | — |
 | （ラベルなし） | バックログ / 未着手 | — | `/verify`（FAIL 時） |
 
 ### 担当者 (assignee)
@@ -248,7 +249,7 @@ PR 本文に `closes #N` を追加すると、マージ時に Issue が自動ク
 ユーザーが選択:
   - /auto N          — fix-cycle fast-path: issue/spec phase を自動 skip（推奨）
   - /code --patch N  — main 直接コミットで修正（小さな修正、Size 据え置き）
-  - /code --pr N     — 新規ブランチ + PR で修正（大きめの修正、Size L）
+  - /code --pr N     — 新規ブランチ + PR で修正（大きめの修正、Size M/L）
   - /spec N          — 設計を見直す（根本原因が再設計を要する場合）
   ↓
 /verify N  （修正後に再検証）
@@ -297,7 +298,7 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 
 ### Projects 連携
 
-`.github/workflows/kanban-automation.yml` が `phase/*` ラベルによる Kanban カラムの自動移動を実装します。`phase/issue`、`phase/spec` → Plan、`phase/ready` → Ready、`phase/code` → Implementation。Review/Verification/Done は Projects の組み込み automation を使います。
+`.github/workflows/kanban-automation.yml` が `phase/*` ラベルによる Kanban カラムの自動移動を実装します。`labeled` イベントごとに、7 つのフェーズラベル (`phase/issue`、`phase/spec`、`phase/ready`、`phase/code`、`phase/review`、`phase/verify`、`phase/done`) を 7 つの Status オプションに 1 対 1 で対応づけ、必要なら Issue をプロジェクトに追加して Status フィールドを設定します。それ以外のラベル (`phase/merge`・`phase/skill` を含む) は無視します。プロジェクト・フィールド・オプションの ID は本リポジトリのプロジェクト用にハードコードされており、projects スコープを持つ `PROJECT_PAT` シークレットが必要です。
 
 ## Blocked-by relationships
 

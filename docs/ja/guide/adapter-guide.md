@@ -94,8 +94,8 @@ Wholework はこの順序で検索し、**最初に見つかったファイル**
   コミットされる。MCP サーバーやプロジェクト固有の CLI ツールに使う。
 - **User-global** (`~/.wholework/adapters/`) — ユーザーの全プロジェクトに適用される。
   個人的な CLI の好みに使う。
-- **Bundled default** — Wholework に同梱される。`browser` と `lighthouse` を標準で
-  カバーする。
+- **Bundled default** — Wholework に同梱される。`browser`、`lighthouse`、`visual-diff` を
+  標準でカバーする。
 
 新しい capability を追加するには、project-local パスに adapter ファイルを作成する:
 

@@ -128,14 +128,12 @@ Claude Code の応答フロー:
 
 **ゲート 4 — ドキュメント drift チェック:**
 
-```sh
+```bash
 # a. 利用者向けリファレンスと実装 SSoT の config キーが一致
 #    (docs/guide/customization.md § Available Keys と modules/detect-config-markers.md)
 
 # b. top-level の docs/*.md すべてに docs/ja/ の対訳が存在する
-ls docs/*.md | sed 's|docs/||' | sort > /tmp/en.txt
-ls docs/ja/*.md | sed 's|docs/ja/||' | sort > /tmp/ja.txt
-comm -23 /tmp/en.txt /tmp/ja.txt   # 空であること
+comm -23 <(ls docs/*.md | sed 's|docs/||' | sort) <(ls docs/ja/*.md | sed 's|docs/ja/||' | sort)   # 空であること
 
 # c. plugin.json のバージョンが、これから打つタグと一致
 jq -r '.version' .claude-plugin/plugin.json

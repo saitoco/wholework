@@ -9,7 +9,7 @@ English | [日本語](../docs/ja/phase-state.md)
 
 # phase-state
 
-SSoT module for phase-level state definitions used by `scripts/reconcile-phase-state.sh` and `/auto` SKILL.md.
+SSoT module for phase-level state definitions used by `scripts/reconcile-phase-state.sh` and its callers: the `run-*.sh` phase wrappers, the orchestration recovery tiers, and the `/auto`, `/code`, `/merge`, and `/verify` skills (full list in the JSON Schema field contract below).
 
 ## Purpose
 
@@ -37,8 +37,8 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue exists and state != CLOSED | `phase/(issue\|ready\|code\|review\|merge\|verify\|done)` label on issue | Implemented |
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists in the local working tree or on `origin/main` (remote-tracking ref, no fetch) AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
-| code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below); OR an open PR on the `worktree-code+issue-N` branch is found (see "Stray PR Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
-| code-pr | `phase/ready` label on issue, Spec exists OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
+| code-patch | `phase/ready` label on issue, Spec exists in the local working tree (no `origin/main` lookup, unlike the spec Completion check) OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below); OR an open PR on the `worktree-code+issue-N` branch is found (see "Stray PR Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
+| code-pr | `phase/ready` label on issue, Spec exists in the local working tree (no `origin/main` lookup, unlike the spec Completion check) OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `<!-- review-summary -->` marker (primary); or `## Review Response Summary` / `## レビュー回答サマリ` (fallback for marker-absent posts). When the same comment also carries a `type=review-incomplete` marker (posted by `post-fallback-review-summary.sh`), completion is still reported `true` but `actual.review_incomplete_fallback` is set to flag the completion as fallback-origin rather than organic (see #1174) | Implemented |
 | merge | PR is OPEN and (reviewDecision is APPROVED, OR reviewDecision is not CHANGES_REQUESTED and a review-summary marker is found in PR comments/reviews — see "Merge Precondition Marker Fallback" below); reviewDecision=CHANGES_REQUESTED is an unconditional mismatch | `gh pr view --json state == MERGED` | Implemented |
 | verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/done` label | Implemented |
@@ -105,7 +105,7 @@ Wholework's self-hosted operation model has a single account performing Issue tr
 }
 ```
 
-**Field contract (downstream #315, #316, #317, #319 depend on this schema):**
+**Field contract (callers that read this output depend on this schema: the phase wrappers `run-issue.sh`, `run-spec.sh`, `run-code.sh`, `run-review.sh`, `run-merge.sh`, and `run-auto-sub.sh`; the recovery tiers `apply-fallback.sh` (Tier 2) and `spawn-recovery-subagent.sh` with `agents/orchestration-recovery.md` (Tier 3); `detect-wrapper-anomaly.sh`, which reads the result the wrappers log; and `skills/auto`, `skills/code`, `skills/merge`, and `skills/verify` SKILL.md):**
 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
@@ -117,6 +117,7 @@ Wholework's self-hosted operation model has a single account performing Issue tr
 | `actual.pr_state` | string | When PR state is checked | `"OPEN"`, `"MERGED"`, `"CLOSED"`, or `null` |
 | `actual.pr_number` | number\|null | When PR is checked | PR number, or `null` if not found |
 | `actual.commits_found` | boolean | When git log is checked | `true` if matching commit found on origin/main |
+| `actual.reopen_ts` | string | When `code-patch` completion obtains a reopen timestamp | Last reopen timestamp from `get-last-reopen`. When set, only a `closes #N` commit, operate marker, or stray PR created after it counts, and the label/state fallback is skipped. Present in every `code-patch` completion result (match or mismatch) while the timestamp is available; omitted when it is unavailable |
 | `actual.operate_signal` | boolean | When `code-patch` completion does not find a `closes #N` commit | `true` if an operate route completion marker comment (execution-log or execution-plan) was found; see "Operate Route Completion Signature" above |
 | `actual.stray_pr_signal` | boolean | When `code-patch` completion does not find a `closes #N` commit or operate marker | `true` if an open PR on the `worktree-code+issue-N` branch was found and passed the freshness gate; see "Stray PR Completion Signature" above. When `true`, `actual.pr_number` is also set to the PR number |
 | `actual.worktree_commits_found` | boolean | When `code-patch` completion does not find a `closes #N` commit, operate marker, or stray PR, or `code-pr` completion does not find an open PR | `true` if the `worktree-code+issue-N` branch has commits ahead of `origin/main` (`git rev-list --count`, read-only). Distinguishes "not yet started" (`false`) from "committed in worktree, push/PR-creation not yet complete" (`true`) — both would otherwise collapse to the same `commits_found: false` (`code-patch`) or `pr_state: null` (`code-pr`) observation. Branch not existing also yields `false` (a single `git rev-list` call folds both cases). Diagnostic only — does not affect `matches_expected`. Emitted unconditionally by `_completion_code_pr()` (not gated behind the no-PR branch), mirroring `_completion_code_patch()`'s own unconditional placement. |

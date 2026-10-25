@@ -1,17 +1,18 @@
 ---
 type: project
-ssot_for: ja-translation-sync
+ssot_for:
+  - ja-translation-sync
 ---
 
 English | [日本語](ja/translation-workflow.md)
 
 # Translation Workflow
 
-This document defines the rules for maintaining `docs/ja/` mirror files in sync with English source documents. Skills that modify top-level `docs/*.md` files must consult this document and apply the sync procedure described below.
+This document defines the rules for maintaining `docs/ja/` mirror files in sync with English source documents. Skills that modify top-level `docs/*.md` or `docs/guide/*.md` files must consult this document and apply the sync procedure described below.
 
 ## When to Sync
 
-Sync `docs/ja/` mirror files whenever a top-level `docs/*.md` file is added or modified during skill execution (e.g., `/code`, `/spec`, `/review`).
+Sync `docs/ja/` mirror files whenever a top-level `docs/*.md` or `docs/guide/*.md` file is added or modified during skill execution (e.g., `/code`, `/spec`, `/review`).
 
 ## Exclusions
 
@@ -19,12 +20,13 @@ The following paths are **excluded** from the sync obligation:
 
 - `docs/spec/` — Issue specifications (disposable, not translated)
 - `docs/reports/` — Audit and optimization reports (not translated)
+- `docs/stats/` — Generated `/audit stats` reports (not translated)
 - `docs/ja/` — Translation files themselves (not recursively synced)
 
 ## Sync Procedure
 
-1. Identify all top-level `docs/*.md` files in the changed-files list (excluding the paths above).
-2. For each identified file, locate the corresponding `docs/ja/<filename>.md` mirror.
+1. Identify all top-level `docs/*.md` and `docs/guide/*.md` files in the changed-files list (excluding the paths above).
+2. For each identified file, locate the corresponding mirror: `docs/ja/<filename>.md` for `docs/*.md`, `docs/ja/guide/<filename>.md` for `docs/guide/*.md`.
 3. If the mirror does not exist, create it.
 4. Update the mirror to reflect the English changes, writing in Japanese. Preserve structure, headings, and formatting consistent with the English original.
 5. Verify code block fidelity: count ` ``` ` (code fence markers) in the English source and the synced mirror. If the counts differ, locate the missing code blocks in the source and insert them into the mirror at the correct positions.

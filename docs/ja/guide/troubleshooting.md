@@ -58,7 +58,7 @@ cd wholework
 claude --plugin-dir /path/to/wholework
 ```
 
-スキル実行時に `${CLAUDE_PLUGIN_ROOT}` が設定されていることを確認してください — これは `--plugin-dir` または marketplace install 使用時に Claude Code が自動設定します。
+スキルはスクリプトやモジュールを `${CLAUDE_PLUGIN_ROOT}` (plugin ディレクトリ) 経由で参照します。`--plugin-dir` または marketplace install を使うと、Claude Code は Skill の内容を読み込むときにこれをその場で置換し、hook プロセスには環境変数として渡します。Bash ツールの環境には設定されないため、Bash 呼び出しで `$CLAUDE_PLUGIN_ROOT` が空なのは想定どおりで、インストールの不具合ではありません。`run-*.sh` wrapper が起動する headless セッション (`/auto` が起動するフェーズ) では Claude Code の置換が働かないため、wrapper 自身がパスを解決して `CLAUDE_PLUGIN_ROOT` を export します (`scripts/plugin-root.sh`、#1546)。
 
 ## Verify Command 失敗の読み方
 
@@ -124,6 +124,16 @@ Wholework が代わりに pull することはない。
 
 - 比較には最後に `git fetch` した時点の upstream ブランチを使い、ネットワークには出ない。そのため、長く fetch していない checkout は最新に見えることがある。警告を正確に保つには、`git -C /path/to/wholework fetch` を時々 (例: 定期ジョブで) 実行する。
 - marketplace からの install (git の checkout ではない)、detached HEAD、upstream の無いブランチ、チェックが実行できない場合は、警告は出ない。意図して固定した checkout で警告を止めるには、`git -C /path/to/wholework branch --unset-upstream` を実行する。
+
+## フェーズ作業ディレクトリが残っている
+
+**症状**: フェーズ (`/spec`・`/code`・`/verify`) の開始時に、`${XDG_CACHE_HOME:-~/.cache}/wholework/work/` 配下のディレクトリがサイズ付きで警告として一覧される。または、作業ディレクトリが使えないために検証が UNCERTAIN として記録される。
+
+**原因**: フェーズは大きな検証用の作業ファイル (リポジトリのコピー・`node_modules`・ビルド成果物・ブラウザのプロファイル) を Issue・フェーズごとの作業ディレクトリに置き、終了時に削除する。強制停止 (watchdog・OOM killer・クラッシュ) ではこの削除が行われない。フェーズ開始時の sweep は、同じリポジトリ・Issue・フェーズの残骸は削除するが、他の Issue・フェーズ・リポジトリのディレクトリは並行して動いているセッションのものかもしれないため、警告するだけにとどめる。
+
+**修正**: 一覧された Issue・フェーズを処理中のセッションがないことを確認してから、不要になったディレクトリを削除する。Wholework がこれらを自動で削除することはなく、判断はユーザーに委ねられる。基準ディレクトリを移すには、`XDG_CACHE_HOME` を絶対パスで設定する。
+
+**補足**: 基準ディレクトリはディスク上にある必要がある。tmpfs や ramfs 上にある場合 (または作成できない場合)、フェーズはそれを使わず、`/tmp` にもフォールバックしない。コピーを必要とする検証は理由を添えて UNCERTAIN として記録される。`modules/phase-work-dir.md` を参照。
 
 ## さらに助けが必要なとき
 

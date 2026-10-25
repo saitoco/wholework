@@ -31,7 +31,7 @@ The main flow is `/issue` → `/spec` → `/code` → `/review` → `/merge` →
 
 **Size-based routing**: The Issue's Size property determines the workflow path (patch vs. PR, review depth, spec depth). See [`modules/size-workflow-table.md`](../modules/size-workflow-table.md) for the decision table (Size determination 2-axis + CI dependency check + Size→workflow mapping).
 
-Main branch protection rules: see [CLAUDE.md](../CLAUDE.md).
+**Protected main**: phase records (Spec, retrospectives, Phase Handoff) and patch-route commits are pushed directly to the base branch. When the remote rejects a direct push (ruleset, branch protection, pre-receive hook), they land through a `wholework-record/...` phase-record PR that is merged immediately with the repository's `merge-strategy` — no configuration key is needed. If the ruleset requires approvals or status checks on that PR, the run stops and prints the PR URL. See [`modules/worktree-lifecycle.md` § "Direct push rejected by the remote: phase-record PR"](../modules/worktree-lifecycle.md#direct-push-rejected-by-the-remote-phase-record-pr) and [`scripts/push-to-base.sh`](../scripts/push-to-base.sh).
 
 ## Core Phases
 
@@ -45,7 +45,7 @@ Clarifies Issue requirements. Two modes: new creation (`/issue "title"`) and exi
 
 ### 2. `/spec` — Specification
 
-Investigates the codebase from Issue requirements and creates a Spec (`docs/spec/issue-N-short-title.md`). On design completion, performs Size→workflow routing and presents the next action based on Size (`/code --patch` / `/code`). `--light` for lightweight design (omits ambiguity resolution, uncertainty detection, self-review, etc.), `--full` for full design. When the option is omitted, auto-determines from the Size label (M → `--light`, L/XL → `--full`). For Issues involving real external or MCP tool calls, generates an optional `## Smoke Test` section in the Spec. Details: [`skills/spec/SKILL.md`](../skills/spec/SKILL.md)
+Investigates the codebase from Issue requirements and creates a Spec (`docs/spec/issue-N-short-title.md`). On design completion, performs Size→workflow routing and presents the next action: `/auto` is recommended for both patch (XS/S) and pr (M/L) routes, with `/code` as the alternative (XL is guided to sub-issue splitting). `--light` for lightweight design (omits ambiguity resolution, uncertainty detection, self-review, etc.), `--full` for full design. When the option is omitted, auto-determines from the Size label (M → `--light`, L/XL → `--full`). For Issues involving real external or MCP tool calls, generates an optional `## Smoke Test` section in the Spec. Details: [`skills/spec/SKILL.md`](../skills/spec/SKILL.md)
 
 ### 3. `/code` — Implementation
 
@@ -76,9 +76,10 @@ Integrates PR acceptance criteria verification, multi-perspective code review, a
 
 | Size | Review mode | Behavior |
 |------|-------------|----------|
-| XS, S | skip (early exit) | Exits with "review not required" message (patch route) |
+| XS, S | skip (early exit) | Exits with "review not required" message (patch route). With `always-pr: true` a PR exists, so XS/S get light instead |
 | M | light | Runs Step 10 as lightweight integrated review (1 agent) |
 | L, XL | full | Runs all steps |
+| (unset) | full | Safe fallback when `/review` is invoked directly. `/auto` instead passes `--light` for an unset Size |
 
 **operate route**: `/review` is skipped entirely — operate route produces no PR (see `/code` above), so there is nothing to review.
 
@@ -128,7 +129,7 @@ If `phase/ready` is absent and the Issue has not progressed past spec, `/auto` a
 
 **Review PENDING retry**: If `run-review.sh` exits with code 2 (PENDING — CI/preview state not yet confirmed within its timeout; not a failure), both `run_phase_with_recovery()` (`scripts/run-auto-sub.sh`) and `skills/auto/SKILL.md` pr route item 8 sleep `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` (default 300s) and retry, up to `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` (default 2) times, before falling through to the normal Tier 1/2/3 recovery path. See `modules/orchestration-fallbacks.md#review-pending-not-failure`. If the exit code 2 is determined to be a CI platform infrastructure failure (`modules/ci-failure-classifier.md` verdict `ci-infra`), this sleep+retry does not apply — the wait/re-judge/stop path is used instead. When zero registered checks reflects a repository with no `pull_request`/`pull_request_target`-triggered workflow at all, `run-review.sh` does not return exit code 2 in the first place (see `scripts/detect-pr-ci-workflows.sh`); if exit code 2 is still observed for another reason and the classifier verdict is `no-ci-configured`, item 8 skips the sleep+retry entirely. This detection is file-based, so a repository whose PR checks come entirely from an external GitHub App (no `.github/workflows/` at all) is also treated as `absent` — review proceeds without CI confirmation, and the CI gate falls back to `/review` Step 9 and `/merge`'s own check.
 
-**`--batch --resume`**: Resumes an interrupted batch run. Reads `.tmp/auto-batch-state.json` (written automatically when `--batch N1 N2 ...` starts) to restore the remaining Issue list. If the file is absent or `remaining` is empty, exits with "No resume target found". Issues are processed in the same order as the original batch. The same start-of-run assignee warning is printed for the remaining Issues, since another member may have started on one of them during the interruption.
+**`--batch --resume`**: Resumes an interrupted batch run. Each List mode batch (`--batch N1 N2 ...`, and `--batch --until`, which rewrites it every round) writes its state to `.tmp/auto-batch-state-<BATCH_ID>.json`. On resume, `auto-checkpoint.sh list_active_batches` lists the active batches: an interactive run asks which batch to resume, and a non-interactive run takes the most recent one. Only when no active batch exists does it fall back to the legacy single file `.tmp/auto-batch-state.json`. The remaining Issue list is restored from the selected file; if it is absent or `remaining` is empty, exits with "No resume target found". Issues are processed in the same order as the original batch. The same start-of-run assignee warning is printed for the remaining Issues, since another member may have started on one of them during the interruption.
 
 **`--batch --until <query>`**: Condition-driven batch mode. Always pass the query as a single, double-quoted argument — e.g. `/auto --batch --until "label:retro/*"` — since the query is whitespace-split internally. Query grammar: whitespace-separated `key:value` clauses with two supported keys — `label:<glob>` (required; matched against Issue label names, `*` glob supported) and `status:<value>` (optional; exact, case-sensitive match against the Project v2 Status field; values containing whitespace, e.g. `In progress`, are not supported and cause a parse error). Each round first runs bulk `/triage` (no Issue number) to triage any still-untriaged Issues project-wide — including ones that were already untriaged before the loop started, not only ones created mid-session — so that Issues newly assigned a `theme/*` label become visible to that round's query; Each round resolves the query via `scripts/resolve-batch-query.sh` (which excludes Issues assigned to someone other than the executing user, with the same rule as `--batch N`; the check runs every round, so an Issue whose assignee is removed returns as a candidate in the next round, and for that reason the start-of-run assignee warning of List mode is not repeated per round), reorders the resulting `ROUND_LIST` per `modules/round-ordering.md` (ROI + title prefix clustering + semantic relationship judgment, so related Issues are processed adjacently and high-ROI Issues first — this does not change which Issues are in scope, only their processing order, and does not replace the blocked-by gate), processes the matching Issues exactly like `--batch N1 N2 ...` (List mode), then re-resolves the query and repeats. The loop converges when the query returns 0 Issues; Issues already `complete`d or `fail`ed in a prior round of the same run are excluded from later rounds (an Issue skipped only by the blocked-by gate is retried next round, since its blocker may clear within the same session) — without this exclusion, a label-only query would keep re-matching already-completed Issues indefinitely. A safety valve bounds the loop regardless of convergence: `--max-rounds <N>` (default `3`) caps the number of rounds and cannot be disabled. `--checkin-per-round` (opt-in) asks for confirmation via AskUserQuestion before each subsequent round in interactive mode; it is ignored (with a warning) under `--non-interactive`. Resuming with `--batch --resume` after an interrupted `--batch --until` run processes the last round's `remaining` Issues as a one-shot List mode batch — it does not resume the until-loop itself; re-run `--batch --until` to continue the condition-driven loop.
 
@@ -195,13 +196,13 @@ Setup: Wholework automatically creates the labels it needs on first run. Manual 
 |-------|---------|-------------|------------|
 | `phase/issue` | Issue creation phase | `/issue` | `/spec` |
 | `phase/spec` | Specification phase | `/spec` (on start) | `/spec` (after spec push) |
-| `phase/ready` | Design complete, awaiting implementation | `/spec` (after design push) | `/code` |
-| `phase/code` | Implementation phase | `/code` | `/review` |
-| `phase/merge` | Merge in progress | `/merge` (at start, for in-progress tracking) | `/merge` (on transition to `phase/verify`) |
+| `phase/ready` | Design complete, awaiting implementation | `/spec` (after design push); `/issue` (XS Issues, which skip `/spec`); `/auto` fix-cycle reset (residual `phase/verify` → `phase/ready` before code) | `/code` |
+| `phase/code` | Implementation phase | `/code` | `/review`; `/code` (patch route, on transition to `phase/verify`) |
+| `phase/merge` | Merge in progress (reserved) | — (currently not assigned by any skill; created by `scripts/setup-labels.sh` and recognized on `/auto` resume) | — |
 | `phase/review` | Review phase | `/review` | `/merge` |
 | `phase/skill` | Skill development / migration tracking | Developer (when creating skill-behavior Issues) | — (tracking label, remains) |
-| `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
-| `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked); `/audit stats --retention` (Level 3 auto-retire, autonomy tier L2/L3, when the retire leaves no unchecked post-merge condition) | — |
+| `phase/verify` | Acceptance test phase | `/merge`; `/code` (patch route, replacing `phase/code`) | `/verify` |
+| `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked); `/issue` (close as not planned); `scripts/post_merge_check.sh` (all manual checks PASS); `/audit stats --retention` (Level 3 auto-retire, autonomy tier L2/L3, when the retire leaves no unchecked post-merge condition) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
 
 ### Assignee
@@ -255,7 +256,7 @@ When `/verify` detects a FAIL among auto-verification targets, it appends a mach
 User selects:
   - /auto N          — fix-cycle fast-path: skips issue/spec phases automatically (recommended)
   - /code --patch N  — fix with direct commit to main (small fix, Size unchanged)
-  - /code --pr N     — fix with new branch + PR (larger fix, Size L)
+  - /code --pr N     — fix with new branch + PR (larger fix, Size M/L)
   - /spec N          — revisit design (when root cause requires redesign)
   ↓
 /verify N  (re-verify after fix)
@@ -304,7 +305,7 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
 
 ### Projects Integration
 
-`.github/workflows/kanban-automation.yml` implements auto Kanban column movement by `phase/*` labels. `phase/issue`, `phase/spec` → Plan, `phase/ready` → Ready, `phase/code` → Implementation. Review/Verification/Done use Projects built-in automations.
+`.github/workflows/kanban-automation.yml` implements auto Kanban column movement by `phase/*` labels. On each `labeled` event it maps the seven phase labels (`phase/issue`, `phase/spec`, `phase/ready`, `phase/code`, `phase/review`, `phase/verify`, `phase/done`) one-to-one to seven Status options, adds the Issue to the project if needed, and sets its Status field. Other labels (including `phase/merge` and `phase/skill`) are ignored. The project, field, and option IDs are hardcoded for this repository's project, and the workflow needs a `PROJECT_PAT` secret with projects scope.
 
 ## Blocked-by relationships
 

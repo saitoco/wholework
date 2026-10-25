@@ -98,8 +98,8 @@ Wholework searches in this order and uses the **first file found**.
   project repository. Use this for MCP servers or project-specific CLI tools.
 - **User-global** (`~/.wholework/adapters/`) — applies across all projects for the user.
   Use this for personal CLI preferences.
-- **Bundled default** — ships with Wholework. Covers `browser` and `lighthouse`
-  out of the box.
+- **Bundled default** — ships with Wholework. Covers `browser`, `lighthouse`, and
+  `visual-diff` out of the box.
 
 To add a new capability, create the adapter file at the project-local path:
 

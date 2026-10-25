@@ -137,14 +137,12 @@ A trigger opens the question; it does not by itself authorize the tag. Run the g
 
 **Gate 4 — documentation drift checks:**
 
-```sh
+```bash
 # a. config keys agree between the user-facing reference and the implementation SSoT
 #    (docs/guide/customization.md § Available Keys vs modules/detect-config-markers.md)
 
 # b. every top-level docs/*.md has a docs/ja/ mirror
-ls docs/*.md | sed 's|docs/||' | sort > /tmp/en.txt
-ls docs/ja/*.md | sed 's|docs/ja/||' | sort > /tmp/ja.txt
-comm -23 /tmp/en.txt /tmp/ja.txt   # must be empty
+comm -23 <(ls docs/*.md | sed 's|docs/||' | sort) <(ls docs/ja/*.md | sed 's|docs/ja/||' | sort)   # must be empty
 
 # c. plugin.json version matches the tag about to be created
 jq -r '.version' .claude-plugin/plugin.json

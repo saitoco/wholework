@@ -70,7 +70,7 @@ In Claude Code, run:
 
 Replace `42` with your actual Issue number.
 
-`/issue` triages the Issue: it assigns a Size label (XS for this sample), sets Type to Feature, and adds the `phase/ready` label. You can observe the triage result in the Issue metadata on GitHub.
+`/issue` triages the Issue: it assigns a Size label (XS for this sample), sets Type to Feature, and adds the `phase/ready` label. It also sets you as the assignee, since the Issue has none yet. You can observe the triage result in the Issue metadata on GitHub.
 
 ## Step 4 — Run `/code`
 

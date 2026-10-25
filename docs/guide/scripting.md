@@ -87,4 +87,4 @@ VALUE=$(gh issue view "$NUMBER" --json labels \
 
 - Issue #355 — original discovery of `.[0].field` returning `"null"` for empty arrays
 - `scripts/get-issue-type.sh` — example using `// empty` for both GraphQL and label lookups
-- `scripts/run-merge.sh` — example using `.[0].databaseId // empty`
+- `scripts/observation-trigger.sh` — example using `.[-1].createdAt // empty` before a non-empty check

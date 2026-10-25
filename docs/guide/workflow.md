@@ -40,6 +40,8 @@ Size is assigned during triage (manually or via `/triage`). If you run `/auto` o
 
 ## Skill Reference
 
+`/issue N` (refining an existing issue), `/spec`, and `/code` set you as the assignee when the issue has none. If another member is already assigned, an interactive run asks whether to reassign it to you and continue, continue without reassigning, or abort (a non-interactive run only warns). `auto-assign: false` in `.wholework.yml` stops the assignment only; see [Assignee](../workflow.md#assignee).
+
 ### `/issue` — Clarify Requirements
 
 Use when an issue description is vague or incomplete. Wholework interviews you and rewrites the issue body with clear acceptance criteria and verify commands.
@@ -194,7 +196,7 @@ Run periodically — for example, after a sprint or milestone — to keep docs, 
 
 ## Fixing After Verify Fails
 
-If `/verify` fails, Wholework reopens the issue and removes all `phase/*` labels. Run `/code --patch N` to apply a small fix with a direct commit to main (Size unchanged), or `/code --pr N` for a larger fix with a new branch and PR. For cases requiring design changes, run `/spec N` to revisit the spec first.
+If `/verify` fails, Wholework reopens the issue and removes all `phase/*` labels. The recommended next step is `/auto N`: when a Spec exists, it detects the fix cycle, skips the issue/spec phases, and runs code directly. To drive the fix manually, run `/code --patch N` to apply a small fix with a direct commit to main (Size unchanged), or `/code --pr N` for a larger fix with a new branch and PR. For cases requiring design changes, run `/spec N` to revisit the spec first.
 
 ## Further Reading
 

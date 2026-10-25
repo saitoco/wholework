@@ -45,10 +45,11 @@ steering-docs-path: docs          # Where steering documents live
 # Production URL for browser-based verify commands
 production-url: https://yourapp.example.com
 
-# Watchdog timeout (default: 2700 seconds)
-# Claude's extended thinking time on Size L+ tasks (especially Opus with high effort)
-# can produce silent periods exceeding 2700 seconds. Set to 3600 for meta-development.
-watchdog-timeout-seconds: 3600
+# Watchdog timeout (unset by default: each phase uses its own default —
+# spec 2964, code 4680, review 5400, merge 600, issue 1200 seconds)
+# A single override for all phases: it replaces every phase default, so a value
+# below a phase's default shortens that phase. Prefer the per-phase keys below.
+# watchdog-timeout-seconds: 3600
 
 # Per-phase overrides (optional; take precedence over watchdog-timeout-seconds)
 # watchdog-timeout-spec-seconds: 2964
@@ -143,7 +144,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; ACs that can only be confirmed against the preview environment are classified as pre-merge-preview, whether or not they have a verify command (auto: executed at `/review` when `PREVIEW_URL` is set; manual: presented as a human-check item at `/review`). Skipped in `/verify` post-merge to prevent double verification; for the auto subcase, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check (only for an AC still at `- [ ]`; an AC already at `- [x]` is recorded SKIPPED by the already-checked rule, manual and auto alike). Also gates `/code`'s pr route: when `true`, `/code` waits for the deploy/preview build to complete after PR creation and pushes fix commits (bounded to 3 attempts) on failure before falling through to `/review`. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
-| `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
+| `watchdog-timeout-seconds` | integer | `""` (unset: per-phase defaults; `2700` where no phase applies) | Watchdog timeout in seconds before killing a silent `claude -p` process, as a single override for all phases. When unset, each phase uses its own default (`2964` spec, `4680` code, `5400` review, `600` merge, `1200` issue; see `scripts/watchdog-defaults.sh`). When set, it replaces every phase default, so a value below a phase's default shortens that phase (e.g. `3600` lowers the `/code` and `/review` timeouts). To raise or lower one phase only, use the per-phase `watchdog-timeout-{spec,code,review,merge,issue}-seconds` keys below. The phase-less `2700` default applies only to the recovery sub-agent (`scripts/spawn-recovery-subagent.sh`). Values ≤0 or non-numeric fall back to the default. |
 | `watchdog-timeout-spec-seconds` | integer | `""` (falls back to `2964`) | Per-phase watchdog timeout override for `/spec`. Priority: this key > `watchdog-timeout-seconds` > `2964`. |
 | `watchdog-timeout-code-seconds` | integer | `""` (falls back to `4680`) | Per-phase watchdog timeout override for `/code`. Priority: this key > `watchdog-timeout-seconds` > `4680`. |
 | `watchdog-timeout-review-seconds` | integer | `""` (falls back to `5400`) | Per-phase watchdog timeout override for `/review`. Priority: this key > `watchdog-timeout-seconds` > `5400`. |

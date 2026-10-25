@@ -64,7 +64,7 @@ Claude Code で実行:
 
 `42` は実際の Issue 番号に置き換えてください。
 
-`/issue` は Issue を triage します: Size ラベル（このサンプルでは XS）を付与し、Type を Feature に設定し、`phase/ready` ラベルを追加します。GitHub の Issue メタデータで triage 結果を確認できます。
+`/issue` は Issue を triage します: Size ラベル (このサンプルでは XS) を付与し、Type を Feature に設定し、`phase/ready` ラベルを追加します。Issue にまだ assignee がいないため、あなたを assignee にも設定します。GitHub の Issue メタデータで triage 結果を確認できます。
 
 ## Step 4 — `/code` を実行
 

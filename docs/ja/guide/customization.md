@@ -39,10 +39,11 @@ steering-docs-path: docs          # steering documents の配置先
 # ブラウザベース verify command 用の本番 URL
 production-url: https://yourapp.example.com
 
-# watchdog タイムアウト（デフォルト: 2700 秒）
-# Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により
-# 2700 秒を超える silent 期間が発生しうる。メタ開発用途では 3600 を推奨。
-watchdog-timeout-seconds: 3600
+# watchdog タイムアウト (デフォルトは未設定: 各フェーズが自身のデフォルトを使う —
+# spec 2964、code 4680、review 5400、merge 600、issue 1200 秒)
+# 全フェーズ共通の一括上書き: すべてのフェーズのデフォルトを置き換えるため、
+# デフォルトより小さい値はそのフェーズを短くする。下記のフェーズ別キーを推奨。
+# watchdog-timeout-seconds: 3600
 
 # フェーズ別上書き（オプション; watchdog-timeout-seconds より優先）
 # watchdog-timeout-spec-seconds: 2964
@@ -132,7 +133,7 @@ capabilities:
 | `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。preview 環境でしか確認できない AC は、verify command の有無を問わず pre-merge-preview に分類される (auto: `PREVIEW_URL` が設定されている場合に `/review` 時に実行。manual: `/review` 時に人間の確認項目として提示)。`/verify` post-merge では二重検証防止のため skip するが、auto サブケースは `/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合に `/verify` が本番 URL に対するフォールバック検証を行う (未チェック (`- [ ]`) の AC に限る。既に `- [x]` の AC は manual・auto を問わず already-checked 規則で SKIPPED として記録される)。`/code` の pr route もこの capability でゲートされる: `true` のとき `/code` は PR 作成後にデプロイ/preview ビルドの完了を待ち、失敗時は修正コミットを push する (最大 3 回まで)。上限に達した場合は `/review` に処理を委ねる。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
-| `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
+| `watchdog-timeout-seconds` | integer | `""` (未設定: フェーズ別デフォルト。フェーズを持たない呼び出しでは `2700`) | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数を、全フェーズ共通で一括上書きする。未設定の場合、各フェーズは自身のデフォルトを使う (spec `2964`、code `4680`、review `5400`、merge `600`、issue `1200`。`scripts/watchdog-defaults.sh` 参照)。設定するとすべてのフェーズのデフォルトを置き換えるため、フェーズのデフォルトより小さい値はそのフェーズを短くする (例: `3600` は `/code` と `/review` のタイムアウトを下げる)。特定のフェーズだけを変えるには、下記のフェーズ別キー `watchdog-timeout-{spec,code,review,merge,issue}-seconds` を使う。フェーズを持たない `2700` のデフォルトは recovery sub-agent (`scripts/spawn-recovery-subagent.sh`) にのみ適用される。0 以下または非数値の場合はデフォルトにフォールバック。 |
 | `watchdog-timeout-spec-seconds` | integer | `""` (フォールバック: `2964`) | `/spec` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `2964`。 |
 | `watchdog-timeout-code-seconds` | integer | `""` (フォールバック: `4680`) | `/code` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `4680`。 |
 | `watchdog-timeout-review-seconds` | integer | `""` (フォールバック: `5400`) | `/review` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `5400`。 |

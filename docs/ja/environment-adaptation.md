@@ -45,7 +45,7 @@ Layer 1 の宣言を読み、欠けている情報はセッション内で動的
 
 | メカニズム | 検出対象 | 使用箇所 |
 |-----------|----------------|---------|
-| `detect-config-markers.md`（固定マッピング） | `.wholework.yml` の既知フラグ → 環境変数 | `/review`、`/verify`、`/issue` |
+| `detect-config-markers.md` (固定マッピング) | `.wholework.yml` の既知フラグ → 環境変数 | 全スキル (すべての `skills/*/SKILL.md` が Read する) |
 | `detect-config-markers.md`（動的マッピング） | 任意の `capabilities.{name}: true` → `HAS_{UPPERCASE_NAME}_CAPABILITY` 変数 | `detect-config-markers.md` を Read する全スキル |
 | `ToolSearch` | セッション内の MCP ツール可用性 | `/issue`（宣言なしの場合）、`verify-executor`（`mcp_call` 実行時） |
 | `command -v` | CLI ツール可用性 | `browser-adapter`（browser-use CLI）、`lighthouse-adapter`（lighthouse） |

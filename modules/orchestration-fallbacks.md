@@ -458,7 +458,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ### Rationale
 - Distinguishes CI-wait-caused silence from `json-mode-silent-hang` above, which the two share an identical wrapper-log symptom (exit 143 + `still waiting (json mode)`) but different root causes and different correct recovery
 - Introduced in Issue #1221; real case in Issue #1214 / PR #1216 (2026-08-06): a GitHub Actions-wide outage held CI pending for the length of `watchdog-timeout-review-seconds` (5400s); the catalog's `json-mode-silent-hang` "retry once" instruction would have re-entered the same `ci_wait` wait and been killed again. The parent session instead confirmed CI status first, re-ran CI on the same SHA once green elsewhere, then retried — completing in 1200s
-- `wait-ci-checks.sh` already emits the `ci_wait` event on CI poll completion (`docs/reports/event-log-schema.md` §5); `detect-wrapper-anomaly.sh --events .tmp/auto-events.jsonl` reads it to separate this pattern from `json-mode-silent-hang`
+- `wait-ci-checks.sh` already emits the `ci_wait` event on CI poll completion (`docs/event-log-schema.md` §5); `detect-wrapper-anomaly.sh --events .tmp/auto-events.jsonl` reads it to separate this pattern from `json-mode-silent-hang`
 
 ---
 

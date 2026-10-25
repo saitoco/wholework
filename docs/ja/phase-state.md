@@ -2,7 +2,7 @@
 
 # phase-state
 
-`scripts/reconcile-phase-state.sh` と `/auto` の SKILL.md が使用する、フェーズレベルの状態定義に関する SSoT モジュール。
+`scripts/reconcile-phase-state.sh` とその呼び出し元 (`run-*.sh` のフェーズ wrapper、オーケストレーションのリカバリ tier、`/auto`・`/code`・`/merge`・`/verify` の各 skill。全一覧は後述の JSON スキーマのフィールド契約を参照) が使用する、フェーズレベルの状態定義に関する SSoT モジュール。
 
 ## 目的
 
@@ -30,8 +30,8 @@
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue が存在し、状態が CLOSED でない | Issue に `phase/(issue\|ready\|code\|review\|merge\|verify\|done)` ラベルが付与されている | 実装済み |
 | spec | Issue に `phase/issue` または `phase/spec` ラベルが付与されている | `$SPEC_PATH/issue-N-*.md` がローカル作業ツリー、または `origin/main` (リモート追跡 ref。fetch はしない) に存在し、かつ `phase/(ready\|code\|review\|merge\|verify\|done)` ラベルが付与されている | 実装済み |
-| code-patch | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` が新規コミットを 1 件以上返す (reopen タイムスタンプは `get-last-reopen` で取得); reopen タイムスタンプが取得できない場合は `git log origin/main --grep="closes #N"` にフォールバック; または operate ルート完了マーカーコメントが見つかる (後述の「Operate ルート完了シグネチャ」参照); または `worktree-code+issue-N` ブランチ上にオープンな PR が見つかる (後述の「残留 PR 完了シグネチャ」参照) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
-| code-pr | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists OR Size=XS | `worktree-code+issue-N` ブランチにオープンな PR (#310 が SSoT) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
+| code-patch | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists (ローカル作業ツリーのみを見る。spec の完了チェックと異なり `origin/main` は参照しない) OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` が新規コミットを 1 件以上返す (reopen タイムスタンプは `get-last-reopen` で取得); reopen タイムスタンプが取得できない場合は `git log origin/main --grep="closes #N"` にフォールバック; または operate ルート完了マーカーコメントが見つかる (後述の「Operate ルート完了シグネチャ」参照); または `worktree-code+issue-N` ブランチ上にオープンな PR が見つかる (後述の「残留 PR 完了シグネチャ」参照) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
+| code-pr | Issue に `phase/ready` ラベルが付与されている、かつ Spec exists (ローカル作業ツリーのみを見る。spec の完了チェックと異なり `origin/main` は参照しない) OR Size=XS | `worktree-code+issue-N` ブランチにオープンな PR (#310 が SSoT) | 前提条件: `phase/ready` — 実装済み; Spec exists OR Size=XS — 実装済み (Spec exists OR Size=XS)。完了判定: 実装済み |
 | review | PR が OPEN | PR に `<!-- review-summary -->` マーカーを含むコメントがある (主判定); または `## Review Response Summary` / `## レビュー回答サマリ` (マーカー不在の投稿に対するフォールバック)。同一コメントが `type=review-incomplete` マーカー (`post-fallback-review-summary.sh` が投稿) も併せ持つ場合、完了判定は引き続き `true` を返すが、その完了がオーガニックではなくフォールバック起源であることを示すため `actual.review_incomplete_fallback` が設定される (#1174 参照) | 実装済み |
 | merge | PR が OPEN であり、かつ (reviewDecision が APPROVED、または reviewDecision が CHANGES_REQUESTED でなく PR のコメント/レビューに review-summary マーカーが見つかる — 後述の「Merge 前提条件マーカーフォールバック」参照); reviewDecision=CHANGES_REQUESTED の場合は無条件で不一致 | `gh pr view --json state == MERGED` | 実装済み |
 | verify | Issue に `phase/verify` ラベルが付与されている、または CLOSED である | Issue が CLOSED である、または `phase/done` ラベルが付与されている | 実装済み |
@@ -98,7 +98,7 @@ Wholework のセルフホスト運用モデルでは、単一のアカウント�
 }
 ```
 
-**フィールド契約 (下流の #315, #316, #317, #319 がこのスキーマに依存する):**
+**フィールド契約 (この出力を読む呼び出し元がこのスキーマに依存する: フェーズ wrapper の `run-issue.sh`・`run-spec.sh`・`run-code.sh`・`run-review.sh`・`run-merge.sh`・`run-auto-sub.sh`、リカバリ tier の `apply-fallback.sh` (Tier 2) と `spawn-recovery-subagent.sh` および `agents/orchestration-recovery.md` (Tier 3)、wrapper がログに記録した結果を読む `detect-wrapper-anomaly.sh`、`skills/auto`・`skills/code`・`skills/merge`・`skills/verify` の SKILL.md):**
 
 | フィールド | 型 | 必須 | 備考 |
 |-------|------|----------|-------|
@@ -110,6 +110,7 @@ Wholework のセルフホスト運用モデルでは、単一のアカウント�
 | `actual.pr_state` | string | PR の状態をチェックする場合 | `"OPEN"`、`"MERGED"`、`"CLOSED"`、または `null` |
 | `actual.pr_number` | number\|null | PR をチェックする場合 | PR 番号。見つからない場合は `null` |
 | `actual.commits_found` | boolean | git log をチェックする場合 | `true` の場合 origin/main 上で該当するコミットが見つかった |
+| `actual.reopen_ts` | string | code-patch の完了判定で reopen タイムスタンプを取得できた場合 | `get-last-reopen` で取得した最後の reopen タイムスタンプ。設定されている場合、それより後に作られた `closes #N` コミット・operate マーカー・残留 PR だけが有効になり、label/state フォールバックはスキップされる。タイムスタンプを取得できている間は code-patch の完了判定のすべての結果 (一致・不一致とも) に含まれ、取得できない場合は省略される |
 | `actual.operate_signal` | boolean | code-patch の完了判定で `closes #N` コミットが見つからない場合 | operate ルート完了マーカーコメント (execution-log または execution-plan) が見つかった場合 `true`。上記「Operate ルート完了シグネチャ」参照 |
 | `actual.stray_pr_signal` | boolean | code-patch の完了判定で `closes #N` コミットも operate マーカーも見つからない場合 | `worktree-code+issue-N` ブランチにオープンな PR が見つかり、新しさゲートを通過した場合 `true`。上記「残留 PR 完了シグネチャ」参照。`true` の場合、`actual.pr_number` にも PR 番号が設定される |
 | `actual.worktree_commits_found` | boolean | code-patch の完了判定で `closes #N` コミット・operate マーカー・残留 PR のいずれも見つからない場合、または code-pr の完了判定でオープンな PR が見つからない場合 | `worktree-code+issue-N` ブランチが `origin/main` に対してコミットが先行している場合 `true` (`git rev-list --count`、読み取り専用)。「まだ開始していない」(`false`) と「worktree ではコミット済みだが push/PR 作成が未完了」(`true`) を区別する — この区別がなければ両者は同じ `commits_found: false` (code-patch) または `pr_state: null` (code-pr) の観測結果に収束してしまう。ブランチが存在しない場合も `false` になる (1 回の `git rev-list` 呼び出しで両ケースを畳み込む)。診断目的のみであり、`matches_expected` には影響しない。`_completion_code_pr()` により無条件に出力される (PR なしの分岐の内側に限定されない)。これは `_completion_code_patch()` 自身の無条件配置を踏襲している。 |

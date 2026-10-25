@@ -1,4 +1,4 @@
-English | [日本語](../ja/reports/auto-session-22090-1781508629-2026-06-15.md)
+English | [日本語](session.ja.md)
 
 # /auto Session Report — 22090-1781508629
 
